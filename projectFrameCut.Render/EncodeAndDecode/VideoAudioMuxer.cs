@@ -177,7 +177,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _outputAudioStream->time_base = new AVRational { num = 1, den = sampleRate };
             _audioEncoderCtx->time_base = new AVRational { num = 1, den = sampleRate };
 
-            if ((ffmpeg.AVFMT_GLOBALHEADER) != 0)
+            if ((_outputFmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                 _audioEncoderCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
 
             FFmpegHelper.Throw(ffmpeg.avcodec_open2(_audioEncoderCtx, audioCodec, null), "avcodec_open2 (audio)");
@@ -416,6 +416,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!File.Exists(audioInputPath))
             {
                 File.Copy(videoInputPath, outputPath, overwrite: true);
+                return;
             }
 
             AVFormatContext* videoFmtCtx = null;
@@ -524,7 +525,50 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     audioEncoderCtx = ffmpeg.avcodec_alloc_context3(audioEncoder);
                     audioEncoderCtx->codec_id = audioEncoder->id;
                     audioEncoderCtx->codec_type = AVMediaType.AVMEDIA_TYPE_AUDIO;
-                    audioEncoderCtx->sample_rate = audioDecoderCtx->sample_rate;
+                    
+                    // For AAC and other codecs with limited sample rate support, 
+                    // use supported sample rate or resample
+                    int targetSampleRate = audioDecoderCtx->sample_rate;
+                    
+                    // Validate and adjust sample rate for the encoder
+                    if (audioEncoder->supported_samplerates != null)
+                    {
+                        int* sr = audioEncoder->supported_samplerates;
+                        bool found = false;
+                        while (*sr != 0)
+                        {
+                            if (*sr == targetSampleRate)
+                            {
+                                found = true;
+                                break;
+                            }
+                            sr++;
+                        }
+                        
+                        // If not found, use the highest supported sample rate
+                        if (!found)
+                        {
+                            sr = audioEncoder->supported_samplerates;
+                            int bestSampleRate = *sr;
+                            while (*sr != 0)
+                            {
+                                if (*sr > bestSampleRate)
+                                    bestSampleRate = *sr;
+                                sr++;
+                            }
+                            targetSampleRate = bestSampleRate;
+                        }
+                    }
+                    else if (audioCodecName == "aac")
+                    {
+                        // AAC typically supports up to 96kHz, some implementations support 48kHz
+                        if (targetSampleRate > 96000)
+                            targetSampleRate = 96000;
+                        else if (targetSampleRate > 48000)
+                            targetSampleRate = 48000;
+                    }
+                    
+                    audioEncoderCtx->sample_rate = targetSampleRate;
                     audioEncoderCtx->bit_rate = 192000;
                     audioEncoderCtx->time_base = new AVRational { num = 1, den = audioEncoderCtx->sample_rate };
 
@@ -569,10 +613,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (channels <= 0) channels = 2;
                     ffmpeg.av_channel_layout_default(&audioEncoderCtx->ch_layout, channels);
                     
+                    // Use the adjusted sample rate for time_base
+                    audioEncoderCtx->time_base = new AVRational { num = 1, den = audioEncoderCtx->sample_rate };
                     outputAudioStream->time_base = audioEncoderCtx->time_base;
 
                     if ((outputFmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                         audioEncoderCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
+
+                    // Validate channel layout was set correctly
+                    if (audioEncoderCtx->ch_layout.nb_channels <= 0)
+                    {
+                        ffmpeg.av_channel_layout_default(&audioEncoderCtx->ch_layout, channels);
+                    }
 
                     FFmpegHelper.Throw(ffmpeg.avcodec_open2(audioEncoderCtx, audioEncoder, null), "avcodec_open2 (audio encoder)");
                     FFmpegHelper.Throw(

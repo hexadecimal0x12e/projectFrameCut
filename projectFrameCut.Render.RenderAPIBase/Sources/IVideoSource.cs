@@ -102,6 +102,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 
     }
 
+    public interface IVideoSource<T> : IVideoSource 
+    {
+        public new IPicture<T> GetFrame(uint targetFrame, bool hasAlpha = false);
+        IPicture IVideoSource.GetFrame(uint targetFrame, bool hasAlpha) => GetFrame(targetFrame, hasAlpha);
+    }
+
     public interface IVideoWriter : IDisposable
     {
         public int Width { get; set; }
@@ -111,6 +117,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public string CodecName { get; set; }
         public string PixelFormat { get; set; }
         public uint DurationWritten { get; }
+        public IPicture.PicturePixelMode? TargetPPB { get; }
 
         public void Initialize();
         public virtual bool TryInitialize()

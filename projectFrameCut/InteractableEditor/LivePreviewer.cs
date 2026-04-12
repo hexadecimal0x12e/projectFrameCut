@@ -1,0 +1,311 @@
+﻿using Microsoft.Maui.Controls.PlatformConfiguration;
+using projectFrameCut.Asset;
+using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
+using SixLabors.ImageSharp.Formats.Png;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using IPicture = projectFrameCut.Shared.IPicture;
+
+namespace projectFrameCut.LivePreview
+{
+    public class LivePreviewer
+    {
+        public IClip[]? Clips;
+        public ISoundTrack[]? SoundTracks;
+        public int targetFrameRate = 60;
+        public uint TotalDuration;
+        public string TempPath = string.Empty;
+        public string? ProxyRoot;
+        public int ProjectRelativeWidth { get; set; }
+        public int ProjectRelativeHeight { get; set; }
+        public event Action<double, TimeSpan>? OnProgressChanged;
+
+        public bool IsFrameRendered(uint frameIndex)
+        {
+            if (Clips == null) return false;
+            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
+            return Path.Exists(destPath);
+        }
+
+        public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
+        {
+            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+            LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
+            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+            var cacheKey = BuildFrameCacheKey(frameHash, targetWidth, targetHeight);
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{cacheKey}.png");
+            LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
+            if (Path.Exists(destPath))
+            {
+                LogDiagnostic($"[LiveRender] Frame already exist; skip");
+                return destPath;
+            }
+            else
+            {
+                LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
+            }
+            var layers = Timeline.GetFramesInOneFrame(
+                Clips,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                forceResize: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            var pic = Timeline.MixtureLayers(
+                layers,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                autoCenterImplicitClip: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            pic.SaveAsPng8bpp(destPath, encoder);
+            return destPath;
+        }
+
+        public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
+        {
+            ArgumentNullException.ThrowIfNull(Clips, "Clips");
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+            var layers = Timeline.GetFramesInOneFrame(
+                Clips,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                forceResize: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            var pic = Timeline.MixtureLayers(
+                layers,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                autoCenterImplicitClip: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            return pic;
+        }
+
+        public async Task UpdateDraft(DraftStructureJSON json)
+        {
+            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+
+            var clipsList = new List<IClip>();
+
+            foreach (var clip in elements.Cast<JsonElement>())
+            {
+                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
+                    && clipTypeProp.ValueKind == JsonValueKind.Number
+                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
+                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                {
+                    continue;
+                }
+
+                var clipInstance = PluginManager.CreateClip(clip);
+                if (clipInstance.FilePath is not null)
+                {
+                    if (clipInstance.FilePath.StartsWith('$'))
+                    {
+                        var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
+                        clipInstance.FilePath = asset.Path;
+                        var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
+                        if (Path.Exists(proxyPath))
+                        {
+                            clipInstance.FilePath = proxyPath;
+                            Log($"The proxy for {clipInstance.Name} is used.");
+                        }
+                        else
+                        {
+                            Log($"The proxy for {clipInstance.Name} does not exist.");
+                        }
+                    }
+                    else if (ProxyRoot is not null && clipInstance.FilePath is not null)
+                    {
+                        var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
+
+                        if (Path.Exists(proxiedPath))
+                        {
+                            clipInstance.FilePath = proxiedPath;
+                            Log($"The proxy for {clipInstance.Name} is used.");
+                        }
+                        else
+                        {
+                            Log($"The proxy for {clipInstance.Name} does not exist.");
+                        }
+                    }
+                }
+                await Task.Run(() => clipInstance.ReInit(8));
+                clipsList.Add(clipInstance);
+
+            }
+
+            Clips = clipsList.ToArray();
+            SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();
+            long max = 0;
+            foreach (var clip in Clips)
+            {
+                max = Math.Max(clip.StartFrame + clip.Duration, max);
+
+            }
+
+            if (max > uint.MaxValue)
+            {
+                throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
+            }
+
+            TotalDuration = (uint)max;
+
+            Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
+        }
+
+        public bool HasAudioSources()
+        {
+            var hasAudioClip = Clips?.Any(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip) ?? false;
+            var hasSoundTrack = SoundTracks?.Any() ?? false;
+            return hasAudioClip || hasSoundTrack;
+        }
+
+        public async Task ResetAudioPlaybackSources(int ppb = 8)
+        {
+            if (Clips is not null)
+            {
+                foreach (var clip in Clips.Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip))
+                {
+                    await Task.Run(() => clip.ReInit(ppb));
+                }
+            }
+
+            if (SoundTracks is not null)
+            {
+                foreach (var track in SoundTracks)
+                {
+                    await Task.Run(track.ReInit);
+                }
+            }
+        }
+
+        public async Task<string?> RenderSomeAudio(int startIndex, int length, int targetFramerate, CancellationToken token, int sampleRate = 96000, int channels = 2)
+        {
+            if (!HasAudioSources())
+            {
+                return null;
+            }
+
+            var id = Guid.NewGuid();
+            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
+
+            using var writer = new AudioWriter(audDestPath, sampleRate, channels, "pcm_s16le");
+            var composer = new AudioComposer<float>
+            {
+                Clips = Clips ?? Array.Empty<IClip>(),
+                SoundTracks = SoundTracks,
+                Writer = writer,
+                StartFrame = (uint)startIndex,
+                Duration = (uint)length,
+            };
+
+            await Task.Run(() => composer.Compose(targetFramerate, sampleRate, channels, 40960, token), token);
+            writer.Finish();
+            return audDestPath;
+        }
+
+        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
+        {
+
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+
+            var (encodeWidth, encodeHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: true);
+
+            var id = Guid.NewGuid();
+            var resultPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}_result.mp4");
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.mp4");
+            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
+            LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, output {targetWidth}x{targetHeight}, encode {encodeWidth}x{encodeHeight}");
+            using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", "AV_PIX_FMT_YUV420P")
+            {
+                Duration = uint.MaxValue,
+                BlockWrite = true //builder doesn't write from non-0 start index when blockwrite is not true
+            };
+            Renderer renderer = new Renderer
+            {
+                StartFrame = (uint)startIndex,
+                Duration = (uint)length,
+                builder = builder,
+                Clips = Clips,
+                Use16Bit = false,
+                AutoCenterImplicitClip = true,
+                MaxThreads = 1,
+                ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : targetWidth,
+                ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : targetHeight,
+
+            };
+            renderer.PrepareRender(token);
+            renderer.OnProgressChanged += OnProgressChanged;
+            await renderer.GoRender(token);
+            renderer.OnProgressChanged -= OnProgressChanged;
+            audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
+            builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
+            builder.Dispose();
+
+            if (!string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
+            {
+                await Task.Run(() => VideoAudioMuxer.MuxFromFiles(destPath, audDestPath, resultPath, true), token);
+                File.Delete(audDestPath);
+            }
+            else
+            {
+                File.Copy(destPath, resultPath, true);
+            }
+
+            File.Delete(destPath);
+            LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {resultPath}");
+            return resultPath;
+        }
+
+        private static PngEncoder encoder = new()
+        {
+            BitDepth = PngBitDepth.Bit8,
+        };
+
+        private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
+        {
+            var normalizedWidth = Math.Max(1, width);
+            var normalizedHeight = Math.Max(1, height);
+
+            if (!requireEven)
+            {
+                return (normalizedWidth, normalizedHeight);
+            }
+
+            if ((normalizedWidth & 1) == 1)
+            {
+                normalizedWidth++;
+            }
+
+            if ((normalizedHeight & 1) == 1)
+            {
+                normalizedHeight++;
+            }
+
+            normalizedWidth = Math.Max(2, normalizedWidth);
+            normalizedHeight = Math.Max(2, normalizedHeight);
+            return (normalizedWidth, normalizedHeight);
+        }
+
+        private static string BuildFrameCacheKey(string frameHash, int width, int height)
+            => $"{frameHash}_{width}x{height}";
+    }
+}

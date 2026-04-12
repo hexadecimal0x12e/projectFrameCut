@@ -6,11 +6,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using static projectFrameCut.Render.EncodeAndDecode.FFmpegHelper;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
 
-    public sealed unsafe class DecoderContext16Bit : IVideoSource
+    public sealed unsafe class DecoderContext16Bit : IVideoSource<ushort>
     {
         private readonly string _path;
         private AVFormatContext* _fmt = null;
@@ -44,7 +45,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string[] PreferredExtension => [".mkv"];
         public int? ResultBitPerPixel => 8;
 
-        public bool EnableLock { get; set; } = false;
+    public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
         private Lock locker = new();
 
@@ -181,86 +182,143 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        private void EnsureDecoderReady(uint targetFrame)
         {
-            if (EnableLock) locker.Enter();
+            if (Disposed)
+                throw new ObjectDisposedException(nameof(DecoderContext16Bit), $"Decoder for '{_path}' is already disposed when trying to read frame {targetFrame}.");
+            if (!Initialized)
+                throw new InvalidOperationException($"Decoder for '{_path}' is not initialized when trying to read frame {targetFrame}.");
+            if (_videoStreamIndex < 0 || _width <= 0 || _height <= 0)
+                throw new InvalidDataException($"Decoder metadata is invalid for '{_path}' when trying to read frame {targetFrame}.");
+            if (IsPointerAddressesNotValid(_fmt) || IsPointerAddressesNotValid(_codec) || IsPointerAddressesNotValid(_pkt) ||
+                IsPointerAddressesNotValid(_frm) || IsPointerAddressesNotValid(_rgb) || IsPointerAddressesNotValid(_sws) || _rgbBuffer == null)
+                throw new InvalidDataException($"Decoder native state is invalid for '{_path}' when trying to read frame {targetFrame}.");
+            if (_rgb->data[0] == null || _rgb->linesize[0] <= 0)
+                throw new InvalidDataException($"Decoder RGB buffer is invalid for '{_path}' when trying to read frame {targetFrame}.");
+        }
 
-            if (targetFrame < _currentFrameNumber)
+
+        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
+        {
+            bool lockTaken = false;
+            try
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                ffmpeg.avcodec_flush_buffers(_codec);
-                _currentFrameNumber = 0;
-            }
-
-            while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
-            {
-
-                try
+                if (EnableLock)
                 {
-                    if (_pkt->stream_index == _videoStreamIndex)
+                    locker.Enter();
+                    lockTaken = true;
+                }
+
+                EnsureDecoderReady(targetFrame);
+
+                if (targetFrame < _currentFrameNumber)
+                {
+                    int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                    if (seekRet < 0)
                     {
-                        if (ffmpeg.avcodec_send_packet(_codec, _pkt) < 0) continue;
+                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                        if (StrictMode)
+                            throw new InvalidOperationException(msg);
+                        Log(msg, "warning");
+                        throw new InvalidOperationException(msg);
+                    }
+                    ffmpeg.avcodec_flush_buffers(_codec);
+                    _currentFrameNumber = 0;
+                }
+
+                bool frameFound = false;
+                while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
+                {
+                    try
+                    {
+                        if (_pkt->stream_index != _videoStreamIndex)
+                            continue;
+
+                        int sendRet = ffmpeg.avcodec_send_packet(_codec, _pkt);
+                        if (sendRet < 0 && sendRet != ffmpeg.AVERROR(ffmpeg.EAGAIN) && sendRet != ffmpeg.AVERROR_EOF)
+                            throw new InvalidDataException($"Decoder failed to send packet for '{_path}' (code {sendRet}).");
 
                         while (true)
                         {
                             ffmpeg.av_frame_unref(_frm);
-                            if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
+                            int receiveRet = ffmpeg.avcodec_receive_frame(_codec, _frm);
+                            if (receiveRet == 0)
                             {
-                                if (_currentFrameNumber++ == targetFrame) goto found;
+                                if (_currentFrameNumber++ == targetFrame)
+                                {
+                                    frameFound = true;
+                                    break;
+                                }
 
+                                continue;
                             }
-                            else if (_totalFrames < _currentFrameNumber)
-                            {
-                                goto not_found;
-                            }
-                            break;
 
+                            if (receiveRet == ffmpeg.AVERROR(ffmpeg.EAGAIN) || receiveRet == ffmpeg.AVERROR_EOF)
+                                break;
+
+                            throw new InvalidDataException($"Decoder failed to receive frame for '{_path}' (code {receiveRet}).");
                         }
                     }
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-                finally
-                {
-                    ffmpeg.av_packet_unref(_pkt);
+                    finally
+                    {
+                        ffmpeg.av_packet_unref(_pkt);
+                    }
+
+                    if (frameFound)
+                        break;
+
+                    if (_totalFrames >= 0 && _currentFrameNumber > _totalFrames)
+                        break;
                 }
 
+                if (!frameFound)
+                {
+                    if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
+                    {
+                        Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
+                        return GetFrame(targetFrame - 1, hasAlpha);
+                    }
+
+                    double fps = _fps > 0 ? _fps : 1.0;
+                    double seconds = targetFrame / fps;
+                    throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
+                }
+
+                Index++;
+                int scaledRows = ffmpeg.sws_scale(
+                    _sws,
+                    _frm->data,
+                    _frm->linesize,
+                    0,
+                    _height,
+                    _rgb->data,
+                    _rgb->linesize
+                );
+                if (scaledRows <= 0)
+                    throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+
+                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
             }
-
-        not_found:
-            if (EnableLock) locker.Exit();
-            if (Math.Abs(targetFrame - TotalFrames) < 5)
+            finally
             {
-                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - TotalFrames} instead.");
-                return GetFrame(targetFrame - 1, hasAlpha);
+                if (lockTaken)
+                    locker.Exit();
             }
-            double fps = _fps > 0 ? _fps : 1.0;
-            double seconds = targetFrame / fps;
-            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
-
-        found:
-            Index++;
-            ffmpeg.sws_scale(
-                             _sws,
-                             _frm->data,
-                             _frm->linesize,
-                             0,
-                             _height,
-                             _rgb->data,
-                             _rgb->linesize
-                             );
-            if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
         }
 
 
         [DebuggerNonUserCode()]
-        private static IPicture PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
+            // Validate input parameters
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException($"Invalid dimensions: {width}x{height}");
+            if (stride <= 0 || stride < width * 3)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 3})");
             var size = width * height;
-            var result = new Picture(width, height)
+            var result = new Picture16bpp(width, height)
             {
                 r = new ushort[size],
                 g = new ushort[size],
@@ -315,7 +373,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
     }
 
-    public sealed unsafe class DecoderContext8Bit : IVideoSource
+    public sealed unsafe class DecoderContext8Bit : IVideoSource<byte>
     {
 
         private readonly string _path;
@@ -353,7 +411,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int? ResultBitPerPixel => 8;
 
-        public bool EnableLock { get; set; } = false;
+    public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
         private Lock locker = new();
 
@@ -515,91 +573,153 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
+        private void EnsureDecoderReady(uint targetFrame)
+        {
+            if (Disposed)
+                throw new ObjectDisposedException(nameof(DecoderContext8Bit), $"Decoder for '{_path}' is already disposed when trying to read frame {targetFrame}.");
+            if (!Initialized)
+                throw new InvalidOperationException($"Decoder for '{_path}' is not initialized when trying to read frame {targetFrame}.");
+            if (_videoStreamIndex < 0 || _width <= 0 || _height <= 0)
+                throw new InvalidDataException($"Decoder metadata is invalid for '{_path}' when trying to read frame {targetFrame}.");
+            if (IsPointerAddressesNotValid(_fmt) || IsPointerAddressesNotValid(_codec) || IsPointerAddressesNotValid(_pkt) ||
+                IsPointerAddressesNotValid(_frm) || IsPointerAddressesNotValid(_rgb) || IsPointerAddressesNotValid(_sws) || _rgbBuffer == null)
+                throw new InvalidDataException($"Decoder native state is invalid for '{_path}' when trying to read frame {targetFrame}.");
+            if (_rgb->data[0] == null || _rgb->linesize[0] <= 0)
+                throw new InvalidDataException($"Decoder RGB buffer is invalid for '{_path}' when trying to read frame {targetFrame}.");
+        }
+
+
 
         [DebuggerNonUserCode()]
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha)
+        public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
         {
-            if (EnableLock) locker.Enter();
-            if (targetFrame < _currentFrameNumber)
+            bool lockTaken = false;
+            try
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                ffmpeg.avcodec_flush_buffers(_codec);
-                _currentFrameNumber = 0;
-                _eof = false;
-            }
-
-
-            while (true)
-            {
-                if (!_eof)
+                if (EnableLock)
                 {
-                    if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
-                    {
-                        _eof = true;
-                        ffmpeg.av_packet_unref(_pkt);
-                    }
-                    else
-                    {
-                        if (_pkt->stream_index == _videoStreamIndex)
-                        {
-                            ffmpeg.avcodec_send_packet(_codec, _pkt);
-                        }
-                        ffmpeg.av_packet_unref(_pkt);
-                    }
-                }
-                else if (!flushSent)
-                {
-                    ffmpeg.avcodec_send_packet(_codec, null);
-                    flushSent = true;
+                    locker.Enter();
+                    lockTaken = true;
                 }
 
+                EnsureDecoderReady(targetFrame);
+
+                if (targetFrame < _currentFrameNumber)
+                {
+                    int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                    if (seekRet < 0)
+                    {
+                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                        if (StrictMode)
+                            throw new InvalidOperationException(msg);
+                        Log(msg, "warning");
+                        throw new InvalidOperationException(msg);
+                    }
+                    ffmpeg.avcodec_flush_buffers(_codec);
+                    _currentFrameNumber = 0;
+                    _eof = false;
+                    flushSent = false;
+                }
+
+                bool frameFound = false;
                 while (true)
                 {
-                    ffmpeg.av_frame_unref(_frm);
-                    if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
+                    if (!_eof)
                     {
-                        if (_currentFrameNumber++ == targetFrame)
+                        int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
+                        if (readRet < 0)
                         {
-                            goto found;
+                            _eof = true;
+                            ffmpeg.av_packet_unref(_pkt);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                if (_pkt->stream_index == _videoStreamIndex)
+                                {
+                                    int sendRet = ffmpeg.avcodec_send_packet(_codec, _pkt);
+                                    if (sendRet < 0 && sendRet != ffmpeg.AVERROR(ffmpeg.EAGAIN) && sendRet != ffmpeg.AVERROR_EOF)
+                                        throw new InvalidDataException($"Decoder failed to send packet for '{_path}' (code {sendRet}).");
+                                }
+                            }
+                            finally
+                            {
+                                ffmpeg.av_packet_unref(_pkt);
+                            }
+                        }
+                    }
+                    else if (!flushSent)
+                    {
+                        int flushRet = ffmpeg.avcodec_send_packet(_codec, null);
+                        if (flushRet < 0 && flushRet != ffmpeg.AVERROR_EOF)
+                            throw new InvalidDataException($"Decoder failed to flush packets for '{_path}' (code {flushRet}).");
+                        flushSent = true;
+                    }
+
+                    while (true)
+                    {
+                        ffmpeg.av_frame_unref(_frm);
+                        int receiveRet = ffmpeg.avcodec_receive_frame(_codec, _frm);
+                        if (receiveRet == 0)
+                        {
+                            if (_currentFrameNumber++ == targetFrame)
+                            {
+                                frameFound = true;
+                                break;
+                            }
+
+                            continue;
                         }
 
-                        continue;
-                    }
-                    else if (_totalFrames < _currentFrameNumber)
-                    {
-                        goto not_found;
+                        if (receiveRet == ffmpeg.AVERROR(ffmpeg.EAGAIN) || receiveRet == ffmpeg.AVERROR_EOF)
+                            break;
+
+                        throw new InvalidDataException($"Decoder failed to receive frame for '{_path}' (code {receiveRet}).");
                     }
 
-                    break;
+                    if (frameFound)
+                        break;
+
+                    if (_eof && flushSent)
+                        break;
+
+                    if (_totalFrames >= 0 && _currentFrameNumber > _totalFrames)
+                        break;
                 }
 
-                if (_eof && flushSent)
-                    break;
-            }
+                if (!frameFound)
+                {
+                    if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
+                    {
+                        Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
+                        return GetFrame(targetFrame - 1, hasAlpha);
+                    }
 
-        not_found:
-            if (EnableLock) locker.Exit();
-            if (Math.Abs(targetFrame - TotalFrames) < 5)
+                    double fps = _fps > 0 ? _fps : 1.0;
+                    double seconds = targetFrame / fps;
+                    throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
+                }
+
+                Index++;
+                int scaledRows = ffmpeg.sws_scale(
+                    _sws,
+                    _frm->data,
+                    _frm->linesize,
+                    0,
+                    _height,
+                    _rgb->data,
+                    _rgb->linesize);
+                if (scaledRows <= 0)
+                    throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+
+                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+            }
+            finally
             {
-                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                return GetFrame(targetFrame - 1, hasAlpha);
+                if (lockTaken)
+                    locker.Exit();
             }
-            double fps = _fps > 0 ? _fps : 1.0;
-            double seconds = targetFrame / fps;
-            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
-
-        found:
-            Index++;
-            ffmpeg.sws_scale(
-                                _sws,
-                                _frm->data,
-                                _frm->linesize,
-                                0,
-                                _height,
-                                _rgb->data,
-                                _rgb->linesize);
-            if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
 
 
         }
@@ -607,6 +727,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
         //[DebuggerNonUserCode()]
         private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
+            // Validate input parameters
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException($"Invalid dimensions: {width}x{height}");
+            if (stride <= 0 || stride < width * 3)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 3})");
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {

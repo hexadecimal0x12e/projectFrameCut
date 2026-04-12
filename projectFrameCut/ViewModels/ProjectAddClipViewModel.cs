@@ -16,10 +16,14 @@ using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Setting.SettingPages;
 using projectFrameCut.Shared;
+using projectFrameCut.Template;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows.Input;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using IPicture = projectFrameCut.Shared.IPicture;
@@ -41,6 +45,34 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public readonly DraftPage _draftPage;
 
     public bool TransformMenuActivatedViaHandleClick = false;
+
+    private void EnsurePlacementTrackExists(bool useSubTrack)
+    {
+        if (useSubTrack)
+        {
+            var trackIndex = _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset).Max();
+            if (!_draftPage.Tracks.ContainsKey(trackIndex))
+            {
+                _draftPage.AddASubTrack(trackIndex);
+            }
+            return;
+        }
+
+        var mainTrackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
+        if (!_draftPage.Tracks.ContainsKey(mainTrackIndex))
+        {
+            _draftPage.AddATrack(mainTrackIndex);
+        }
+    }
+
+    private void BeginTimelineClipPlacement(Func<int, double, ClipElementUI> clipFactory, bool useSubTrack = false, string? name = null)
+    {
+        EnsurePlacementTrackExists(useSubTrack);
+        _draftPage.BeginClipPlacement(
+            clipFactory,
+            useSubTrack ? trackId => trackId >= DraftPage.SubTrackOffset : trackId => trackId < DraftPage.SubTrackOffset,
+            name);
+    }
 
     public string SearchText
     {
@@ -70,6 +102,33 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = 0;
 
+    public bool ShowAllTemplates
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                _ = Task.Run(async () => await FilterAssets());
+            }
+        }
+    } = false;
+
+    public bool NotAddTemplateAsGroup
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
     public string AIPrompt
     {
         get;
@@ -94,7 +153,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
             }
         }
-    } = "Image"; // 默认为图片
+    } = "Image"; // ??????
 
     public int AIVideoDuration
     {
@@ -107,7 +166,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
             }
         }
-    } = 5; // 默认5秒
+    } = 5; // ??5?
 
     public string AIVideoRatio
     {
@@ -120,7 +179,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
             }
         }
-    } = "16:9"; // 默认16:9比例
+    } = "16:9"; // ??16:9??
 
     public string AIImageStyle
     {
@@ -149,7 +208,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = false;
 
-    // AI转场生成相关属性
     public string AITransitionPrompt
     {
         get;
@@ -174,7 +232,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
             }
         }
-    } = 2; // 默认2秒
+    } = 2; // ??2?
 
     public bool IsGeneratingAITransition
     {
@@ -190,7 +248,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = false;
 
-    // 基于选中Clip获取相邻片段信息
+    // ???? Clip ????????
     public bool CanGenerateAITransition
     {
         get
@@ -309,7 +367,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    // 绘图颜色与线宽
+    // ?????????
     public Color DrawingPenColor
     {
         get;
@@ -366,12 +424,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
+    public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
 
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
+    public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
     #endregion
@@ -384,6 +444,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
     public ICommand AddAlternativeSourceClipCommand { get; set; } = null!;
     public ICommand AddAssetClipCommand { get; set; } = null!;
+    public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
     public ICommand AddTransformClipCommand { get; set; } = null!;
     public ICommand AddTransformClipInLeftCommand { get; set; } = null!;
@@ -392,7 +453,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand SelectTransformForPreviewCommand { get; set; } = null!;
     public ICommand GenerateAIContentCommand { get; set; } = null!;
 
-    // AI转场生成相关命令
+    // AI ????????
     public ICommand GenerateAITransitionCommand { get; set; } = null!;
 
     public ICommand DrawingContentUndoCommand { get; set; } = null!;
@@ -407,6 +468,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
+        AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
         AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
@@ -420,7 +482,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddDrawingContentCommand = new Command(async () => await AddDrawingContent());
         GenerateAIContentCommand = new Command(async () => await GenerateAIContent());
 
-        // AI转场生成命令
+        // AI ??????
         GenerateAITransitionCommand = new Command(async (d) => await GenerateAITransition(d));
     }
     #endregion
@@ -433,8 +495,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         RegisterCommands();
         await LoadAssets();
+        LoadTemplates();
         LoadTransforms();
         InitializeTextStyles();
+        await FilterAssets();
         var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
         IsApplicableToLeft = neighbors.left != null;
         IsApplicableToRight = neighbors.right != null;
@@ -445,6 +509,41 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(TransformAddHint));
         OnPropertyChanged(nameof(TransformAddHintText));
         LoadTransforms();
+    }
+
+    public void LoadTemplates()
+    {
+        AvailableTemplates.Clear();
+
+        foreach (var kv in TemplateStore.Templates)
+        {
+            var template = kv.Value;
+            var item = new TemplateItemViewModel(this)
+            {
+                TemplateId = kv.Key,
+                Name = string.IsNullOrWhiteSpace(template.TemplateName) ? kv.Key.ToString() : template.TemplateName,
+                TemplateType = template.TemplateType.ToString(),
+                Scope = template.Scope.ToString(),
+                Template = template
+            };
+
+            if (template is JSONBasedTemplateStructure jsonTemplate)
+            {
+                item.ClipCount = (jsonTemplate.Draft.Clips ?? Array.Empty<object>()).Length;
+                item.TrackCount = (jsonTemplate.Draft.SoundTracks ?? Array.Empty<object>()).Length;
+            }
+
+            AvailableTemplates.Add(item);
+        }
+    }
+
+    private bool ShouldShowTemplateByScope(TemplateItemViewModel template)
+    {
+        if (ShowAllTemplates)
+            return true;
+
+        return string.Equals(template.Scope, TemplateScope.Any.ToString(), StringComparison.OrdinalIgnoreCase)
+            || string.Equals(template.Scope, TemplateScope.Clips.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task LoadAssets()
@@ -485,9 +584,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
         await FilterAssets();
 
-        // 注释：暂时禁用远程可重用资产加载
+        // ???????????????
         /*
-        // 加载远程可重用资产（从多个服务器）
+        // ?????????????????
         try
         {
             var multiServerService = MultiServerRemoteAssetService.Instance;
@@ -516,7 +615,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             Log(ex, "load reuseable asset", this);
         }
 
-        // 初始化过滤列表
+        // ???????
         await FilterAssets();
         */
     }
@@ -528,22 +627,761 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         if (assetViewModel?.OriginalAsset == null) return;
 
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
+        var sourcePath = _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null;
+        BeginTimelineClipPlacement((trackIndex, startX) =>
         {
-            _draftPage.AddATrack(trackIndex);
+            var clip = _draftPage.CreateFromAsset(
+                assetViewModel.OriginalAsset,
+                trackIndex,
+                startX,
+                InternalPluginBase.InternalPluginBaseID,
+                sourcePath);
+
+            _draftPage.RegisterClip(clip, true);
+            _draftPage.AddAClip(clip);
+            return clip;
+        }, name: assetViewModel.Name, useSubTrack: assetViewModel.OriginalAsset.AssetType == AssetType.Audio);
+
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
+    {
+        if (templateViewModel?.Template is not JSONBasedTemplateStructure jsonTemplate)
+        {
+            await _draftPage.DisplayAlertAsync(Localized._Info, "Only JSON templates are supported for timeline insertion.", Localized._OK);
+            return;
         }
 
-        var clip = _draftPage.CreateFromAsset(
-            assetViewModel.OriginalAsset,
-            trackIndex,
-            InternalPluginBase.InternalPluginBaseID,
-            _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null
-        );
+        try
+        {
+            var clonedDraft = JsonSerializer.Deserialize<DraftStructureJSON>(
+                JsonSerializer.Serialize(jsonTemplate.Draft, DraftPage.DraftJSONOption),
+                DraftPage.DraftJSONOption) ?? new DraftStructureJSON();
 
-        _draftPage.RegisterClip(clip, true);
-        _draftPage.AddAClip(clip);
-        ClipAdded?.Invoke(this, EventArgs.Empty);
+            var draftNode = JsonSerializer.SerializeToNode(clonedDraft, DraftPage.DraftJSONOption) as JsonObject;
+            if (draftNode is null)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Error, "Template draft is invalid.", Localized._OK);
+                return;
+            }
+
+            var templateDefaults = jsonTemplate.Variables ?? new Dictionary<string, string?>();
+            var templateDefinitions = jsonTemplate.VariableDefinitions ?? new Dictionary<string, TemplateVariableDefinition>();
+
+            var inputValues = await PromptTemplateValuesWithViewAsync(jsonTemplate, templateViewModel.Name);
+            if (inputValues is null)
+            {
+                return;
+            }
+
+            ReplaceTemplatePlaceholders(draftNode, inputValues, templateDefaults, templateDefinitions);
+            RemapAllTemplateIds(draftNode);
+            EnsurePackagedTemplateAssetsInProject(draftNode, jsonTemplate);
+
+            var remappedDraft = draftNode.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption);
+            if (remappedDraft is null)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Error, "Template draft deserialization failed.", Localized._OK);
+                return;
+            }
+
+            var clipDtos = new List<ClipDraftDTO>();
+            foreach (var obj in remappedDraft.Clips ?? Array.Empty<object>())
+            {
+                var dto = obj switch
+                {
+                    ClipDraftDTO c => c,
+                    JsonElement je => je.Deserialize<ClipDraftDTO>(DraftPage.DraftJSONOption),
+                    _ => null
+                };
+
+                if (dto is not null)
+                {
+                    clipDtos.Add(dto);
+                }
+            }
+
+            var soundtrackDtos = new List<SoundtrackDTO>();
+            foreach (var obj in remappedDraft.SoundTracks ?? Array.Empty<object>())
+            {
+                var dto = obj switch
+                {
+                    SoundtrackDTO s => s,
+                    JsonElement je => je.Deserialize<SoundtrackDTO>(DraftPage.DraftJSONOption),
+                    _ => null
+                };
+
+                if (dto is not null)
+                {
+                    soundtrackDtos.Add(dto);
+                }
+            }
+
+            if (clipDtos.Count == 0 && soundtrackDtos.Count == 0)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no clip/track data.", Localized._OK);
+                return;
+            }
+
+            var allStarts = clipDtos.Select(c => c.StartFrame).Concat(soundtrackDtos.Select(s => s.StartFrame)).ToArray();
+            var minStart = allStarts.Length > 0 ? allStarts.Min() : 0u;
+
+            static uint NormalizeStart(uint value, uint minValue)
+            {
+                if (value <= minValue)
+                {
+                    return 0u;
+                }
+
+                return value - minValue;
+            }
+
+            foreach (var c in clipDtos)
+            {
+                c.StartFrame = NormalizeStart(c.StartFrame, minStart);
+            }
+
+            foreach (var s in soundtrackDtos)
+            {
+                s.StartFrame = NormalizeStart(s.StartFrame, minStart);
+            }
+
+            var importDraft = new DraftStructureJSON
+            {
+                Clips = clipDtos.Cast<object>().ToArray(),
+                SoundTracks = soundtrackDtos.Cast<object>().ToArray(),
+                TargetFrameRate = _draftPage.ProjectInfo.TargetFrameRate,
+                SavedAt = DateTime.Now
+            };
+
+            var (importedClips, _) = DraftImportAndExportHelper.ImportFromJSON(importDraft, _draftPage.ProjectInfo);
+
+            var templateClips = importedClips.Values
+                .Where(c => c.origTrack is not null)
+                .OrderBy(c => c.origTrack ?? 0)
+                .ThenBy(c => c.origX)
+                .ToList();
+
+            if (templateClips.Count == 0)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
+                return;
+            }
+
+            var minTemplateX = templateClips.Min(c => c.origX);
+            var mainTemplateTracks = templateClips
+                .Select(c => c.origTrack ?? 0)
+                .Where(track => track < DraftPage.SubTrackOffset)
+                .Distinct()
+                .OrderBy(track => track)
+                .ToArray();
+            var subTemplateTracks = templateClips
+                .Select(c => c.origTrack ?? 0)
+                .Where(track => track >= DraftPage.SubTrackOffset)
+                .Distinct()
+                .OrderBy(track => track)
+                .ToArray();
+
+            var hasMainTrackClip = mainTemplateTracks.Length > 0;
+            var hasSubTrackClip = subTemplateTracks.Length > 0;
+
+            if (hasMainTrackClip && !hasSubTrackClip)
+            {
+                EnsurePlacementTrackExists(false);
+            }
+            else if (!hasMainTrackClip && hasSubTrackClip)
+            {
+                EnsurePlacementTrackExists(true);
+            }
+            else
+            {
+                EnsurePlacementTrackExists(false);
+                EnsurePlacementTrackExists(true);
+            }
+
+            Predicate<int>? trackFilter = null;
+            if (hasMainTrackClip && !hasSubTrackClip)
+            {
+                trackFilter = trackId => trackId < DraftPage.SubTrackOffset;
+            }
+            else if (!hasMainTrackClip && hasSubTrackClip)
+            {
+                trackFilter = trackId => trackId >= DraftPage.SubTrackOffset;
+            }
+
+            bool hasPlacedTemplate = false;
+            _draftPage.BeginClipPlacement((targetTrack, targetStartX) =>
+            {
+                if (hasPlacedTemplate)
+                {
+                    throw new InvalidOperationException("Template placement has already been committed.");
+                }
+
+                hasPlacedTemplate = true;
+                var xOffset = targetStartX - minTemplateX;
+
+                var mainTrackMap = new Dictionary<int, int>();
+                if (hasMainTrackClip)
+                {
+                    var mainAnchorTrack = targetTrack < DraftPage.SubTrackOffset
+                        ? targetTrack
+                        : _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
+                    if (mainAnchorTrack < 0)
+                    {
+                        mainAnchorTrack = 0;
+                    }
+
+                    for (int i = 0; i < mainTemplateTracks.Length; i++)
+                    {
+                        mainTrackMap[mainTemplateTracks[i]] = mainAnchorTrack + i;
+                    }
+                }
+
+                var subTrackMap = new Dictionary<int, int>();
+                if (hasSubTrackClip)
+                {
+                    var subAnchorTrack = targetTrack >= DraftPage.SubTrackOffset
+                        ? targetTrack
+                        : Math.Max(
+                            DraftPage.SubTrackOffset,
+                            _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset - 1).Max() + 1);
+
+                    for (int i = 0; i < subTemplateTracks.Length; i++)
+                    {
+                        subTrackMap[subTemplateTracks[i]] = subAnchorTrack + i;
+                    }
+                }
+
+                foreach (var trackId in mainTrackMap.Values.Concat(subTrackMap.Values).Distinct().OrderBy(v => v))
+                {
+                    if (_draftPage.Tracks.ContainsKey(trackId))
+                    {
+                        continue;
+                    }
+
+                    if (trackId >= DraftPage.SubTrackOffset)
+                    {
+                        _draftPage.AddASubTrack(trackId);
+                    }
+                    else
+                    {
+                        _draftPage.AddATrack(trackId);
+                    }
+                }
+
+                ClipElementUI? firstClip = null;
+                var placedTemplateClips = new List<ClipElementUI>();
+                foreach (var sourceClip in templateClips)
+                {
+                    if (sourceClip.origTrack is not int sourceTrack)
+                    {
+                        continue;
+                    }
+
+                    var mappedTrack = sourceTrack >= DraftPage.SubTrackOffset
+                        ? subTrackMap[sourceTrack]
+                        : mainTrackMap[sourceTrack];
+                    var mappedX = Math.Max(0, sourceClip.origX + xOffset);
+
+                    sourceClip.origTrack = mappedTrack;
+                    sourceClip.SubLayerIndex = mappedTrack;
+                    sourceClip.origX = mappedX;
+                    sourceClip.layoutX = mappedX;
+                    sourceClip.layoutY = 0;
+                    sourceClip.defaultY = 0;
+                    sourceClip.Clip.TranslationX = mappedX;
+                    sourceClip.Clip.TranslationY = 0;
+
+                    _draftPage.RegisterClip(sourceClip, true);
+                    _draftPage.AddAClip(sourceClip);
+
+                    placedTemplateClips.Add(sourceClip);
+                    firstClip ??= sourceClip;
+                }
+
+                if (!NotAddTemplateAsGroup && placedTemplateClips.Count > 1)
+                {
+                    _ = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
+                }
+
+                _ = _draftPage.UpdateAdjacencyForTrack();
+                return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
+            }, trackFilter, templateViewModel.Name);
+
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "add template", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, $"Failed to add template: {ex.Message}", Localized._OK);
+        }
+    }
+
+    private async Task<Dictionary<string, string?>?> PromptTemplateValuesWithViewAsync(
+        JSONBasedTemplateStructure template,
+        string? templateName)
+    {
+        var inputView = new TemplateCreatePage();
+        var originPopupClosable = _draftPage.IsPopupClosableByTapBackground;
+        EventHandler closeRequestedHandler = async (_, _) => await _draftPage.HidePopup(true);
+        inputView.CloseRequested += closeRequestedHandler;
+
+        try
+        {
+            _draftPage.IsPopupClosableByTapBackground = false;
+            var inputTask = inputView.PromptTemplateValuesAsync(template, $"???{templateName ?? "???"}");
+            await _draftPage.ShowAPopup(inputView, mode: "dialog");
+            return await inputTask;
+        }
+        finally
+        {
+            _draftPage.IsPopupClosableByTapBackground = originPopupClosable;
+            inputView.CloseRequested -= closeRequestedHandler;
+        }
+    }
+
+    private static void ReplaceTemplatePlaceholders(
+        JsonNode? node,
+        IReadOnlyDictionary<string, string?> values,
+        IReadOnlyDictionary<string, string?> defaults,
+        IReadOnlyDictionary<string, TemplateVariableDefinition> definitions)
+    {
+        if (node is JsonObject obj)
+        {
+            var keys = obj.Select(kv => kv.Key).ToArray();
+            foreach (var key in keys)
+            {
+                var current = obj[key];
+                if (current is JsonValue val && TryGetTemplatePlaceholderKey(val, out var placeholderKey))
+                {
+                    if (!TryResolveTemplateVariable(placeholderKey, values, defaults, definitions, out var resolved, out var variableType))
+                    {
+                        throw new KeyNotFoundException($"Missing template variable: {placeholderKey}");
+                    }
+
+                    obj[key] = ConvertTemplateResolvedValue(resolved, variableType);
+                }
+                else
+                {
+                    ReplaceTemplatePlaceholders(current, values, defaults, definitions);
+                }
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                var current = arr[i];
+                if (current is JsonValue val && TryGetTemplatePlaceholderKey(val, out var placeholderKey))
+                {
+                    if (!TryResolveTemplateVariable(placeholderKey, values, defaults, definitions, out var resolved, out var variableType))
+                    {
+                        throw new KeyNotFoundException($"Missing template variable: {placeholderKey}");
+                    }
+
+                    arr[i] = ConvertTemplateResolvedValue(resolved, variableType);
+                }
+                else
+                {
+                    ReplaceTemplatePlaceholders(current, values, defaults, definitions);
+                }
+            }
+        }
+    }
+
+    private static bool TryResolveTemplateVariable(
+        string key,
+        IReadOnlyDictionary<string, string?> values,
+        IReadOnlyDictionary<string, string?> defaults,
+        IReadOnlyDictionary<string, TemplateVariableDefinition> definitions,
+        out string? resolved,
+        out TemplateVariableType variableType)
+    {
+        variableType = TemplateVariableType.Auto;
+        if (definitions.TryGetValue(key, out var def) && def is not null)
+        {
+            variableType = def.Type;
+        }
+
+        if (values.TryGetValue(key, out resolved))
+        {
+            return true;
+        }
+
+        if (values.TryGetValue($"{{{{{key}}}}}", out resolved))
+        {
+            return true;
+        }
+
+        if (def?.DefaultValue is not null)
+        {
+            resolved = def.DefaultValue;
+            return true;
+        }
+
+        if (defaults.TryGetValue(key, out resolved))
+        {
+            return true;
+        }
+
+        if (defaults.TryGetValue($"{{{{{key}}}}}", out resolved))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static JsonNode? ConvertTemplateResolvedValue(string? value, TemplateVariableType type)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        switch (type)
+        {
+            case TemplateVariableType.String:
+            case TemplateVariableType.File:
+                return JsonValue.Create(value);
+
+            case TemplateVariableType.Boolean:
+                if (!bool.TryParse(value, out var boolValue))
+                {
+                    throw new FormatException($"Value '{value}' is not a valid boolean.");
+                }
+                return JsonValue.Create(boolValue);
+
+            case TemplateVariableType.Integer:
+                if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+                {
+                    throw new FormatException($"Value '{value}' is not a valid integer.");
+                }
+                return JsonValue.Create(longValue);
+
+            case TemplateVariableType.Number:
+                if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleValue))
+                {
+                    throw new FormatException($"Value '{value}' is not a valid number.");
+                }
+                return JsonValue.Create(doubleValue);
+
+            case TemplateVariableType.Json:
+                return JsonNode.Parse(value);
+        }
+
+        if (value.StartsWith("json:", StringComparison.OrdinalIgnoreCase))
+        {
+            return JsonNode.Parse(value.Substring(5));
+        }
+
+        if (bool.TryParse(value, out var b))
+        {
+            return JsonValue.Create(b);
+        }
+
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l))
+        {
+            return JsonValue.Create(l);
+        }
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+        {
+            return JsonValue.Create(d);
+        }
+
+        return JsonValue.Create(value);
+    }
+
+    private static bool TryGetTemplatePlaceholderKey(JsonValue value, out string key)
+    {
+        key = string.Empty;
+        if (!value.TryGetValue<string>(out var str) || string.IsNullOrWhiteSpace(str))
+        {
+            return false;
+        }
+
+        var trimmed = str.Trim();
+        if (!trimmed.StartsWith("{{", StringComparison.Ordinal) || !trimmed.EndsWith("}}", StringComparison.Ordinal) || trimmed.Length <= 4)
+        {
+            return false;
+        }
+
+        key = trimmed.Substring(2, trimmed.Length - 4).Trim();
+        return !string.IsNullOrWhiteSpace(key);
+    }
+
+    private void EnsurePackagedTemplateAssetsInProject(JsonNode draftNode, JSONBasedTemplateStructure template)
+    {
+        if (template.AssetHashTable is not { Count: > 0 })
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_draftPage.WorkingPath))
+        {
+            return;
+        }
+
+        var referencedAssetIds = CollectTemplateReferencedAssetIds(draftNode);
+        if (referencedAssetIds.Count == 0)
+        {
+            return;
+        }
+
+        var projectAssetsDir = Path.Combine(_draftPage.WorkingPath, "assets");
+        Directory.CreateDirectory(projectAssetsDir);
+
+        var resolvedAssetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var assetId in referencedAssetIds)
+        {
+            if (!template.AssetHashTable.TryGetValue(assetId, out var packagedSourcePath)
+                || string.IsNullOrWhiteSpace(packagedSourcePath)
+                || !File.Exists(packagedSourcePath))
+            {
+                continue;
+            }
+
+            if (_draftPage.Assets.TryGetValue(assetId, out var existingProjectAsset)
+                && !string.IsNullOrWhiteSpace(existingProjectAsset.Path)
+                && File.Exists(existingProjectAsset.Path))
+            {
+                resolvedAssetPaths[assetId] = existingProjectAsset.Path;
+                continue;
+            }
+
+            var extension = Path.GetExtension(packagedSourcePath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".bin";
+            }
+
+            var copiedPath = Path.Combine(projectAssetsDir, assetId + extension);
+            File.Copy(packagedSourcePath, copiedPath, overwrite: true);
+
+            var projectAsset = AssetDatabase.Assets.TryGetValue(assetId, out var sharedAsset)
+                ? JsonSerializer.Deserialize<AssetItem>(
+                    JsonSerializer.Serialize(sharedAsset, DraftPage.DraftJSONOption),
+                    DraftPage.DraftJSONOption)
+                : null;
+
+            projectAsset ??= new AssetItem();
+            projectAsset.AssetId = assetId;
+            projectAsset.Path = copiedPath;
+            if (projectAsset.AssetType == AssetType.Other)
+            {
+                projectAsset.AssetType = AssetItem.GetAssetType(copiedPath);
+            }
+
+            if (string.IsNullOrWhiteSpace(projectAsset.Name))
+            {
+                projectAsset.Name = Path.GetFileNameWithoutExtension(packagedSourcePath);
+                if (string.IsNullOrWhiteSpace(projectAsset.Name))
+                {
+                    projectAsset.Name = $"Asset@{assetId[..Math.Min(assetId.Length, 8)]}";
+                }
+            }
+
+            if (projectAsset.CreatedAt == default)
+            {
+                projectAsset.CreatedAt = DateTime.Now;
+            }
+
+            _draftPage.Assets[assetId] = projectAsset;
+            resolvedAssetPaths[assetId] = copiedPath;
+        }
+
+        ReplaceTemplateAssetReferencesWithPaths(draftNode, resolvedAssetPaths);
+    }
+
+    private static HashSet<string> CollectTemplateReferencedAssetIds(JsonNode? node)
+    {
+        var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectTemplateReferencedAssetIds(node, refs);
+        return refs;
+    }
+
+    private static void CollectTemplateReferencedAssetIds(JsonNode? node, ISet<string> refs)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var kv in obj)
+            {
+                CollectTemplateReferencedAssetIds(kv.Value, refs);
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            foreach (var item in arr)
+            {
+                CollectTemplateReferencedAssetIds(item, refs);
+            }
+            return;
+        }
+
+        if (node is JsonValue value
+            && value.TryGetValue<string>(out var text)
+            && TryParseTemplateAssetReference(text, out var assetId))
+        {
+            refs.Add(assetId);
+        }
+    }
+
+    private static bool TryParseTemplateAssetReference(string? value, out string assetId)
+    {
+        assetId = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (!trimmed.StartsWith('$') || trimmed.Length <= 1)
+        {
+            return false;
+        }
+
+        assetId = trimmed[1..].Trim();
+        return !string.IsNullOrWhiteSpace(assetId);
+    }
+
+    private static void ReplaceTemplateAssetReferencesWithPaths(JsonNode? node, IReadOnlyDictionary<string, string> resolvedAssetPaths)
+    {
+        if (node is null || resolvedAssetPaths.Count == 0)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var key in obj.Select(kv => kv.Key).ToArray())
+            {
+                var current = obj[key];
+                if (current is JsonValue jsonValue
+                    && jsonValue.TryGetValue<string>(out var text)
+                    && TryParseTemplateAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    obj[key] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceTemplateAssetReferencesWithPaths(current, resolvedAssetPaths);
+                }
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                var current = arr[i];
+                if (current is JsonValue jsonValue
+                    && jsonValue.TryGetValue<string>(out var text)
+                    && TryParseTemplateAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    arr[i] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceTemplateAssetReferencesWithPaths(current, resolvedAssetPaths);
+                }
+            }
+        }
+    }
+
+    private void RemapAllTemplateIds(JsonNode root)
+    {
+        var idMap = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (root["Clips"] is JsonArray clips)
+        {
+            foreach (var item in clips.OfType<JsonObject>())
+            {
+                var id = item["Id"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                idMap[id] = Guid.NewGuid().ToString();
+            }
+        }
+
+        if (root["SoundTracks"] is JsonArray tracks)
+        {
+            foreach (var item in tracks.OfType<JsonObject>())
+            {
+                var id = item["Id"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                idMap[id] = Guid.NewGuid().ToString();
+            }
+        }
+
+        if (idMap.Count == 0)
+        {
+            return;
+        }
+
+        ReplaceMappedStringValues(root, idMap);
+    }
+
+    private static void ReplaceMappedStringValues(JsonNode? node, IReadOnlyDictionary<string, string> idMap)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var key in obj.Select(kv => kv.Key).ToArray())
+            {
+                var value = obj[key];
+                if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var str) && idMap.TryGetValue(str, out var newValue))
+                {
+                    obj[key] = newValue;
+                }
+                else
+                {
+                    ReplaceMappedStringValues(value, idMap);
+                }
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                var value = arr[i];
+                if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var str) && idMap.TryGetValue(str, out var newValue))
+                {
+                    arr[i] = newValue;
+                }
+                else
+                {
+                    ReplaceMappedStringValues(value, idMap);
+                }
+            }
+        }
     }
 
     #endregion
@@ -556,44 +1394,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         if (style is null) return;
         var text = TextToAdd;
         if (string.IsNullOrWhiteSpace(text)) return;
-
-
-        int trackIndex = 0;
-        if (TextClipInSubTrack)
-        {
-            trackIndex = _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-            {
-                _draftPage.AddASubTrack(trackIndex);
-            }
-        }
-        else
-        {
-            trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-            {
-                _draftPage.AddATrack(trackIndex);
-            }
-        }
-
-
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel(300),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: text,
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.TextClip;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = true;
-        element.maxFrameCount = 0;
-        element.ExtraData = new();
 
         var textLang = DetectTextLanguage(text);
         var fontOverride = style.ActualTemplate.fontFamily;
@@ -612,14 +1412,32 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
         }
 
-        if (style != null)
+        BeginTimelineClipPlacement((trackIndex, startX) =>
         {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(300),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
             element.ExtraData["TextEntries"] = new List<TextClipEntry>
             {
                 style.ActualTemplate with { text = text, fontFamily = fontOverride }
             };
 
-        }
+            return element;
+        }, TextClipInSubTrack, name: "Text");
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
         TextToAdd = "";
@@ -700,7 +1518,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         SelectedTextStyle = AvailableTextStyles.FirstOrDefault();
 
-        // 同步过滤
+        // ????
         FilteredAvailableTextStyles.Clear();
         var searchLower = SearchText?.ToLower() ?? "";
         foreach (var s in AvailableTextStyles)
@@ -738,7 +1556,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             });
         }
 
-        // 同步过滤
+        // ????
         FilteredAvailableTransforms.Clear();
         var searchLower = SearchText?.ToLower() ?? "";
         foreach (var t in AvailableTransforms)
@@ -836,7 +1654,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     for (uint i = 0; i < frameCount; i++)
                     {
                         double progress = (double)i / Math.Max(1, frameCount - 1);
-                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i);
+                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i, 8);
                         writer.Append(frame);
                     }
 
@@ -877,23 +1695,26 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
         FilteredReuseableAssets.Clear();
+        FilteredAvailableTemplates.Clear();
 
         List<AssetItemViewModel> localFiltered = new();
         List<AssetItemViewModel> sharedFiltered = new();
         List<AssetItemViewModel> reuseableFiltered = new();
+        List<TemplateItemViewModel> templateFiltered = new();
 
         if (string.IsNullOrWhiteSpace(SearchText))
         {
-            // 如果搜索文本为空，显示所有素材
+            // ????????????????
             localFiltered.AddRange(LocalAssets);
             sharedFiltered.AddRange(SharedAssets);
             reuseableFiltered.AddRange(ReuseableAssets);
+            templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
         }
         else
         {
             var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
             var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
-            // 过滤素材
+            // ????
             var searchLower = SearchText.ToLower();
             foreach (var asset in LocalAssets)
             {
@@ -922,22 +1743,38 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     reuseableFiltered.Add(asset);
                 }
             }
+
+            foreach (var template in AvailableTemplates)
+            {
+                if (!ShouldShowTemplateByScope(template))
+                {
+                    continue;
+                }
+
+                if (template.Name.ToLower().Contains(searchLower)
+                    || template.TemplateType.ToLower().Contains(searchLower)
+                    || template.Scope.ToLower().Contains(searchLower))
+                {
+                    templateFiltered.Add(template);
+                }
+            }
         }
 
-        // 应用排序
+        // ????
         if (OrderOption == 0)
         {
-            // By add date - 使用原始资产的创建时间
+            // By add date - ???????????
             localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             reuseableFiltered = reuseableFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
         }
         else if (OrderOption == 1)
         {
-            // By name - 使用发音排序
+            // By name - ??????
             localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             sharedFiltered = (await sharedFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             reuseableFiltered = (await reuseableFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
+            templateFiltered = (await templateFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
         foreach (var asset in localFiltered)
@@ -953,7 +1790,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             FilteredReuseableAssets.Add(asset);
         }
 
-        // 过滤转场
+        foreach (var template in templateFiltered)
+        {
+            FilteredAvailableTemplates.Add(template);
+        }
+
+        // ????
         FilteredAvailableTransforms.Clear();
         var transformSearch = SearchText?.ToLower() ?? "";
         foreach (var t in AvailableTransforms)
@@ -966,7 +1808,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
         }
 
-        // 过滤文字样式
+        // ??????
         FilteredAvailableTextStyles.Clear();
         var styleSearch = SearchText?.ToLower() ?? "";
         foreach (var s in AvailableTextStyles)
@@ -1051,7 +1893,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             DrawingPenColor = Color.FromRgb(c.R, c.G, c.B);
         }
 #else
-        // 非 Windows 平台：循环切换常用颜色
+        // ? Windows ???????????
         Color[] palette = [Colors.Black, Colors.Red, Colors.Blue, Colors.Green, Colors.Orange, Colors.Purple, Colors.White];
         var idx = Array.FindIndex(palette, c => c == DrawingPenColor);
         DrawingPenColor = palette[(idx + 1) % palette.Length];
@@ -1079,11 +1921,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (imageStream == Stream.Null || imageStream.Length == 0)
             {
-                await _draftPage.DisplayAlertAsync("Error", "Failed to capture drawing.", Localized._OK);
+                await _draftPage.DisplayAlertAsync(Localized._Error, "Failed to capture drawing.", Localized._OK);
                 return;
             }
 
-            // 保存到临时文件
+            // ???????
             var sketchDir = Path.Combine(FileSystem.CacheDirectory, "Sketches");
             Directory.CreateDirectory(sketchDir);
             var tempPath = Path.Combine(sketchDir, $"sketch_{Guid.NewGuid():N}.png");
@@ -1093,44 +1935,39 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 await imageStream.CopyToAsync(fs);
             }
 
-            // 添加到时间轴（Photo Clip，默认 90 帧 / 3 秒）
             const uint defaultFrames = 90u;
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
+            BeginTimelineClipPlacement((trackIndex, startX) =>
+            {
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(defaultFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: "Sketch 1",
+                    background: new SolidColorBrush(Colors.MediumSeaGreen),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: defaultFrames
+                );
 
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(defaultFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: "Sketch 1",
-                background: new SolidColorBrush(Colors.MediumSeaGreen),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: defaultFrames
-            );
+                element.ClipType = ClipMode.PhotoClip;
+                element.SourcePath = tempPath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = defaultFrames;
+                element.ExtraData = new();
 
-            element.ClipType = ClipMode.PhotoClip;
-            element.SourcePath = tempPath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = defaultFrames;
-            element.ExtraData = new();
-
-            // 清空画布
-            _drawingView.Lines.Clear();
-            _redoStack.Clear();
+                _drawingView.Lines.Clear();
+                _redoStack.Clear();
+                return element;
+            }, name: "Drawing");
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             Log(ex, "AddDrawingContent", this);
-            await _draftPage.DisplayAlertAsync("Error", $"Failed to add sketch: {ex.Message}", Localized._OK);
+            await _draftPage.DisplayAlertAsync(Localized._Error, $"Failed to add sketch: {ex.Message}", Localized._OK);
         }
     }
 
@@ -1139,12 +1976,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     #region misc
     public async Task AddSolidColorClip()
     {
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
-        {
-            _draftPage.AddATrack(trackIndex);
-        }
-
         ushort R = 65535, G = 65535, B = 65535;
         float A = 1f;
 
@@ -1174,28 +2005,32 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         G = (ushort)(picker.SelectedColor.Green * ushort.MaxValue);
         B = (ushort)(picker.SelectedColor.Blue * ushort.MaxValue);
         A = picker.SelectedColor.Alpha;
+        var colorStr = $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{(int)(A * 255):X2}";
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(90),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: colorStr,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
 
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel(90),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{(int)(A * 255):X2}",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.SolidColorClip;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = true;
-        element.maxFrameCount = 0;
-        element.ExtraData["R"] = R;
-        element.ExtraData["G"] = G;
-        element.ExtraData["B"] = B;
-        element.ExtraData["A"] = A;
-        element.isInfiniteLength = true;
+            element.ClipType = ClipMode.SolidColorClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData["R"] = R;
+            element.ExtraData["G"] = G;
+            element.ExtraData["B"] = B;
+            element.ExtraData["A"] = A;
+            element.isInfiniteLength = true;
+            return element;
+        }, name: colorStr);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
@@ -1206,33 +2041,31 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         var path = await _draftPage.DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream id>");
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
-        {
-            _draftPage.AddATrack(trackIndex);
-        }
-
         var vidSrc = PluginManager.CreateVideoSource(path);
 
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel((uint)vidSrc.TotalFrames),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: "Alternative source 1",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel((uint)vidSrc.TotalFrames),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: "Alternative source 1",
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
 
-        element.ClipType = ClipMode.VideoClip;
-        element.SourcePath = path;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = false;
-        element.maxFrameCount = (uint)vidSrc.TotalFrames;
-        element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
-        element.ExtraData = new();
+            element.ClipType = ClipMode.VideoClip;
+            element.SourcePath = path;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = false;
+            element.maxFrameCount = (uint)vidSrc.TotalFrames;
+            element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
+            element.ExtraData = new();
+            return element;
+        }, name: path);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
@@ -1244,29 +2077,29 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         try
         {
-            // 如果是远程资产，需要先获取访问 token 并下载
+            // ??????????????? token ???
             if (assetViewModel.IsRemote)
             {
-                // 显示加载提示
-                // TODO: 添加加载指示器
+                // ??????
+                // TODO: ???????
 
-                // 从多服务器系统获取文件 token
+                // ??????????? token
                 var multiServerService = MultiServerRemoteAssetService.Instance;
                 var tokenResponse = await multiServerService.GetFileTokenAsync(assetViewModel.ServerId ?? "", assetViewModel.Id);
 
                 if (tokenResponse == null)
                 {
-                    await _draftPage.DisplayAlertAsync("错误", "无法获取文件访问令牌", "确定");
+                    await _draftPage.DisplayAlertAsync(Localized._Error, "Cannot get file access token.", Localized._OK);
                     return;
                 }
 
-                // 构建文件下载 URL（使用资产所属服务器的 URL）
+                // ?????? URL?????????? URL?
                 var serverBaseUrl = assetViewModel.ServerUrl?.TrimEnd('/') ?? "";
                 var fileServerUri = new Uri($"{serverBaseUrl}/api/file/download?token={tokenResponse.token}");
 
                 Log($"Downloading asset from {fileServerUri}...");
 
-                // 下载文件到缓存目录
+                // ?????????
                 var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets", assetViewModel.ServerId ?? "default");
                 if (!Directory.Exists(cacheDir))
                 {
@@ -1276,11 +2109,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var fileName = Path.GetFileName(assetViewModel.OriginalAsset.Path) ?? $"{assetViewModel.Id}{Path.GetExtension(assetViewModel.OriginalAsset.Path)}";
                 var localPath = Path.Combine(cacheDir, fileName);
 
-                // 如果文件已经存在，直接使用
+                // ????????????
                 if (!File.Exists(localPath))
                 {
 #if DEBUG
-                    // 开发环境：忽略 SSL 证书验证
+                    // ??????? SSL ????
                     var handler = new HttpClientHandler
                     {
                         ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
@@ -1296,33 +2129,31 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     await response.Content.CopyToAsync(fileStream);
                 }
 
-                // 更新资产的路径为本地缓存路径
+                // ?????????????
                 assetViewModel.OriginalAsset.Path = localPath;
             }
 
-            var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                _draftPage.AddATrack(trackIndex);
-            }
+                var clip = _draftPage.CreateFromAsset(
+                    assetViewModel.OriginalAsset,
+                    trackIndex,
+                    startX,
+                    InternalPluginBase.InternalPluginBaseID,
+                    assetViewModel.SourcePath
+                );
 
-            var clip = _draftPage.CreateFromAsset(
-                assetViewModel.OriginalAsset,
-                trackIndex,
-                InternalPluginBase.InternalPluginBaseID,
-                assetViewModel.SourcePath
-            );
-
-            _draftPage.RegisterClip(clip, true);
-
-            _draftPage.AddAClip(clip);
+                _draftPage.RegisterClip(clip, true);
+                _draftPage.AddAClip(clip);
+                return clip;
+            }, name: assetViewModel.Name);
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             Log(ex, "load reuseabel asset", this);
-            await _draftPage.DisplayAlertAsync("Error", $"Failed to add asset: {ex.Message}", "OK");
+            await _draftPage.DisplayAlertAsync(Localized._Error, $"Failed to add asset: {ex.Message}", Localized._OK);
         }
     }
     #endregion
@@ -1335,14 +2166,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "Please input prompt.",
+                Localized.DraftPage_AddClipView_AIGC_InputPlaceholder,
                 Localized._OK);
             return;
         }
 
         if (IsGeneratingAIContent)
         {
-            return; // 防止重复触发
+            return; // ??????
         }
 
         IsGeneratingAIContent = true;
@@ -1376,10 +2207,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
-            // 根据比例设定解析宽高（复用视频比例解析逻辑）
+            // ??????????
             var (width, height) = ParseVideoRatio(AIVideoRatio);
 
-            // 将 UI 风格字符串映射到 ImageStyle 枚举
+            // ? UI ???????? ImageStyle ??
             var imageStyle = AIImageStyle switch
             {
                 var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Natural => ImageStyle.Natural,
@@ -1390,7 +2221,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 _ => ImageStyle.Natural
             };
 
-            // 创建图片生成选项
+            // ????????
             var options = new ImageGenerationOptions
             {
                 Width = width,
@@ -1399,7 +2230,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Quality = ImageQuality.Standard
             };
 
-            // 调用AI生成图片
+            // ?? AI ????
             var result = await AIHelper.GenerateImageAsync(AIPrompt, options);
 
             if (!result.Success)
@@ -1421,7 +2252,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // 下载图片到本地并添加到素材库
+            // ??????????????
             var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.ImageUrl, "png", "AIGenerated-{0}");
             if (asset == null)
             {
@@ -1432,13 +2263,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // 添加图片到时间轴
+            // ????????
             await AddAIGeneratedImageToTimeline(asset.Path, AIPrompt);
 
-            // 清空输入
+            // ????
             AIPrompt = "";
 
-            // 通知添加成功
+            // ??????
             ClipAdded?.Invoke(this, EventArgs.Empty);
             await _draftPage.HidePopup(true);
         }
@@ -1455,39 +2286,35 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         try
         {
             const uint defaultFrames = 90u;
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(defaultFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: $"AI: {string.Join("", prompt.Take(20).ToArray())}",
-                background: new SolidColorBrush(Colors.Orange),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: defaultFrames
-            );
-
-            element.ClipType = ClipMode.PhotoClip;
-            element.SourcePath = imagePath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = defaultFrames;
-            element.ExtraData = new Dictionary<string, object>
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                ["IsAI"] = true,
-                ["AIPrompt"] = prompt,
-                ["GeneratedAt"] = DateTime.Now,
-                ["ImageRatio"] = AIVideoRatio,
-                ["ImageStyle"] = AIImageStyle
-            };
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(defaultFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: $"AI: {string.Join("", prompt.Take(20).ToArray())}",
+                    background: new SolidColorBrush(Colors.Orange),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: defaultFrames
+                );
+
+                element.ClipType = ClipMode.PhotoClip;
+                element.SourcePath = imagePath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = defaultFrames;
+                element.ExtraData = new Dictionary<string, object>
+                {
+                    ["IsAI"] = true,
+                    ["AIPrompt"] = prompt,
+                    ["GeneratedAt"] = DateTime.Now,
+                    ["ImageRatio"] = AIVideoRatio,
+                    ["ImageStyle"] = AIImageStyle
+                };
+                return element;
+            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
         }
         catch (Exception ex)
         {
@@ -1565,7 +2392,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             "1:1" => (1024, 1024),
             "4:3" => (1024, 768),
             "3:4" => (768, 1024),
-            _ => (1280, 720) // 默认16:9
+            _ => (1280, 720) // ??16:9
         };
     }
 
@@ -1584,39 +2411,35 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
             catch { }
 
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(totalFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: $"AI Video: {string.Join("", prompt.Take(20).ToArray())}",
-                background: new SolidColorBrush(Colors.Purple),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: totalFrames
-            );
-
-            element.ClipType = ClipMode.VideoClip;
-            element.SourcePath = videoPath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = totalFrames;
-            element.ExtraData = new Dictionary<string, object>
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                ["IsAI"] = true,
-                ["AIPrompt"] = prompt,
-                ["GeneratedAt"] = DateTime.Now,
-                ["VideoDuration"] = AIVideoDuration,
-                ["VideoRatio"] = AIVideoRatio
-            };
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(totalFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: $"AI Video: {string.Join("", prompt.Take(20).ToArray())}",
+                    background: new SolidColorBrush(Colors.Purple),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: totalFrames
+                );
+
+                element.ClipType = ClipMode.VideoClip;
+                element.SourcePath = videoPath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = totalFrames;
+                element.ExtraData = new Dictionary<string, object>
+                {
+                    ["IsAI"] = true,
+                    ["AIPrompt"] = prompt,
+                    ["GeneratedAt"] = DateTime.Now,
+                    ["VideoDuration"] = AIVideoDuration,
+                    ["VideoRatio"] = AIVideoRatio
+                };
+                return element;
+            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
         }
         catch (Exception ex)
         {
@@ -1644,12 +2467,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "Invalid transition direction.",
+                Localized.DraftPage_AddClipView_AddTransform_AddInSelectedDirection,
                 Localized._OK);
             return;
         }
 
-        // 验证是否有选中的Clip和相邻Clip
+        // ???????? Clip ??? Clip
         var selectedClip = _draftPage?.SelectedClip;
         var (leftClip, rightClip) = _draftPage!.FindNeighbors(selectedClip);
 
@@ -1666,7 +2489,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "Please input prompt",
+                Localized.DraftPage_AddClipView_AIGC_InputPlaceholder,
                 Localized._OK);
             return;
         }
@@ -1682,11 +2505,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var durationInSeconds = AITransitionDuration switch
             {
-                0 => 1,  // 1秒
-                1 => 2,  // 2秒
-                2 => 3,  // 3秒
-                3 => 5,  // 5秒
-                _ => 2   // 默认2秒
+                0 => 1,  // 1?
+                1 => 2,  // 2?
+                2 => 3,  // 3?
+                3 => 5,  // 5?
+                _ => 2   // ??2?
             };
             IPicture? firstFrame = null!, lastFrame = null!;
 
@@ -1707,7 +2530,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "Invalid transition direction.",
+                Localized.DraftPage_AddClipView_AddTransform_AddInSelectedDirection,
                 Localized._OK);
                 return;
             }
@@ -1774,7 +2597,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            var sourcePath = asset.Path; // 捕获到局部变量中
+            var sourcePath = asset.Path; // ????????
 
             _draftPage.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
             {
@@ -1809,13 +2632,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
-            // 将ClipElementUI转换为IClip以获取帧数据
+            // ? ClipElementUI ??? IClip ??????
             var clipData = ConvertClipElementToIClip(clipElement);
             if (clipData == null) return null;
 
-            // 获取片段的最后一帧
+            // ?????????
             var lastFrameIndex = clipData.Duration > 0 ? clipData.Duration - 1 : 0;
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, false);
+            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, 8);
 
             return frame;
         }
@@ -1833,7 +2656,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var clipData = ConvertClipElementToIClip(clipElement);
             if (clipData == null) return null;
 
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, false);
+            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
 
             return frame;
         }
@@ -1848,11 +2671,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
-            // 导出单个Clip的数据
-            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true);
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftData);
+            // ???? Clip ???
+            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true, false);
+            var clips = DraftImportAndExportHelper.JSONToIClips(draftData, true, 8);
 
-            // 根据ID查找对应的IClip
+            // ?? ID ????? IClip
             return clips.FirstOrDefault(c => c.Id == clipElement.Id);
         }
         catch (Exception ex)
@@ -1889,7 +2712,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 IsAIGenerated = true
             };
 
-            // 生成缩略图
+            // ?????
             var thumbnailsDir = Path.Combine(workingPage.WorkingPath, "assets", ".thumbnails");
             Directory.CreateDirectory(thumbnailsDir);
             var thumbnailPath = Path.Combine(thumbnailsDir, id.ToString() + ".png");
@@ -1909,7 +2732,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                         }
                     case AssetType.Image:
                         {
-                            // 图片直接使用原路径作为缩略图
+                            // ??????????????
                             item.ThumbnailPath = localPath;
                             break;
                         }
@@ -1955,17 +2778,17 @@ public class AssetItemViewModel
     public bool IsRemote { get; set; } = false;
 
     /// <summary>
-    /// 远程服务器ID（用于多服务器支持）
+    /// ????? ID??????????
     /// </summary>
     public string? ServerId { get; set; }
 
     /// <summary>
-    /// 远程服务器名称
+    /// ???????
     /// </summary>
     public string? ServerName { get; set; }
 
     /// <summary>
-    /// 远程服务器URL
+    /// ????? URL
     /// </summary>
     public string? ServerUrl { get; set; }
 
@@ -1978,6 +2801,26 @@ public class AssetItemViewModel
     public AssetItemViewModel(ProjectAddClipViewModel parent)
     {
         AddAssetClipCommand = new Command(async () => await parent.AddAssetClip(this));
+    }
+}
+
+public class TemplateItemViewModel
+{
+    public Guid TemplateId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string TemplateType { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+    public int ClipCount { get; set; }
+    public int TrackCount { get; set; }
+    public ITemplateStructure Template { get; set; } = default!;
+
+    public string Summary => Localized.DraftPage_AssetPanel_Templates_Summary(ClipCount, TrackCount);
+
+    public Command AddTemplateCommand { get; set; }
+
+    public TemplateItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddTemplateCommand = new Command(async () => await parent.AddTemplate(this));
     }
 }
 
@@ -2034,9 +2877,9 @@ public class TransformItemViewModel : INotifyPropertyChanged
 
     public TransformItemViewModel(ProjectAddClipViewModel parent)
     {
-        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this,false,false));
-        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this,true,false));
-        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this,false,true));
+        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this, false, false));
+        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this, true, false));
+        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this, false, true));
     }
 }
 
@@ -2079,3 +2922,5 @@ public class TextStyleItemViewModel
 }
 
 #endregion
+
+

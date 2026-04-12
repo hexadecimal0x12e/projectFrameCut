@@ -6,11 +6,14 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class NormalSoundTrack : ISoundTrack
     {
+        private bool disposedValue;
+
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public TrackMode TrackType => TrackMode.NormalTrack;
@@ -21,9 +24,47 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
-        public float Ratio { get; init; }
-        public float Volume { get; init; }
+        public float Ratio { get; set; } = 1f;
+        public float Volume { get; set; } = 1f;
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; }
+
+        public bool NeedFilePath => true;
+        public string? FilePath { get; set; }
+
+        [JsonIgnore]
         public IAudioSource? AudioSource { get; set; }
+
+        public int SamplePerSecond => AudioSource?.SamplePerSecond ?? 0;
+
+
+        public IAudioSamples GetAudioSamplesRelatedToStartPointOfSource(uint startIndex, int length) => AudioSource?.GetSample(startIndex, length) ?? throw new InvalidOperationException("AudioSource is not set.");
+
+        public void ReInit()
+        {
+            AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    AudioSource?.Dispose();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 
     public class SoundTrackToClipWrapper : IClip
@@ -34,22 +75,24 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public string Id { get; init; }
         public string Name { get; init; }
-        public string? BindedSoundTrack { get => SoundTrack?.Id; init { throw new NotSupportedException(); } }
+        public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
 
         public ISoundTrack SoundTrack { get; set; }
@@ -67,6 +110,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }
@@ -89,6 +142,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
+        }
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
         }
     }
 }

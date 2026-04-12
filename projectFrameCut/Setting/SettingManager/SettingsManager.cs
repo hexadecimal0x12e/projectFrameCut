@@ -40,7 +40,7 @@ namespace projectFrameCut.Setting.SettingManager
         }
 
         [DebuggerNonUserCode()]
-        public static T GetSettingAs<T>(string key, T onNotExist, T? onFail = default)
+        public static T GetSettingAs<T>(string key, T onNotExist, T? onFail = default) where T : notnull
         {
             if (Settings.TryGetValue(key, out var value))
             {
@@ -49,14 +49,26 @@ namespace projectFrameCut.Setting.SettingManager
                     var t = typeof(T);
                     var method = t?.GetMethod("Parse", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, new Type[] { typeof(string) }, null);
                     var result = method?.Invoke(null, [value]);
-                    return (T)result;
+                    if (result is T r)
+                    {
+                        return r;
+                    }
+                    else
+                    {
+                        return onFail ?? throw new InvalidCastException($"'{value}' ({key}) cannot be parsed to {typeof(T).Name}.");
+                    }
                 }
                 catch (Exception ex)
                 {
                     return onFail ?? throw new InvalidCastException($"'{value}' ({key}) cannot be parsed to {typeof(T).Name}.", ex);
                 }
             }
-            return onNotExist;
+            else
+            {
+                if (onNotExist is not null) WriteSetting(key, onNotExist.ToString());
+                return onNotExist;
+            }
+
         }
 
         [DebuggerNonUserCode()]

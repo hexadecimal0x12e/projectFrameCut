@@ -11,17 +11,6 @@ using SixLabors.ImageSharp.Drawing.Processing;
 
 namespace projectFrameCut.Shared
 {
-    [Obsolete("This enum is deprecated and will be removed in future versions. We have no plan on custom type of mixturing.")]
-    public enum MixtureMode
-    {
-        Overlay,
-        Add,
-        Minus,
-        Multiply,
-        RemoveColor,
-        ExtendMixture,
-    }
-
     public enum ClipMode
     {
         VideoClip,
@@ -52,13 +41,23 @@ namespace projectFrameCut.Shared
         SpecialTrack
     }
 
+    [Flags]
     public enum EffectType
     {
         NormalEffect,
         ContinuousEffect,
         BindableEffect,
-        AudioEffect,
-        NotSpecified = -1
+        AudioNormalEffect,
+        AudioContinuousEffect,
+        AudioBindableEffect,
+        NotSpecified = -1,
+    }
+
+    public enum EffectTarget
+    {
+        Video,
+        Audio,
+        NotSpecified = -1,
     }
 
     public enum BindableArgumentEffectType

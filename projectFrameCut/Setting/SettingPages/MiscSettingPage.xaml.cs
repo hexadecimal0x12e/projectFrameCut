@@ -30,12 +30,9 @@ public partial class MiscSettingPage : ContentPage
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc()))
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
-            .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
-            .AddSwitch("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"))
-            .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
-             .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
+            .AddButton(Localized.MainSettingsPage_Tab_Advanced, async (s, e) => await Navigation.PushAsync(new SettingPages.AdvancedSettingPage()))
             .AddSeparator()
-            .AddText(new SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Misc_Reset, 25, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
             (b) =>
             {

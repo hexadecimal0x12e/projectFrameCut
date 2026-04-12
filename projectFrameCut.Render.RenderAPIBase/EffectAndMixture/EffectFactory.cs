@@ -30,6 +30,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public Dictionary<string, string> ParametersType { get; }
 
         /// <summary>
+        /// Get the target of this effect.
+        /// </summary>
+        public EffectTarget Target { get; }
+
+
+        /// <summary>
         /// Build a effect with default implementation type.
         /// </summary>
         /// <param name="parameters"></param>
@@ -49,10 +55,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public EffectImplementType[] SupportsImplementTypes { get; }
         /// <summary>
         /// Gets the default effect implementation type supported by this instance.
+        /// <b>Now EffectHelper will automatically determine the EffectImplementType while converts EffectBundle to effects.  This property is not used in this case.</b>
         /// </summary>
-        /// <remarks>The default implementation type is determined by the first entry in the
+        /// <remarks>
+        /// The default implementation type is determined by the first entry in the
         /// SupportsImplementTypes array. If no implementation types are supported, the value is
-        /// EffectImplementType.NotSpecified.</remarks>
+        /// EffectImplementType.NotSpecified.
+        /// </remarks>
         public virtual EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
 
     }
@@ -85,7 +94,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="implementType"></param>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null);
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null);
 
         IEffect IEffectFactory.Build(EffectImplementType implementType, Dictionary<string, object>? parameters)
         {
@@ -107,13 +116,111 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             ArgumentNullException.ThrowIfNull(factories);
             if (!factories.TryGetValue(effect.TypeName, out var factory))
             {
-                if(factories.First(f => f.Value.TypeName.Equals(effect.TypeName, StringComparison.Ordinal)).Value is IEffectFactory foundFactory)
+                if (factories.First(f => f.Value.TypeName.Equals(effect.TypeName, StringComparison.Ordinal)).Value is IEffectFactory foundFactory)
                 {
                     return foundFactory;
                 }
                 throw new InvalidOperationException($"No EffectFactory found for Effect TypeName '{effect.TypeName}'.");
             }
             return factory;
+        }
+
+        public static EffectImplementType[] DetermineEffectImplementTypes(IEffectFactory[] factories)
+        {
+            ArgumentNullException.ThrowIfNull(factories);
+            if (factories.Length == 0)
+            {
+                return [];
+            }
+
+            static int GetPriorityPenalty(EffectImplementType type)
+            {
+                return type switch
+                {
+                    EffectImplementType.HwAcceleration => 0,
+                    EffectImplementType.IPicture => 1,
+                    EffectImplementType.ImageSharp => 2,
+                    EffectImplementType.NotSpecified => 100,
+                    _ => 50,
+                };
+            }
+
+            // DP state: for each candidate type at position i, keep the best path ending with it.
+            var states = new List<Dictionary<EffectImplementType, (int Switches, int PriorityPenalty, EffectImplementType PrevType)>>();
+
+            for (int i = 0; i < factories.Length; i++)
+            {
+                var supports = factories[i].SupportsImplementTypes;
+                if (supports == null || supports.Length == 0)
+                {
+                    supports = [EffectImplementType.NotSpecified];
+                }
+
+                // Remove duplicates while preserving enumeration order.
+                var uniqueSupports = new List<EffectImplementType>();
+                foreach (var t in supports)
+                {
+                    if (!uniqueSupports.Contains(t))
+                    {
+                        uniqueSupports.Add(t);
+                    }
+                }
+
+                var current = new Dictionary<EffectImplementType, (int Switches, int PriorityPenalty, EffectImplementType PrevType)>();
+
+                if (i == 0)
+                {
+                    foreach (var t in uniqueSupports)
+                    {
+                        current[t] = (0, GetPriorityPenalty(t), EffectImplementType.NotSpecified);
+                    }
+                }
+                else
+                {
+                    var previous = states[i - 1];
+                    foreach (var t in uniqueSupports)
+                    {
+                        var best = (Switches: int.MaxValue, PriorityPenalty: int.MaxValue, PrevType: EffectImplementType.NotSpecified);
+                        foreach (var prev in previous)
+                        {
+                            var switches = prev.Value.Switches + (prev.Key == t ? 0 : 1);
+                            var penalty = prev.Value.PriorityPenalty + GetPriorityPenalty(t);
+                            if (switches < best.Switches || (switches == best.Switches && penalty < best.PriorityPenalty))
+                            {
+                                best = (switches, penalty, prev.Key);
+                            }
+                        }
+
+                        current[t] = best;
+                    }
+                }
+
+                states.Add(current);
+            }
+
+            var result = new EffectImplementType[factories.Length];
+            var lastCandidates = states[^1];
+
+            var bestLastType = EffectImplementType.NotSpecified;
+            var bestLastState = (Switches: int.MaxValue, PriorityPenalty: int.MaxValue, PrevType: EffectImplementType.NotSpecified);
+
+            foreach (var candidate in lastCandidates)
+            {
+                if (candidate.Value.Switches < bestLastState.Switches ||
+                    (candidate.Value.Switches == bestLastState.Switches && candidate.Value.PriorityPenalty < bestLastState.PriorityPenalty))
+                {
+                    bestLastType = candidate.Key;
+                    bestLastState = candidate.Value;
+                }
+            }
+
+            result[^1] = bestLastType;
+            for (int i = factories.Length - 1; i > 0; i--)
+            {
+                result[i - 1] = states[i][result[i]].PrevType;
+            }
+
+            return result;
         }
 
 
@@ -125,7 +232,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static IEffect BuildAndInitialize(this IEffectFactory factory, EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
             ArgumentNullException.ThrowIfNull(factory);
-            if(!factory.SupportsImplementTypes.Contains(implementType))
+            if (!factory.SupportsImplementTypes.Contains(implementType))
             {
                 throw new InvalidOperationException($"EffectFactory '{factory.TypeName}' does not support ImplementType '{implementType}'.");
             }

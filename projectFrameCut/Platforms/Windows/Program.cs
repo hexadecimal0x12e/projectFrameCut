@@ -3,6 +3,8 @@
 // in MAUI, if the namespace for WinUI's base is not '$(RootNamespace).WinUI', it will let whole App not working.
 #nullable enable
 
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -30,10 +32,15 @@ namespace projectFrameCut.WinUI
             Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
             try
             {
+                try
+                {
+                    SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+                }
+                catch { }
                 if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
                 {
                     var opt = MessageBox(IntPtr.Zero,
-                        "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
+                          SimpleLocalizerBaseGeneratedHelper.Localized?.UnsupportedOSPrompt() ?? "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
                         "projectFrameCut",
                         0x10 | 0x4);
                     if (opt == 6)
@@ -44,6 +51,16 @@ namespace projectFrameCut.WinUI
                             UseShellExecute = true
                         });
                     }
+                    return;
+                }
+                if (Services.AdminServices.IsRunningAsAdministrator())
+                {
+
+                    _ = MessageBox(IntPtr.Zero,
+                        SimpleLocalizerBaseGeneratedHelper.Localized.AdminPrompt() ?? "Sorry, projectFrameCut does not support running with administrator privileges. Reboot the app in a context which is without administrator privileges.",
+                        "projectFrameCut",
+                        0x10);
+                    Environment.Exit(-1);
                     return;
                 }
                 try
@@ -72,13 +89,9 @@ namespace projectFrameCut.WinUI
                 {
                     Log(ex, "Read channel");
                 }
-                if (args.Length == 1)
+                if (args.Length > 0 && args[0].StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (args[0].StartsWith("pjfc:"))
-                    {
-                        args = args[0].Substring(5).Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-                        Log("Params read from protocol: " + string.Join(' ', args));
-                    }
+                    args = ParseProtocolArgs(args);
                 }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
@@ -125,6 +138,7 @@ namespace projectFrameCut.WinUI
                     var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=', 2)[1];
                     UserDataPathOverride = userDataPath;
                 }
+                MauiProgram.CmdlineArgs = args;
             }
             catch
             {
@@ -140,10 +154,9 @@ namespace projectFrameCut.WinUI
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
-                Log("Application exited.");
+                Helper.CrashHandler.Handler?.Kill(true);
                 _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
-                MauiProgram.LogWriter.Flush();
                 try
                 {
                     foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
@@ -156,6 +169,8 @@ namespace projectFrameCut.WinUI
                     }
                 }
                 catch { }
+                Log("Application exited.");
+                MauiProgram.LogWriter.Flush();
                 Environment.Exit(0);
                 return;
             }
@@ -171,6 +186,97 @@ namespace projectFrameCut.WinUI
 
         }
 
+        private static string[] ParseProtocolArgs(string[] args)
+        {
+            var protocolPayload = args[0].Substring(5);
+
+            if (TryParseFileProtocolPayload(protocolPayload, out var filePath, out var queryArgs))
+            {
+                var parsedArgs = new List<string> { filePath };
+                parsedArgs.AddRange(queryArgs);
+                parsedArgs.AddRange(args.Skip(1));
+
+                Log("Params read from protocol URI: " + string.Join(' ', parsedArgs.Select(c => $"'{c}'")));
+                return parsedArgs.ToArray();
+            }
+
+            // Keep legacy behavior for protocol payloads like "pjfc:--log --noSplash".
+            var fallbackArgs = protocolPayload
+                .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Concat(args.Skip(1))
+                .ToArray();
+            Log("Params read from protocol: " + string.Join(' ', fallbackArgs.Select(c => $"'{c}'")));
+            return fallbackArgs;
+        }
+
+        private static bool TryParseFileProtocolPayload(string payload, out string filePath, out string[] queryArgs)
+        {
+            filePath = string.Empty;
+            queryArgs = Array.Empty<string>();
+
+            if (!payload.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var queryStartIndex = payload.IndexOf('?');
+            var fileUriText = queryStartIndex >= 0 ? payload[..queryStartIndex] : payload;
+            var query = queryStartIndex >= 0 ? payload[(queryStartIndex + 1)..] : string.Empty;
+
+            if (!Uri.TryCreate(fileUriText, UriKind.Absolute, out var fileUri) ||
+                !string.Equals(fileUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            filePath = fileUri.LocalPath;
+            if (OperatingSystem.IsWindows() && filePath.Length >= 3 && filePath[0] == '/' && char.IsLetter(filePath[1]) && filePath[2] == ':')
+            {
+                filePath = filePath[1..];
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return false;
+            }
+
+            queryArgs = ParseQueryArguments(query).ToArray();
+            return true;
+        }
+
+        private static IEnumerable<string> ParseQueryArguments(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                yield break;
+            }
+
+            foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var equalsIndex = segment.IndexOf('=');
+                if (equalsIndex < 0)
+                {
+                    var decodedSingle = Uri.UnescapeDataString(segment.Replace('+', ' '));
+                    if (!string.IsNullOrWhiteSpace(decodedSingle))
+                    {
+                        yield return decodedSingle;
+                    }
+                    continue;
+                }
+
+                var keyPart = segment[..equalsIndex];
+                if (string.IsNullOrWhiteSpace(keyPart))
+                {
+                    continue;
+                }
+
+                var valuePart = segment[(equalsIndex + 1)..];
+                var decodedKey = Uri.UnescapeDataString(keyPart.Replace('+', ' '));
+                var decodedValue = Uri.UnescapeDataString(valuePart.Replace('+', ' '));
+                yield return $"{decodedKey}={decodedValue}";
+            }
+        }
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
@@ -178,7 +284,6 @@ namespace projectFrameCut.WinUI
         public static void Crash(Exception ex)
         {
             MauiProgram.LogWriter?.Flush();
-
 #if DEBUG
             if (Debugger.IsAttached)
             {
@@ -187,14 +292,21 @@ namespace projectFrameCut.WinUI
 #endif
             try
             {
-                MauiProgram.LogWriter?.WriteLine("FATAL: CRASH");
-                Log("FATAL: projectFrameCut encountered an unhandled exception and is going to crash.", "fatal");
+                MauiProgram.LogWriter?.WriteLine("*** FATAL: CRASH");
                 Log(ex, "", "Application");
                 Log($"Crash() is invoked by:{Environment.StackTrace}.", "fatal");
                 MauiProgram.LogWriter?.Flush();
 
             }
             catch (Exception) { }
+            try
+            {
+                if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it
+                {
+                    Environment.Exit(ex.HResult);
+                }
+            }
+            catch { }
             finally
             {
                 string innerExceptionInfo = "None";
@@ -224,7 +336,12 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
-                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}";
+                    appInfo = 
+$"""
+{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
+Assembly: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}
+IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+""";
                 }
                 catch { }
                 var content =
@@ -266,6 +383,7 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
+  
                 if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
                 {
                     try
@@ -302,6 +420,15 @@ Current directory: {Environment.CurrentDirectory}
                 Environment.FailFast(logMessage, ex);
                 Environment.Exit(ex.HResult);
             }
+        }
+
+        public static void RebootApp()
+        {
+            var proc = new Process();
+            proc.StartInfo.FileName = "pjfc:";
+            proc.StartInfo.UseShellExecute = true;
+            proc.StartInfo.CreateNoWindow = false;
+            proc.Start();
         }
 
     }

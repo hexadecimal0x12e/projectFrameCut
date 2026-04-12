@@ -103,8 +103,11 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async Task AddAsset(string path)
     {
-       
-        await AssetDatabase.Add(path, this);
+        var asset = await AssetDatabase.Add(path, this);
+        if(asset?.AssetType == AssetType.Font)
+        {
+            await MainSettingsPage.RebootApp(this);
+        }
         if (BindingContext is AssetViewModel vm)
         {
             vm.LoadAssets();
@@ -280,13 +283,13 @@ public partial class AssetsLibraryPage : ContentPage
                     case 3:
                         var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(asset.Name), Localized._Confirm, Localized._Cancel);
                         if (!confirm0) return;
-                        var confirm1 = await DisplayPromptAsync(Localized._Warn, Localized.AssetPage_DeleteAAsset_Confirm1(asset.Name), Localized._OK, Localized._Cancel, asset.Name);
-                        if (confirm1 == asset.Name)
-                        {
-                            vm.DeleteAsset(asset);
-                            await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(asset.Name), Localized._OK);
+                        var confirm1 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(asset.Name), Localized._Confirm, Localized._Cancel);
+                        if (!confirm1) return;
+                        var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(asset.Name), Localized.HomePage_ProjectContextMenu_Delete_Confirm3(asset.Name), Localized._Cancel, "no");
 
-                        }
+                        if (confirm2 != "yes") return;
+                        vm.DeleteAsset(asset);
+                        await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(asset.Name), Localized._OK);
                         break;
                     default:
                         break;

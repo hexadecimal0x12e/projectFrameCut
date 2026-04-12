@@ -7,8 +7,8 @@
 
 		<ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-		<AssemblyVersion>1.4.0.0</AssemblyVersion>
-		<FileVersion>1.4.0.0</FileVersion>
+		<AssemblyVersion>1.4.1.0</AssemblyVersion>
+		<FileVersion>1.4.1.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut ILGpu accelerator provider</Product>
 		<Description>projectFrameCut ILGpu accelerator provider</Description>
@@ -20,8 +20,7 @@
 
   <ItemGroup>
 	<!--	<ProjectReference Include="..\projectFrameCut.Render.WindowsRender.NanoHost\projectFrameCut.Render.WindowsRender.NanoHost.csproj" /> -->
-		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj">
-		</ProjectReference>
+		<ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj">
 		</ProjectReference>
 		<PackageReference Include="ILGPU" Version="1.5.3" />

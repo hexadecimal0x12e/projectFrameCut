@@ -136,6 +136,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public event EventHandler MaximizeClicked;
         public event EventHandler Activated;
         public event EventHandler<(View Next, View Current)> OnNavigate;
+        public event EventHandler<WindowBoundsChangedEventArgs>? DragStarted;
+        public event EventHandler<WindowBoundsChangedEventArgs>? Dragging;
+        public event EventHandler<WindowBoundsChangedEventArgs>? DragCompleted;
 
         #endregion
 
@@ -1164,20 +1167,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 newWindow.Destroying += (s, e) =>
                 {
-                    CloseClicked.Invoke(s, new());
+                    CloseClicked?.Invoke(s, new());
                 };
             }
+#if WINDOWS
 
             newWindow.HandlerChanged += (s, e) =>
             {
-#if WINDOWS
                 var platformView = newWindow.Handler?.PlatformView;
                 if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
                 {
                     nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
                 }
+        };
 #endif
-            };
 
             // 8. Open the window
             Application.Current?.OpenWindow(newWindow);
@@ -1281,6 +1284,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         #endregion
 
         #region Moving
+        private WindowBoundsChangedEventArgs CreateBoundsChangedEventArgs()
+        {
+            double width = Width > 0 ? Width : Math.Max(0, WidthRequest);
+            double height = Height > 0 ? Height : Math.Max(0, HeightRequest);
+            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height);
+        }
+
         private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
         {
             if (_isMaximized || !IsDraggable) return;
@@ -1292,6 +1302,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 case GestureStatus.Started:
                     _startX = this.TranslationX;
                     _startY = this.TranslationY;
+                    DragStarted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Running:
                     double proposedX = _startX + e.TotalX;
@@ -1305,8 +1316,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
                     this.TranslationX = Math.Clamp(proposedX, 0, maxX);
                     this.TranslationY = Math.Clamp(proposedY, 0, maxY);
+                    Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    DragCompleted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
             }
         }
@@ -1478,5 +1492,21 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
     public class CloseEventArgs : EventArgs
     {
         public bool Cancel { get; set; }
+    }
+
+    public sealed class WindowBoundsChangedEventArgs : EventArgs
+    {
+        public WindowBoundsChangedEventArgs(double x, double y, double width, double height)
+        {
+            X = x;
+            Y = y;
+            Width = width;
+            Height = height;
+        }
+
+        public double X { get; }
+        public double Y { get; }
+        public double Width { get; }
+        public double Height { get; }
     }
 }

@@ -126,6 +126,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "SubjectMattingMaskGenerator";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded => SubjectMattingMaskGenerator.ParametersNeeded;
         public Dictionary<string, string> ParametersType => SubjectMattingMaskGenerator.ParametersType;
 

@@ -40,6 +40,7 @@ public partial class ProjectAddClipView : ContentView
             case "LocalAssets":
             case "AIGC":
             case "SharedAssets":
+            case "Templates":
                 {
                     OrderOptionPicker.IsVisible = true;
                     break;

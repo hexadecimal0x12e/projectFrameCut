@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -50,7 +49,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// Some project-wide properties defined by user.
         /// </summary>
-        public Dictionary<string, string> UserDefinedProperties = new();
+        public Dictionary<string, string> UserDefinedProperties { get => field ?? new(); set; } //= new();
         /// <summary>
         /// Gets or sets the file system path to the thumbnail image associated with the item.
         /// </summary>
@@ -77,6 +76,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// The target frame rate of the draft.
         /// </summary>
+        [Obsolete("Use ProjectInfo.TargetFrameRate instead.", false)]
         public uint TargetFrameRate { get; set; } = 60;
 
         /// <summary>
@@ -101,6 +101,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Get when this draft was last saved.
         /// </summary>
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
+
+        /// <summary>
+        /// Indicates why the draft was changed. 
+        /// Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangeReason { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -114,15 +120,20 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
+        public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public float SecondPerFrameRatio { get; set; }
-        public MixtureMode MixtureMode { get; set; } = MixtureMode.Overlay;
         public string? FilePath { get; set; }
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
+        public bool ShouldDisplayInUI { get; set; } = true;
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
 

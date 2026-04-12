@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using static SimpleLocalizerBaseGeneratedHelper;
+using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Helper
 {
@@ -15,29 +16,65 @@ namespace projectFrameCut.Helper
         public string logPath = string.Empty;
         public string infoLogPath = string.Empty;
 
-        public CrashForm()
+        public CrashForm(bool isHandler = false, string[]? args = null)
         {
             Load += (s, e) =>
             {
-                OpenLogButton.Text = Localized.CrashForm_OpenLog;
-                FeedbackButton.Text = Localized.CrashForm_Feedback;
-                RestartButton.Text = Localized.CrashForm_Restart;
-                Text = Localized.CrashForm_Title();
-                if (Environment.GetCommandLineArgs().Contains("crashForm") && Environment.GetCommandLineArgs().Length >= 3)
+                if (isHandler && args is not null)
                 {
-                    logPath = Environment.GetCommandLineArgs()[2];
-                    if (!string.IsNullOrWhiteSpace(logPath) && File.Exists(logPath))
+                    Hide();
+                    if (args.Length != 2) Environment.Exit(0);
+                    if (!int.TryParse(args[0], out var parentPID)) Environment.Exit(0);
+                    var launchTarget = args[1];
+                    if (string.IsNullOrWhiteSpace(launchTarget)) Environment.Exit(0);
+                    Log($"CrashHandler: parent {parentPID}, launch target {launchTarget}");
+                    Process parent = null!;
+                    try
                     {
-                        var logText = File.ReadAllText(logPath);
-                        LogBox.Text = logText;
-                        var logHeader = File.ReadAllLines(logPath)[0];
-                        MessageLabel.Text = logHeader;
+                        parent = Process.GetProcessById(parentPID);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        LogBox.Text = "Sorry, logs not available.";
+                        Log(ex, "CrashHandler: Cannot resolve parent process");
+                        Environment.Exit(0);
                     }
-                    infoLogPath = Environment.GetCommandLineArgs().Last();
+                    Log($"CrashHandler: Start wait for parent crashing...");
+                    try
+                    {
+                        parent.WaitForExit();
+                        Log($"CrashHandler: Parent crashed. Try rebooting...");
+                        Process.Start(CrashHandler.CreateRebootStartInfo(launchTarget));
+                        _ = HelperProgram.MessageBox(Handle, Localized?.CrashForm_AutoRebootSoon() ?? $"projectFrameCut has crashed. Program will be automatically reboot soon. To disable this feature, go Settings-General-No reboot after crash.", "projectFrameCut", 0x00000040);
+                        Environment.Exit(0);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "CrashHandler: Wait parent process exit failed");
+                        Environment.Exit(0);
+                    }
+                }
+                else
+                {
+                    OpenLogButton.Text = Localized.CrashForm_OpenLog;
+                    FeedbackButton.Text = Localized.CrashForm_Feedback;
+                    RestartButton.Text = Localized.CrashForm_Restart;
+                    Text = Localized.CrashForm_Title();
+                    if (Environment.GetCommandLineArgs().Contains("crashForm") && Environment.GetCommandLineArgs().Length >= 3)
+                    {
+                        logPath = Environment.GetCommandLineArgs()[2];
+                        if (!string.IsNullOrWhiteSpace(logPath) && File.Exists(logPath))
+                        {
+                            var logText = File.ReadAllText(logPath);
+                            LogBox.Text = logText;
+                            var logHeader = File.ReadAllLines(logPath)[0];
+                            MessageLabel.Text = logHeader;
+                        }
+                        else
+                        {
+                            LogBox.Text = "Sorry, logs not available.";
+                        }
+                        infoLogPath = Environment.GetCommandLineArgs().Last();
+                    }
                 }
             };
             InitializeComponent();

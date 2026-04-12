@@ -5,15 +5,18 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Channels;
 using static projectFrameCut.Shared.IPicture;
 using Image = SixLabors.ImageSharp.Image;
@@ -31,6 +34,10 @@ namespace projectFrameCut.Shared
         /// If set, the picture will be saved to this path for diagnostics.
         /// </summary>
         public static string? DiagImagePath { get; set; }
+        /// <summary>
+        /// Allow convert a IPicture to a lower <see cref="bitPerPixel"/>.
+        /// </summary>
+        public static bool AllowPixelModeDowngrade = true;
         /// <summary>
         /// Get how much bits in one pixel.
         /// Please refer to <see cref="PicturePixelMode"/> for more information.
@@ -75,10 +82,15 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Get whether this picture has been disposed.
         /// </summary>
+        public bool Disposed { get; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the object can be disposed.
+        /// </summary>
         /// <remarks>
-        /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
+        /// when this is true, <see cref="Dispose(bool)"/> will have no effect, except the force param is True.
         /// </remarks>
-        public bool? Disposed { get; set; }
+        public bool CanBeDisposed { get; set; }
 
         /// <summary>
         /// Resize the picture. 
@@ -107,6 +119,12 @@ namespace projectFrameCut.Shared
         /// </summary>
         /// <returns>The Diagnostics info</returns>
         string GetDiagnosticsInfo();
+
+        /// <summary>
+        /// Dispose the Picture when <see cref="CanBeDisposed"/> is true or <paramref name="force"/> is true.
+        /// </summary>
+        /// <param name="force">Ignore <see cref="CanBeDisposed"/> and dispose it anyway.</param>
+        public void Dispose(bool force = false);
 
         public enum ChannelId
         {
@@ -209,6 +227,7 @@ namespace projectFrameCut.Shared
     /// This class is for compatibility with some pretty old codes (mostly written before the main application appears in the Git repository). It's basically equals to <see cref="Picture16bpp"/>.
     /// </summary>
     [DebuggerDisplay("ProcessStack: {ProcessStack}")]
+    [Obsolete("Consider to use Picture16bpp. It's exactly same.",false)]
     public class Picture : Picture16bpp
     {
         public Picture(IPicture<ushort> picture) : base(picture)
@@ -255,7 +274,8 @@ namespace projectFrameCut.Shared
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
-        public bool? Disposed { get; set; } = false;
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -302,6 +322,8 @@ namespace projectFrameCut.Shared
                     { "CopyData", copyData }
                 },
             }];
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
         /// <summary>
@@ -326,6 +348,8 @@ namespace projectFrameCut.Shared
                 Operator = this.GetType(),
                 ProcessingFuncStackTrace = new StackTrace(true),
             }];
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
 
@@ -385,6 +409,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
         /// <summary>
@@ -395,6 +421,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture16bpp(SixLabors.ImageSharp.Image source)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
@@ -459,11 +486,14 @@ namespace projectFrameCut.Shared
             {
                 new PictureProcessStack
                 {
-                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    OperationDisplayName = "Converted from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
+                    Elapsed = sw.Elapsed,
                     ProcessingFuncStackTrace = new StackTrace(true),
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -692,7 +722,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || !CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -706,15 +736,19 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
 
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true, force);
             GC.SuppressFinalize(this);
         }
 
@@ -726,6 +760,7 @@ namespace projectFrameCut.Shared
             }
             else if (bitPerPixel == PicturePixelMode.BytePicture)
             {
+                if (!AllowPixelModeDowngrade) throw new InvalidOperationException($"AllowPixelModeDowngrade is false, so you can't convert a Picture16bpp to Picture8bpp.") { Data = { { "ProcessStack", ProcessStack } } };
                 var sw = Stopwatch.StartNew();
                 var pic = new Picture8bpp(Width, Height)
                 {
@@ -823,7 +858,8 @@ namespace projectFrameCut.Shared
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
-        public bool? Disposed { get; set; } = false;
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -877,6 +913,8 @@ namespace projectFrameCut.Shared
                 }
             };
 
+            PictureLifecycleTracker.RegisterCreated(this);
+
         }
 
         /// <summary>
@@ -909,6 +947,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -966,11 +1006,14 @@ namespace projectFrameCut.Shared
                 }
             };
 
+            PictureLifecycleTracker.RegisterCreated(this);
+
         }
 
         [DebuggerNonUserCode()]
         public Picture8bpp(SixLabors.ImageSharp.Image source)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
@@ -1035,9 +1078,10 @@ namespace projectFrameCut.Shared
             {
                 new PictureProcessStack
                 {
-                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    OperationDisplayName = "Converted from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = sw.Elapsed,
                     Properties = new Dictionary<string, object>
                     {
                         { "Width", Width },
@@ -1045,6 +1089,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -1273,7 +1319,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1287,14 +1333,17 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true,force);
             GC.SuppressFinalize(this);
         }
 
@@ -1398,7 +1447,14 @@ namespace projectFrameCut.Shared
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool hasAlphaChannel { get; set; }
-        public bool? Disposed { get; set; }
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
+
+        public BitMaskPicture()
+        {
+            ProcessStack = new List<PictureProcessStack>();
+            PictureLifecycleTracker.RegisterCreated(this);
+        }
 
         public string GetDiagnosticsInfo() => $"BitMaskPicture image, Size: {Width}*{Height}, avg R:{r.Average(v => v ? 1 : 0)} G:{g.Average(v => v ? 1 : 0)} B:{b.Average(v => v ? 1 : 0)}";
 
@@ -1461,7 +1517,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || !CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1474,15 +1530,18 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
 
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true,force);
             GC.SuppressFinalize(this);
         }
     }

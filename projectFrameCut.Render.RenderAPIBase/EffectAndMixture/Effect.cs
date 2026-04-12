@@ -125,13 +125,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             };
         }
 
-        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
-        public bool IsNormalEffect => true;
-        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
-        public bool IsContinuousEffect => false;
-        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
-        public bool IsBindableArgsEffect => false;
-
         /// <summary>
         /// Get the binded EffectGroup's ID
         /// </summary>

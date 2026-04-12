@@ -78,7 +78,7 @@ namespace projectFrameCut.Asset
                 }
             }
             var proxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
-            var createProxy = (proxyOption != "never") && ((proxyOption == "always") || await page.DisplayAlertAsync(Localized.DraftPage_CreateProxy(nameInput), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
+            var createProxy = (type == AssetType.Video) && (proxyOption != "never") && ((proxyOption == "always") || await page.DisplayAlertAsync(Localized.DraftPage_CreateProxy(nameInput), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
             bool ok = false;
             AssetItem? asset = null;
             await Task.Run(() =>

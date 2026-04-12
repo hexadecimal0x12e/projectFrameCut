@@ -2,7 +2,12 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "MsixPackage",
-      "commandLineArgs": "--noSplash",
+      "commandLineArgs": "--noSplash --noUIWatchdog",
+      "nativeDebugging": false
+    },
+    "Windows Unpackaged": {
+      "commandName": "Project",
+      "commandLineArgs": "--noSplash --noUIWatchdog",
       "nativeDebugging": false
     }
   }

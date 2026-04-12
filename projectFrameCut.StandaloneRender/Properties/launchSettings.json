@@ -2,7 +2,7 @@
   "profiles": {
     "projectFrameCut.StandaloneRender": {
       "commandName": "Project",
-      "commandLineArgs": "render \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\abc (2).pjfc\" \"-output=D:\\code\\playground\\projectFrameCut\\test111111111.mp4\" -output_options=1270,720,60,AV_PIX_FMT_YUV420P,libx264 -target=video \"-assetDbFile=D:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" -Use16bpp=false -maxParallelThreads=12 -multiAccelerator=true -acceleratorDeviceIds=all \"-diagReportPath=D:\\code\\playground\\projectFrameCut\\diag\" "
+      "commandLineArgs": " render  \"-project=C:\\Users\\azert\\Documents\\projectFrameCut\\My Drafts\\Untitled_Project_42_cb1501a0-8e9b-4987-a70a-3962b26c76d4\" \"-output=C:\\Users\\azert\\Documents\\Untitled Project 42_20260410_183744.mov\" \"-output_options=2560,1440,60,AV_PIX_FMT_YUV420P,libx264\" \"-assetDbFile=C:\\Users\\azert\\Documents\\projectFrameCut\\My Assets\\.database\\database.json\" \"-maxParallelThreads=64\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=2\""
     }
   }
 }

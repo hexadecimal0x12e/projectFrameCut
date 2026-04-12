@@ -49,16 +49,19 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         };
 
-        Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };
+        
 
         Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
             new Dictionary<string, Func<IComputer>>
             {
                 {"OverlayComputer", new(() => new OverlayComputer()) },
-                {"RemoveColorComputer", new(() => new RemoveColorComputer()) }
+                {"RemoveColorComputer", new(() => new RemoveColorComputer()) },
+                {"ResizeComputer", new(() => new ResizeComputer()) },
+                {"CropComputer", new(() => new CropComputer()) },
+                {"PlaceComputer", new(() => new PlaceComputer()) }
             };
 
-        Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
+        //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };

@@ -1243,15 +1243,17 @@ public partial class DraftEffectBindingView : ContentView
         Dictionary<string, object> localCache = new(), globalCache = new(); //for bindable effect
         var w = _page.previewWidth;
         var h = _page.previewHeight;
+        var projectRelativeWidth = Math.Max(1, _page.ProjectInfo.RelativeWidth);
+        var projectRelativeHeight = Math.Max(1, _page.ProjectInfo.RelativeHeight);
 
         try
         {
-            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0);
+            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0, 1280, 720, true, 8);
             if (_inputNode is not null)
             {
                 await UpdateNodePreview(_inputNode, srcFrame);
             }
-            srcFrame.Disposed = null;
+            srcFrame.CanBeDisposed = false;
             var frame = new OneFrame(42, clip, srcFrame)
             {
                 Effects = _clip.Effects?.Values?.ToArray() ?? []
@@ -1275,7 +1277,7 @@ public partial class DraftEffectBindingView : ContentView
                     }
                     else
                     {
-                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}","error");
+                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}", "error");
                     }
 
                 }
@@ -1288,7 +1290,9 @@ public partial class DraftEffectBindingView : ContentView
                     await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), Localized._OK);
 #endif
                 }
-            });
+            },
+            projectRelativeWidth: projectRelativeWidth,
+            projectRelativeHeight: projectRelativeHeight);
 
             if (_outputNode is not null)
             {
@@ -1296,8 +1300,8 @@ public partial class DraftEffectBindingView : ContentView
             }
 
 
-            srcFrame.Disposed = false;
-            srcFrame.Dispose();
+            srcFrame.CanBeDisposed = true;
+            srcFrame.Dispose(true);
         }
         catch (Exception ex)
         {

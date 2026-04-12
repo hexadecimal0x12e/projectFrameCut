@@ -1,12 +1,12 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -22,8 +22,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => false;
 
+        public EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public EffectTarget Target => EffectTarget.Video;
+
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; }
+        public string Name { get; set; } = "Jitter";
         
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -37,11 +41,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
+        {
+            { "MaxOffsetX", 10 },
+            { "MaxOffsetY", 10 },
+            { "Direction", JitterEffect.Direction_Both },
+            { "Seed", 0 },
+        };
 
         public List<string> ParametersNeeded => JitterEffect.s_ParametersNeeded;
 
         public Dictionary<string, string> ParametersType => JitterEffect.s_ParametersType;
+
+        public bool Enabled { get; set; } = true;
 
         public IEffectFactory[] Create()
         {
@@ -52,46 +64,55 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            var ppb = new PropertyPanelBuilder();
-            ppb.AddEntry("MaxOffsetX", PluginManager.GetLocalizationItem("Effect_Jitter_MaxOffsetX", "Max X Offset"), (Parameters.TryGetValue("MaxOffsetX", out var mx) ? mx.ToString() : "10") ?? "10", "10");
-            ppb.AddEntry("MaxOffsetY", PluginManager.GetLocalizationItem("Effect_Jitter_MaxOffsetY", "Max Y Offset"), (Parameters.TryGetValue("MaxOffsetY", out var my) ? my.ToString() : "10") ?? "10", "10");
-            string[] options = [
-                                    PluginManager.GetLocalizationItem("_Effect_Jitter_Both", "Both directions"),
-                        PluginManager.GetLocalizationItem("_Effect_Jitter_XOnly", "X direction"),
-                        PluginManager.GetLocalizationItem("_Effect_Jitter_YOnly", "Y direction")
-                                ];
-            string val = Parameters.TryGetValue("Direction", out var d) ? d as string ?? JitterEffect.Direction_Both : JitterEffect.Direction_Both;
-            string defaultVal = val switch
-            {
-                JitterEffect.Direction_XOnly => options[1],
-                JitterEffect.Direction_YOnly => options[2],
-                _ => options[0]
-            };
-            ppb.AddPicker("Direction", PluginManager.GetLocalizationItem("Direction", "Direction"), options, defaultVal);
-            ppb.AddEntry("Seed", PluginManager.GetLocalizationItem("Effect_Jitter_Seed", "Random Seed"), (Parameters.TryGetValue("Seed", out var s) ? s.ToString() : "0") ?? "0", "0");
-            return ppb;
+            int maxOffsetX = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetX", 10));
+            int maxOffsetY = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetY", 10));
+            int seed = EffectBundleUiHelper.GetInt(Parameters, "Seed", 0);
+            string direction = EffectBundleUiHelper.GetString(Parameters, "Direction", JitterEffect.Direction_Both);
+
+            var options = GetDirectionOptions();
+            string selectedDirection = ToDirectionLabel(direction, options);
+
+            var panel = new PropertyPanelBuilder();
+            panel.AddSlider(
+                "MaxOffsetX",
+                EffectBundleUiHelper.L("Effect_Jitter_MaxOffsetX", "Max X Offset"),
+                0,
+                Math.Max(200, maxOffsetX),
+                maxOffsetX,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            panel.AddSlider(
+                "MaxOffsetY",
+                EffectBundleUiHelper.L("Effect_Jitter_MaxOffsetY", "Max Y Offset"),
+                0,
+                Math.Max(200, maxOffsetY),
+                maxOffsetY,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            panel.AddPicker("Direction", EffectBundleUiHelper.L("Direction", "Direction"), options, selectedDirection);
+            EffectBundleUiHelper.AddNumericEntry(panel, "Seed", EffectBundleUiHelper.L("Effect_Jitter_Seed", "Random Seed"), seed.ToString(), "0");
+            return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
             if (args.Id == "Direction")
             {
-                string[] options = [
-                    PluginManager.GetLocalizationItem("_Effect_Jitter_Both", "Both directions"),
-                    PluginManager.GetLocalizationItem("_Effect_Jitter_XOnly", "X direction"),
-                    PluginManager.GetLocalizationItem("_Effect_Jitter_YOnly", "Y direction")
-                ];
-                if (args.Value?.ToString() == options[1])
-                    Parameters["Direction"] = JitterEffect.Direction_XOnly;
-                else if (args.Value?.ToString() == options[2])
-                    Parameters["Direction"] = JitterEffect.Direction_YOnly;
-                else
-                    Parameters["Direction"] = JitterEffect.Direction_Both;
+                Parameters["Direction"] = ToDirectionValue(args.Value?.ToString(), GetDirectionOptions());
             }
-            else
+            else if (args.Id == "MaxOffsetX" && EffectBundleUiHelper.TrySetInt(Parameters, "MaxOffsetX", args.Value))
             {
-                Parameters[args.Id] = int.TryParse(args.Value as string, out var result) ? result : throw new InvalidDataException();
+                Parameters["MaxOffsetX"] = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetX", 10));
             }
+            else if (args.Id == "MaxOffsetY" && EffectBundleUiHelper.TrySetInt(Parameters, "MaxOffsetY", args.Value))
+            {
+                Parameters["MaxOffsetY"] = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetY", 10));
+            }
+            else if (args.Id == "Seed")
+            {
+                EffectBundleUiHelper.TrySetInt(Parameters, "Seed", args.Value);
+            }
+
             return Parameters;
         }
 
@@ -99,13 +120,46 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.DisplayName_Effect_Jitter,
-                Description = "jitter",
-
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_Jitter", "Jitter"),
+                Description = EffectBundleUiHelper.L("Description_Effect_Jitter", "Apply random frame-to-frame positional jitter."),
+                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }
 
-        public bool Enabled { get; set; }
+        private static string[] GetDirectionOptions()
+        {
+            return
+            [
+                EffectBundleUiHelper.L("_Effect_Jitter_Both", "Both directions"),
+                EffectBundleUiHelper.L("_Effect_Jitter_XOnly", "X direction"),
+                EffectBundleUiHelper.L("_Effect_Jitter_YOnly", "Y direction")
+            ];
+        }
+
+        private static string ToDirectionLabel(string direction, string[] options)
+        {
+            return direction switch
+            {
+                var x when x == JitterEffect.Direction_XOnly => options[1],
+                var y when y == JitterEffect.Direction_YOnly => options[2],
+                _ => options[0]
+            };
+        }
+
+        private static string ToDirectionValue(string? selectedLabel, string[] options)
+        {
+            if (selectedLabel == options[1])
+            {
+                return JitterEffect.Direction_XOnly;
+            }
+
+            if (selectedLabel == options[2])
+            {
+                return JitterEffect.Direction_YOnly;
+            }
+
+            return JitterEffect.Direction_Both;
+        }
 
     }
 }

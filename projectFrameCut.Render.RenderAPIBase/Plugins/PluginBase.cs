@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 3;
+        public const int CurrentPluginAPIVersion = 4;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -94,7 +94,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <remarks>
         /// The argument for value is Id of the clip, and the second argument is the name of the clip.
         /// </remarks>
-        public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
+        //public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
 
         /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
@@ -146,12 +146,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
         public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
-
-        /// <summary>
-        /// Create an IMixture instance from the given JSON structure.
-        /// </summary>
-        [Obsolete("We have no plan on custom type of mixturing, so this property is no longer used and it will be removed in next Plugin API version.", false)]
-        public virtual Dictionary<string, Func<IMixture>> MixtureProvider { get => new(); }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
@@ -595,14 +589,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public static string GetWhatProvided(IPluginBase pluginBase)
         {
             StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            if (pluginBase.ClipProvider.Any())
-            {
-                providedContent.AppendLine("Clips:");
-                foreach (var item in pluginBase.ClipProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
+            //if (pluginBase.ClipProvider.Any())
+            //{
+            //    providedContent.AppendLine("Clips:");
+            //    foreach (var item in pluginBase.ClipProvider)
+            //    {
+            //        providedContent.AppendLine($"- {item.Key}");
+            //    }
+            //}
             var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
             if (effectTypes.Any())
             {

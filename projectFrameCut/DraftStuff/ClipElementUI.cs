@@ -2,6 +2,7 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.ComponentModel;
@@ -11,13 +12,41 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Path = System.IO.Path;
+using projectFrameCut.ApplicationAPIBase.Project;
 
 
 namespace projectFrameCut.DraftStuff
 {
     [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
-    public class ClipElementUI
+    public class ClipElementUI : IClipElementUI
     {
+        static ClipElementUI()
+        {
+            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
+        }
+
+        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
+        {
+            try
+            {
+                if (reason == ClipUpdateReason.PropertyChanged)
+                {
+                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
+                }
+
+                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
+                {
+                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
         public required string Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
@@ -25,6 +54,8 @@ namespace projectFrameCut.DraftStuff
         public required Border LeftHandle { get; set; }
         [JsonIgnore]
         public required Border RightHandle { get; set; }
+
+        public bool ShouldDisplayInUI { get; set; } = true;
 
         public string DisplayName { get; set; } = "Clip";
 
@@ -41,6 +72,10 @@ namespace projectFrameCut.DraftStuff
         public double origX { get; set; } = 0;
 
         public uint lengthInFrame { get; set; } = 0;
+        /// <summary>
+        /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
+        /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
+        /// </summary>
         public bool isInfiniteLength { get; set; } = false;
         public uint maxFrameCount { get; set; } = 0;
         public uint relativeStartFrame { get; set; } = 0u;
@@ -52,6 +87,16 @@ namespace projectFrameCut.DraftStuff
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
         public string? SourcePath { get; set; } = null;
+        public int TargetWidth { get; set; } = 0;
+        public int TargetHeight { get; set; } = 0;
+        public int TargetX { get; set; } = 0;
+        public int TargetY { get; set; } = 0;
+        public int SubLayerIndex { get; set; } = 0;
+        public int SubTrackIndex
+        {
+            get => SubLayerIndex;
+            set => SubLayerIndex = value;
+        }
 
         public string? ClipColor { get; set; } = null;
 
@@ -85,7 +130,52 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        public bool IsExtraDataOptionIsTrue(string option) => ExtraData.TryGetValue(option, out var o) && IsObjectTrue(o);
 
+        public bool IsClipFallInRange(uint targetFrame, IDraftPage workingPage)
+        {
+            var extend = IsExtraDataOptionIsTrue("ExtendToWholeDraft");
+            if (workingPage is null || extend)
+            {
+                return extend;
+            }
+
+            double startPx = (Clip is not null) ? Clip.TranslationX : layoutX;
+            if (double.IsNaN(startPx) || double.IsInfinity(startPx))
+            {
+                startPx = layoutX;
+            }
+            startPx = Math.Max(0d, startPx);
+
+            uint startFrame = workingPage.PixelToFrame(startPx);
+
+            uint effectiveLength = lengthInFrame;
+            if (effectiveLength == 0)
+            {
+                double widthPx = origLength;
+                if (Clip is not null)
+                {
+                    widthPx = Clip.WidthRequest > 0 ? Clip.WidthRequest : Clip.Width;
+                }
+
+                effectiveLength = Math.Max(1u, workingPage.PixelToFrame(Math.Max(0d, widthPx)));
+            }
+
+            ulong start = startFrame;
+            ulong endExclusive = start + Math.Max(1u, effectiveLength);
+            ulong frame = targetFrame;
+
+            return frame >= start && frame < endExclusive;
+        }
+
+        private static bool IsObjectTrue(object? input)
+        {
+            if (input is null) return false;
+            if (input is bool b) return b;
+            if (input is string s) return bool.TryParse(s, out b) && b;
+            if (input is JsonElement e) return e.ValueKind == JsonValueKind.True;
+            return false;
+        }
 
         [SetsRequiredMembers]
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
@@ -249,6 +339,7 @@ namespace projectFrameCut.DraftStuff
                 ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
                 ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
                 ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                ClipMode.MarkingClip => new SolidColorBrush(Color.FromRgba(51, 136, 255, 96)),
                 ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
                 _ => new SolidColorBrush(Colors.Gray),
             };
@@ -265,33 +356,4 @@ namespace projectFrameCut.DraftStuff
         }
 
     }
-
-
-    public class ClipUpdateEventArgs : EventArgs
-    {
-        public ClipUpdateEventArgs() { }
-
-        public string? SourceId { get; set; }
-
-        public ClipUpdateReason? Reason { get; set; }
-
-        public bool NoSave { get; set; } = false;
-    }
-
-    public enum ClipUpdateReason
-    {
-        Unknown,
-        ClipItselfMove,
-        ClipResized,
-        TrackAdd
-    }
-
-    public enum ClipMovingStatus
-    {
-        Free,
-        Move,
-        Resize
-    }
-
-
 }

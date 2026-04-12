@@ -133,6 +133,48 @@ public interface ApplicationAPIBaseLocalizerBase
     ///')
     /// </summary>
     public string _Error { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Canceled (like '
+    /// 任务已取消
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Canceled { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Cancelling (like '
+    /// 尝试取消任务...
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Cancelling { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Completed (like '
+    /// 任务成功的完成了
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Completed { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Fail (like '
+    /// 任务执行失败
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Fail { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Running (like '
+    /// 任务正在执行
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Running { get; }
+
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Unknown (like '
+    /// 任务状态位置
+    ///')
+    /// </summary>
+    public string DraftPage_Tasks_Status_Unknown { get; }
     
     /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
@@ -172,6 +214,12 @@ public interface ApplicationAPIBaseLocalizerBase
             "MultiWindowView_DockPrompt_Android" => MultiWindowView_DockPrompt_Android,
             "MultiWindowView_PopOut_NotSupport" => MultiWindowView_PopOut_NotSupport,
             "_Error" => _Error,
+            "DraftPage_Tasks_Status_Canceled" => DraftPage_Tasks_Status_Canceled,
+            "DraftPage_Tasks_Status_Cancelling" => DraftPage_Tasks_Status_Cancelling,
+            "DraftPage_Tasks_Status_Completed" => DraftPage_Tasks_Status_Completed,
+            "DraftPage_Tasks_Status_Fail" => DraftPage_Tasks_Status_Fail,
+            "DraftPage_Tasks_Status_Running" => DraftPage_Tasks_Status_Running,
+            "DraftPage_Tasks_Status_Unknown" => DraftPage_Tasks_Status_Unknown,
             _ => fallbackValue ?? $"Can't find the localized string for id '{id}'"
         };
     }
@@ -330,6 +378,54 @@ public class __ApplicationAPIBaseLocalizerBase_zh_CN__ : ApplicationAPIBaseLocal
     /// ')
     /// </summary>
     public static string _Error => $"错误";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Canceled => DraftPage_Tasks_Status_Canceled;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Canceled in zh-CN (like '
+    /// 任务已取消
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Canceled => $"任务已取消";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Cancelling => DraftPage_Tasks_Status_Cancelling;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Cancelling in zh-CN (like '
+    /// 尝试取消任务...
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Cancelling => $"尝试取消任务...";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Completed => DraftPage_Tasks_Status_Completed;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Completed in zh-CN (like '
+    /// 任务成功的完成了
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Completed => $"任务成功的完成了";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Fail => DraftPage_Tasks_Status_Fail;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Fail in zh-CN (like '
+    /// 任务执行失败
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Fail => $"任务执行失败";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Running => DraftPage_Tasks_Status_Running;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Running in zh-CN (like '
+    /// 任务正在执行
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Running => $"任务正在执行";
+
+    string ApplicationAPIBaseLocalizerBase.DraftPage_Tasks_Status_Unknown => DraftPage_Tasks_Status_Unknown;
+    /// <summary>
+    /// Get the localized string for DraftPage_Tasks_Status_Unknown in zh-CN (like '
+    /// 任务状态位置
+    /// ')
+    /// </summary>
+    public static string DraftPage_Tasks_Status_Unknown => $"任务状态位置";
     
     /// <summary>
     /// Get the current localized Id (like 'z')

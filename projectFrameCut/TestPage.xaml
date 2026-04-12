@@ -48,6 +48,8 @@
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
+                    <Button x:Name="StuckInUIThreadButton" Text="Stuck in UI Thread" Clicked="StuckInUIThreadButton_Clicked"/>
+                    <Button x:Name="ReadSettingButton" Text="Read a setting" Clicked="ReadSettingButton_Clicked"/>
                     <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
                     <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
                     <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />

@@ -37,8 +37,8 @@ namespace projectFrameCut.Render.Benchmark
                 Clips = stru,
                 Duration = duration,
                 MaxThreads = 32,
-                LogState = false,
-                LogStatToLogger = true,
+                LogRenderState = false,
+                LogStaticsData = true,
                 GCOption = 0,
                 Use16Bit = false,
                 

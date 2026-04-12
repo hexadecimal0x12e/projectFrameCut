@@ -2,7 +2,7 @@
 
 版權所有 (c) hexadecimal0x12e 2025。
 
-projectFrameCut 是一個開源專案，採用 GNU GPL v2（或更新版本）授權。你可以在此找到原始碼：https://github.com/hexadecimal0x12e/projectFrameCut
+projectFrameCut 是一個開源專案，採用 Apache License（或更新版本）授權。你可以在此找到原始碼：https://github.com/hexadecimal0x12e/projectFrameCut
 
 projectFrameCut 仍在開發中 — 請勿在任何生產環境中使用。我們不對因 projectFrameCut 導致的任何工作流程中斷承擔任何保證。
 

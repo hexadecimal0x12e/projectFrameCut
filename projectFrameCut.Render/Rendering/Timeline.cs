@@ -24,16 +24,24 @@ namespace projectFrameCut.Render.Rendering
     public static class Timeline
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
-        public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
-        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
-        public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
+        public static IEnumerable<OneFrame> GetFramesInOneFrame(
+            IClip[] video,
+            uint targetFrame,
+            int targetWidth,
+            int targetHeight,
+            bool forceResize = false,
+            IPicture.PicturePixelMode? targetPPB = null,
+            int projectRelativeWidth = 0,
+            int projectRelativeHeight = 0)
         {
+            var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame)
+                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame > targetFrame)
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -42,9 +50,11 @@ namespace projectFrameCut.Render.Rendering
                         //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     IPicture frame = null!;
+                    int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
+                    int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
                     if (clip is TransformContainer c)
                     {
-                        if (c.Transform == null) c.ReInit();
+                        if (c.Transform == null) c.ReInit(ppb);
                         var t = c.Transform;
                         if (t == null)
                         {
@@ -62,13 +72,13 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else
                             {
-                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, targetWidth, targetHeight, targetFrame);
+                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
                             }
                         }
                     }
                     else
                     {
-                        frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
+                        frame = clip.GetFrame(targetFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -95,7 +105,7 @@ namespace projectFrameCut.Render.Rendering
             foreach (var clip in video)
             {
 
-                if ((clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
+                if ((clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame > targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -118,7 +128,16 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect, IPicture>? AfterEffect = null)
+        public static IPicture MixtureLayers(
+            IEnumerable<OneFrame> frames,
+            uint frameIndex,
+            int targetWidth,
+            int targetHeight,
+            int targetPPB = 8,
+            Action<IEffect, IPicture>? AfterEffect = null,
+            bool autoCenterImplicitClip = false,
+            int projectRelativeWidth = 0,
+            int projectRelativeHeight = 0)
         {
             try
             {
@@ -183,10 +202,44 @@ namespace projectFrameCut.Render.Rendering
                         steps.Clear();
                     }
 
-                    if (result is null) result = effected;
+                    int clipX = ResolveClipOutputX(srcFrame.ParentClip, targetWidth, projectRelativeWidth);
+                    int clipY = ResolveClipOutputY(srcFrame.ParentClip, targetHeight, projectRelativeHeight);
+                    if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
+                    {
+                        clipY += (targetHeight - effected.Height) / 2;
+                    }
+                    bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
+
+                    if (result is null)
+                    {
+                        if (!needsPlacement)
+                        {
+                            result = effected;
+                        }
+                        else
+                        {
+                            result = OverlayMixture.Mix(
+                                FallBackImageGetter(targetWidth, targetHeight),
+                                effected,
+                                PluginManager.CreateComputer("OverlayComputer"),
+                                targetPPB,
+                                clipX,
+                                clipY,
+                                targetWidth,
+                                targetHeight);
+                        }
+                    }
                     else
                     {
-                        result = OverlayMixture.Mix(result, effected, PluginManager.CreateComputer("OverlayComputer"), targetPPB);
+                        result = OverlayMixture.Mix(
+                            result,
+                            effected,
+                            PluginManager.CreateComputer("OverlayComputer"),
+                            targetPPB,
+                            clipX,
+                            clipY,
+                            targetWidth,
+                            targetHeight);
                     }
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
@@ -196,7 +249,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else if (result is null)
                 {
-                    return Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                    return Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
                 }
                 else
                 {
@@ -221,11 +274,113 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        private static PlaceEffect_ImageSharp Placer = new()
+        private static PlaceEffect_IPicture Placer = new()
         {
             StartX = 0,
             StartY = 0
         };
+
+        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
+        {
+            if (clip.TargetWidth > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetWidth, projectRelativeWidth, fallbackWidth);
+            }
+
+            return Math.Max(1, fallbackWidth);
+        }
+
+        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight, int projectRelativeHeight)
+        {
+            if (clip.TargetHeight > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetHeight, projectRelativeHeight, fallbackHeight);
+            }
+
+            return Math.Max(1, fallbackHeight);
+        }
+
+        private static int ResolveClipOutputX(IClip clip, int targetWidth, int projectRelativeWidth)
+            => ScaleCoordinateToTarget(clip.TargetX, projectRelativeWidth, targetWidth);
+
+        private static int ResolveClipOutputY(IClip clip, int targetHeight, int projectRelativeHeight)
+            => ScaleCoordinateToTarget(clip.TargetY, projectRelativeHeight, targetHeight);
+
+        private static int ScaleDimensionToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value <= 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return Math.Max(1, (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero));
+            }
+
+            return Math.Max(1, value);
+        }
+
+        private static int ScaleCoordinateToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value == 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero);
+            }
+
+            return value;
+        }
+
+        private static bool ShouldAutoCenterImplicitClip(IClip clip)
+        {
+            if (HasExplicitTargetRect(clip))
+            {
+                return false;
+            }
+
+            return !HasLegacyInternalPlaceResizeEffects(clip);
+        }
+
+        private static bool HasExplicitTargetRect(IClip clip)
+            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+        private static bool HasLegacyInternalPlaceResizeEffects(IClip clip)
+        {
+            if (clip.Effects is null || clip.Effects.Length == 0)
+            {
+                return false;
+            }
+
+            return clip.Effects.Any(effect => effect is not null
+                && (string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+                    || string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal)
+                    || (string.IsNullOrWhiteSpace(effect.Name)
+                        && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))));
+        }
+
+        private static bool IsLegacyInternalLayoutEffect(IEffect effect)
+        {
+            if (string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+                || string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(effect.Name)
+                && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return false;
+        }
 
 
 
@@ -298,7 +453,6 @@ namespace projectFrameCut.Render.Rendering
         public uint FrameNumber { get; init; }
         public IPicture Clip { get; init; }
         public uint LayerIndex { get; init; } = 0;
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
         public OneFrame(uint frameNumber, IClip parent, IPicture pic)
@@ -307,8 +461,21 @@ namespace projectFrameCut.Render.Rendering
             ParentClip = parent;
             Clip = pic;
             LayerIndex = parent.LayerIndex;
-            MixtureMode = parent.MixtureMode;
-            Effects = EffectHelper.GetEffectsInstances(parent.Effects);
+
+            var effectInstances = EffectHelper.GetEffectsInstances(parent.Effects);
+            if (parent.TargetX != 0 || parent.TargetY != 0 || parent.TargetWidth > 0 || parent.TargetHeight > 0)
+            {
+                effectInstances = effectInstances
+                    .Where(effect => effect is not null
+                        && !string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+                        && !string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal)
+                        && !(string.IsNullOrWhiteSpace(effect.Name)
+                            && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase))))
+                    .ToArray();
+            }
+
+            Effects = effectInstances;
         }
     }
 }

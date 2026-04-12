@@ -56,7 +56,7 @@
                         ItemsSource="{Binding Assets}"
                         SelectionMode="Single"
                         SelectedItem="{Binding SelectedAsset}"
-                        EmptyView="{l:Localized Key=AssetPage_AddAAsset_Hint}"
+                        EmptyView="{l:Localized Key=AssetPage_SearchNoResult}"
                         SizeChanged="OnCollectionViewSizeChanged">
             <CollectionView.ItemsLayout>
                 <GridItemsLayout x:Name="AssetsGridLayout" Orientation="Vertical" Span="6" VerticalItemSpacing="5" HorizontalItemSpacing="5" />

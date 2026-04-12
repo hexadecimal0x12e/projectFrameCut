@@ -21,7 +21,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; set; } = EffectImplementType.ImageSharp;
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
 
@@ -94,10 +94,11 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "PointPlacer";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
 
         public string? ID { get; set; }
@@ -117,6 +118,11 @@ namespace projectFrameCut.Render.Effect
             }
 
             var e = parameters != null ? PointPlacer.FromParametersDictionary(parameters) : new PointPlacer();
+
+            if (e is PointPlacer pointPlacer)
+            {
+                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.ImageSharp : implementType;
+            }
 
             if (e is IBindableArgumentEffect be)
             {

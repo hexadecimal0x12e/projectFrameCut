@@ -4,10 +4,109 @@
              x:Class="projectFrameCut.Setting.SettingPages.UserDataManagePage"
              xmlns:l="clr-namespace:LocalizedResources"
              Title="{l:Localized Key=UserDataManagePage_Title}">
-    <VerticalStackLayout>
-        <Label 
-            Text="TODO"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout Padding="0" Spacing="0">
+            <Label
+                Text="{l:Localized Key=UserDataManagePage_Description}"
+                Margin="12,0"
+                FontSize="14"
+                TextColor="Gray" />
+
+            <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{l:Localized Key=UserDataManagePage_CategoryDraft}" FontSize="20" FontAttributes="Bold" />
+                    <Label x:Name="DraftStatLabel" FontSize="13" TextColor="Gray" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding DraftItems}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="1" Stroke="#30222222" StrokeShape="RoundRectangle 8" Padding="8">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FullPath}" FontSize="12" TextColor="Gray" LineBreakMode="MiddleTruncation" />
+                                        <Label Text="{Binding SizeText}" FontSize="12" TextColor="Gray" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_OpenInFileManager}" Clicked="OnOpenItemClicked" CommandParameter="{Binding FullPath}" />
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}" Clicked="OnDeleteDraftItemClicked" BackgroundColor="#B00020" TextColor="White" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{l:Localized Key=UserDataManagePage_CategoryAsset}" FontSize="20" FontAttributes="Bold" />
+                    <Label x:Name="AssetStatLabel" FontSize="13" TextColor="Gray" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding AssetItems}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="1" Stroke="#30222222" StrokeShape="RoundRectangle 8" Padding="8">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FullPath}" FontSize="12" TextColor="Gray" LineBreakMode="MiddleTruncation" />
+                                        <Label Text="{Binding SizeText}" FontSize="12" TextColor="Gray" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_OpenInFileManager}" Clicked="OnOpenItemClicked" CommandParameter="{Binding FullPath}" />
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}" Clicked="OnDeleteAssetItemClicked" BackgroundColor="#B00020" TextColor="White" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{l:Localized Key=UserDataManagePage_CategoryTemplate}" FontSize="20" FontAttributes="Bold" />
+                    <Label x:Name="TemplateStatLabel" FontSize="13" TextColor="Gray" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding TemplateItems}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="1" Stroke="#30222222" StrokeShape="RoundRectangle 8" Padding="8">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FullPath}" FontSize="12" TextColor="Gray" LineBreakMode="MiddleTruncation" />
+                                        <Label Text="{Binding SizeText}" FontSize="12" TextColor="Gray" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_OpenInFileManager}" Clicked="OnOpenItemClicked" CommandParameter="{Binding FullPath}" />
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}" Clicked="OnDeleteTemplateItemClicked" BackgroundColor="#B00020" TextColor="White" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{l:Localized Key=UserDataManagePage_CategoryPlugin}" FontSize="20" FontAttributes="Bold" />
+                    <Label x:Name="PluginStatLabel" FontSize="13" TextColor="Gray" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding PluginItems}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="1" Stroke="#30222222" StrokeShape="RoundRectangle 8" Padding="8">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FullPath}" FontSize="12" TextColor="Gray" LineBreakMode="MiddleTruncation" />
+                                        <Label Text="{Binding SizeText}" FontSize="12" TextColor="Gray" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_OpenInFileManager}" Clicked="OnOpenItemClicked" CommandParameter="{Binding FullPath}" />
+                                            <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}" Clicked="OnDeletePluginItemClicked" BackgroundColor="#B00020" TextColor="White" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public int MaxOffsetX { get; init; }
         public int MaxOffsetY { get; init; }
@@ -34,8 +34,8 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => null;
-        public bool YieldProcessStep => true;
+        public string? NeedComputer => ImplementType == EffectImplementType.HwAcceleration ? "PlaceComputer" : null;
+        public bool YieldProcessStep => ImplementType != EffectImplementType.HwAcceleration;
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
@@ -120,6 +120,11 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
+            if (ImplementType == EffectImplementType.HwAcceleration)
+            {
+                return PlaceEffect_HwAccel.RenderWithOffset(source, computer, offX, offY, targetWidth, targetHeight);
+            }
+
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
         }
 
@@ -153,6 +158,8 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Jitter";
 
+        public EffectTarget Target => EffectTarget.Video;
+
         public List<string> ParametersNeeded { get; } = new List<string>
         {
             "MaxOffsetX",
@@ -168,7 +175,7 @@ namespace projectFrameCut.Render.Effect
             {"Direction", "string"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -177,15 +184,21 @@ namespace projectFrameCut.Render.Effect
                 return BuildWithDefaultType(parameters);
             }
 
-            if (implementType != EffectImplementType.ImageSharp)
+            return implementType switch
             {
-                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
-            }
-
-            return BuildWithDefaultType(parameters);
+                EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
+                EffectImplementType.HwAcceleration => BuildWithType(implementType, parameters),
+                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        {
+            return BuildWithType(EffectImplementType.ImageSharp, parameters);
+        }
+
+        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
         {
             parameters ??= new Dictionary<string, object>();
             if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
@@ -199,6 +212,7 @@ namespace projectFrameCut.Render.Effect
                 MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
                 Seed = Convert.ToInt32(parameters["Seed"]),
                 Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
+                ImplementType = implementType,
             };
         }
     }

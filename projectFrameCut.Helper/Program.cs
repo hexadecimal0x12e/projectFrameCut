@@ -17,10 +17,11 @@ namespace projectFrameCut.Helper
     {
         static SplashForm splash;
         static LogForm log;
+        static FrozenForm froze;
         [STAThread]
         public static void SplashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -34,7 +35,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void CrashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
@@ -48,7 +49,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void LogMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
@@ -58,6 +59,21 @@ namespace projectFrameCut.Helper
             log = new LogForm();
             log.ShowInTaskbar = false;
             log.Show();
+            Application.Run();
+        }
+
+        [STAThread]
+        public static void FrozenMain()
+        {
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
+
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            froze = new FrozenForm();
+            froze.ShowInTaskbar = true;
+            froze.Show();
             Application.Run();
         }
 
@@ -80,6 +96,7 @@ namespace projectFrameCut.Helper
                 }
                 return;
             }
+#if DEBUG
             if (args.Contains("--wait"))
             {
                 while (!Debugger.IsAttached)
@@ -87,7 +104,8 @@ namespace projectFrameCut.Helper
                     Thread.Sleep(500);
                 }
             }
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+#endif
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             if (args.Length > 1)
             {
@@ -95,34 +113,41 @@ namespace projectFrameCut.Helper
                 switch (mode)
                 {
                     case "crashForm":
-                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
                         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
                         Application.EnableVisualStyles();
                         Application.SetCompatibleTextRenderingDefault(false);
-                        Application.Run(new CrashForm());
+                        Application.Run(new CrashForm(false));
                         return;
-                    case "uriCallback":
-                        //todo
+                    case "crashHandler":
+                        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                        Application.EnableVisualStyles();
+                        Application.SetCompatibleTextRenderingDefault(false);
+                        Application.Run(new CrashForm(true, args.Skip(1).ToArray()));
                         return;
                 }
             }
-            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            Process.Start(new ProcessStartInfo
             {
-                var proc = new ProcessStartInfo
-                {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe"),
-                    Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
-                };
-                Process.Start(proc);
-            }
-            else
-            {
-                _ = MessageBox(IntPtr.Zero,
-                     SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
-                     AppTitle,
-                     0x10);
-                return;
-            }
+                FileName = "pjfc:",
+                UseShellExecute = true
+            });
+            //if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            //{
+            //    var proc = new ProcessStartInfo
+            //    {
+            //        FileName = "pjfc:",
+            //        Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
+            //    };
+            //    Process.Start(proc);
+            //}
+            //else
+            //{
+            //    _ = MessageBox(IntPtr.Zero,
+            //         SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
+            //         AppTitle,
+            //         0x10);
+            //    return;
+            //}
 
 
 
@@ -137,21 +162,45 @@ namespace projectFrameCut.Helper
         public static void CloseSplash()
         {
             Thread.Sleep(1500);
-            splash?.Invoke(new Action(() =>
+            try
             {
-                splash?.Close();
-            }));
-            SplashShowing = false;
-            splash = null;
+                splash?.Invoke(new Action(() =>
+                {
+                    splash?.Close();
+                }));
+            }
+            catch { }
+            finally
+            {
+                SplashShowing = false;
+                splash = null;
+            }
         }
+
         public static void CloseLog()
         {
             Thread.Sleep(1500);
-            log?.Invoke(() => log?.Close());
+            try
+            {
+                log?.Invoke(() => log?.Close());
+            }
+            catch { }
+        }
+        public static void CloseFrozenDiag()
+        {
+            Thread.Sleep(1500);
+            try
+            {
+                froze?.Invoke(() => froze?.Close());
+            }
+            catch { }
         }
 
         public static void Cleanup()
         {
+            CloseSplash();
+            CloseLog();
+            CloseFrozenDiag();
             Application.Exit();
         }
 
@@ -165,6 +214,6 @@ namespace projectFrameCut.Helper
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+        public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
     }
 }

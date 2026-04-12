@@ -58,10 +58,11 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
-        {"Place",  new(() => new PlaceEffect_ImageSharp())},
+        {"Place",  new(() => new PlaceEffect_IPicture())},
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
+        {"Rotation",  new(() => new RotationEffect_ImageSharp())},
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -71,12 +72,8 @@ public class InternalPluginBase : IPluginBase
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
         {"Blur", new BlurEffectFactory()},
+        {"Rotation", new RotationEffectFactory()},
     };
-
-    //public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
-    //{
-    //    {"Overlay", new(() => new OverlayMixture()) }
-    //};
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
@@ -101,11 +98,7 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", () => new MaskApplier() },
         { "StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
         { "PointPlacer",() => new PointPlacer() },
-        { "MockValueProvider", () => new MockValueProvider() },
-        { "MockOneToOneProcessor", () => new MockOneToOneProcessor() },
-        { "MockManyToOneProcessor", () => new MockManyToOneProcessor() },
-        { "MockOneInputResultGenerator", () => new MockOneInputResultGenerator() },
-        { "MockManyInputResultGenerator", () => new MockManyInputResultGenerator() },
+
     };
 
     public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -114,13 +107,7 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", new MaskApplierFactory() },
         { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
         { "PointPlacer", new PointPlacerFactory() },
-#if DEBUG
-        { "MockValueProvider",  new MockValueProviderFactory() },
-        { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
-        { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
-        { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
-        { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
-#endif
+
     };
 
 
@@ -149,12 +136,12 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>>
     {
-        {"NormalTrack", new((i,n) => new NormalSoundTrack{Id = i, Name = n}) }
+        {"NormalTrack", new((i,n) => new NormalSoundTrack{Id = i, Name = n, Ratio = 1f, Volume = 1f}) }
     };
 
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>>
     {
-        {"AudioDecoder", (s) => new AudioDecoder(s) }
+        {"AudioDecoder", (s) => new Float32bitAudioDecoder(s) }
     };
 
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
@@ -182,6 +169,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
+            ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };

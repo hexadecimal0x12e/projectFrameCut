@@ -2,7 +2,7 @@ codename 'projectFrameCut'에 관하여
 
 저작권 (c) hexadecimal0x12e 2025.
 
-projectFrameCut는 **GNU GPL v2 (또는 그 이후 버전)** 하에 오픈소스로 배포됩니다. 소스 코드는 다음에서 확인할 수 있습니다: https://github.com/hexadecimal0x12e/projectFrameCut
+projectFrameCut는 **Apache License (또는 그 이후 버전)** 하에 오픈소스로 배포됩니다. 소스 코드는 다음에서 확인할 수 있습니다: https://github.com/hexadecimal0x12e/projectFrameCut
 
 **projectFrameCut는 아직 개발 중이며, 어떠한 생산 환경에서도 사용하지 마시기 바랍니다.** 또한 projectFrameCut의 오류로 인해 작업에 지장이 발생하더라도 저희는 어떠한 보증도 제공하지 않습니다.
 

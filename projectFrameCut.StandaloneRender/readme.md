@@ -75,6 +75,13 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
   如果一个参数在命令行和环境变量中都有定义，以环境变量里的参数优先。
   请注意，运行模式参数（如 `render`）不能通过环境变量设置，必须在命令行中指定。
+  
+- **`--trace`**
+  启用IPicture对象跟踪，并且输出更详细的调试信息。
+
+- **`--noSigInt`**
+  禁止将 `SIGINT` 信号（通常由 Ctrl+C 产生）注册为中断渲染的信号。这对于某些环境（如Docker容器）可能有用。
+  如果没有定义此参数，程序会默认注册 `SIGINT` 信号处理程序，这意味着你可以通过按 Ctrl+C 来优雅地停止渲染过程。
 
 ### 模式 'render' 的参数
 
@@ -146,6 +153,12 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 - **`-diagReportPath=<path to .csv file or output directory>`**  
   诊断报告输出路径（CSV 格式）。
 
+- **`-stopAfter=<second>`**
+  在一段时间后停止渲染，单位为秒。不定义此参数代表不限制。
+
+- **`-preferHwAccelDecoder=<true|false>`**
+  是否优先使用硬件加速解码器。默认：`false`
+
 ### 模式 'bench' 的参数
 
 - **`-multiAccelerator=<true|false>`**  
@@ -164,6 +177,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 返回0表示成功。
 返回1表示项目损坏、不能识别或者配置错误。
 返回2表示找不到加速器。
+返回255表示渲染被取消。
 返回负数通常表示出现了没有被处理的异常，可能是你的参数问题，或者是程序的bug。如果是程序的bug，请将错误信息反馈给我们。
 
 

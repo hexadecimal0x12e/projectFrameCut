@@ -345,6 +345,495 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
     }
 
+    public class ResizeComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Resize";
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcW = Convert.ToInt32((float)args[4]);
+            int srcH = Convert.ToInt32((float)args[5]);
+            int dstW = Convert.ToInt32((float)args[6]);
+            int dstH = Convert.ToInt32((float)args[7]);
+
+            if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0)
+            {
+                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
+            }
+
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(dstW * dstH);
+            int glLength = Math.Max(srcLength, dstLength);
+
+            float[] rPad = PreparePaddedChannel(rIn, srcLength, glLength);
+            float[] gPad = PreparePaddedChannel(gIn, srcLength, glLength);
+            float[] bPad = PreparePaddedChannel(bIn, srcLength, glLength);
+            float[] aPad = PreparePaddedChannel(aIn, srcLength, glLength);
+
+            float ratioX = (float)srcW / dstW;
+            float ratioY = (float)srcH / dstH;
+
+            string shader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{dstLength}}))
+                    {
+                        outputData[i] = 0.0;
+                        return;
+                    }
+
+                    int x = int(i % uint({{dstW}}));
+                    int y = int(i / uint({{dstW}}));
+
+                    int srcX = int(float(x) * {{ratioX.ToString(System.Globalization.CultureInfo.InvariantCulture)}});
+                    int srcY = int(float(y) * {{ratioY.ToString(System.Globalization.CultureInfo.InvariantCulture)}});
+
+                    if (srcX >= {{srcW}}) srcX = {{srcW - 1}};
+                    if (srcY >= {{srcH}}) srcY = {{srcH - 1}};
+                    if (srcX < 0) srcX = 0;
+                    if (srcY < 0) srcY = 0;
+
+                    int srcIdx = srcY * {{srcW}} + srcX;
+                    outputData[i] = inputData[srcIdx];
+                }
+                """;
+
+            using (ShaderLibrary.locker.EnterScope())
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader,
+                        Inputs = new float[][] { rPad },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "ResizeComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+
+                    ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask;
+
+                    async Task<float[]> RunChannel(float[] channel, string jobId)
+                    {
+                        accelerator.JobID = jobId;
+                        accelerator.Inputs = new float[][] { channel };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                        var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == dstLength)
+                        {
+                            return raw;
+                        }
+
+                        var trimmed = new float[dstLength];
+                        Array.Copy(raw, 0, trimmed, 0, Math.Min(raw.Length, dstLength));
+                        return trimmed;
+                    }
+
+                    var rOut = await RunChannel(rPad, "ResizeComputer-R");
+                    var gOut = await RunChannel(gPad, "ResizeComputer-G");
+                    var bOut = await RunChannel(bPad, "ResizeComputer-B");
+                    var aOut = await RunChannel(aPad, "ResizeComputer-A");
+
+                    return new object[] { rOut, gOut, bOut, aOut };
+                });
+
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException("ResizeComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion.");
+                }
+
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null)
+                {
+                    throw new InvalidOperationException("ResizeComputer Compute failed: accelerator returned null result.");
+                }
+
+                return result;
+            }
+        }
+
+        private static float[] PreparePaddedChannel(float[] source, int sourceLength, int paddedLength)
+        {
+            var arr = new float[paddedLength];
+            Array.Copy(source, 0, arr, 0, Math.Min(Math.Min(source.Length, sourceLength), paddedLength));
+            return arr;
+        }
+    }
+
+    public class CropComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Crop";
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcW = Convert.ToInt32(args[4]);
+            int srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]);
+            int startY = Convert.ToInt32(args[7]);
+            int cropW = Convert.ToInt32(args[8]);
+            int cropH = Convert.ToInt32(args[9]);
+
+            if (srcW <= 0 || srcH <= 0 || cropW <= 0 || cropH <= 0)
+            {
+                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
+            }
+
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(cropW * cropH);
+            int glLength = Math.Max(srcLength, dstLength);
+
+            float[] rPad = PreparePaddedChannel(rIn, srcLength, glLength);
+            float[] gPad = PreparePaddedChannel(gIn, srcLength, glLength);
+            float[] bPad = PreparePaddedChannel(bIn, srcLength, glLength);
+            float[] aPad = PreparePaddedChannel(aIn, srcLength, glLength);
+
+            string shader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{dstLength}}))
+                    {
+                        outputData[i] = 0.0;
+                        return;
+                    }
+
+                    int x = int(i % uint({{cropW}}));
+                    int y = int(i / uint({{cropW}}));
+                    int srcX = {{startX}} + x;
+                    int srcY = {{startY}} + y;
+
+                    if (srcX >= 0 && srcX < {{srcW}} && srcY >= 0 && srcY < {{srcH}})
+                    {
+                        int srcIdx = srcY * {{srcW}} + srcX;
+                        outputData[i] = inputData[srcIdx];
+                    }
+                    else
+                    {
+                        outputData[i] = 0.0;
+                    }
+                }
+                """;
+
+            using (ShaderLibrary.locker.EnterScope())
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader,
+                        Inputs = new float[][] { rPad },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "CropComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+
+                    ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask;
+
+                    async Task<float[]> RunChannel(float[] channel, string jobId)
+                    {
+                        accelerator.JobID = jobId;
+                        accelerator.Inputs = new float[][] { channel };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                        var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == dstLength)
+                        {
+                            return raw;
+                        }
+
+                        var trimmed = new float[dstLength];
+                        Array.Copy(raw, 0, trimmed, 0, Math.Min(raw.Length, dstLength));
+                        return trimmed;
+                    }
+
+                    var rOut = await RunChannel(rPad, "CropComputer-R");
+                    var gOut = await RunChannel(gPad, "CropComputer-G");
+                    var bOut = await RunChannel(bPad, "CropComputer-B");
+                    var aOut = await RunChannel(aPad, "CropComputer-A");
+
+                    return new object[] { rOut, gOut, bOut, aOut };
+                });
+
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException("CropComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion.");
+                }
+
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null)
+                {
+                    throw new InvalidOperationException("CropComputer Compute failed: accelerator returned null result.");
+                }
+
+                return result;
+            }
+        }
+
+        private static float[] PreparePaddedChannel(float[] source, int sourceLength, int paddedLength)
+        {
+            var arr = new float[paddedLength];
+            Array.Copy(source, 0, arr, 0, Math.Min(Math.Min(source.Length, sourceLength), paddedLength));
+            return arr;
+        }
+    }
+
+    public class PlaceComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Place";
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcW = Convert.ToInt32(args[4]);
+            int srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]);
+            int startY = Convert.ToInt32(args[7]);
+            int dstW = Convert.ToInt32(args[8]);
+            int dstH = Convert.ToInt32(args[9]);
+
+            if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0)
+            {
+                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
+            }
+
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(dstW * dstH);
+            int glLength = Math.Max(srcLength, dstLength);
+
+            float[] rPad = PreparePaddedChannel(rIn, srcLength, glLength);
+            float[] gPad = PreparePaddedChannel(gIn, srcLength, glLength);
+            float[] bPad = PreparePaddedChannel(bIn, srcLength, glLength);
+            float[] aPad = PreparePaddedChannel(aIn, srcLength, glLength);
+
+            string shader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{dstLength}}))
+                    {
+                        outputData[i] = 0.0;
+                        return;
+                    }
+
+                    int x = int(i % uint({{dstW}}));
+                    int y = int(i / uint({{dstW}}));
+                    int srcX = x - {{startX}};
+                    int srcY = y - {{startY}};
+
+                    if (srcX >= 0 && srcX < {{srcW}} && srcY >= 0 && srcY < {{srcH}})
+                    {
+                        int srcIdx = srcY * {{srcW}} + srcX;
+                        outputData[i] = inputData[srcIdx];
+                    }
+                    else
+                    {
+                        outputData[i] = 0.0;
+                    }
+                }
+                """;
+
+            using (ShaderLibrary.locker.EnterScope())
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader,
+                        Inputs = new float[][] { rPad },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "PlaceComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+
+                    ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask;
+
+                    async Task<float[]> RunChannel(float[] channel, string jobId)
+                    {
+                        accelerator.JobID = jobId;
+                        accelerator.Inputs = new float[][] { channel };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                        var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == dstLength)
+                        {
+                            return raw;
+                        }
+
+                        var trimmed = new float[dstLength];
+                        Array.Copy(raw, 0, trimmed, 0, Math.Min(raw.Length, dstLength));
+                        return trimmed;
+                    }
+
+                    var rOut = await RunChannel(rPad, "PlaceComputer-R");
+                    var gOut = await RunChannel(gPad, "PlaceComputer-G");
+                    var bOut = await RunChannel(bPad, "PlaceComputer-B");
+                    var aOut = await RunChannel(aPad, "PlaceComputer-A");
+
+                    return new object[] { rOut, gOut, bOut, aOut };
+                });
+
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException("PlaceComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion.");
+                }
+
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null)
+                {
+                    throw new InvalidOperationException("PlaceComputer Compute failed: accelerator returned null result.");
+                }
+
+                return result;
+            }
+        }
+
+        private static float[] PreparePaddedChannel(float[] source, int sourceLength, int paddedLength)
+        {
+            var arr = new float[paddedLength];
+            Array.Copy(source, 0, arr, 0, Math.Min(Math.Min(source.Length, sourceLength), paddedLength));
+            return arr;
+        }
+    }
+
     public class RemoveColorComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
@@ -359,13 +848,18 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             var aB = args[2] as float[];
             var sourceA = args[3] as float[];
 
+            if (aR is null || aG is null || aB is null || sourceA is null)
+            {
+                throw new ArgumentException("RemoveColorComputer expects four float[] channel arrays.");
+            }
+
             var toRemoveR = (ushort)args[4];
             var toRemoveG = (ushort)args[5];
             var toRemoveB = (ushort)args[6];
             var range = (ushort)args[7];
             
             // Validate all input arrays have the same length
-            if (aR!.Length != aG!.Length || aR.Length != aB!.Length || aR.Length != sourceA!.Length)
+            if (aR.Length != aG.Length || aR.Length != aB.Length || aR.Length != sourceA.Length)
             {
                 throw new InvalidDataException($"Input array length mismatch: aR={aR.Length}, aG={aG.Length}, aB={aB.Length}, sourceA={sourceA.Length}");
             }

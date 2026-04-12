@@ -22,15 +22,19 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public bool NeedFilePath => false;
 
@@ -60,12 +64,17 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("Use TransformProcesser.");
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize = false)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("Use TransformProcesser.");
         }
 
-        public void ReInit()
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotSupportedException("Use TransformProcesser.");
+        }
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (TransformElement is JsonElement e)
             {

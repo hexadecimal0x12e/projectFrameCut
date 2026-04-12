@@ -95,7 +95,7 @@ namespace projectFrameCut.Services
                         font = TextClip.FontsCache.TryGet(item.FontName, out var family) ? family.CreateFont(fontSize) : throw new InvalidOperationException("Font not available.");
                     }
 
-                    var isDark = Application.Current?.UserAppTheme == AppTheme.Dark;
+                    var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
 
                     // 当未指定 sample 时，优先使用 FontItem.PrimaryLanguageTag 判断语言，
                     // 再尝试从字体文件直接读取（如果能找到路径的话）。

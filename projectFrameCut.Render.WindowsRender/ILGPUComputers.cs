@@ -547,6 +547,284 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
+    public class CropComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "Crop";
+
+        [SetsRequiredMembers]
+        public CropComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; } = false;
+
+        private int accelIdx = 0;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator,
+            Action<Index1D,
+                ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+                ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+                int, int, int, int, int>> KernelCache = new();
+
+        private static Action<Index1D,
+            ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+            ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+            int, int, int, int, int> GetKernel(Accelerator accelerator)
+        {
+            return KernelCache.GetOrAdd(accelerator, static acc =>
+                acc.LoadAutoGroupedStreamKernel((
+                    Index1D i,
+                    ArrayView<float> rOut,
+                    ArrayView<float> gOut,
+                    ArrayView<float> bOut,
+                    ArrayView<float> aOut,
+                    ArrayView<float> rIn,
+                    ArrayView<float> gIn,
+                    ArrayView<float> bIn,
+                    ArrayView<float> aIn,
+                    int dstW,
+                    int srcW,
+                    int srcH,
+                    int startX,
+                    int startY) =>
+                {
+                    int x = i % dstW;
+                    int y = i / dstW;
+                    int srcX = startX + x;
+                    int srcY = startY + y;
+
+                    if (srcX >= 0 && srcX < srcW && srcY >= 0 && srcY < srcH)
+                    {
+                        int srcIdx = srcY * srcW + srcX;
+                        rOut[i] = rIn[srcIdx];
+                        gOut[i] = gIn[srcIdx];
+                        bOut[i] = bIn[srcIdx];
+                        aOut[i] = aIn[srcIdx];
+                    }
+                    else
+                    {
+                        rOut[i] = 0f;
+                        gOut[i] = 0f;
+                        bOut[i] = 0f;
+                        aOut[i] = 0f;
+                    }
+                }));
+        }
+
+        public object[] Compute(object[] args)
+        {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcW = Convert.ToInt32(args[4]);
+            int srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]);
+            int startY = Convert.ToInt32(args[7]);
+            int cropW = Convert.ToInt32(args[8]);
+            int cropH = Convert.ToInt32(args[9]);
+
+            if (srcW <= 0 || srcH <= 0 || cropW <= 0 || cropH <= 0)
+            {
+                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
+            }
+
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(cropW * cropH);
+
+            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
+
+            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+
+            var kernel = GetKernel(accelerator);
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    kernel(dstLength,
+                        rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                        rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                        cropW, srcW, srcH, startX, startY);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                kernel(dstLength,
+                    rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                    rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                    cropW, srcW, srcH, startX, startY);
+            }
+
+            var rRes = rBufOut.GetAsArray1D();
+            var gRes = gBufOut.GetAsArray1D();
+            var bRes = bBufOut.GetAsArray1D();
+            var aRes = aBufOut.GetAsArray1D();
+            return [rRes, gRes, bRes, aRes];
+        }
+    }
+
+    public class PlaceComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "Place";
+
+        [SetsRequiredMembers]
+        public PlaceComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; } = false;
+
+        private int accelIdx = 0;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator,
+            Action<Index1D,
+                ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+                ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+                int, int, int, int, int>> KernelCache = new();
+
+        private static Action<Index1D,
+            ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+            ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
+            int, int, int, int, int> GetKernel(Accelerator accelerator)
+        {
+            return KernelCache.GetOrAdd(accelerator, static acc =>
+                acc.LoadAutoGroupedStreamKernel((
+                    Index1D i,
+                    ArrayView<float> rOut,
+                    ArrayView<float> gOut,
+                    ArrayView<float> bOut,
+                    ArrayView<float> aOut,
+                    ArrayView<float> rIn,
+                    ArrayView<float> gIn,
+                    ArrayView<float> bIn,
+                    ArrayView<float> aIn,
+                    int dstW,
+                    int srcW,
+                    int srcH,
+                    int startX,
+                    int startY) =>
+                {
+                    int x = i % dstW;
+                    int y = i / dstW;
+                    int srcX = x - startX;
+                    int srcY = y - startY;
+
+                    if (srcX >= 0 && srcX < srcW && srcY >= 0 && srcY < srcH)
+                    {
+                        int srcIdx = srcY * srcW + srcX;
+                        rOut[i] = rIn[srcIdx];
+                        gOut[i] = gIn[srcIdx];
+                        bOut[i] = bIn[srcIdx];
+                        aOut[i] = aIn[srcIdx];
+                    }
+                    else
+                    {
+                        rOut[i] = 0f;
+                        gOut[i] = 0f;
+                        bOut[i] = 0f;
+                        aOut[i] = 0f;
+                    }
+                }));
+        }
+
+        public object[] Compute(object[] args)
+        {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcW = Convert.ToInt32(args[4]);
+            int srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]);
+            int startY = Convert.ToInt32(args[7]);
+            int dstW = Convert.ToInt32(args[8]);
+            int dstH = Convert.ToInt32(args[9]);
+
+            if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0)
+            {
+                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
+            }
+
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(dstW * dstH);
+
+            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
+
+            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+
+            var kernel = GetKernel(accelerator);
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    kernel(dstLength,
+                        rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                        rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                        dstW, srcW, srcH, startX, startY);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                kernel(dstLength,
+                    rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                    rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                    dstW, srcW, srcH, startX, startY);
+            }
+
+            var rRes = rBufOut.GetAsArray1D();
+            var gRes = gBufOut.GetAsArray1D();
+            var bRes = bBufOut.GetAsArray1D();
+            var aRes = aBufOut.GetAsArray1D();
+            return [rRes, gRes, bRes, aRes];
+        }
+    }
+
     public static class ILGPUComputerHelper
     {
         public static Lock locker = new();

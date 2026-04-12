@@ -5,17 +5,27 @@
   "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
   "NameOfLocalizerInstance": "Localized",
   "NameOfBaseInterface": "ISimpleLocalizerBase_Helper",
-  "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
+  "EnablePseudoLocalization": false,
+  "PseudoLocalizationCondition": "DEBUG",
+  "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
     "zh-CN": [
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u4E0D\u80FD\u5728\u7BA1\u7406\u5458\u8EAB\u4EFD\u4E0B\u8FD0\u884C\u3002\r\u8BF7\u5C1D\u8BD5\u5728\u6CA1\u6709\u7BA1\u7406\u5458\u6743\u9650\u7684\u4E0A\u4E0B\u6587\u91CC\u91CD\u65B0\u6253\u5F00\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
       {
         "Id": "AppLoading",
         "Value": "\u52A0\u8F7D\u5E94\u7528\u7A0B\u5E8F...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -23,7 +33,15 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6E83\u4E86\u3002\r\u7A0B\u5E8F\u5C06\u81EA\u52A8\u91CD\u542F\uFF0C\u4F60\u7684\u9879\u76EE\u5C06\u4F1A\u88AB\u81EA\u52A8\u6062\u590D\u3002\r\u8981\u7981\u7528\u6B64\u529F\u80FD\uFF0C\u8BF7\u8F6C\u5230 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u6E83\u540E\u4E0D\u91CD\u542F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -31,7 +49,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -39,7 +57,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -47,7 +65,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -55,7 +73,39 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} \u4F3C\u4E4E\u5FD9\u4E8E\u67D0\u4E8B\uFF0C\u65E0\u6CD5\u54CD\u5E94UI\u3002\r\u4F60\u53EF\u4EE5\u7EE7\u7EED\u7B49\u5F85\uFF0C\u6216\u8005\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F\u3002\r\u5982\u679C\u4F60\u91CD\u542F\u7A0B\u5E8F\uFF0C\u4F60\u7684\u6570\u636E\u53EF\u80FD\u4F1A\u4E22\u5931\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u672A\u54CD\u5E94",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u7EE7\u7EED\u7B49\u5F85",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -63,15 +113,7 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -89,7 +131,7 @@
             "Value": ""
           }
         ],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -97,7 +139,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -105,7 +147,7 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -113,7 +155,7 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -124,7 +166,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -133,7 +175,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -142,7 +184,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -151,7 +193,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -160,7 +202,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -169,16 +211,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Source value is a single space character.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -187,7 +220,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -196,7 +229,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -205,7 +238,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -224,7 +257,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -233,7 +266,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Sorry, {HelperProgram.AppTitle} cannot run under administrator privileges.\r\nPlease try reopening the program without administrator permissions.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} Not Responding",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Restart the application",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Continue waiting",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} seems busy and cannot respond to the UI.\r\nYou can continue waiting, or restart the application.\r\nIf you restart, you may lose some data.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "We\u0027re sorry, {HelperProgram.AppTitle} has crashed.\r\nThe program will restart automatically, and your projects will be automatically restored.\r\nTo disable this feature, go to Settings - General - Do not restart after crash.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -244,7 +331,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -253,7 +340,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -262,7 +349,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -271,7 +358,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -280,7 +367,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -289,16 +376,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u539F\u59CB\u503C\u70BA\u55AE\u4E00\u7A7A\u683C\uFF0C\u53EF\u80FD\u7528\u65BC\u683C\u5F0F\u63A7\u5236\uFF0C\u6545\u4FDD\u6301\u4E0D\u8B8A\u3002",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -307,7 +385,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -316,7 +394,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -325,7 +403,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -344,7 +422,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -353,7 +431,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u7121\u6CD5\u5728\u7BA1\u7406\u54E1\u8EAB\u5206\u4E0B\u57F7\u884C\u3002\r\n\u8ACB\u5617\u8A66\u5728\u6C92\u6709\u7BA1\u7406\u54E1\u6B0A\u9650\u7684\u74B0\u5883\u4E2D\u91CD\u65B0\u958B\u555F\u7A0B\u5F0F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u672A\u56DE\u61C9",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u91CD\u555F\u61C9\u7528\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u7E7C\u7E8C\u7B49\u5F85",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} \u4F3C\u4E4E\u6B63\u5728\u8655\u7406\u67D0\u4E9B\u4E8B\u60C5\uFF0C\u7121\u6CD5\u56DE\u61C9UI\u3002\r\n\u4F60\u53EF\u4EE5\u7E7C\u7E8C\u7B49\u5F85\uFF0C\u6216\u8005\u91CD\u555F\u61C9\u7528\u7A0B\u5F0F\u3002\r\n\u5982\u679C\u4F60\u91CD\u555F\u7A0B\u5F0F\uFF0C\u4F60\u7684\u8CC7\u6599\u53EF\u80FD\u6703\u907A\u5931\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6F70\u4E86\u3002\r\u7A0B\u5F0F\u5C07\u81EA\u52D5\u91CD\u65B0\u555F\u52D5\uFF0C\u4F60\u7684\u5C08\u6848\u6703\u81EA\u52D5\u6062\u5FA9\u3002\r\u8981\u505C\u7528\u6B64\u529F\u80FD\uFF0C\u8ACB\u524D\u5F80 \u8A2D\u5B9A-\u4E00\u822C-\u5D29\u6F70\u5F8C\u4E0D\u91CD\u65B0\u555F\u52D5\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5DF2\u8ABF\u6574\u7528\u8A5E\u4EE5\u7B26\u5408\u53F0\u7063\u7E41\u9AD4\u4E2D\u6587\u7FD2\u6163\uFF0C\u5982\u300C\u7A0B\u5E8F\u300D\u6539\u70BA\u300C\u7A0B\u5F0F\u300D\u3001\u300C\u9879\u76EE\u300D\u6539\u70BA\u300C\u5C08\u6848\u300D\u3001\u300C\u7981\u7528\u300D\u6539\u70BA\u300C\u505C\u7528\u300D\u3001\u300C\u8BBE\u7F6E-\u901A\u7528\u300D\u6539\u70BA\u300C\u8A2D\u5B9A-\u4E00\u822C\u300D\u3002",
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -364,7 +496,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -373,7 +505,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -382,7 +514,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -391,7 +523,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -400,7 +532,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -409,16 +541,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -427,7 +550,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -436,7 +559,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -445,7 +568,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -464,7 +587,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -473,7 +596,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001{HelperProgram.AppTitle} \u306F\u7BA1\u7406\u8005\u6A29\u9650\u3067\u5B9F\u884C\u3059\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002\r\u7BA1\u7406\u8005\u6A29\u9650\u306E\u306A\u3044\u72B6\u614B\u3067\u30D7\u30ED\u30B0\u30E9\u30E0\u3092\u518D\u5EA6\u304A\u958B\u304D\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u306F\u5FDC\u7B54\u3057\u3066\u3044\u307E\u305B\u3093",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u518D\u8D77\u52D5\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u7D9A\u884C\u3092\u304A\u5F85\u3061\u304F\u3060\u3055\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle}\u306F\u4F55\u304B\u306B\u5FD9\u3057\u304F\u3001UI\u306B\u5FDC\u7B54\u3067\u304D\u307E\u305B\u3093\u3002\r\n\u305D\u306E\u307E\u307E\u304A\u5F85\u3061\u3044\u305F\u3060\u304F\u304B\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u518D\u8D77\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r\n\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u518D\u8D77\u52D5\u3059\u308B\u3068\u3001\u30C7\u30FC\u30BF\u304C\u5931\u308F\u308C\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001{HelperProgram.AppTitle} \u304C\u30AF\u30E9\u30C3\u30B7\u30E5\u3057\u307E\u3057\u305F\u3002\r\u30D7\u30ED\u30B0\u30E9\u30E0\u306F\u81EA\u52D5\u7684\u306B\u518D\u8D77\u52D5\u3057\u307E\u3059\u3002\u3042\u306A\u305F\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306F\u81EA\u52D5\u7684\u306B\u5FA9\u5143\u3055\u308C\u307E\u3059\u3002\r\u3053\u306E\u6A5F\u80FD\u3092\u7121\u52B9\u306B\u3059\u308B\u306B\u306F\u3001[\u8A2D\u5B9A] - [\u4E00\u822C] - [\u30AF\u30E9\u30C3\u30B7\u30E5\u5F8C\u306B\u518D\u8D77\u52D5\u3057\u306A\u3044] \u306B\u79FB\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -484,7 +661,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -493,7 +670,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -502,7 +679,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -511,7 +688,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -520,7 +697,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -529,16 +706,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\uBE48 \uBB38\uC790\uC5F4 - \uBC88\uC5ED\uD560 \uB0B4\uC6A9 \uC5C6\uC74C",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -547,7 +715,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -556,7 +724,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -565,7 +733,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -584,7 +752,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -593,7 +761,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. {HelperProgram.AppTitle}\uC740(\uB294) \uAD00\uB9AC\uC790 \uAD8C\uD55C\uC73C\uB85C \uC2E4\uD589\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.\r\uAD00\uB9AC\uC790 \uAD8C\uD55C\uC774 \uC5C6\uB294 \uC0C1\uD0DC\uC5D0\uC11C \uD504\uB85C\uADF8\uB7A8\uC744 \uB2E4\uC2DC \uC5F4\uC5B4 \uBCF4\uC2ED\uC2DC\uC624.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \uC751\uB2F5 \uC5C6\uC74C",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uC7AC\uC2DC\uC791",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\uACC4\uC18D \uAE30\uB2E4\uB9AC\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle}\uAC00 \uBB34\uC5B8\uAC00\uC5D0 \uBC14\uBE60\uC11C UI\uC5D0 \uC751\uB2F5\uD558\uC9C0 \uBABB\uD558\uB294 \uAC83 \uAC19\uC2B5\uB2C8\uB2E4.\r\uACC4\uC18D \uAE30\uB2E4\uB9AC\uAC70\uB098 \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC744 \uB2E4\uC2DC \uC2DC\uC791\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\uD504\uB85C\uADF8\uB7A8\uC744 \uB2E4\uC2DC \uC2DC\uC791\uD558\uBA74 \uB370\uC774\uD130\uAC00 \uC190\uC2E4\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. {HelperProgram.AppTitle}\uAC00 \uBE44\uC815\uC0C1 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.\r\n\uD504\uB85C\uADF8\uB7A8\uC774 \uC790\uB3D9\uC73C\uB85C \uC7AC\uC2DC\uC791\uB418\uBA70, \uC791\uC5C5 \uC911\uC774\uB358 \uD504\uB85C\uC81D\uD2B8\uB294 \uC790\uB3D9\uC73C\uB85C \uBCF5\uC6D0\uB429\uB2C8\uB2E4.\r\n\uC774 \uAE30\uB2A5\uC744 \uBE44\uD65C\uC131\uD654\uD558\uB824\uBA74, \uC124\uC815 \u003E \uC77C\uBC18 \u003E \u0027\uBE44\uC815\uC0C1 \uC885\uB8CC \uD6C4 \uC7AC\uC2DC\uC791 \uC548 \uD568\u0027\uC73C\uB85C \uC774\uB3D9\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -604,7 +826,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -613,7 +835,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -622,7 +844,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -631,7 +853,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -640,7 +862,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Titre de la fen\u00EAtre de rapport de plantage de l\u0027application. Le nom de l\u0027application est ins\u00E9r\u00E9 via le param\u00E8tre.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -649,16 +871,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "La valeur source est un espace unique, probablement utilis\u00E9 comme espace r\u00E9serv\u00E9 ou pour l\u0027espacement. Conserv\u00E9 tel quel.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -667,7 +880,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -676,7 +889,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -685,7 +898,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -704,7 +917,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -713,7 +926,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "D\u00E9sol\u00E9, {HelperProgram.AppTitle} ne peut pas s\u0027ex\u00E9cuter en tant qu\u0027administrateur.\rVeuillez r\u00E9essayer en ouvrant le programme sans privil\u00E8ges d\u0027administrateur.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} ne r\u00E9pond pas",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Red\u00E9marrer l\u0027application",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Continuer \u00E0 attendre",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} semble occup\u00E9 \u00E0 quelque chose et ne r\u00E9pond pas \u00E0 l\u0027interface. Vous pouvez continuer \u00E0 attendre ou red\u00E9marrer l\u0027application. Si vous red\u00E9marrez, vos donn\u00E9es pourraient \u00EAtre perdues.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Je suis d\u00E9sol\u00E9, {HelperProgram.AppTitle} a plant\u00E9.\r\nLe programme va red\u00E9marrer automatiquement, et vos projets seront restaur\u00E9s automatiquement.\r\nPour d\u00E9sactiver cette fonctionnalit\u00E9, allez dans Param\u00E8tres -\u003E G\u00E9n\u00E9ral -\u003E Ne pas red\u00E9marrer apr\u00E8s un plantage.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -724,7 +991,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -733,7 +1000,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -742,7 +1009,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -751,7 +1018,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -760,7 +1027,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -769,7 +1036,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u5E94\u7528\u7A0B\u5E8F\u5D29\u6E83\u62A5\u544A\u4E4B\u6807\u9898",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -778,16 +1045,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u539F\u540D\u79F0\u53CA\u52A8\u6001\u5E74\u4EFD\u8868\u8FBE\u5F0F\u3002",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -806,7 +1064,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -815,7 +1073,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -824,7 +1082,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -833,7 +1091,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7248\u672C\u4E4B\u7CFB\u7EDF\u8981\u6C42\u63D0\u793A\uFF0C\u4FDD\u7559\u53C2\u6570\u5360\u4F4D\u7B26\uFF0C\u7528\u8BED\u53E4\u96C5\u800C\u660E\u6670\u3002",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u6B49\u54C9\uFF0C{HelperProgram.AppTitle} \u4E0D\u53EF\u4E8E\u7BA1\u7406\u5458\u4E4B\u8EAB\u8FD0\u884C\u3002\u8BF7\u8BD5\u4E8E\u65E0\u7BA1\u7406\u5458\u6743\u9650\u4E4B\u4E0A\u4E0B\u6587\u4E2D\u91CD\u542F\u6B64\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u672A\u5E94",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u7EED\u5019",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} \u4F3C\u6709\u5197\u52A1\uFF0C\u672A\u80FD\u5E94\u673A\u3002\n\u541B\u53EF\u9759\u5019\uFF0C\u6216\u91CD\u542F\u6B64\u7A0B\u3002\n\u82E5\u91CD\u542F\u4E4B\uFF0C\u6050\u5931\u6240\u5B58\u4E4B\u6570\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7A0B\u5E8F\u65E0\u54CD\u5E94\u4E4B\u63D0\u793A\uFF0C\u6587\u8A00\u8BD1\u6CD5\u6C42\u7B80\u96C5\uFF0C\u6280\u672F\u8BCD\u7A0D\u4F5C\u8F6C\u5316\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u6B49\u751A\uFF0C{HelperProgram.AppTitle} \u5D29\u574F\u77E3\u3002\r\u7A0B\u5F0F\u5C06\u81EA\u542F\uFF0C\u6C5D\u4E4B\u9879\u76EE\u5C06\u81EA\u590D\u3002\r\u6B32\u7981\u6B64\u80FD\uFF0C\u8BF7\u8F6C\u81F3 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u540E\u4E0D\u542F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u5D29\u6E83\u63D0\u793A\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u6301\u6280\u672F\u542B\u4E49\u51C6\u786E\uFF0C\u7B26\u5408\u6587\u8A00\u6587\u7B80\u6D01\u98CE\u683C\u3002",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -844,7 +1156,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -853,7 +1165,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -862,7 +1174,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -871,7 +1183,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -880,7 +1192,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -889,25 +1201,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
-        "Value": "[Translation Error]: An error occurred while sending the request.",
+        "Value": "\u062D\u0642\u0648\u0642 \u0627\u0644\u0637\u0628\u0639 \u0648\u0627\u0644\u0646\u0634\u0631 \u0645\u062D\u0641\u0648\u0638\u0629 hexadecimal0x12e 2025-{DateTime.Now.Year}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: An error occurred while sending the request.",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "The original value is a single space, likely for formatting. Retained as is in Arabic.",
-        "HasValidationErrors": false
+        "Comment": "",
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -926,7 +1229,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -935,7 +1238,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -944,7 +1247,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -953,7 +1256,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u0639\u0630\u0631\u064B\u0627\u060C \u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0634\u063A\u064A\u0644 {HelperProgram.AppTitle} \u0628\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u0624\u0648\u0644. \u064A\u064F\u0631\u062C\u0649 \u0645\u062D\u0627\u0648\u0644\u0629 \u0625\u0639\u0627\u062F\u0629 \u0641\u062A\u062D \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0641\u064A \u0633\u064A\u0627\u0642 \u0628\u062F\u0648\u0646 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u0624\u0648\u0644.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u063A\u064A\u0631 \u0645\u0633\u062A\u062C\u064A\u0628",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u0627\u0644\u0627\u0633\u062A\u0645\u0631\u0627\u0631 \u0641\u064A \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} \u064A\u0628\u062F\u0648 \u0645\u0634\u063A\u0648\u0644\u0627\u064B \u0628\u0634\u064A\u0621 \u0645\u0627 \u0648\u0644\u0627 \u064A\u0633\u062A\u062C\u064A\u0628 \u0644\u0648\u0627\u062C\u0647\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.\r\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 \u0623\u0648 \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.\r\u0625\u0630\u0627 \u0642\u0645\u062A \u0628\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u060C \u0642\u062F \u062A\u0641\u0642\u062F \u0628\u064A\u0627\u0646\u0627\u062A\u0643.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u0639\u0630\u0631\u064B\u0627\u060C {HelperProgram.AppTitle} \u0642\u062F \u062A\u0639\u0637\u0644.\r\u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627\u060C \u0648\u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0645\u0634\u0631\u0648\u0639\u0643 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627.\r\u0644\u062A\u0639\u0637\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629\u060C \u0627\u0646\u062A\u0642\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u003E \u0639\u0627\u0645 \u003E \u0639\u062F\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0628\u0639\u062F \u0627\u0644\u062A\u0639\u0637\u0644.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -964,7 +1321,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -973,7 +1330,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -982,7 +1339,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -991,7 +1348,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1000,7 +1357,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1009,7 +1366,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1018,16 +1375,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Der urspr\u00FCngliche Wert ist ein Leerzeichen, daher wurde er nicht \u00FCbersetzt.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1046,7 +1394,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1055,7 +1403,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1064,7 +1412,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1073,7 +1421,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Es tut uns leid, {HelperProgram.AppTitle} kann nicht mit Administratorrechten ausgef\u00FChrt werden.\rBitte versuchen Sie, das Programm ohne Administratorrechte neu zu starten.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} reagiert nicht",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Anwendung neu starten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Bitte warten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} scheint mit etwas besch\u00E4ftigt zu sein und reagiert nicht auf die Benutzeroberfl\u00E4che.\r\nSie k\u00F6nnen weiter warten oder die Anwendung neu starten.\r\nWenn Sie die Anwendung neu starten, k\u00F6nnten Ihre Daten verloren gehen.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Es tut uns leid, {HelperProgram.AppTitle} ist abgest\u00FCrzt.\r\nDas Programm wird automatisch neu gestartet, Ihr Projekt wird automatisch wiederhergestellt.\r\nUm diese Funktion zu deaktivieren, gehen Sie bitte zu Einstellungen \u2192 Allgemein \u2192 Nach Absturz nicht neu starten.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -1084,7 +1486,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1093,7 +1495,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1102,7 +1504,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1111,7 +1513,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1120,7 +1522,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1129,7 +1531,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1138,16 +1540,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "El valor original es un espacio en blanco, por lo que se mantiene igual en la traducci\u00F3n.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1166,7 +1559,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1175,7 +1568,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1184,7 +1577,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1193,7 +1586,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Lo siento, {HelperProgram.AppTitle} no puede ejecutarse con privilegios de administrador.\r\nIntente volver a abrir el programa en un contexto sin permisos de administrador.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} no responde",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Reiniciar aplicaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Espere un momento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} parece estar ocupado con algo y no responde a la interfaz de usuario.\r\nPuedes seguir esperando o reiniciar la aplicaci\u00F3n.\r\nSi reinicias la aplicaci\u00F3n, podr\u00EDas perder tus datos.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Lo sentimos, {HelperProgram.AppTitle} ha fallado.\r\nEl programa se reiniciar\u00E1 autom\u00E1ticamente y tu proyecto se restaurar\u00E1.\r\nPara desactivar esta funci\u00F3n, ve a Configuraci\u00F3n - General - No reiniciar despu\u00E9s del fallo.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -1204,7 +1651,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1213,7 +1660,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1222,7 +1669,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1231,7 +1678,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1240,7 +1687,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1249,7 +1696,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1258,16 +1705,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Il valore originale \u00E8 una stringa vuota. Non \u00E8 richiesta alcuna traduzione.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1286,7 +1724,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1295,7 +1733,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1304,7 +1742,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1313,7 +1751,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Mi dispiace, {HelperProgram.AppTitle} non pu\u00F2 essere eseguito con privilegi di amministratore.\r\nPer favore, prova a riaprire il programma senza privilegi di amministratore.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} non risponde",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Riavvia l\u0027applicazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Attendi ancora",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} sembra essere occupato con qualcosa e non risponde all\u0027interfaccia utente.\r\nPuoi continuare ad attendere o riavviare l\u0027applicazione.\r\nSe riavvii il programma, i tuoi dati potrebbero andare persi.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u793A\u7528\u6237\u5E94\u7528\u7A0B\u5E8F\u65E0\u54CD\u5E94\u65F6\u7684\u64CD\u4F5C\u9009\u9879",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Ci dispiace, {HelperProgram.AppTitle} \u00E8 crashato.\r\nIl programma si riavvier\u00E0 automaticamente e i tuoi progetti verranno ripristinati automaticamente.\r\nPer disabilitare questa funzione, vai su Impostazioni \u2192 Generale \u2192 Non riavviare dopo il crash.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Messaggio di crash con funzionalit\u00E0 di riavvio automatico",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -1324,7 +1816,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1333,7 +1825,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1342,7 +1834,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1351,7 +1843,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1360,7 +1852,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1369,7 +1861,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1378,16 +1870,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1406,7 +1889,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1415,7 +1898,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1424,7 +1907,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1433,7 +1916,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Przepraszamy, {HelperProgram.AppTitle} nie mo\u017Ce dzia\u0142a\u0107 z uprawnieniami administratora.\r\nSpr\u00F3buj ponownie otworzy\u0107 aplikacj\u0119 w kontek\u015Bcie bez uprawnie\u0144 administratora.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} nie odpowiada",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Uruchom ponownie aplikacj\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Kontynuuj oczekiwanie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} wydaje si\u0119 by\u0107 zaj\u0119ty czym\u015B i nie odpowiada na interfejs u\u017Cytkownika.\rMo\u017Cesz kontynuowa\u0107 oczekiwanie lub ponownie uruchomi\u0107 aplikacj\u0119.\rJe\u015Bli ponownie uruchomisz aplikacj\u0119, Twoje dane mog\u0105 zosta\u0107 utracone.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Przepraszamy, {HelperProgram.AppTitle} uleg\u0142o awarii.\r\nProgram zostanie automatycznie uruchomiony ponownie, a Twoje projekty zostan\u0105 automatycznie przywr\u00F3cone.\r\nAby wy\u0142\u0105czy\u0107 t\u0119 funkcj\u0119, przejd\u017A do Ustawienia \u003E Og\u00F3lne \u003E Nie uruchamiaj ponownie po awarii.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -1444,7 +1981,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1453,7 +1990,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1462,7 +1999,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1471,7 +2008,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1480,7 +2017,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1489,7 +2026,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1498,16 +2035,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Espa\u00E7o em branco para formata\u00E7\u00E3o ou como marcador de posi\u00E7\u00E3o.",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1526,7 +2054,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1535,7 +2063,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1544,7 +2072,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1553,7 +2081,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Desculpe, {HelperProgram.AppTitle} n\u00E3o pode ser executado como administrador.\r\nTente abrir o programa novamente sem privil\u00E9gios de administrador.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} n\u00E3o est\u00E1 respondendo",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Reiniciar aplicativo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Continue aguardando",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} parece estar ocupado com algo e n\u00E3o consegue responder \u00E0 interface do usu\u00E1rio.\r\nVoc\u00EA pode continuar esperando ou reiniciar o aplicativo.\r\nSe voc\u00EA reiniciar o programa, seus dados podem ser perdidos.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Lamentamos, {HelperProgram.AppTitle} sofreu uma falha.\r\nO programa ser\u00E1 reiniciado automaticamente e seus projetos ser\u00E3o restaurados automaticamente.\r\nPara desativar esta fun\u00E7\u00E3o, v\u00E1 para Configura\u00E7\u00F5es - Geral - N\u00E3o reiniciar ap\u00F3s falha.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -1564,7 +2146,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1573,7 +2155,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1582,7 +2164,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1591,7 +2173,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1600,7 +2182,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1609,7 +2191,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1618,16 +2200,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u0441\u0442\u0440\u043E\u043A\u0438 \u043E\u0431 \u0430\u0432\u0442\u043E\u0440\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u0430\u0445. \u0418\u043C\u044F \u0027hexadecimal0x12e\u0027 \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430, \u0442\u0430\u043A \u043A\u0430\u043A \u044D\u0442\u043E, \u0432\u0435\u0440\u043E\u044F\u0442\u043D\u043E, \u0438\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0438\u043B\u0438 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435.",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1646,7 +2219,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1655,7 +2228,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1664,7 +2237,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1673,7 +2246,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u041A \u0441\u043E\u0436\u0430\u043B\u0435\u043D\u0438\u044E, {HelperProgram.AppTitle} \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0441 \u043F\u0440\u0430\u0432\u0430\u043C\u0438 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430.\r\n\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0443 \u0431\u0435\u0437 \u043F\u0440\u0430\u0432 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle}, \u043A\u0430\u0436\u0435\u0442\u0441\u044F, \u0437\u0430\u043D\u044F\u0442 \u0447\u0435\u043C-\u0442\u043E \u0438 \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442 \u043D\u0430 UI. \u0412\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0438\u043B\u0438 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435. \u0415\u0441\u043B\u0438 \u0432\u044B \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0443, \u0432\u0430\u0448\u0438 \u0434\u0430\u043D\u043D\u044B\u0435 \u043C\u043E\u0433\u0443\u0442 \u0431\u044B\u0442\u044C \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u044B.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u041A \u0441\u043E\u0436\u0430\u043B\u0435\u043D\u0438\u044E, {HelperProgram.AppTitle} \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B \u0440\u0430\u0431\u043E\u0442\u0443 \u0430\u0432\u0430\u0440\u0438\u0439\u043D\u043E.\r\n\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0431\u0443\u0434\u0435\u0442 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430, \u0438 \u0432\u0430\u0448\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u044B \u0431\u0443\u0434\u0443\u0442 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u044B.\r\n\u0427\u0442\u043E\u0431\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u044D\u0442\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E, \u043F\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u0432 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 - \u041E\u0431\u0449\u0438\u0435 - \u041D\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u043A\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435 \u0441\u0431\u043E\u044F.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -1684,7 +2311,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CorruptedInstallPrompt",
@@ -1693,7 +2320,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Feedback",
@@ -1702,7 +2329,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_OpenLog",
@@ -1711,7 +2338,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Restart",
@@ -1720,7 +2347,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "CrashForm_Title",
@@ -1729,7 +2356,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Copyright",
@@ -1738,16 +2365,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PluginLoading",
@@ -1766,7 +2384,7 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_PostInit",
@@ -1775,7 +2393,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "SplashForm_Version",
@@ -1784,7 +2402,7 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "UnsupportedOSPrompt",
@@ -1793,7 +2411,61 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u00DCzg\u00FCn\u00FCz, {HelperProgram.AppTitle} y\u00F6netici olarak \u00E7al\u0131\u015Ft\u0131r\u0131lamaz.\r\nL\u00FCtfen program\u0131 y\u00F6netici izinleri olmadan yeniden a\u00E7may\u0131 deneyin.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} yan\u0131t vermiyor",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Uygulamay\u0131 Yeniden Ba\u015Flat",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Devam etmek i\u00E7in bekleyin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} bir \u015Feyle me\u015Fgul g\u00F6r\u00FCn\u00FCyor ve kullan\u0131c\u0131 aray\u00FCz\u00FCne yan\u0131t vermiyor.\r\nBeklemeye devam edebilir veya uygulamay\u0131 yeniden ba\u015Flatabilirsiniz.\r\nUygulamay\u0131 yeniden ba\u015Flat\u0131rsan\u0131z, verilerinizi kaybedebilirsiniz.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u00DCzg\u00FCn\u00FCz, {HelperProgram.AppTitle} \u00E7\u00F6kt\u00FC.\r\nProgram otomatik olarak yeniden ba\u015Flat\u0131lacak ve projeleriniz otomatik olarak kurtar\u0131lacakt\u0131r.\r\nBu \u00F6zelli\u011Fi devre d\u0131\u015F\u0131 b\u0131rakmak i\u00E7in l\u00FCtfen Ayarlar \u003E Genel \u003E \u00C7\u00F6kmeden sonra yeniden ba\u015Flatma se\u00E7ene\u011Fine gidin.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ]
   }

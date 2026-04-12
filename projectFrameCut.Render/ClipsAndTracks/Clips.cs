@@ -26,14 +26,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? FilePath { get; set; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
 
@@ -46,6 +46,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public string BindedSoundTrack { get; init; } = "";
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public VideoClip()
         {
@@ -53,9 +57,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
 
-        void IClip.ReInit()
+        void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
         }
@@ -77,10 +81,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
@@ -98,22 +102,26 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string BindedSoundTrack { get; init; } = "";
 
 
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public PhotoClip()
         {
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
 
         }
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize) => source?.Resize(targetWidth, targetHeight, forceResize) ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
-        void IClip.ReInit()
+        void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
-            source = Use16bpp ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
-            source.Disposed = null;
+            source = targetPPB == 16 ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
+            source.CanBeDisposed = false;
             source.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -146,16 +154,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -170,12 +178,45 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ushort B { get; init; }
         public float? A { get; init; } = null;
 
+        public bool UseFixedOutputSize { get; init; } = true;
+        public int OutputWidth { get; init; } = 1920;
+        public int OutputHeight { get; init; } = 1080;
+
+        [JsonIgnore]
+        public bool EffectiveUseFixedOutputSize => ResolveConfiguredBool("SolidColorUseFixedOutputSize", UseFixedOutputSize);
+
+        [JsonIgnore]
+        public int EffectiveOutputWidth => ResolveConfiguredInt("SolidColorOutputWidth", OutputWidth > 0 ? OutputWidth : targetWidth);
+
+        [JsonIgnore]
+        public int EffectiveOutputHeight => ResolveConfiguredInt("SolidColorOutputHeight", OutputHeight > 0 ? OutputHeight : targetHeight);
+
+        [JsonIgnore]
+        public bool ShouldUseFixedOutputSize => EffectiveUseFixedOutputSize && TargetWidth <= 0 && TargetHeight <= 0;
+
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
+        {
+            var width = ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth);
+            var height = ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight);
+            return Picture16bpp.GenerateSolidColor(width, height, R, G, B, A);
+        }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
+        {
+            16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), R, G, B, A),
+            8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+            _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
+        };
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
+            => Picture16bpp.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, R, G, B, A);
 
         public SolidColorClip()
         {
@@ -194,6 +235,72 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public uint? GetClipLength() => Duration;
 
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+        }
+
+        private int ResolveConfiguredInt(string key, int fallback)
+        {
+            if (ExtraData != null && ExtraData.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i)
+                {
+                    return Math.Max(1, i);
+                }
+
+                if (raw is long l)
+                {
+                    return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn))
+                    {
+                        return Math.Max(1, jn);
+                    }
+
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js))
+                    {
+                        return Math.Max(1, js);
+                    }
+                }
+
+                if (int.TryParse(raw.ToString(), out var parsed))
+                {
+                    return Math.Max(1, parsed);
+                }
+            }
+
+            return Math.Max(1, fallback);
+        }
+
+        private bool ResolveConfiguredBool(string key, bool fallback)
+        {
+            if (ExtraData != null && ExtraData.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is bool b)
+                {
+                    return b;
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var jb)) return jb;
+                }
+
+                if (bool.TryParse(raw.ToString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return fallback;
+        }
+
     }
 
     public class TextClip : IClip
@@ -204,16 +311,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -226,13 +333,31 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
 
         public string FontPath { get; set; } = string.Empty;
+        private const int MaxTextFrameCacheEntries = 16;
+        private readonly object textFrameCacheLock = new();
+        private readonly Dictionary<string, IPicture> textFrameCache = new(StringComparer.Ordinal);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-        {
-            Image<Rgba64> canvas = new(targetWidth, targetHeight);
+            => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
 
-            foreach (var entry in TextEntries)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            var entriesToRender = ResolveTextEntriesForRender();
+            string serializedEntries = JsonSerializer.Serialize(entriesToRender, JsonSerializerOptions.Web);
+            string cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, serializedEntries);
+
+            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
             {
+                return cachedFrame;
+            }
+
+            using Image<Rgba64> canvas = new(targetWidth, targetHeight);
+
+            foreach (var entry in entriesToRender)
+            {
+                if (string.IsNullOrEmpty(entry.text))
+                    continue;
+
                 Font font;
                 if (GetFont().TryGet(entry.fontFamily, out var family))
                 {
@@ -329,10 +454,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     });
                 }
             }
-
-            return new Picture(canvas)
-            {
-                ProcessStack = new List<PictureProcessStack>
+            var stack = new List<PictureProcessStack>
                 {
                     new PictureProcessStack
                     {
@@ -342,12 +464,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         StepUsed = null,
                         Properties = new Dictionary<string, object>
                         {
-                            { "TextEntries", JsonSerializer.Serialize(TextEntries, JsonSerializerOptions.Web) },
+                            { "TextEntries", serializedEntries },
                             { "FontPath", FontPath }
                         }
                     }
-                }
+                };
+
+            IPicture rendered = targetPPB.Value switch
+            {
+                8 => new Picture8bpp(canvas) { ProcessStack = stack },
+                16 => new Picture16bpp(canvas) { ProcessStack = stack },
+                _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
+
+            CacheRenderedFrame(cacheKey, rendered);
+            return rendered.DeepCopy();
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
@@ -360,8 +491,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
         }
 
-        public void ReInit()
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClearFrameCache();
+
             if (!string.IsNullOrWhiteSpace(FontPath))
             {
                 fontsCache.Add(FontPath);
@@ -372,7 +505,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
-
+            ClearFrameCache();
         }
 
         public uint? GetClipLength() => Duration;
@@ -381,6 +514,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private static FontCollection fontsCache = new();
         private static bool hasGetFontCache = false;
         public static FontCollection FontsCache { get { return fontsCache; } }
+
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
+
         public static FontCollection GetFont(bool force = false)
         {
             if (hasGetFontCache && !force) return fontsCache;
@@ -392,6 +531,105 @@ namespace projectFrameCut.Render.ClipsAndTracks
             hasGetFontCache = true;
             return fontsCache;
 
+        }
+
+        private string BuildFrameCacheKey(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB, string serializedEntries)
+            => $"{targetWidth}x{targetHeight}|forceResize={forceResize}|ppb={targetPPB.Value}|font={FontPath}|entries={serializedEntries}";
+
+        private bool TryGetFrameFromCache(string cacheKey, out IPicture picture)
+        {
+            lock (textFrameCacheLock)
+            {
+                if (textFrameCache.TryGetValue(cacheKey, out var cachedFrame))
+                {
+                    if (!cachedFrame.Disposed)
+                    {
+                        picture = cachedFrame.DeepCopy();
+                        return true;
+                    }
+
+                    textFrameCache.Remove(cacheKey);
+                    try { cachedFrame.Dispose(true); } catch { }
+                }
+            }
+
+            picture = null!;
+            return false;
+        }
+
+        private void CacheRenderedFrame(string cacheKey, IPicture picture)
+        {
+            lock (textFrameCacheLock)
+            {
+                if (!textFrameCache.ContainsKey(cacheKey) && textFrameCache.Count >= MaxTextFrameCacheEntries)
+                {
+                    ClearFrameCacheUnsafe();
+                }
+
+                if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
+                {
+                    try { oldFrame.Dispose(true); } catch { }
+                }
+
+                picture.CanBeDisposed = false;
+                textFrameCache[cacheKey] = picture;
+            }
+        }
+
+        private void ClearFrameCache()
+        {
+            lock (textFrameCacheLock)
+            {
+                ClearFrameCacheUnsafe();
+            }
+        }
+
+        private void ClearFrameCacheUnsafe()
+        {
+            foreach (var frame in textFrameCache.Values)
+            {
+                try { frame.Dispose(true); } catch { }
+            }
+            textFrameCache.Clear();
+        }
+
+        private IReadOnlyList<TextClipEntry> ResolveTextEntriesForRender()
+        {
+            if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
+            {
+                if (rawEntries is List<TextClipEntry> list && list.Count > 0)
+                    return list;
+
+                if (rawEntries is JsonElement je)
+                {
+                    try
+                    {
+                        var parsed = je.Deserialize<List<TextClipEntry>>();
+                        if (parsed is { Count: > 0 })
+                            return parsed;
+                    }
+                    catch
+                    {
+                        // fall back to TextEntries
+                    }
+                }
+
+                if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
+                {
+                    try
+                    {
+                        var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
+                        if (parsed is { Count: > 0 })
+                            return parsed;
+                    }
+                    catch
+                    {
+                        // fall back to TextEntries
+                    }
+                }
+            }
+
+            return TextEntries;
         }
 
         /// <summary>
@@ -486,7 +724,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 currentY += charAdvance;
             }
         }
-        
+
     }
 
     public class MarkingClip : IClip
@@ -502,19 +740,22 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
 
 
         public bool NeedFilePath => false;
+
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public string? MarkData;
         public Guid MarkID;
@@ -540,6 +781,20 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
         }
 
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }

@@ -24,6 +24,11 @@ using projectFrameCut.Render.Effect;
 using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.AIAssistance;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Render.TemplateSystem;
+using projectFrameCut.Template;
+using projectFrameCut.Render.EncodeAndDecode;
+
 
 
 
@@ -44,6 +49,7 @@ using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
 using System.Text.RegularExpressions;
+
 #endif
 
 
@@ -53,7 +59,7 @@ namespace projectFrameCut
     {
         public static StreamWriter LogWriter;
 
-        public static string LogPath { get; private set;  }
+        public static string LogPath { get; private set; }
 
         public static string DataPath { get; private set; }
 
@@ -65,6 +71,7 @@ namespace projectFrameCut
             [
             "My Drafts",
             "My Assets",
+            "My Templates",
 #if WINDOWS
             "My Assets\\.database",
             "My Assets\\.thumbnails"
@@ -83,7 +90,7 @@ namespace projectFrameCut
             {
                 try
                 {
-                    CmdlineArgs = Environment.GetCommandLineArgs();
+                    CmdlineArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
                 }
                 catch { } //safe to ignore it
             }
@@ -197,7 +204,8 @@ namespace projectFrameCut
                         Preferences.Clear();
                     }
 
-                    MyLoggerExtensions.LoggingDiagnosticInfo = SettingsManager.IsBoolSettingTrue("LogDiagnostics");
+                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
+                        MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
                 else
                 {
@@ -343,6 +351,7 @@ namespace projectFrameCut
                 }
                 builder.Logging.SetMinimumLevel(logLevel);
                 builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
+                builder.Services.AddSingleton<UIThreadWatchdogService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
 #elif ANDROID
@@ -433,6 +442,28 @@ namespace projectFrameCut
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
+                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
+                    {
+                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly))
+                        {
+                            try
+                            {
+                                var info = TextHelper.ReadFontFileInfo(item);
+                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
+                            }
+                            catch { }
+                        }
+                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly))
+                        {
+                            try
+                            {
+                                var info = TextHelper.ReadFontFileInfo(item);
+                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
+                            }
+                            catch { }
+                        }
+                    }
+
                 }
                 catch
                 {
@@ -440,6 +471,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                 }
 
@@ -498,6 +530,9 @@ namespace projectFrameCut
                 SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
                 SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                 projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#if WINDOWS
+                SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
+#endif
                 PluginManager.CurrentLocale = Localized._LocaleId_;
                 PluginManager.ExtenedLocalizationGetter = new((k) =>
                 {
@@ -693,6 +728,7 @@ namespace projectFrameCut
                 Log($"FFmpeg library root path: {ffmpeg.RootPath}");
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+                FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
                 Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
             }
             catch (Exception ex)
@@ -727,6 +763,24 @@ namespace projectFrameCut
 
             }
 
+
+            try
+            {
+                foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Templates"), "*.json", SearchOption.AllDirectories))
+                {
+                    var templateJson = File.ReadAllText(item);
+
+                    // Deserialize the template
+                    var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+
+                    // Add to TemplateStore
+                    TemplateStore.Templates[template.TemplateID] = template;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "load templates", CreateMauiApp);
+            }
 
             try
             {
@@ -831,6 +885,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 case 950: //Traditional Chinese
@@ -838,6 +893,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_TC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_TC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 case 932: //Japanese
@@ -846,8 +902,13 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
 #else
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                    });
                     //use system ones
 #endif
                     break;
@@ -859,6 +920,10 @@ namespace projectFrameCut
                         fonts.AddFont("NotoSansKR-Bold.ttf", "Font_Semibold");
                     });
 #else
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                    });
                     //use system ones
 #endif
                     break;
@@ -867,6 +932,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Naskh_Arabic_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Naskh_Arabic_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 default: //Latin and others
@@ -874,6 +940,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
             }

@@ -32,6 +32,7 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.ClipsAndTracks;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
+using System.Text;
 
 
 
@@ -647,7 +648,7 @@ public partial class TestPage : ContentPage
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_ImageSharp p = new()
+        PlaceEffect_IPicture p = new()
         {
             StartX = 50,
             StartY = 120
@@ -668,7 +669,7 @@ public partial class TestPage : ContentPage
     private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_ImageSharp p = new()
+        PlaceEffect_IPicture p = new()
         {
             StartX = 250,
             StartY = 180
@@ -712,7 +713,7 @@ public partial class TestPage : ContentPage
     private void TestMixtureButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_ImageSharp p = new()
+        PlaceEffect_IPicture p = new()
         {
             StartX = 50,
             StartY = 120
@@ -875,7 +876,7 @@ public partial class TestPage : ContentPage
     #region runtime
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
-        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
+        var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
         switch (type)
         {
             case "Native(null pointer)":
@@ -896,6 +897,40 @@ public partial class TestPage : ContentPage
         }
 
 
+    }
+
+    private async void StuckInUIThreadButton_Clicked(object sender, EventArgs e)
+    {
+        var type = await DisplayActionSheetAsync("Choose a flavor you'd like", "Cancel", null, "Dispatcher.Dispatch", "MainThread.BeginInvokeOnMainThread", "In current context");
+        switch (type)
+        {
+            case "Dispatcher.Dispatch":
+                Dispatcher.Dispatch(() =>
+                {
+                    Thread.Sleep(50000);
+                });
+                break;
+            case "MainThread.BeginInvokeOnMainThread":
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Thread.Sleep(50000);
+                });
+                break;
+            case "In current context":
+                Thread.Sleep(50000);
+                break;
+        }
+    }
+
+    private void ReadSettingButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var std = Preferences.Get("App_Channel", "none");
+            DisplayAlertAsync("Setting Value", $"app_channel: {std}", "ok");
+            Preferences.Set("App_Channel", "none");
+        }
+        catch { }
     }
 
     private async void WinUIDiagTestBtn_Clicked(object sender, EventArgs e)
@@ -1013,10 +1048,6 @@ public partial class TestPage : ContentPage
     {
 
     }
-
-
-
-
 
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)

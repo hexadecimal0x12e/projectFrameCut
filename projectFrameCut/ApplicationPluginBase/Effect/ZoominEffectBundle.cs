@@ -1,13 +1,12 @@
-﻿using Microsoft.Maui.Handlers;
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -15,15 +14,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public string Name { get; set; }
+        public string Name { get; set; } = "ZoomIn";
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
+        {
+            { "TargetX", 960 },
+            { "TargetY", 540 },
+        };
 
-        public List<string> ParametersNeeded => Render.Effect.ZoomInContinuousEffectFactory.s_ParametersNeeded;
+        public List<string> ParametersNeeded => ZoomInContinuousEffectFactory.s_ParametersNeeded;
 
-        public Dictionary<string, string> ParametersType => Render.Effect.ZoomInContinuousEffectFactory.s_ParametersType;
+        public Dictionary<string, string> ParametersType => ZoomInContinuousEffectFactory.s_ParametersType;
 
         public string TypeName => "ZoomIn";
 
@@ -33,11 +36,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => false;
 
+        public EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public EffectTarget Target => EffectTarget.Video;
+
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
         public List<Guid>? BindedInputIds { get; set; }
         public bool IsMultiInput => false;
-        public bool Enabled { get; set; }
+        public bool Enabled { get; set; } = true;
 
         public string InputAnchorDisplayName => string.Empty;
         public string[]? InputAnchorsDisplayName => null;
@@ -48,49 +55,33 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public IEffectFactory[] Create()
         {
-            var factory = new Render.Effect.ZoomInContinuousEffectFactory();
+            var factory = new ZoomInContinuousEffectFactory();
             this.ConfigureFactory(factory);
             return [factory];
         }
 
         public PropertyPanelBuilder CreateUI()
         {
-            var ppb = new PropertyPanelBuilder();
+            int targetX = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
+            int targetY = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
 
-            foreach (var paramName in ParametersNeeded)
-            {
-                if (!ParametersType.TryGetValue(paramName, out var paramType)) continue;
-
-                var currentVal = Parameters.ContainsKey(paramName) ? Parameters[paramName] : null;
-                if (currentVal is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.True || je.ValueKind == JsonValueKind.False)
-                        currentVal = je.GetBoolean();
-                    else if (je.ValueKind == JsonValueKind.String)
-                        currentVal = je.GetString();
-                    else
-                        currentVal = je.ToString();
-                }
-
-                if (paramType == "bool")
-                {
-                    bool val = false;
-                    if (currentVal is bool b) val = b;
-                    else if (bool.TryParse(currentVal?.ToString(), out var bParsed)) val = bParsed;
-                    ppb.AddCheckbox(paramName, PluginManager.GetLocalizationItem($"_{paramName}", paramName), val);
-                }
-                else
-                {
-                    string valStr = currentVal?.ToString() ?? "";
-                    ppb.AddEntry(paramName, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
-                }
-            }
-            return ppb;
+            var panel = new PropertyPanelBuilder();
+            EffectBundleUiHelper.AddNumericEntry(panel, "TargetX", EffectBundleUiHelper.ParamLabel("TargetX"), targetX.ToString(), "960");
+            EffectBundleUiHelper.AddNumericEntry(panel, "TargetY", EffectBundleUiHelper.ParamLabel("TargetY"), targetY.ToString(), "540");
+            return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            Parameters[args.Id] = int.Parse(args.Value as string);
+            if (args.Id == "TargetX" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetX", args.Value))
+            {
+                Parameters["TargetX"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
+            }
+            else if (args.Id == "TargetY" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetY", args.Value))
+            {
+                Parameters["TargetY"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
+            }
+
             return Parameters;
         }
 
@@ -98,12 +89,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.DisplayName_Effect_ZoomIn,
-                Description = "111",
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_ZoomIn", "Zoom In"),
+                Description = EffectBundleUiHelper.L("Description_Effect_ZoomIn", "Zoom in from the source frame size to the target size over time."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }
-
-
     }
 }
