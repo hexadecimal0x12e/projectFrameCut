@@ -93,6 +93,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
 
         public ISoundTrack SoundTrack { get; set; }

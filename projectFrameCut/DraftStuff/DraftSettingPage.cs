@@ -20,6 +20,8 @@ public class DraftSettingPage
         public int SlotIndex { get; init; }
         public DateTime SavedAt { get; init; }
         public string ChangeReason { get; init; } = string.Empty;
+        public string ChangedBy { get; internal set; }
+        public Guid ChangedByUserID { get; internal set; }
     }
 
     public TabbedView tabView;
@@ -118,7 +120,8 @@ public class DraftSettingPage
                 TextColor = Colors.White,
                 FontSize = 12,
                 Margin = new(0, 0, 8, 0),
-                Text = DateTime.Now.Ticks - item.SavedAt.Ticks >= 0 ?
+                Text = item.ChangedBy + " - " +
+                       (DateTime.Now.Ticks - item.SavedAt.Ticks >= 0 ?
                        TimeSpan.FromTicks(DateTime.Now.Ticks - item.SavedAt.Ticks) switch
                        {
                            var t when t.TotalMinutes < 1 => Localized.DraftSettingPage_Tab_History_Now,
@@ -127,8 +130,10 @@ public class DraftSettingPage
                            var t when t.TotalDays < 14 => Localized.DraftSettingPage_Tab_History_DaysAgo((int)t.TotalDays),
                            _ => Localized.DraftSettingPage_Tab_History_VeryLongAgo
                        }
-                       : Localized.HomePage_LastChangedOnFuture
+                       : Localized.HomePage_LastChangedOnFuture)
             };
+
+            ToolTipProperties.SetText(lastChangeLabel, $"{item.SavedAt} - {item.ChangedBy}({item.ChangedByUserID})");
 
             var applyButton = new Button
             {
@@ -218,7 +223,9 @@ public class DraftSettingPage
                 {
                     SlotIndex = slotIndex,
                     SavedAt = draft.SavedAt,
-                    ChangeReason = draft.ChangeReason
+                    ChangeReason = draft.ChangeReason,
+                    ChangedBy = string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
+                    ChangedByUserID = draft.ChangedByUser
                 });
             }
             catch
@@ -229,7 +236,7 @@ public class DraftSettingPage
 
         return result
             .OrderByDescending(i => i.SavedAt)
-            .ThenBy(i => i.ChangeReason, StringComparer.OrdinalIgnoreCase)
+            //.ThenBy(i => i.ChangeReason, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(i => i.SlotIndex)
             .ToList();
     }
@@ -358,6 +365,7 @@ public class DraftSettingPage
         PropertyPanelBuilder ppb = new();
         ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
         ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
+        ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, parent.ProjectInfo.Properties.TryGetValue("enableHDR", out var enableHDR) && bool.TryParse(enableHDR, out var result) ? result : false, null);
         return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
     }
     public ScrollView BuildAdvancedTab()
@@ -387,6 +395,10 @@ public class DraftSettingPage
             case "targetFrameRate":
                 if (e.Value is string s && uint.TryParse(s, out var result))
                     parent.ProjectInfo.TargetFrameRate = result;
+                break;
+            case "enableHDR":
+                if (e.Value is bool b)
+                    parent.ProjectInfo.Properties["EnableHDR"] = b.ToString();
                 break;
             case "relativeResolution":
                 if (e.Value is string res)

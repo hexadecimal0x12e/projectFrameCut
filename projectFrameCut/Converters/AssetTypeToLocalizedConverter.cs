@@ -25,6 +25,19 @@ namespace projectFrameCut.Converters
             return value?.ToString() ?? "";
         }
 
+        public static string TypeToDisplayName(AssetType type)
+        {
+            return type switch
+            {
+                AssetType.Video => Localized.AssetPage_AssetType_Video,
+                AssetType.Audio => Localized.AssetPage_AssetType_Audio,
+                AssetType.Image => Localized.AssetPage_AssetType_Image,
+                AssetType.Font => Localized.AssetPage_AssetType_Font,
+                AssetType.Other => Localized.AssetPage_AssetType_Other,
+                _ => "Unknown"
+            };
+        }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();

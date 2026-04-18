@@ -27,11 +27,16 @@ public partial class GeneralSettingPage : ContentPage
         Title = Localized.MainSettingsPage_Tab_General;
         FFmpegProviderDisplayNameMapping =
             new Dictionary<string, string>
-            { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
+            { 
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" },
+#if WINDOWS
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" } 
+#endif
+            }
             .Concat(
                 PluginManager.LoadedPlugins
                 .Where(c => c.Value.Properties.TryGetValue("IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
-                .Select(p => new KeyValuePair<string, string>(p.Value.Name, p.Key))
+                .Select(p => new KeyValuePair<string, string>($"{Localized.DraftPage_MenuBar_Extensions}: {p.Value.Name}", p.Key))
             )
             .ToDictionary(c => c.Key, c => c.Value);
         BuildPPB();
@@ -373,6 +378,21 @@ public partial class GeneralSettingPage : ContentPage
 #endif
                         WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
 
+                    }
+                    else if (id == "external")
+                    {
+                        var libsDir = await FileSystemService.PickFolderAsync();
+                        if (!string.IsNullOrWhiteSpace(libsDir))
+                        {
+                            WriteSetting("PluginProvidedFFmpeg_Enable", true.ToString());
+                            WriteSetting("PluginProvidedFFmpeg_PluginID", "external");
+                            WriteSetting("PluginProvidedFFmpeg_LibPath", libsDir);
+                        }
+                        else
+                        {
+                            WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
+                            WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
+                        }
                     }
                     else
                     {

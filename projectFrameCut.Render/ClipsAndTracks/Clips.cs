@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? FilePath { get; set; }
 
@@ -50,10 +50,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+
+        public string TargetDecoder { get; set; } = string.Empty;
+
+        public string? DecoderName => Decoder?.TypeName;
 
         public VideoClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
+            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
 
         }
 
@@ -61,7 +67,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
-            Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
+            if(string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+            if(!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+            {
+                var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
+                Decoder = supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath); 
+                return;
+            }
+            Decoder = PluginManager.CreateVideoSource(FilePath);
         }
 
 
@@ -83,7 +96,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
@@ -109,10 +122,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         public PhotoClip()
         {
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
 
         }
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
@@ -156,7 +171,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
@@ -200,6 +215,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
         {
@@ -220,7 +236,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
+            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
         }
 
         public void ReInit()
@@ -313,7 +330,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
@@ -330,15 +347,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         string? IClip.FilePath { get => null; set => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
-        public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
+        public List<TextClipEntry> TextEntries { get; set; } = new List<TextClipEntry>();
 
         public string FontPath { get; set; } = string.Empty;
         private const int MaxTextFrameCacheEntries = 16;
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<string, IPicture> textFrameCache = new(StringComparer.Ordinal);
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-            => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
@@ -488,7 +502,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public TextClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
+            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -519,6 +534,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         public static FontCollection GetFont(bool force = false)
         {
@@ -742,7 +758,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
@@ -756,6 +772,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         public string? MarkData;
         public Guid MarkID;

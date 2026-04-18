@@ -135,7 +135,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if ((item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame > idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
+                    if (IsFrameInClipRange(item, idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
                         found = true;
                         ClipNeedForFrame.AddOrUpdate(
@@ -665,7 +665,7 @@ namespace projectFrameCut.Render.Rendering
             var clipsNeed = new List<IClip>();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
-                if (item.StartFrame <= targetFrame && item.Duration * item.SecondPerFrameRatio + item.StartFrame > targetFrame)
+                if (IsFrameInClipRange(item, targetFrame))
                 {
                     clipsNeed.Add(item);
                 }
@@ -924,6 +924,85 @@ namespace projectFrameCut.Render.Rendering
         #endregion
 
         #region misc
+
+        private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
+        {
+            if (targetFrame < clip.StartFrame)
+            {
+                return false;
+            }
+
+            float speedRatio = ResolveSpeedRatioAtTargetFrame(clip, targetFrame);
+            uint effectiveDuration = ScaleDurationForSpeed(clip.Duration, speedRatio);
+            if (effectiveDuration == 0)
+            {
+                return false;
+            }
+
+            ulong endExclusive = (ulong)clip.StartFrame + effectiveDuration;
+            return (ulong)targetFrame < endExclusive;
+        }
+
+        private static float ResolveSpeedRatioAtTargetFrame(IClip clip, uint targetFrame)
+        {
+            float fallback = clip.SecondPerFrameRatio;
+            if (fallback <= 0 || float.IsNaN(fallback) || float.IsInfinity(fallback))
+            {
+                fallback = 1f;
+            }
+
+            var provider = clip.SpeedVarianceProviderInstance;
+            if (provider is null)
+            {
+                return fallback;
+            }
+
+            uint duration = clip.Duration;
+            float progress = 0f;
+            if (duration > 0)
+            {
+                long offset = (long)targetFrame - clip.StartFrame;
+                if (offset > 0)
+                {
+                    progress = Math.Clamp((float)offset / duration, 0f, 1f);
+                }
+            }
+
+            try
+            {
+                float providerRatio = provider.GetRatio(progress);
+                if (providerRatio > 0 && !float.IsNaN(providerRatio) && !float.IsInfinity(providerRatio))
+                {
+                    return providerRatio;
+                }
+            }
+            catch
+            {
+            }
+
+            return fallback;
+        }
+
+        private static uint ScaleDurationForSpeed(uint duration, float speedRatio)
+        {
+            if (duration == 0)
+            {
+                return 0;
+            }
+
+            double scaled = Math.Round(duration * speedRatio, MidpointRounding.AwayFromZero);
+            if (scaled < 1)
+            {
+                return 1;
+            }
+
+            if (scaled > uint.MaxValue)
+            {
+                return uint.MaxValue;
+            }
+
+            return (uint)scaled;
+        }
 
         private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
         {

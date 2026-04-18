@@ -200,18 +200,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _swrInputSampleRate = inputSampleRate;
         }
 
-        [Obsolete("Use Append(IAudioSamples<float>) instead.")]
-        public void Append(AudioBuffer buffer)
-        {
-            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
-            Append(new FloatAudioSamples
-            {
-                Channels = buffer.Samples,
-                SampleCount = buffer.SampleCount,
-                SamplePerSecond = buffer.SampleRate
-            });
-        }
-
         public override void Append(IAudioSamples<float> samples)
         {
             if (_isDisposed) throw new ObjectDisposedException(nameof(AudioWriter));

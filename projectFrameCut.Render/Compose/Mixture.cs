@@ -13,7 +13,8 @@ namespace projectFrameCut.Render.Compose
 {
     public static class OverlayMixture
     {
-        public static string? ComputerId => "OverlayComputer";
+        public const string ComputerId = "OverlayComputer";
+        private const float DefaultHdrMaximumBrightness = 1000f;
 
         public static IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
             => MixInternal(basePicture, topPicture, computer, targetPPB, resizeTopWhenDimensionMismatch: true);
@@ -234,9 +235,9 @@ namespace projectFrameCut.Render.Compose
             object[]? outB;
             try
             {
-                outR = computer.Compute([topR, baseR, topA, baseA, (int)targetPPB, basePixels]);
-                outG = computer.Compute([topG, baseG, topA, baseA, (int)targetPPB, basePixels]);
-                outB = computer.Compute([topB, baseB, topA, baseA, (int)targetPPB, basePixels]);
+                outR = computer.Compute([topR, baseR, topA!, baseA!, (int)targetPPB, basePixels]);
+                outG = computer.Compute([topG, baseG, topA!, baseA!, (int)targetPPB, basePixels]);
+                outB = computer.Compute([topB, baseB, topA!, baseA!, (int)targetPPB, basePixels]);
             }
             finally
             {
@@ -256,6 +257,92 @@ namespace projectFrameCut.Render.Compose
             {
                 outA = null;
             }
+
+            static float NormalizeHdrMaximumBrightness(float value)
+            {
+                if (!float.IsFinite(value) || value <= 0f)
+                {
+                    return DefaultHdrMaximumBrightness;
+                }
+
+                return value;
+            }
+
+            static bool TryGetHdrBrightness(IPicture pic, out float[]? brightness, out float maximumBrightness)
+            {
+                if (pic is IHDRPicture<ushort> hdr && hdr.Brightness != null && hdr.Brightness.Length == pic.Pixels)
+                {
+                    brightness = hdr.Brightness;
+                    maximumBrightness = NormalizeHdrMaximumBrightness(hdr.MaximumBrightness);
+                    return true;
+                }
+
+                brightness = null;
+                maximumBrightness = DefaultHdrMaximumBrightness;
+                return false;
+            }
+
+            static float[] CreateBrightnessFromRgb(float[] rr, float[] gg, float[] bb, int pixels)
+            {
+                var brightness = new float[pixels];
+                for (int i = 0; i < pixels; i++)
+                {
+                    // Rec.2020 luma estimate in normalized [0,1] signal space.
+                    float v = (0.2627f * rr[i] + 0.6780f * gg[i] + 0.0593f * bb[i]) / 65535f;
+                    if (!float.IsFinite(v)) v = 0f;
+                    if (v < 0f) v = 0f;
+                    if (v > 1f) v = 1f;
+                    brightness[i] = v;
+                }
+
+                return brightness;
+            }
+
+            bool baseHasHdrBrightness = TryGetHdrBrightness(basePicture, out float[]? baseBrightness, out float baseMaximumBrightness);
+            bool topHasHdrBrightness = TryGetHdrBrightness(topPicture, out float[]? topBrightness, out float topMaximumBrightness);
+            bool shouldComposeHdrBrightness = baseHasHdrBrightness || topHasHdrBrightness;
+
+            float[]? outBrightness = null;
+            float outputMaximumBrightness = DefaultHdrMaximumBrightness;
+            if (shouldComposeHdrBrightness)
+            {
+                baseBrightness ??= CreateBrightnessFromRgb(baseR, baseG, baseB, basePixels);
+                topBrightness ??= CreateBrightnessFromRgb(topR, topG, topB, topPixels);
+
+                object[] brightnessResult = computer.Compute([topBrightness, baseBrightness, topA!, baseA!, 0, basePixels]);
+                if (brightnessResult[0] is float[] composedBrightness)
+                {
+                    outBrightness = composedBrightness;
+                }
+                else if (brightnessResult[0] is ushort[] composedBrightnessU16)
+                {
+                    outBrightness = new float[composedBrightnessU16.Length];
+                    for (int i = 0; i < composedBrightnessU16.Length; i++)
+                    {
+                        float v = composedBrightnessU16[i] / 65535f;
+                        if (v < 0f) v = 0f;
+                        if (v > 1f) v = 1f;
+                        outBrightness[i] = v;
+                    }
+                }
+                else if (brightnessResult[0] is byte[] composedBrightnessU8)
+                {
+                    outBrightness = new float[composedBrightnessU8.Length];
+                    for (int i = 0; i < composedBrightnessU8.Length; i++)
+                    {
+                        outBrightness[i] = composedBrightnessU8[i] / 255f;
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Invalid overlay output channel type for HDR brightness");
+                }
+
+                outputMaximumBrightness = baseHasHdrBrightness && topHasHdrBrightness
+                    ? Math.Max(baseMaximumBrightness, topMaximumBrightness)
+                    : (baseHasHdrBrightness ? baseMaximumBrightness : topMaximumBrightness);
+            }
+
             IPicture result;
             if ((int)targetPPB == 8)
             {
@@ -272,15 +359,32 @@ namespace projectFrameCut.Render.Compose
             }
             else
             {
-                result = new Picture16bpp(basePicture.Width, basePicture.Height)
+                if (shouldComposeHdrBrightness)
                 {
-                    r = ConvertToUShortChannel(outR![0]),
-                    g = ConvertToUShortChannel(outG![0]),
-                    b = ConvertToUShortChannel(outB![0]),
-                    a = outA,
-                    hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
-                    ProcessStack = new List<PictureProcessStack> { procStack }
-                };
+                    result = new HDRPicture16bpp(basePicture.Width, basePicture.Height)
+                    {
+                        r = ConvertToUShortChannel(outR![0]),
+                        g = ConvertToUShortChannel(outG![0]),
+                        b = ConvertToUShortChannel(outB![0]),
+                        a = outA,
+                        hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
+                        ProcessStack = new List<PictureProcessStack> { procStack },
+                        Brightness = outBrightness ?? CreateBrightnessFromRgb(baseR, baseG, baseB, basePixels),
+                        MaximumBrightness = outputMaximumBrightness,
+                    };
+                }
+                else
+                {
+                    result = new Picture16bpp(basePicture.Width, basePicture.Height)
+                    {
+                        r = ConvertToUShortChannel(outR![0]),
+                        g = ConvertToUShortChannel(outG![0]),
+                        b = ConvertToUShortChannel(outB![0]),
+                        a = outA,
+                        hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
+                        ProcessStack = new List<PictureProcessStack> { procStack }
+                    };
+                }
             }
             sw.Stop();
             procStack.Elapsed = sw.Elapsed;

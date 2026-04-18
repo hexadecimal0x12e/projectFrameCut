@@ -51,6 +51,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public Dictionary<string, string> UserDefinedProperties { get => field ?? new(); set; } //= new();
         /// <summary>
+        /// The properties of the draft. Set and write by code only.
+        /// </summary>
+        public Dictionary<string, string> Properties { get => field ?? new(); set; } //= new();
+        /// <summary>
         /// Gets or sets the file system path to the thumbnail image associated with the item.
         /// </summary>
         public string? ThumbPath { get; set; } = null;
@@ -74,10 +78,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     public class DraftStructureJSON
     {
         /// <summary>
-        /// The target frame rate of the draft.
+        /// The unique identifier for the draft snapshot. 
         /// </summary>
-        [Obsolete("Use ProjectInfo.TargetFrameRate instead.", false)]
-        public uint TargetFrameRate { get; set; } = 60;
+        public Guid SnapshotID { get; set; } = Guid.Empty;
 
         /// <summary>
         /// All of the clips in the draft.
@@ -107,6 +110,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Used in history management and undo/redo system.
         /// </summary>
         public string ChangeReason { get; set; } = string.Empty;
+        /// <summary>
+        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        /// <summary>
+        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// </summary>
+        public Guid ChangedByUser { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// The unique identifier of the previous draft snapshot. Used in branch/edition management.
+        /// </summary>
+        public Guid PreviousSnapshot { get; set; } = Guid.Empty;
     }
 
     /// <summary>

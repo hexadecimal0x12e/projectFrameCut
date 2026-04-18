@@ -145,7 +145,6 @@ namespace projectFrameCut.DraftStuff
 
             var d = new DraftStructureJSON
             {
-                TargetFrameRate = page.ProjectInfo.TargetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
                 SoundTracks = soundtracks.Cast<object>().ToArray(),
                 Duration = (uint)max,

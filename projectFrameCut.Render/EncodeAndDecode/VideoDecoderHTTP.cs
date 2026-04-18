@@ -42,6 +42,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => []; //no extension to avoid auto-matching
+        public string TypeName => "HttpDecoderContext";
 
         public int? ResultBitPerPixel => 8;
 

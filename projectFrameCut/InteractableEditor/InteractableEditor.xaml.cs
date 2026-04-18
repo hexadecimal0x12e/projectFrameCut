@@ -1,17 +1,16 @@
 using Microsoft.Maui.Controls.Shapes;
-using projectFrameCut.Shared;
-using System.Diagnostics;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
-
-using System.Text.Json;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.InteractableEditor
 {
@@ -297,8 +296,11 @@ namespace projectFrameCut.InteractableEditor
 
                 public void Hide()
                 {
-                    Root.IsVisible = false;
-                    SizeLabel.IsVisible = false;
+                    _ = MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        Root.IsVisible = false;
+                        SizeLabel.IsVisible = false;
+                    });
                 }
             }
 
@@ -485,8 +487,19 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
+            private static bool CanApplyVisualProperty(VisualElement element)
+            {
+                var handler = element.Handler;
+                return handler is null || handler.PlatformView is not null;
+            }
+
             private void UpdateRootInputTransparency()
             {
+                if (!CanApplyVisualProperty(Root))
+                {
+                    return;
+                }
+
                 Root.InputTransparent = !_owner.ShouldAllowOverlayTapSelection(this)
                     || (!ClipVisual.IsVisible && !PreviewHost.IsVisible && !HasVisibleTextEntryOverlay());
             }
@@ -618,7 +631,11 @@ namespace projectFrameCut.InteractableEditor
 
             private void UpdatePreviewHostVisibility()
             {
-                PreviewHost.IsVisible = _owner.ShouldShowPreviewHost(this) && PreviewHost.Content is not null;
+                if (CanApplyVisualProperty(PreviewHost))
+                {
+                    PreviewHost.IsVisible = _owner.ShouldShowPreviewHost(this) && PreviewHost.Content is not null;
+                }
+
                 UpdateRootInputTransparency();
             }
         }
@@ -681,9 +698,38 @@ namespace projectFrameCut.InteractableEditor
             }
 
             state = new ClipOverlayState(this, clipId);
-            _clipStates[clipId] = state;
-            ClipStatesHost.Children.Add(state.Root);
-            return state;
+            try
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    ClipStatesHost.Children.Add(state.Root);
+                    _clipStates[clipId] = state;
+                });
+                return state;
+            }
+            catch (Exception e1)
+            {
+                Log(e1, "add the clip overlay state for clip " + clipId, this);
+                try
+                {
+                    ClipStatesHost.Children.Remove(state.Root);
+                }
+                catch (Exception e2)
+                {
+                    Log(e2, "Exception fallback:remove the clip overlay state for clip " + clipId, this);
+                }
+
+                try
+                {
+                    state.Root.Handler?.DisconnectHandler();
+                }
+                catch (Exception e3)
+                {
+                    Log(e3, "Exception fallback:disconnect the handler for clip " + clipId, this);
+                }
+
+                throw;
+            }
         }
 
         private bool ShouldAllowOverlayTapSelection(ClipOverlayState state)
@@ -819,33 +865,37 @@ namespace projectFrameCut.InteractableEditor
 
         private void SetActiveState(ClipOverlayState? state)
         {
-            if (ReferenceEquals(_activeState, state))
+            _ = MainThread.InvokeOnMainThreadAsync(() =>
             {
+                if (ReferenceEquals(_activeState, state))
+                {
+                    if (_activeState is not null)
+                    {
+                        _activeState.Root.IsVisible = true;
+                    }
+
+                    return;
+                }
+
+                var previous = _activeState;
+                if (previous is not null)
+                {
+                    previous.HandleTL.IsVisible = false;
+                    previous.HandleTR.IsVisible = false;
+                    previous.HandleBL.IsVisible = false;
+                    previous.HandleBR.IsVisible = false;
+                    previous.SizeLabel.IsVisible = false;
+                    previous.HideTextEntryOverlays();
+                }
+
+                _activeState = state;
+
                 if (_activeState is not null)
                 {
                     _activeState.Root.IsVisible = true;
                 }
+            });
 
-                return;
-            }
-
-            var previous = _activeState;
-            if (previous is not null)
-            {
-                previous.HandleTL.IsVisible = false;
-                previous.HandleTR.IsVisible = false;
-                previous.HandleBL.IsVisible = false;
-                previous.HandleBR.IsVisible = false;
-                previous.SizeLabel.IsVisible = false;
-                previous.HideTextEntryOverlays();
-            }
-
-            _activeState = state;
-
-            if (_activeState is not null)
-            {
-                _activeState.Root.IsVisible = true;
-            }
         }
 
         private void ClearClipStates()
@@ -1471,38 +1521,46 @@ namespace projectFrameCut.InteractableEditor
                 bool showHandles = isCurrentClip && !isCurrentTextClip;
                 bool showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 
-                state.UpdateLayout(
-                    displayX,
-                    displayY,
-                    displayW,
-                    displayH,
-                    w,
-                    h,
-                    showHandles: showHandles,
-                    showSizeLabel: showSizeLabel,
-                    sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                    showClipVisual: isCurrentClip && !isCurrentTextClip);
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    state.UpdateLayout(
+                        displayX,
+                        displayY,
+                        displayW,
+                        displayH,
+                        w,
+                        h,
+                        showHandles: showHandles,
+                        showSizeLabel: showSizeLabel,
+                        sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
+                        showClipVisual: isCurrentClip && !isCurrentTextClip);
 
-                UpdateTextEntryOverlays(
-                    state,
-                    clip,
-                    isCurrentClip,
-                    clipX: x,
-                    clipY: y,
-                    scale: scale);
+                    UpdateTextEntryOverlays(
+                        state,
+                        clip,
+                        isCurrentClip,
+                        clipX: x,
+                        clipY: y,
+                        scale: scale);
 
-                UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
+                    UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
+                });
             }
 
             // 隐藏不再活跃的clips
             var inactiveIds = _clipStates.Keys.Except(activeClipIds).ToList();
-            foreach (var inactiveId in inactiveIds)
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (_clipStates.TryGetValue(inactiveId, out var state))
+                foreach (var inactiveId in inactiveIds)
                 {
-                    state.Hide();
+                    if (_clipStates.TryGetValue(inactiveId, out var state))
+                    {
+                        state.Hide();
+                    }
                 }
-            }
+
+            });
+
 
             ReorderClipStateRootsByZIndex();
         }
@@ -1569,8 +1627,19 @@ namespace projectFrameCut.InteractableEditor
 
             foreach (var root in orderedRoots)
             {
-                ClipStatesHost.Children.Remove(root);
-                ClipStatesHost.Children.Add(root);
+                try
+                {
+                    Dispatcher.Dispatch(() =>
+                    {
+                        ClipStatesHost.Children.Remove(root);
+                        ClipStatesHost.Children.Add(root);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "reorder the clips overlay state", this);
+
+                }
             }
         }
 

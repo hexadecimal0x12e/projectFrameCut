@@ -44,6 +44,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<WindowsPackageType>MSIX</WindowsPackageType>
 
 		<AssemblyVersion>1.4.1.0</AssemblyVersion>
 		<FileVersion>1.4.1.0</FileVersion>
@@ -55,14 +56,6 @@
 		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com/projectFrameCut</PackageProjectUrl>
 		<Title>projectFrameCut Application</Title>
-		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
-		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-		<PackageCertificateThumbprint>709BFFFE9C8383532B419FAEE50869A22F19234F</PackageCertificateThumbprint>
-		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-		<AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
-		<AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
-		<GenerateTestArtifacts>True</GenerateTestArtifacts>
-		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -86,9 +79,15 @@
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
-		<WindowsPackageType>MSIX</WindowsPackageType>
 		<SelfContained>true</SelfContained>
-		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+		<PackageCertificateThumbprint>709BFFFE9C8383532B419FAEE50869A22F19234F</PackageCertificateThumbprint>
+		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+		<AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+		<AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+		<GenerateTestArtifacts>True</GenerateTestArtifacts>
+		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 	</PropertyGroup>
 
 
@@ -117,10 +116,10 @@
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
 		<PackageReference Include="OpenAI" Version="2.8.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.30" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.30" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.50" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.50" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.1.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 
@@ -145,7 +144,6 @@
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
-		<ShouldImportMsixCommonTargets>false</ShouldImportMsixCommonTargets>
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">

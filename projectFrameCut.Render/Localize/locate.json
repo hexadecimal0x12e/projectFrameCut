@@ -467,6 +467,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "General_Color",
+        "Value": "\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "General_Crop",
         "Value": "\u88C1\u5207",
         "Mode": "ConstString",
@@ -509,6 +517,14 @@
       {
         "Id": "General_Rotation",
         "Value": "\u65CB\u8F6C (\u5EA6)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "\u8272\u5757\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -985,16 +1001,107 @@
         "DontTranslate": false
       },
       {
-        "Id": "General_Color",
-        "Value": "\u989C\u8272",
+        "Id": "General_VideoCodec",
+        "Value": "\u89C6\u9891\u89E3\u7801",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "General_SolidColor",
-        "Value": "\u8272\u5757\u914D\u7F6E",
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "\u76EE\u6807\u683C\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "\u81EA\u52A8\u68C0\u6D4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "8 \u4F4D SDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "16 \u4F4D SDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "16 \u4F4D HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "HTTP \u8FDC\u7A0B\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "projectFrameCut RPSV\u4E13\u6709\u683C\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "FFmpeg \u517C\u5BB9\u8BBE\u5907\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "8 \u4F4D SDR (\u786C\u4EF6\u52A0\u901F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "\u672A\u77E5/\u63D2\u4EF6 ({id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u6E90\u6587\u4EF6\u8DEF\u5F84",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2086,6 +2193,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -3171,6 +3396,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -4260,6 +4603,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -5345,6 +5806,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -6434,6 +7013,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -7519,6 +8216,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -8608,6 +9423,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -9693,6 +10626,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -10782,6 +11833,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -11867,6 +13036,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -12956,6 +14243,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -14041,6 +15446,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
@@ -15130,6 +16653,124 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -16215,6 +17856,124 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "Unset localization item:General_SolidColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec",
+        "Value": "Unset localization item:General_VideoCodec()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }

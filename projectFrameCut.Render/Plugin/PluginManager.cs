@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -359,15 +360,21 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoWriter CreateVideoWriter(string codec)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(codec);
+            var codecCandidates = GetVideoWriterCodecCandidates(codec);
+
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
                 {
                     foreach (var item in plugin.VideoWriterProvider)
                     {
-                        if (string.Equals(item.Key, codec, StringComparison.OrdinalIgnoreCase))
+                        var keyMatch = codecCandidates.FirstOrDefault(c => string.Equals(item.Key, c, StringComparison.OrdinalIgnoreCase));
+                        if (keyMatch is not null)
                         {
-                            return item.Value(codec);
+                            var writer = item.Value(keyMatch);
+                            TryAssignWriterCodec(writer, keyMatch);
+                            return writer;
                         }
                     }
                 }
@@ -379,36 +386,131 @@ namespace projectFrameCut.Render.Plugin
 
             // Fallback: probe each writer implementation by asking whether it supports the codec.
             // IMPORTANT: dispose non-selected instances to avoid leaking unmanaged resources.
-            foreach (var plugin in LoadedPlugins.Values)
+            foreach (var candidateCodec in codecCandidates)
             {
-                foreach (var item in plugin.VideoWriterProvider)
+                foreach (var plugin in LoadedPlugins.Values)
                 {
-                    IVideoWriter? instance = null;
-                    var selected = false;
-                    try
+                    foreach (var item in plugin.VideoWriterProvider)
                     {
-                        instance = item.Value(codec);
-                        if (instance.SupportCodec(codec))
+                        IVideoWriter? instance = null;
+                        var selected = false;
+                        try
                         {
-                            selected = true;
-                            return instance;
+                            instance = item.Value(candidateCodec);
+                            if (instance.SupportCodec(candidateCodec))
+                            {
+                                TryAssignWriterCodec(instance, candidateCodec);
+                                selected = true;
+                                return instance;
+                            }
                         }
-                    }
-                    catch
-                    {
-                        // Ignore and try next plugin/writer
-                    }
-                    finally
-                    {
-                        if (!selected && instance is not null)
+                        catch
                         {
-                            try { instance.Dispose(); } catch { }
+                            // Ignore and try next plugin/writer
+                        }
+                        finally
+                        {
+                            if (!selected && instance is not null)
+                            {
+                                try { instance.Dispose(); } catch { }
+                            }
                         }
                     }
                 }
             }
 
-            throw new NotSupportedException($"No suitable video writer found for the codec '{codec}'.");
+            throw new NotSupportedException($"No suitable video writer found for the codec '{codec}'. Tried candidates: {string.Join(", ", codecCandidates)}.");
+        }
+
+        private static void TryAssignWriterCodec(IVideoWriter writer, string codecName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(writer.CodecName) || !writer.SupportCodec(writer.CodecName))
+                {
+                    writer.CodecName = codecName;
+                }
+            }
+            catch
+            {
+                // Keep writer as-is when plugin doesn't expose codec assignment.
+            }
+        }
+
+        private static List<string> GetVideoWriterCodecCandidates(string codec)
+        {
+            var requestedCodec = codec.Trim();
+            var candidates = new List<string>();
+
+            void AddCandidate(string name)
+            {
+                if (!string.IsNullOrWhiteSpace(name) && !candidates.Contains(name, StringComparer.OrdinalIgnoreCase))
+                {
+                    candidates.Add(name);
+                }
+            }
+
+            AddCandidate(requestedCodec);
+
+            switch (requestedCodec.ToLowerInvariant())
+            {
+                case "h264":
+                case "avc":
+                case "avc1":
+                case "x264":
+                    AddCandidate("libx264");
+                    AddCandidate("h264_nvenc");
+                    AddCandidate("h264_qsv");
+                    AddCandidate("h264_amf");
+                    AddCandidate("h264_videotoolbox");
+                    AddCandidate("h264");
+                    break;
+
+                case "h265":
+                case "hevc":
+                case "h265/hevc":
+                case "x265":
+                    AddCandidate("libx265");
+                    AddCandidate("hevc_nvenc");
+                    AddCandidate("hevc_qsv");
+                    AddCandidate("hevc_amf");
+                    AddCandidate("hevc_videotoolbox");
+                    AddCandidate("hevc");
+                    break;
+
+                case "av1":
+                    AddCandidate("libaom-av1");
+                    AddCandidate("svtav1");
+                    AddCandidate("rav1e");
+                    AddCandidate("av1_nvenc");
+                    AddCandidate("av1_qsv");
+                    AddCandidate("av1_amf");
+                    AddCandidate("av1");
+                    break;
+            }
+
+            try
+            {
+                var availableVideoEncoders = FFmpegHelper.CodecUtils
+                    .GetCodecsByType(FFmpeg.AutoGen.AVMediaType.AVMEDIA_TYPE_VIDEO, true)
+                    .Select(c => c.Name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var supportedCandidates = candidates
+                    .Where(c => availableVideoEncoders.Contains(c))
+                    .ToList();
+
+                if (supportedCandidates.Count > 0)
+                {
+                    return supportedCandidates;
+                }
+            }
+            catch
+            {
+                // Fallback to static candidate list when ffmpeg probing isn't available.
+            }
+
+            return candidates;
         }
 
         private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();

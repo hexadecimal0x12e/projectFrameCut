@@ -39,6 +39,11 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Converters;
+
+
 
 
 #if WINDOWS
@@ -498,7 +503,16 @@ namespace projectFrameCut.DraftStuff
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+            IClip? TargetInstance = null;
+            try
+            {
+                TargetInstance = DraftImportAndExportHelper.JSONToIClips(new DraftStructureJSON { Clips = [DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip)] }, true, 8).FirstOrDefault();
 
+            }
+            catch
+            {
+
+            }
             string ToArgbHex(Color color)
             {
                 var a = (int)Math.Round(color.Alpha * 255);
@@ -561,6 +575,39 @@ namespace projectFrameCut.DraftStuff
                 clip.ExtraData["A"] = (float)Math.Clamp(color.Alpha, 0f, 1f);
             }
 
+            object? GetVideoDecoderRawValue()
+            {
+                if (clip.ExtraData == null)
+                {
+                    return null;
+                }
+
+                if (clip.ExtraData.TryGetValue("TargetDecoder", out var value))
+                {
+                    return value;
+                }
+
+                return clip.ExtraData.TryGetValue("targetdecoder", out var lowerValue)
+                    ? lowerValue
+                    : null;
+            }
+
+            string ReadVideoDecoderId()
+            {
+                var raw = GetVideoDecoderRawValue();
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.String)
+                    {
+                        return je.GetString() ?? "auto";
+                    }
+
+                    return je.ToString();
+                }
+
+                return raw?.ToString() ?? "auto";
+            }
+
             string currentSolidColorHex = clip.ClipType == ClipMode.SolidColorClip
                 ? ToArgbHex(ResolveSolidColorFromExtraData())
                 : "#FFFFFFFF";
@@ -602,6 +649,41 @@ namespace projectFrameCut.DraftStuff
                     valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
                 }
             }
+
+            string currentVideoDecoderId = ReadVideoDecoderId();
+            if (string.IsNullOrWhiteSpace(currentVideoDecoderId))
+            {
+                currentVideoDecoderId = "auto";
+            }
+
+            var videoDecoderOptionLabelToId = new Dictionary<string, string>
+            {
+                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
+            };
+            var allVideoDecoderOptionLabelToId = new Dictionary<string, string>
+            {
+                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_http] = "HttpDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_rpsv] = "RawPictureSequenceStreamVideoDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_ffmpegDevices] = "FFmpegDeviceDecoderContext",
+            };
+
+            if (!videoDecoderOptionLabelToId.Values.Contains(currentVideoDecoderId, StringComparer.Ordinal))
+            {
+                videoDecoderOptionLabelToId[PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(currentVideoDecoderId)] = currentVideoDecoderId;
+            }
+
+            string selectedVideoDecoderLabel = videoDecoderOptionLabelToId
+                .FirstOrDefault(kv => string.Equals(kv.Value, currentVideoDecoderId, StringComparison.Ordinal)).Key
+                ?? PPLocalizedResources.General_VideoCodec_TargetMode_Auto;
 
             var ppb = new PropertyPanelBuilder()
             .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
@@ -795,11 +877,28 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
             .AppendWhen(clip.ClipType == ClipMode.AudioClip,
-            (c) => 
+            (c) =>
                 c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
                  .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1))
+            .AppendWhen(clip.ClipType == ClipMode.VideoClip,
+            (c) =>
+                c.AddText(new SingleLineLabel(PPLocalizedResources.General_VideoCodec, 20))
+                 .AppendWhen(!(TargetInstance?.FilePath?.StartsWith("#") ?? false), cc => cc.AddPicker(
+                    "videoTargetDecoderMode",
+                    PPLocalizedResources.General_VideoCodec_TargetMode,
+                    videoDecoderOptionLabelToId.Keys.ToArray(),
+                    selectedVideoDecoderLabel),
+                    cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup((TargetInstance as VideoClip)?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown((TargetInstance as VideoClip)?.DecoderName ?? "Unknown")) }))
+                 .AppendWhen(
+                    clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath), 
+                        pp => pp.AppendWhen(clip.SourcePath.StartsWith("$"), 
+                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source,  new Label { 
+                                Text = AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset) ?  $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})" : $"Unknown asset: {clip.SourcePath.Substring(1)}" }),
+                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = System.IO.Path.GetFullPath(clip.SourcePath) })),
+                    pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
+                )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)));
+                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))));
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -822,6 +921,21 @@ namespace projectFrameCut.DraftStuff
                 {
                     var selectedColor = ParseArgbOrFallback(e.Value?.ToString(), Colors.White);
                     SaveSolidColorToExtraData(selectedColor);
+                    handler?.Invoke(s, e);
+                    return;
+                }
+                if (e.Id == "videoTargetDecoderMode" && clip.ClipType == ClipMode.VideoClip)
+                {
+                    var selectedLabel = e.Value?.ToString() ?? string.Empty;
+                    if (!videoDecoderOptionLabelToId.TryGetValue(selectedLabel, out var selectedDecoderId))
+                    {
+                        selectedDecoderId = currentVideoDecoderId;
+                    }
+
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["TargetDecoder"] = selectedDecoderId;
+                    currentVideoDecoderId = selectedDecoderId;
+
                     handler?.Invoke(s, e);
                     return;
                 }

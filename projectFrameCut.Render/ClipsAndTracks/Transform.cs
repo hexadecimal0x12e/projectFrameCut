@@ -58,6 +58,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
         }
 
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+
         public void Dispose()
         {
         }

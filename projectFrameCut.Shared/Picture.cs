@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using CommunityToolkit.HighPerformance;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -134,6 +135,7 @@ namespace projectFrameCut.Shared
             Alpha = 3
         }
 
+        [Obsolete("No longer used. To prevent disposing, use CanBeDisposed property; To tag this image, use frameIndex or filePath.")]
         [Flags]
         public enum PictureFlag
         {
@@ -173,17 +175,37 @@ namespace projectFrameCut.Shared
     /// <typeparam name="T">The pixel type.</typeparam>
     public interface IPicture<T> : IPicture, IDisposable
     {
+        /// <summary>
+        /// Red channel. 0 means dark and 1 means brightest.
+        /// </summary>
         [JsonIgnore()]
         public T[] r { get; set; }
+        /// <summary>
+        /// Green channel. 0 means dark and 1 means brightest.
+        /// </summary>
         [JsonIgnore()]
         public T[] g { get; set; }
+        /// <summary>
+        /// Blue channel. 0 means dark and 1 means brightest.
+        /// </summary>
         [JsonIgnore()]
         public T[] b { get; set; }
+        /// <summary>
+        /// Alpha channel. 0 means completely transparent and 1 means not transparent.
+        /// Negative value is not accepted.
+        /// If this array is null, means this image does not have alpha channel.
+        /// </summary>
         [JsonIgnore()]
         [NotNull()]
         public float[]? a { get; set; }
 
+        /// <summary>
+        /// Set the alpha channel.
+        /// </summary>
         public IPicture<T> SetAlpha(bool haveAlpha);
+        /// <summary>
+        /// Resize the target picture.
+        /// </summary>
         public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
 
     }
@@ -221,30 +243,6 @@ namespace projectFrameCut.Shared
 
         public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
 
-    }
-
-    /// <summary>
-    /// This class is for compatibility with some pretty old codes (mostly written before the main application appears in the Git repository). It's basically equals to <see cref="Picture16bpp"/>.
-    /// </summary>
-    [DebuggerDisplay("ProcessStack: {ProcessStack}")]
-    [Obsolete("Consider to use Picture16bpp. It's exactly same.",false)]
-    public class Picture : Picture16bpp
-    {
-        public Picture(IPicture<ushort> picture) : base(picture)
-        {
-        }
-
-        public Picture(string imagePath) : base(imagePath)
-        {
-        }
-
-        public Picture(Image source) : base(source)
-        {
-        }
-
-        public Picture(int width, int height) : base(width, height)
-        {
-        }
     }
 
     #endregion
@@ -572,7 +570,7 @@ namespace projectFrameCut.Shared
                     if (destW == Width && destH == Height) return this;
                 }
 
-                var result = new Picture(destW, destH);
+                var result = new Picture16bpp(destW, destH);
                 int dstPixels = checked(destW * destH);
                 result.r = new ushort[dstPixels];
                 result.g = new ushort[dstPixels];
@@ -679,9 +677,9 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public static Picture GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a)
+        public static Picture16bpp GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a)
         {
-            var pic = new Picture(width, height)
+            var pic = new Picture16bpp(width, height)
             {
                 ProcessStack = new List<PictureProcessStack>
                 {
@@ -1544,6 +1542,273 @@ namespace projectFrameCut.Shared
             Dispose(disposing: true,force);
             GC.SuppressFinalize(this);
         }
+    }
+    #endregion
+
+    #region hdr
+    /// <summary>
+    /// The structure of a HDR Picture.
+    /// </summary>
+    public interface IHDRPicture<T> : IPicture<T>
+    {
+        /// <summary>
+        /// Get the brightness for each pixel.
+        /// </summary>
+        /// <remarks>
+        /// for each item, 1 means as same bright as <see cref="MaximumBrightness"/>; 
+        /// 0 means no brightness (same as dark)
+        /// Negative value is not accepted.
+        /// </remarks>
+        [JsonIgnore()]
+        public float[] Brightness { get; set; }
+
+        /// <summary>
+        /// Get or set the maximum brightness (unit in nit) of this picture.
+        /// </summary>
+        public float MaximumBrightness { get; set; }
+    }
+
+    public class HDRPicture16bpp : Picture16bpp, IHDRPicture<ushort>
+    {
+        private const float DefaultHdrMaximumBrightness = 1000f;
+
+        public HDRPicture16bpp(string imagePath) : base(imagePath)
+        {
+        }
+
+        public HDRPicture16bpp(Image source) : base(source)
+        {
+        }
+
+        public HDRPicture16bpp(IPicture<ushort> picture, bool copyData = false) : base(picture, copyData)
+        {
+        }
+
+        public HDRPicture16bpp(int width, int height) : base(width, height)
+        {
+        }
+
+        public float[] Brightness { get; set; } = Array.Empty<float>();
+        public float MaximumBrightness { get; set; } = DefaultHdrMaximumBrightness;
+
+        public new HDRPicture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            var sw = Stopwatch.StartNew();
+            if (targetWidth == Width && targetHeight == Height) return this;
+
+            lock (this)
+            {
+                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
+                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
+
+                int destW = targetWidth;
+                int destH = targetHeight;
+
+                if (preserveAspect)
+                {
+                    double sx = (double)targetWidth / Width;
+                    double sy = (double)targetHeight / Height;
+                    double s = Math.Min(sx, sy);
+                    destW = Math.Max(1, (int)Math.Round(Width * s));
+                    destH = Math.Max(1, (int)Math.Round(Height * s));
+                    if (destW == Width && destH == Height) return this;
+                }
+
+                int dstPixels = checked(destW * destH);
+                var result = new HDRPicture16bpp(destW, destH)
+                {
+                    r = new ushort[dstPixels],
+                    g = new ushort[dstPixels],
+                    b = new ushort[dstPixels],
+                    a = hasAlphaChannel ? new float[dstPixels] : null,
+                    hasAlphaChannel = hasAlphaChannel,
+                    Brightness = new float[dstPixels],
+                    MaximumBrightness = (MaximumBrightness > 0f && float.IsFinite(MaximumBrightness))
+                        ? MaximumBrightness
+                        : DefaultHdrMaximumBrightness,
+                };
+
+                float[]? sourceBrightness = (Brightness != null && Brightness.Length == Pixels) ? Brightness : null;
+                bool hasBrightness = sourceBrightness != null;
+
+                double xRatio = (double)Width / destW;
+                double yRatio = (double)Height / destH;
+                int srcArraySize = this.r.Length;
+
+                for (int y = 0; y < destH; y++)
+                {
+                    double srcY = (y + 0.5) * yRatio - 0.5;
+                    int y0 = (int)Math.Floor(srcY);
+                    int y1 = y0 + 1;
+                    double wy = srcY - y0;
+                    if (y0 < 0)
+                    {
+                        y0 = 0; y1 = 0; wy = 0;
+                    }
+                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
+                    if (y1 >= Height) { y1 = Height - 1; }
+
+                    for (int x = 0; x < destW; x++)
+                    {
+                        double srcX = (x + 0.5) * xRatio - 0.5;
+                        int x0 = (int)Math.Floor(srcX);
+                        int x1 = x0 + 1;
+                        double wx = srcX - x0;
+                        if (x0 < 0)
+                        {
+                            x0 = 0; x1 = 0; wx = 0;
+                        }
+                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
+                        if (x1 >= Width) { x1 = Width - 1; }
+
+                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
+                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
+                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
+                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
+
+                        double r00 = this.r[k00];
+                        double r10 = this.r[k10];
+                        double r01 = this.r[k01];
+                        double r11 = this.r[k11];
+
+                        double g00 = this.g[k00];
+                        double g10 = this.g[k10];
+                        double g01 = this.g[k01];
+                        double g11 = this.g[k11];
+
+                        double b00 = this.b[k00];
+                        double b10 = this.b[k10];
+                        double b01 = this.b[k01];
+                        double b11 = this.b[k11];
+
+                        double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
+                        double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
+                        double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
+
+                        int dstIdx = y * destW + x;
+                        int rr = (int)Math.Round(rInterp);
+                        int gg = (int)Math.Round(gInterp);
+                        int bb = (int)Math.Round(bInterp);
+                        if (rr < 0) rr = 0; if (rr > 65535) rr = 65535;
+                        if (gg < 0) gg = 0; if (gg > 65535) gg = 65535;
+                        if (bb < 0) bb = 0; if (bb > 65535) bb = 65535;
+
+                        result.r[dstIdx] = (ushort)rr;
+                        result.g[dstIdx] = (ushort)gg;
+                        result.b[dstIdx] = (ushort)bb;
+
+                        if (hasAlphaChannel && this.a != null)
+                        {
+                            double a00 = this.a[k00];
+                            double a10 = this.a[k10];
+                            double a01 = this.a[k01];
+                            double a11 = this.a[k11];
+                            double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
+                            if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp = 1.0;
+                            if (aInterp < 0) aInterp = 0; if (aInterp > 1) aInterp = 1;
+                            result.a![dstIdx] = (float)aInterp;
+                        }
+
+                        double br00, br10, br01, br11;
+                        if (sourceBrightness != null)
+                        {
+                            br00 = sourceBrightness[k00];
+                            br10 = sourceBrightness[k10];
+                            br01 = sourceBrightness[k01];
+                            br11 = sourceBrightness[k11];
+                        }
+                        else
+                        {
+                            br00 = Math.Clamp((0.2627 * this.r[k00] + 0.6780 * this.g[k00] + 0.0593 * this.b[k00]) / 65535.0, 0.0, 1.0);
+                            br10 = Math.Clamp((0.2627 * this.r[k10] + 0.6780 * this.g[k10] + 0.0593 * this.b[k10]) / 65535.0, 0.0, 1.0);
+                            br01 = Math.Clamp((0.2627 * this.r[k01] + 0.6780 * this.g[k01] + 0.0593 * this.b[k01]) / 65535.0, 0.0, 1.0);
+                            br11 = Math.Clamp((0.2627 * this.r[k11] + 0.6780 * this.g[k11] + 0.0593 * this.b[k11]) / 65535.0, 0.0, 1.0);
+                        }
+
+                        double brightnessInterp = br00 * (1 - wx) * (1 - wy) + br10 * wx * (1 - wy) + br01 * (1 - wx) * wy + br11 * wx * wy;
+                        if (double.IsNaN(brightnessInterp) || double.IsInfinity(brightnessInterp)) brightnessInterp = 0.0;
+                        result.Brightness[dstIdx] = (float)Math.Clamp(brightnessInterp, 0.0, 1.0);
+                    }
+                }
+
+                result.ProcessStack.Add(new PictureProcessStack
+                {
+                    OperationDisplayName = "Resize (HDR IPicture)",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "SourceWidth", Width },
+                        { "SourceHeight", Height },
+                        { "TargetWidth", targetWidth },
+                        { "TargetHeight", targetHeight },
+                        { "PreserveAspect", preserveAspect },
+                        { "MaximumBrightness", result.MaximumBrightness },
+                        { "HasBrightnessChannel", hasBrightness },
+                    },
+                    Elapsed = sw.Elapsed
+                });
+
+                return result;
+            }
+        }
+
+        public static HDRPicture16bpp GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a, float brightness = 1f, float maximumBrightness = DefaultHdrMaximumBrightness)
+        {
+            int pixels = checked(width * height);
+            float validBrightness = float.IsFinite(brightness) ? Math.Clamp(brightness, 0f, 1f) : 0f;
+            float validMaximumBrightness = (maximumBrightness > 0f && float.IsFinite(maximumBrightness))
+                ? maximumBrightness
+                : DefaultHdrMaximumBrightness;
+
+            var pic = new HDRPicture16bpp(width, height)
+            {
+                ProcessStack = new List<PictureProcessStack>
+                {
+                    new PictureProcessStack
+                    {
+                        OperationDisplayName = "GenerateSolidColor (HDR)",
+                        Operator = typeof(HDRPicture16bpp),
+                        ProcessingFuncStackTrace = new StackTrace(true),
+                        Properties = new Dictionary<string, object>
+                        {
+                            { "Width", width },
+                            { "Height", height },
+                            { "R", r },
+                            { "G", g },
+                            { "B", b },
+                            { "A", a ?? -1f },
+                            { "Brightness", validBrightness },
+                            { "MaximumBrightness", validMaximumBrightness },
+                        },
+                    }
+                },
+                MaximumBrightness = validMaximumBrightness,
+                Brightness = Enumerable.Repeat(validBrightness, pixels).ToArray(),
+            };
+
+            pic.r = Enumerable.Repeat(r, pixels).ToArray();
+            pic.g = Enumerable.Repeat(g, pixels).ToArray();
+            pic.b = Enumerable.Repeat(b, pixels).ToArray();
+
+            if (a != null)
+            {
+                pic.a = Enumerable.Repeat(Math.Clamp(a.Value, 0f, 1f), pixels).ToArray();
+                pic.hasAlphaChannel = true;
+            }
+            else
+            {
+                pic.a = null;
+                pic.hasAlphaChannel = false;
+            }
+
+            return pic;
+        }
+
+        public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average() * MaximumBrightness}nit";
+
+
+
     }
     #endregion
 }

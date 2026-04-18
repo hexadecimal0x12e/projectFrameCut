@@ -142,6 +142,7 @@ public partial class RenderSettingPage : ContentPage
 
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
+            .AppendWhen(AcceleratorInfos?.Count() < 1, (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
             .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
             .AppendWhen(AcceleratorInfos?.Count(c => c.Type != "CPU") < 2, (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
             .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out result) ? accels[result] : "", null);
@@ -191,7 +192,7 @@ public partial class RenderSettingPage : ContentPage
         try
         {
             ILGPU.Context context = ILGPU.Context.CreateDefault();
-            var devices = context.Devices.ToList();
+            var devices = context.Devices.Where(C => C.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).ToList();
             List<AcceleratorInfo> listAccels = new();
             for (uint i = 0; i < devices.Count; i++)
             {
@@ -199,7 +200,7 @@ public partial class RenderSettingPage : ContentPage
                 listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
             }
 
-            return listAccels.ToArray();
+            return listAccels.Any() ? listAccels.ToArray() : [new AcceleratorInfo(0, "No support accelerator found on this device.", "CPU")];
         }
         catch (Exception ex)
         {

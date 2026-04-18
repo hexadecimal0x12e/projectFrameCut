@@ -33,6 +33,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             Log($"FFmpeg log callback registered. minLevel={minLogLevel}", "info");
         }
 
+        [DebuggerStepThrough()]
         private static void OnFFmpegLog(void* ptr, int level, string format, byte* vl)
         {
             if (level > ffmpeg.av_log_get_level()) return;
@@ -63,7 +64,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 // Keep logging callback non-throwing, FFmpeg calls this from native context.
             }
         }
-
+        [DebuggerStepThrough()]
         private static string MapFFmpegLogLevel(int level)
         {
             if (level <= ffmpeg.AV_LOG_PANIC || level <= ffmpeg.AV_LOG_FATAL || level <= ffmpeg.AV_LOG_ERROR)
@@ -94,6 +95,51 @@ namespace projectFrameCut.Render.EncodeAndDecode
             byte* buffer = stackalloc byte[AV_ERROR_MAX_STRING_SIZE];
             ffmpeg.av_strerror(err, buffer, (ulong)AV_ERROR_MAX_STRING_SIZE);
             return Marshal.PtrToStringAnsi((IntPtr)buffer);
+        }
+
+        public static AVInputFormat* FindInputFormatByName(string formatName)
+        {
+            if (string.IsNullOrWhiteSpace(formatName))
+            {
+                return null;
+            }
+
+            try
+            {
+                return ffmpeg.av_find_input_format(formatName);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                // Some FFmpeg builds do not export av_find_input_format.
+                // Fallback to iterating demuxers and matching short names.
+            }
+
+            void* opaque = null;
+            AVInputFormat* current = null;
+            while ((current = ffmpeg.av_demuxer_iterate(&opaque)) != null)
+            {
+                if (current->name == null)
+                {
+                    continue;
+                }
+
+                string names = Marshal.PtrToStringAnsi((IntPtr)current->name) ?? string.Empty;
+                if (names.Length == 0)
+                {
+                    continue;
+                }
+
+                var segments = names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var segment in segments)
+                {
+                    if (string.Equals(segment, formatName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return current;
+                    }
+                }
+            }
+
+            return null;
         }
 
         internal static void DetectWhyCannotOpenVideo(string path, int averr)
@@ -260,6 +306,99 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 return encoder
                     ? ffmpeg.avcodec_find_encoder(id)
                     : ffmpeg.avcodec_find_decoder(id);
+            }
+        }
+
+        public static class InputDeviceUtils
+        {
+            public record InputDeviceInfo(
+                string Name,
+                string LongName,
+                string Kind,
+                bool IsAudioInput,
+                bool IsVideoInput,
+                bool IsVirtualInput
+            );
+
+            private static int _deviceRegistered = 0;
+
+            private static void EnsureDeviceRegistered()
+            {
+                if (Interlocked.Exchange(ref _deviceRegistered, 1) == 1) return;
+                //ffmpeg.avdevice_register_all(); 
+                //starting from FFmpeg 5.0, avdevice_register_all() is no longer needed, the devices are registered automatically.
+            }
+
+            public static List<InputDeviceInfo> GetAllInputDevices(bool includeVirtualInputs = true)
+            {
+                EnsureDeviceRegistered();
+
+                var result = new List<InputDeviceInfo>();
+                var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                EnumerateInputDevices(isVideo: true, result, visited);
+                EnumerateInputDevices(isVideo: false, result, visited);
+
+                if (includeVirtualInputs)
+                {
+                    AddVirtualInput("lavfi", "Libavfilter virtual input device", result, visited);
+                }
+
+                return result;
+            }
+
+            public static string EnumAllInputDevices(bool includeVirtualInputs = true)
+            {
+                var devices = GetAllInputDevices(includeVirtualInputs);
+                StringBuilder result = new();
+
+                foreach (var d in devices)
+                {
+                    result.AppendLine($"Input: {d.Name,-20}  Kind: {d.Kind,-13}  Virtual: {(d.IsVirtualInput ? "Yes" : "No")}");
+                }
+
+                return result.ToString();
+            }
+
+            private static void EnumerateInputDevices(bool isVideo, List<InputDeviceInfo> result, HashSet<string> visited)
+            {
+                AVInputFormat* format = null;
+                while ((format = isVideo
+                    ? ffmpeg.av_input_video_device_next(format)
+                    : ffmpeg.av_input_audio_device_next(format)) != null)
+                {
+                    string name = Marshal.PtrToStringAnsi((IntPtr)format->name) ?? "Unknown";
+                    string longName = Marshal.PtrToStringAnsi((IntPtr)format->long_name) ?? "";
+                    if (!visited.Add(name)) continue;
+
+                    result.Add(new InputDeviceInfo(
+                        name,
+                        longName,
+                        isVideo ? "VideoDevice" : "AudioDevice",
+                        IsAudioInput: !isVideo,
+                        IsVideoInput: isVideo,
+                        IsVirtualInput: false
+                    ));
+                }
+            }
+
+            private static void AddVirtualInput(string formatName, string fallbackLongName, List<InputDeviceInfo> result, HashSet<string> visited)
+            {
+                AVInputFormat* format = FindInputFormatByName(formatName);
+                if (format == null) return;
+
+                string name = Marshal.PtrToStringAnsi((IntPtr)format->name) ?? formatName;
+                if (!visited.Add(name)) return;
+
+                string longName = Marshal.PtrToStringAnsi((IntPtr)format->long_name) ?? fallbackLongName;
+                result.Add(new InputDeviceInfo(
+                    name,
+                    longName,
+                    "VirtualInput",
+                    IsAudioInput: true,
+                    IsVideoInput: true,
+                    IsVirtualInput: true
+                ));
             }
         }
     }

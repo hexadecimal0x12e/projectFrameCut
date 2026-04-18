@@ -312,8 +312,8 @@ public partial class EditSettingPage : ContentPage
                         var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                         var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-                        var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
-                        var bkgPic = bkg.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+                        var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                        var bkgPic = bkg.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
 
                         IPicture img = null;
                         if (LoadTextPreview)

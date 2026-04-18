@@ -93,7 +93,10 @@ namespace projectFrameCut.Render.Rendering
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
-            writer.CodecName = encoder;
+            if (string.IsNullOrWhiteSpace(writer.CodecName))
+            {
+                writer.CodecName = encoder;
+            }
             writer.Initialize();
 
 

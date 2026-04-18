@@ -1,5 +1,6 @@
 ﻿
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -42,6 +43,19 @@ namespace projectFrameCut.Render.Effect
                 effects.Add(PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
             }
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
+        }
+
+        public static ISpeedVarianceProvider? GetSpeedVarianceProvider(IEffect[]? effects)
+        {
+            if (effects is null || effects.Length == 0)
+            {
+                return null;
+            }
+            if(effects.Count(c => c.TypeOfEffect == EffectType.SpeedVarianceProvider) > 1)
+            {
+                throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
+            }
+            return effects.FirstOrDefault(c => c.TypeOfEffect == EffectType.SpeedVarianceProvider) as ISpeedVarianceProvider;
         }
 
         public static Dictionary<string, Func<IEffect>> EffectsEnum =>

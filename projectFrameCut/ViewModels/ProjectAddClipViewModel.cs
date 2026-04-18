@@ -751,7 +751,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 Clips = clipDtos.Cast<object>().ToArray(),
                 SoundTracks = soundtrackDtos.Cast<object>().ToArray(),
-                TargetFrameRate = _draftPage.ProjectInfo.TargetFrameRate,
                 SavedAt = DateTime.Now
             };
 
@@ -2908,7 +2907,7 @@ public class TextStyleItemViewModel
             var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
             var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
             return img.ToImageSource();
         }
     }

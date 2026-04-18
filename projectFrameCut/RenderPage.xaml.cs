@@ -27,6 +27,10 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using IPicture = projectFrameCut.Shared.IPicture;
+using static System.Net.Mime.MediaTypeNames;
+using projectFrameCut.Render.Compose;
+
+
 
 
 
@@ -347,40 +351,10 @@ public partial class RenderPage : ContentPage
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
-        Shell.SetNavBarIsVisible(this, false);
         try
         {
             var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
-
-            RenderOptionPanel.IsVisible = false;
-            PreviewLayout.IsVisible = true;
-            ProgressBox.IsVisible = true;
-            CancelRender.IsEnabled = true;
-            MoreOptions.IsEnabled = false;
-            await SubProgress.ProgressTo(0, 250, Easing.Linear);
-
-            _logBuffer.Clear();
-            _logQueue.Clear();
-            LoggingBox.Text = string.Empty;
-            UpdateLogRefreshState();
-            if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
-            {
-#if ANDROID || IOS //oled screen, avoid burn-in
-                SettingsManager.WriteSetting("render_EnableScreenSaver", "true");
-#else
-                SettingsManager.WriteSetting("render_EnableScreenSaver", "false");
-#endif
-            }
-            if (SettingsManager.IsBoolSettingTrue("render_EnableScreenSaver"))
-            {
-                _screenSaverTimer?.Stop();
-                _screenSaverTimer?.Start();
-                StopMovingHint();
-            }
-
-
-
-            MyLoggerExtensions.OnLog += _WriteToLogBox;
+            await PrepareUIForRender();
 
             if (BindingContext is RenderPageViewModel vm)
             {
@@ -416,7 +390,7 @@ public partial class RenderPage : ContentPage
                 string compOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
                 var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
-                if (string.IsNullOrWhiteSpace(resultPath)) goto done;
+                if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
                 string resultPath = compOutputPath;
 #endif
@@ -461,10 +435,13 @@ public partial class RenderPage : ContentPage
                     if (File.Exists(vidOutputPath))
                     {
                         File.Move(vidOutputPath, tempVid);
-                        string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
-                        if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
+                        await Task.Run(async () =>
+                        {
+                            string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
+                            if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
 
-                        await ffmpeg.Run(args);
+                            await ffmpeg.Run(args);
+                        }, _cts.Token);
                         File.Delete(tempVid);
                     }
 #endif
@@ -492,19 +469,6 @@ public partial class RenderPage : ContentPage
 
                 });
 
-            done:
-                _logUpdateTimer?.Stop();
-                _screenSaverTimer?.Stop();
-                ScreenSaverOverlay.IsVisible = false;
-                StopMovingHint();
-                StopScreenSaverTimer();
-                await FlushLogQueue();
-                MyLoggerExtensions.OnLog -= _WriteToLogBox;
-
-                running = false;
-                CancelRender.IsEnabled = false;
-                UpdateLogRefreshState();
-
 
                 try
                 {
@@ -525,6 +489,8 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
                     await FileSystemService.ShowFileInFolderAsync(resultPath);
 #endif
+
+
                 }
                 catch (Exception ex)
                 {
@@ -544,11 +510,7 @@ public partial class RenderPage : ContentPage
         }
         finally
         {
-            StopScreenSaverTimer();
-            Shell.SetNavBarIsVisible(this, true);
-            DeviceDisplay.Current.KeepScreenOn = false;
-            await PerformPostRenderAction();
-
+            await CleanupUIForRenderDone();
         }
 
     }
@@ -587,19 +549,18 @@ public partial class RenderPage : ContentPage
                 "12bit" => "AV_PIX_FMT_YUV444P12LE",
                 _ => "AV_PIX_FMT_GBRP16LE"
             };
-            var enc = vm.BitDepth switch
-            {
-                "8bit" => "libx264",
-                "10bit" => "libx265",
-                "12bit" => "libx265",
-                _ => "ffv1"
-            };
-            var ext = enc switch
+            var enc = vm.Encoding;
+            var ext = vm.Encoding switch
             {
                 "libx264" => ".mp4",
+                "h264" => ".mp4",
                 "libx265" => ".mov",
+                "h265" => ".mov",
+                "h265/hevc" => ".mov",
+                "hevc" => ".mov",
+                "av1" => ".mkv",
                 "ffv1" => ".mkv",
-                _ => ".mp4"
+                _ => ".mkv"
             };
 
             var bpp = vm.BitDepth switch
@@ -839,14 +800,14 @@ public partial class RenderPage : ContentPage
 
             if (dumpDiagData)
             {
-                string renderCheckpointPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                 Guid SessionId = Guid.NewGuid();
-                Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), renderer);
+                string renderCheckpointPath = Path.Combine(MauiProgram.DataPath, "RenderDiag");
+                Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(renderCheckpointPath, $"RenderDiag-{SessionId}.csv"), renderer);
                 int idx = 0, count = 0;
                 StreamWriter? sw = null;
                 foreach (var item in renderer.FrameProcessStacks.OrderBy(c => c.Key))
                 {
-                    sw ??= new(new FileStream(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint", $"ProcessStack_{SessionId}_{++idx}.md"), FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+                    sw ??= new(new FileStream(Path.Combine(renderCheckpointPath, $"ProcessStack-{SessionId}_{++idx}.md"), FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
                     await sw.WriteLineAsync($"# Frame {item.Key}");
                     await sw.WriteLineAsync();
                     await sw.WriteLineAsync(PictureProcessStack.FormatProcessStackForLogMarkdown(item.Value));
@@ -856,7 +817,7 @@ public partial class RenderPage : ContentPage
                     if (count > 2500) sw = null;
                 }
 
-                await ExportPictureLifecycleTrackerSnapshots(renderCheckpointPath, SessionId);
+                await PictureLifecycleTracker.ExportPictureLifecycleTrackerSnapshots(Path.Combine(renderCheckpointPath, $"PictureLifeCycle-{SessionId}.csv"));
             }
 
 
@@ -933,7 +894,7 @@ public partial class RenderPage : ContentPage
             });
         };
 
-        await Task.Run(() => composer.Compose((int)_draft.TargetFrameRate, 96000, 2, SettingsManager.GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960), _cts.Token));
+        await Task.Run(() => composer.Compose((int)_project.TargetFrameRate, 96000, 2, SettingsManager.GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960), _cts.Token));
 
         writer.Finish();
         writer.Dispose();
@@ -972,14 +933,17 @@ public partial class RenderPage : ContentPage
                 if (action == PostRenderAction.None)
                 {
                     WinUI.App.MessageBeep(0x00000040);
-                    await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
                     return;
                 }
             });
 #endif
 
             if (action == PostRenderAction.None)
+            {
+                if (await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized.RenderPage_BackToHome, Localized._OK)) await Navigation.PopToRootAsync();
                 return;
+            }
+
 
             _countdownCts?.Cancel();
             _countdownCts = new CancellationTokenSource();
@@ -1117,7 +1081,7 @@ public partial class RenderPage : ContentPage
 
 
         var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath);
-        await DisplayPromptAsync("Standalone render args", "Copy the args below:", "OK", "Cancel", initialValue: args);
+        await DisplayPromptAsync(Localized._Info, "Copy the args below:", Localized._OK, null, initialValue: args);
     }
 
     private static bool TryParseRenderSettings(RenderPageViewModel vm, out int width, out int height, out int fps)
@@ -1156,6 +1120,152 @@ public partial class RenderPage : ContentPage
         };
     }
 
+
+
+    private async void ExportAudioOnly_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+#endif
+        await ComposeAudio(vm, resultPath);
+#if ANDROID
+        var ext = ".wav";
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+    }
+
+    private async void ExportVideoOnly_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+        var ext = vm.Encoding switch
+        {
+            "libx264" => ".mp4",
+            "h264" => ".mp4",
+            "libx265" => ".mov",
+            "h265" => ".mov",
+            "h265/hevc" => ".mov",
+            "hevc" => ".mov",
+            "av1" => ".mkv",
+            "ffv1" => ".mkv",
+            _ => ".mkv"
+        };
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+#endif
+        await PrepareUIForRender();
+        await DoCompute(vm, resultPath);
+        await CleanupUIForRenderDone();
+#if ANDROID
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+
+    }
+
+    private async void Export16bitRawVideo_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
+#endif
+        await PrepareUIForRender();
+        await DoCompute(new RenderPageViewModel { Encoding = "ffv1", BitDepth = "16bit", Width = vm.Width, Height = vm.Height, Framerate = vm.Framerate }, resultPath);
+        await CleanupUIForRenderDone();
+#if ANDROID
+        var ext = ".mkv";
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+    }
+
+    private async Task PrepareUIForRender()
+    {
+        Shell.SetNavBarIsVisible(this, false);
+        RenderOptionPanel.IsVisible = false;
+        PreviewLayout.IsVisible = true;
+        ProgressBox.IsVisible = true;
+        CancelRender.IsEnabled = true;
+        MoreOptions.IsEnabled = false;
+        ExportAudioOnly.IsEnabled = false;
+        ExportVideoOnly.IsEnabled = false;
+        Export16bitRawVideo.IsEnabled = false;
+        await SubProgress.ProgressTo(0, 250, Easing.Linear);
+
+        _logBuffer.Clear();
+        _logQueue.Clear();
+        LoggingBox.Text = string.Empty;
+        UpdateLogRefreshState();
+        if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
+        {
+#if ANDROID || IOS //oled screen, avoid burn-in
+            SettingsManager.WriteSetting("render_EnableScreenSaver", "true");
+#else
+            SettingsManager.WriteSetting("render_EnableScreenSaver", "false");
+#endif
+        }
+        if (SettingsManager.IsBoolSettingTrue("render_EnableScreenSaver"))
+        {
+            _screenSaverTimer?.Stop();
+            _screenSaverTimer?.Start();
+            StopMovingHint();
+        }
+
+
+
+        MyLoggerExtensions.OnLog += _WriteToLogBox;
+    }
+
+    private async Task CleanupUIForRenderDone()
+    {
+        _logUpdateTimer?.Stop();
+        _screenSaverTimer?.Stop();
+        ScreenSaverOverlay.IsVisible = false;
+        StopMovingHint();
+        StopScreenSaverTimer();
+        await FlushLogQueue();
+        MyLoggerExtensions.OnLog -= _WriteToLogBox;
+
+        running = false;
+        CancelRender.IsEnabled = false;
+        UpdateLogRefreshState();
+
+        StopScreenSaverTimer();
+        Shell.SetNavBarIsVisible(this, true);
+        DeviceDisplay.Current.KeepScreenOn = false;
+        await PerformPostRenderAction();
+    }
 
     private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath)
     {
@@ -1199,84 +1309,6 @@ public partial class RenderPage : ContentPage
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
 
-    private async Task ExportPictureLifecycleTrackerSnapshots(string outputDirectory, Guid sessionId)
-    {
-        try
-        {
-            if (!PictureLifecycleTracker.Enabled)
-            {
-                Log("PictureLifecycleTracker is disabled. Skipped lifecycle snapshot export.");
-                return;
-            }
-
-            var snapshots = PictureLifecycleTracker.GetSnapshots(includeDisposed: true);
-            Directory.CreateDirectory(outputDirectory);
-
-            string outputPath = Path.Combine(outputDirectory, $"PictureLifecycle_{sessionId}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-            await using var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-            await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-
-            await writer.WriteLineAsync(string.Join(',',
-            [
-                "Id",
-                "TypeName",
-                "BitPerPixel",
-                "Width",
-                "Height",
-                "Pixels",
-                "CreatedAtUtc",
-                "DisposedAtUtc",
-                "CollectedAtUtc",
-                "IsDisposed",
-                "IsCollected",
-                "LifetimeToDisposeMs",
-                "LifetimeToCollectMs"
-            ]));
-
-            foreach (var snapshot in snapshots)
-            {
-                await writer.WriteLineAsync(string.Join(',',
-                [
-                    EscapeCsv(snapshot.Id.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.TypeName),
-                    EscapeCsv(snapshot.BitPerPixel.ToString()),
-                    EscapeCsv(snapshot.Width.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.Height.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.Pixels.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.DisposedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.CollectedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.IsDisposed ? "true" : "false"),
-                    EscapeCsv(snapshot.IsCollected ? "true" : "false"),
-                    EscapeCsv(snapshot.LifetimeToDispose?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.LifetimeToCollect?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture))
-                ]));
-            }
-
-            await writer.FlushAsync();
-            Log($"Exported PictureLifecycleTracker snapshots: {snapshots.Count} records, {outputPath}");
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "export PictureLifecycleTracker snapshots", this);
-        }
-    }
-
-    private static string EscapeCsv(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
-
 }
 
 
@@ -1295,7 +1327,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
     public string[] ExportOptions_Encoding { get; } = [
-        "h264", "h265/hevc", "av1",
+        "av1", "h264", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
         Localized.RenderPage_CustomOption
     ];
 
@@ -1371,7 +1403,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _framerate = "30";
+    string _framerate = "60";
     public string Framerate
     {
         get
@@ -1401,7 +1433,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _encoding = "h264";
+    string _encoding = "av1";
     public string Encoding
     {
         get

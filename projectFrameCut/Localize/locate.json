@@ -4175,6 +4175,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderPage_BackToHome",
+        "Value": "\u56DE\u5230\u4E3B\u9875",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "RenderPage_CancelRender",
         "Value": "\u53D6\u6D88\u6E32\u67D3",
         "Mode": "ConstString",
@@ -4426,7 +4434,7 @@
       },
       {
         "Id": "RenderPage_RenderMoreOptions",
-        "Value": "\u66F4\u591A\u9009\u9879",
+        "Value": "\u6E32\u67D3\u8BBE\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4563,8 +4571,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderPage_ToolBar_Export16bitRawVideo",
+        "Value": "\u5BFC\u51FA\u539F\u59CB16bit\u89C6\u9891 (ffv1 GBRP16LE)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_ExportAudioOnly",
+        "Value": "\u53EA\u6E32\u67D3\u5E76\u5BFC\u51FA\u97F3\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_ExportVideoOnly",
+        "Value": "\u53EA\u6E32\u67D3\u5E76\u5BFC\u51FA\u89C6\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
         "Value": "\u5BFC\u51FA\u6E32\u67D3\u5668\u547D\u4EE4\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs_Copy",
+        "Value": "\u590D\u5236\u4E0B\u9762\u7684\u547D\u4EE4\u884C\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5380,6 +5420,14 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_EnableHDR",
+        "Value": "\u542F\u7528 HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11241,6 +11289,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -17096,6 +17162,24 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -22959,6 +23043,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -28821,6 +28923,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -34677,6 +34797,24 @@
           }
         ],
         "Comment": "Statistiques de s\u00E9lection d\u0027actifs : nombre s\u00E9lectionn\u00E9 / total, nombre r\u00E9f\u00E9renc\u00E9. Utilisation du pluriel conditionnel (s) pour l\u0027accord en fran\u00E7ais.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -40538,6 +40676,24 @@
           }
         ],
         "Comment": "\u8D44\u4EA7\u9009\u62E9\u7EDF\u8BA1\u4E4B\u6807\u7B7E\uFF0C\u663E\u5DF2\u62E9\u4E4B\u6570\u3001\u603B\u6570\u53CA\u5F15\u6570",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -46401,6 +46557,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -52262,6 +52436,24 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -58125,6 +58317,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -63986,6 +64196,24 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -69849,6 +70077,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -75710,6 +75956,24 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -81573,6 +81837,24 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -87434,6 +87716,24 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "Unset localization item:WelocmePage_NoAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackToHome",
+        "Value": "Unset localization item:RenderPage_BackToHome()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ]

@@ -85,12 +85,20 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public float FrameTime { get; init; }
         /// <summary>
-        /// The actual frame time's ratio
+        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V5.</b>
+        /// The actual frame time's ratio.
         /// </summary>
         /// <remarks>
         /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
         /// </remarks>
+        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V5.", false)]
         public float SecondPerFrameRatio { get; init; }
+
+        /// <summary>
+        /// The ISpeedVarianceProvider for this clip. If this property is not null, the system will use it to get the actual speed ratio for each frame instead of using the SecondPerFrameRatio property. This allows more flexible speed variance effect, such as variable speed or speed ramping.
+        /// </summary>
+        [JsonIgnore]
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         /// <summary>
         /// Set which this clip should be extended to the whole draft. 
@@ -160,35 +168,77 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         public uint? GetRelativeFrameIndex(uint targetFrame)
         {
-            uint duration = Duration;
-            uint startFrame = StartFrame;
-            uint relativeStartFrame = RelativeStartFrame;
-            if (SecondPerFrameRatio != 1)
+            long offsetFromClipStart = (long)targetFrame - StartFrame;
+
+#pragma warning disable CS0618
+            float fallbackRatio = SecondPerFrameRatio;
+#pragma warning restore CS0618
+            if (fallbackRatio <= 0 || float.IsNaN(fallbackRatio) || float.IsInfinity(fallbackRatio))
             {
-                duration = (uint)Math.Round(Duration * SecondPerFrameRatio);
-                startFrame = (uint)Math.Round(StartFrame * SecondPerFrameRatio);
-                relativeStartFrame = (uint)Math.Round(RelativeStartFrame * SecondPerFrameRatio);
+                fallbackRatio = 1f;
             }
 
-            long offsetFromClipStart = (long)targetFrame - startFrame;
+            float speedRatio = fallbackRatio;
+            if (SpeedVarianceProviderInstance is not null)
+            {
+                float progress = 0f;
+                if (Duration > 0 && offsetFromClipStart > 0)
+                {
+                    progress = Math.Clamp((float)offsetFromClipStart / Duration, 0f, 1f);
+                }
 
-            if (offsetFromClipStart == duration)
+                try
+                {
+                    float providerRatio = SpeedVarianceProviderInstance.GetRatio(progress);
+                    if (providerRatio > 0 && !float.IsNaN(providerRatio) && !float.IsInfinity(providerRatio))
+                    {
+                        speedRatio = providerRatio;
+                    }
+                }
+                catch
+                {
+                    speedRatio = fallbackRatio;
+                }
+            }
+
+            uint effectiveDuration;
+            if (Duration == 0)
+            {
+                effectiveDuration = 0;
+            }
+            else
+            {
+                double scaledDuration = Math.Round(Duration * speedRatio, MidpointRounding.AwayFromZero);
+                if (scaledDuration < 1)
+                {
+                    scaledDuration = 1;
+                }
+                else if (scaledDuration > uint.MaxValue)
+                {
+                    scaledDuration = uint.MaxValue;
+                }
+
+                effectiveDuration = (uint)scaledDuration;
+            }
+
+            if (offsetFromClipStart == effectiveDuration)
             {
                 return null;
             }
 
-            if (offsetFromClipStart < 0 || offsetFromClipStart >= duration)
+            if (offsetFromClipStart < 0 || offsetFromClipStart >= effectiveDuration)
             {
-                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{startFrame}, {startFrame + duration}).");
+                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + effectiveDuration}).");
             }
 
-            ulong sourceIndexLong = (ulong)relativeStartFrame + (ulong)offsetFromClipStart;
+            ulong mappedOffset = (ulong)Math.Round(offsetFromClipStart / speedRatio, MidpointRounding.AwayFromZero);
+            ulong sourceIndexLong = (ulong)RelativeStartFrame + mappedOffset;
             if (sourceIndexLong > uint.MaxValue)
             {
                 throw new IndexOutOfRangeException($"Frame mapping overflow for frame #{targetFrame}.");
             }
 
-            return (uint)Math.Round(sourceIndexLong / SecondPerFrameRatio);
+            return (uint)sourceIndexLong;
         }
 
         /// <summary>

@@ -265,17 +265,29 @@ namespace projectFrameCut.DraftStuff
                 origX = startX
             };
 
+            var titleLabel = new Label
+            {
+                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid[^4..]}" : labelText,
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                InputTransparent = true
+            };
+
             var cont = new HorizontalStackLayout
             {
                 Children =
                 {
-                    new Label
-                    {
-                        Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
-                    }
+                    titleLabel
                 },
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
+                InputTransparent = true,
+                Padding = 0,
+                Spacing = 0
             };
 
             Grid.SetColumn(element.LeftHandle, 0);
@@ -304,7 +316,7 @@ namespace projectFrameCut.DraftStuff
 
             if (!string.IsNullOrWhiteSpace(element.DisplayName))
             {
-                ToolTipProperties.SetText(element.Clip, element.DisplayName);
+                ToolTipProperties.SetText(titleLabel, element.DisplayName);
                 SemanticProperties.SetDescription(element.Clip, $"{element.DisplayName}, {element.TypeName}");
             }
             AutomationProperties.SetIsInAccessibleTree(element.Clip, true);

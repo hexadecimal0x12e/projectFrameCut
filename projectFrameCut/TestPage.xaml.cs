@@ -33,6 +33,8 @@ using projectFrameCut.Render.ClipsAndTracks;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
 using System.Text;
+using FFmpeg.AutoGen;
+
 
 
 
@@ -58,6 +60,26 @@ public partial class TestPage : ContentPage
 
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
+
+        ILGPU.Context context = ILGPU.Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        List<AcceleratorInfo> listAccels = new();
+        for (uint i = 0; i < devices.Count; i++)
+        {
+            var item = devices[(int)i];
+            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+        }
+        if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
+        {
+            var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
+            SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
+            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
+        }
+        var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
+                                .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
+                                new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+        Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice.CreateAccelerator(context)];
+
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
@@ -174,7 +196,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region openGL test
-    private projectFrameCut.Shared.Picture srcA, srcB;
+    private projectFrameCut.Shared.Picture16bpp srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
@@ -188,11 +210,11 @@ public partial class TestPage : ContentPage
             Task.WaitAll([
                 Task.Run(() =>
                 {
-                    srcA = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
+                    srcA = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
                 Task.Run(() =>
                 {
-                    srcB = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
+                    srcB = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
             ]);
 
@@ -520,7 +542,7 @@ public partial class TestPage : ContentPage
             Debug.WriteLine("Waiting for convertor done...");
             Task.WaitAll(RConvertor, GConvertor, BConvertor);
             Debug.WriteLine("Writing result...");
-            var outPic = new projectFrameCut.Shared.Picture(srcA.Width, srcA.Height)
+            var outPic = new projectFrameCut.Shared.Picture16bpp(srcA.Width, srcA.Height)
             {
                 r = uOutR,
                 g = uOutG,
@@ -645,6 +667,61 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region render
+    private async void HDRTestButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var p = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
+            var w = new HDRVideoWriter
+            {
+                OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+                Width = 2560,
+                Height = 1440,
+                FramePerSecond = 30,
+                CodecName = "libx265",
+                PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
+            };
+            w.Initialize();
+            TextClip c = new TextClip { Id = "1", Name = "1" };
+            TextClipEntry te = new TextClipEntry
+            {
+                r = 65535,
+                g = 65535,
+                b = 65535,
+                a = 65535,
+                fontFamily = "Arial",
+                x = 50,
+                y = 50,
+                fontSize = 120,
+            };
+            var f = p;
+            f.Brightness = new float[f.Pixels];
+            for (int idx = 0; idx < f.Pixels; idx++)
+            {
+                int x = idx % f.Width;
+                f.Brightness[idx] = f.Width > 1 ? x / (float)(f.Width - 1) : 1f;
+            }
+
+            for (int i = 0; i < 60; i++)
+            {
+                //c.TextEntries = [te with { text = $"Frame {i}" }];
+                //var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
+                //var f = textFrame.ToHDRPicture(1, 5000);
+
+                // Fill HDR brightness with a horizontal gradient from left (0) to right (1).
+
+                //var r = OverlayMixture.Mix(p, f, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
+                w.Append(f);
+                Log($"Wrote frame {i}, r:{f.GetDiagnosticsInfo()}");
+            }
+            w.Finish();
+        }
+        catch (Exception ex)
+        {
+            if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
+        }
+    }
+
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
@@ -695,19 +772,47 @@ public partial class TestPage : ContentPage
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
-
-        var vidFile = await DisplayPromptAsync("info", "input src path");
-        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
-        var src = PluginManager.CreateVideoSource(vidFile);
-        var frame = src.GetFrame(42U, false);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        try
         {
-            MemoryStream ms = new();
-            frame.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-
+            var vidFile = await FileSystemService.PickFileAsync();
+            if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
+            if (string.IsNullOrWhiteSpace(vidFile)) return;
+            if (await DisplayAlertAsync(Title, "Use HDR?", "yes", "no"))
+            {
+                var src = new HDRDecoderContext(vidFile);
+                src.Initialize();
+                var frame = src.GetFrame(42U, false);
+                if (frame is not HDRPicture16bpp h)
+                {
+                    await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
+                    return;
+                }
+                PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage().SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                await DisplayAlertAsync(Title, h.GetDiagnosticsInfo(), "ok");
+            }
+            else
+            {
+                var src = PluginManager.CreateVideoSource(vidFile);
+                var frame = src.GetFrame(42U, false);
+                PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    frame.SaveToSixLaborsImage().SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
+        }
     }
 
     private void TestMixtureButton_Clicked(object sender, EventArgs e)

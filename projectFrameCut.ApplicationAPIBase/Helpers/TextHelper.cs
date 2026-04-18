@@ -631,6 +631,70 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         public static IReadOnlyList<FontItem> BuildSystemFontItems(
             string? preferredLocale = null, string category = "system")
         {
+            HashSet<string> fontFiles = ScanSystemFont();
+
+            var seenNames = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var tmpResult = new System.Collections.Concurrent.ConcurrentBag<FontItem>();
+
+            // 性能优化：并行处理字体文件扫描，避免串行 I/O 阻塞
+            // 1. 使用 ConcurrentBag 存储结果，支持多线程安全
+            // 2. 限制并发数为逻辑处理器数的 50%，避免过度竞争
+            // 3. 每个字体的全部操作在单个任务中完成，减少同步开销
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Math.Max(1, System.Environment.ProcessorCount / 2)
+            };
+
+            Parallel.ForEach(fontFiles, parallelOptions, path =>
+            {
+                FontFileInfo? info = null;
+
+                try
+                {
+                    // 第一步：读取字体文件元数据（主要耗时操作）
+                    info = ReadFontFileInfo(path, preferredLocale);
+                    if (info == null || !seenNames.TryAdd(info.EnglishName, true))
+                        return;
+
+                    // 第二步：创建 FontCollection（内存密集，失败时继续）
+                    FontCollection? fontCollection = null;
+                    try
+                    {
+                        fontCollection = new FontCollection();
+                        fontCollection.Add(path);
+                    }
+                    catch
+                    {
+                        // FontCollection 创建失败不影响继续，保留为 null
+                    }
+
+                    // 第三步：创建结果对象
+                    var fontItem = new FontItem
+                    {
+                        FontName = info.EnglishName,
+                        DisplayName = info.DisplayName,
+                        PrimaryLanguageTag = ToLanguageCode(info.PrimaryLanguage),
+                        Category = category,
+                        InnerItem = info,
+                        InnerFont = fontCollection,
+                        Path = path,
+                    };
+
+                    tmpResult.Add(fontItem);
+                }
+                catch
+                {
+                    // 整个字体项加载失败，跳过此字体
+                }
+            });
+
+            // 合并结果并按显示名称排序
+            var result = tmpResult.ToList();
+            return result;
+        }
+
+        public static HashSet<string> ScanSystemFont()
+        {
             var fontFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (OperatingSystem.IsWindows())
@@ -684,63 +748,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                 }
             }
 
-            var seenNames = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-            var tmpResult = new System.Collections.Concurrent.ConcurrentBag<FontItem>();
-
-            // 性能优化：并行处理字体文件扫描，避免串行 I/O 阻塞
-            // 1. 使用 ConcurrentBag 存储结果，支持多线程安全
-            // 2. 限制并发数为逻辑处理器数的 50%，避免过度竞争
-            // 3. 每个字体的全部操作在单个任务中完成，减少同步开销
-            var parallelOptions = new ParallelOptions 
-            { 
-                MaxDegreeOfParallelism = Math.Max(1, System.Environment.ProcessorCount / 2)
-            };
-
-            Parallel.ForEach(fontFiles, parallelOptions, path =>
-            {
-                FontFileInfo? info = null;
-                
-                try
-                {
-                    // 第一步：读取字体文件元数据（主要耗时操作）
-                    info = ReadFontFileInfo(path, preferredLocale);
-                    if (info == null || !seenNames.TryAdd(info.EnglishName, true))
-                        return;
-
-                    // 第二步：创建 FontCollection（内存密集，失败时继续）
-                    FontCollection? fontCollection = null;
-                    try
-                    {
-                        fontCollection = new FontCollection();
-                        fontCollection.Add(path);
-                    }
-                    catch 
-                    { 
-                        // FontCollection 创建失败不影响继续，保留为 null
-                    }
-
-                    // 第三步：创建结果对象
-                    var fontItem = new FontItem
-                    {
-                        FontName = info.EnglishName,
-                        DisplayName = info.DisplayName,
-                        PrimaryLanguageTag = ToLanguageCode(info.PrimaryLanguage),
-                        Category = category,
-                        InnerItem = info,
-                        InnerFont = fontCollection
-                    };
-                    
-                    tmpResult.Add(fontItem);
-                }
-                catch 
-                { 
-                    // 整个字体项加载失败，跳过此字体
-                }
-            });
-
-            // 合并结果并按显示名称排序
-            var result = tmpResult.ToList();
-            return result;
+            return fontFiles;
         }
 
         public static string DummyString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur est tortor, imperdiet et dui id, egestas hendrerit quam. Suspendisse ac felis a felis ultrices cursus a sit amet ligula. Praesent volutpat vitae dolor luctus rutrum. Vestibulum eu nibh magna. Maecenas vel tempus nunc. Donec vitae convallis odio. Donec nec mattis sapien.";

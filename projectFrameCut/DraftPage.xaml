@@ -246,7 +246,7 @@
 
 
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
-            <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="9999">
+            <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="0">
                 <mw:MultiWindowItem x:Name="PreviewSubwindow" Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False" IsPopOutVisible="True">
                         <ContentView x:Name="ClipEditorHost"
                             Padding="16"                            
@@ -268,7 +268,7 @@
 
 
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid">
+            <Grid Margin="0,8,0,8" x:Name="MainControlGrid" ZIndex="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -377,37 +377,38 @@
             <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
-        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#80001122" Margin="0,0,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="25"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="2" BackgroundColor="#80001122" Margin="0,0,0,0">
+            <Grid x:Name="StatusBarGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="25"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <HorizontalStackLayout Grid.Column="0" >
-                <VerticalStackLayout x:Name="StateIndicator"/>
-            </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="0" >
+                    <VerticalStackLayout x:Name="StateIndicator"/>
+                </HorizontalStackLayout>
 
-            <HorizontalStackLayout Grid.Column="1">
-                <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" />
-            </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="1">
+                    <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" />
+                </HorizontalStackLayout>
 
 
-            <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
-                <Label x:Name="AlternativeStatusLabel" Text="" />
-                <VerticalStackLayout x:Name="ComputeView" WidthRequest="15" />
+                <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
+                    <Label x:Name="AlternativeStatusLabel" Text="" />
+                    <VerticalStackLayout x:Name="ComputeView" WidthRequest="15" />
 
-            </HorizontalStackLayout>
-
+                </HorizontalStackLayout>
+            </Grid>
         </Grid>
 
         <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
                         ZIndex="10000"
-                        InputTransparent="False"
+                        InputTransparent="True"
                         BackgroundColor="#01000000"
-                        IsVisible="True"
+                        IsVisible="False"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
 

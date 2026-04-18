@@ -48,6 +48,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => [".mp4", ".mov"];
+        public string TypeName => "DecoderContextHW";
+
 
         public int? ResultBitPerPixel => 8;
 

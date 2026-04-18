@@ -49,6 +49,7 @@ using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
 using System.Text.RegularExpressions;
+using projectFrameCut.Helper;
 
 #endif
 
@@ -444,19 +445,14 @@ namespace projectFrameCut
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
                     if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
                     {
-                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly))
+                        string[][] paths = { Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly), Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly), TextHelper.ScanSystemFont().ToArray() };
+                        foreach (var item in paths.SelectMany(c => c))
                         {
                             try
                             {
-                                var info = TextHelper.ReadFontFileInfo(item);
-                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
-                            }
-                            catch { }
-                        }
-                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly))
-                        {
-                            try
-                            {
+#if WINDOWS
+                                HelperProgram.UpdateStatus($"Loading font: {item}");
+#endif
                                 var info = TextHelper.ReadFontFileInfo(item);
                                 builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
                             }
@@ -695,7 +691,20 @@ namespace projectFrameCut
                     {
 #if WINDOWS
                         var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
-                        if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                        if (pluginId == "external")
+                        {
+                            var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
+                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                            {
+                                Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
+                                nativeLibDirOverride = ffmpegPath;
+                            }
+                            else
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
+                            }
+                        }
+                        else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
                         {
                             Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
                         }

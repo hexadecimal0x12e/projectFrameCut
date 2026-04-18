@@ -1,16 +1,18 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
-    public sealed unsafe class VideoWriter : IVideoWriter
+    public sealed unsafe class HDRVideoWriter : IVideoWriter
     {
+        private const float DefaultSdrMaximumBrightness = 100f;
+        private const float DefaultHdrMaximumBrightness = 1000f;
+        private const float PqReferencePeakNits = 10000f;
+
         private int _width;
         public int Width
         {
@@ -33,7 +35,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private string _outputPath;
+        private string _outputPath = string.Empty;
         public string OutputPath
         {
             get => _outputPath;
@@ -55,7 +57,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private string _codecName;
+        private string _codecName = string.Empty;
         public string CodecName
         {
             get => _codecName;
@@ -66,7 +68,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private string _pixelFormatString;
+        private string _pixelFormatString = string.Empty;
         public string PixelFormat
         {
             get => _pixelFormatString;
@@ -76,7 +78,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 _pixelFormatString = value;
             }
         }
-
 
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
@@ -88,19 +89,24 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private int _frameIndex;
         private bool _isHeaderWritten;
         private bool _isDisposed;
-        private int colorDepth = 8;
+        private int _sourceColorDepth = 16;
         private bool _inited;
+
+        private bool _enableHdrSignaling;
+        private float _streamMaximumBrightness = DefaultHdrMaximumBrightness;
+        private uint _streamMaxCll = 1000;
+        private uint _streamMaxFall = 400;
+        private bool _preferAppleHevcTag;
 
         public bool IsOpened => _fmtCtx != null;
 
         public uint Index { get; set; } = 0;
-        //public string OutputOutputPath { get => OutputPath; }
-        public IPicture.PicturePixelMode PixelMode => colorDepth;
+        public IPicture.PicturePixelMode PixelMode => _sourceColorDepth;
         public int Fps => FramePerSecond;
 
         public uint DurationWritten => Index;
 
-        public IPicture.PicturePixelMode? TargetPPB => colorDepth;
+        public IPicture.PicturePixelMode? TargetPPB => _sourceColorDepth;
 
         public static bool DetectCodec(string codec)
         {
@@ -111,18 +117,34 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return false;
         }
 
-        bool IVideoWriter.SupportCodec(string codecName) => DetectCodec(codecName);
+        bool IVideoWriter.SupportCodec(string codecName)
+        {
+            if (string.Equals(codecName, "HDRVideoWriter", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(codecName, "HDRWriter", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return DetectCodec(codecName);
+        }
 
         public void Initialize()
         {
-            if (OutputPath is null || _inited == true) return;
+            if (OutputPath is null || _inited) return;
             if (Width <= 0 || Height <= 0 || FramePerSecond <= 0) throw new ArgumentOutOfRangeException("You set an invalid width, height or fps.");
             if (Path.GetDirectoryName(OutputPath) is not string p || !Directory.Exists(p)) throw new DirectoryNotFoundException($"The target directory '{Path.GetDirectoryName(OutputPath)}' does not exist or it's invalid.");
-            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists."); 
+            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists.");
             if (!Enum.TryParse(PixelFormat, out _pixelFormat) || _pixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 throw new ArgumentException($"The pixel format '{PixelFormat}' is not found. Please check the pixel format name.");
             }
+
+            _enableHdrSignaling = IsHdrPixelFormat(_pixelFormat);
+            _preferAppleHevcTag = IsMp4FamilyOutput(OutputPath);
 
             AVFormatContext* oc = null;
             int ret = ffmpeg.avformat_alloc_output_context2(&oc, null, null, OutputPath);
@@ -152,7 +174,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     throw new FileLoadException($"projectFrameCut can't write the target video file '{OutputPath}' because of no enough privileges. Try modify the privileges of output dir. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
-
                 catch (Exception ex)
                 {
                     throw new InvalidOperationException($"projectFrameCut failed to write the file because of '{ex.Message}'. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
@@ -178,8 +199,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _videoStream->time_base = _codecCtx->time_base;
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = 12;
-            _codecCtx->max_b_frames = 2;
-            _codecCtx->bit_rate = 4_000_000;
+            _codecCtx->max_b_frames = _enableHdrSignaling ? 0 : 2;
+            _codecCtx->bit_rate = 8_000_000;
+
+            if (_enableHdrSignaling)
+            {
+                _codecCtx->color_primaries = AVColorPrimaries.AVCOL_PRI_BT2020;
+                _codecCtx->color_trc = AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084;
+                _codecCtx->colorspace = AVColorSpace.AVCOL_SPC_BT2020_NCL;
+                _codecCtx->color_range = AVColorRange.AVCOL_RANGE_MPEG;
+            }
 
             if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                 _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -191,11 +220,31 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
             }
 
+            if (_enableHdrSignaling)
+            {
+                ConfigureHdrEncoderOptions(codec, &opts, _streamMaximumBrightness, _streamMaxCll, _streamMaxFall);
+            }
+
             FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
             ffmpeg.av_dict_free(&opts);
 
             FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(_videoStream->codecpar, _codecCtx),
                 "avcodec_parameters_from_context");
+
+            if (_preferAppleHevcTag && _codecCtx->codec_id == AVCodecID.AV_CODEC_ID_HEVC)
+            {
+                uint hvc1 = MakeFourCC('h', 'v', 'c', '1');
+                _codecCtx->codec_tag = hvc1;
+                _videoStream->codecpar->codec_tag = hvc1;
+            }
+
+            if (_enableHdrSignaling)
+            {
+                _videoStream->codecpar->color_primaries = _codecCtx->color_primaries;
+                _videoStream->codecpar->color_trc = _codecCtx->color_trc;
+                _videoStream->codecpar->color_space = _codecCtx->colorspace;
+                _videoStream->codecpar->color_range = _codecCtx->color_range;
+            }
 
             if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0)
             {
@@ -212,11 +261,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 (_pixelFormat == AVPixelFormat.AV_PIX_FMT_GBRP16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_RGBA64LE ||
-                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_BGRA64LE)
+                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_BGRA64LE ||
+                 _enableHdrSignaling)
                 ? AVPixelFormat.AV_PIX_FMT_RGBA64LE
                 : AVPixelFormat.AV_PIX_FMT_RGBA;
 
-            colorDepth = (srcPixFmt == AVPixelFormat.AV_PIX_FMT_RGBA64LE) ? 16 : 8;
+            _sourceColorDepth = (srcPixFmt == AVPixelFormat.AV_PIX_FMT_RGBA64LE) ? 16 : 8;
 
             _frameSrc = ffmpeg.av_frame_alloc();
             _frameSrc->format = (int)srcPixFmt;
@@ -228,13 +278,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Width, Height, srcPixFmt,
                 Width, Height, _pixelFormat,
                 4, null, null, null);
-            // SWS_BICUBIC == 4
 
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
-            Console.WriteLine($"[VideoBuilder] Successfully initialized encoder for {OutputPath}");
+            Console.WriteLine($"[HDRVideoWriter] Successfully initialized encoder for {OutputPath}");
 
             _inited = true;
+        }
 
+        public void Append(HDRPicture16bpp picture)
+        {
+            Append((IPicture<ushort>)picture);
         }
 
         public void Append(IPicture<ushort> picture)
@@ -242,13 +295,92 @@ namespace projectFrameCut.Render.EncodeAndDecode
             ArgumentNullException.ThrowIfNull(picture);
             if (picture.Width != _width || picture.Height != _height)
                 throw new ArgumentException("The result size is different from original size. Please check the source.");
-            if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
+            if (_isDisposed) throw new ObjectDisposedException(nameof(HDRVideoWriter));
 
             EnsureHeader();
 
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
 
+            if (_enableHdrSignaling && picture is IHDRPicture<ushort> hdrPicture)
+            {
+                FillHdrSourceFrame(hdrPicture);
+            }
+            else
+            {
+                FillUshortSourceFrame(picture);
+            }
+
+            ffmpeg.sws_scale(
+                _sws,
+                _frameSrc->data,
+                _frameSrc->linesize,
+                0,
+                Height,
+                _frameDst->data,
+                _frameDst->linesize);
+
+            _frameDst->pts = _frameIndex++;
+            _frameDst->duration = 1;
+
+            if (_enableHdrSignaling)
+            {
+                AttachHdrMetadata(_frameDst, _streamMaximumBrightness, _streamMaxCll, _streamMaxFall);
+            }
+
+            EncodeFrame(_frameDst);
+
+            Index++;
+        }
+
+        public void Append(IPicture<byte> picture)
+        {
+            if (picture == null) throw new ArgumentNullException(nameof(picture));
+            if (picture.Width != Width || picture.Height != Height)
+                throw new ArgumentException("The result size is different from original size. Please check the source.");
+            if (_isDisposed) throw new ObjectDisposedException(nameof(HDRVideoWriter));
+
+            EnsureHeader();
+
+            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
+            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
+
+            FillByteSourceFrame(picture);
+
+            ffmpeg.sws_scale(
+                _sws,
+                _frameSrc->data,
+                _frameSrc->linesize,
+                0,
+                Height,
+                _frameDst->data,
+                _frameDst->linesize);
+
+            _frameDst->pts = _frameIndex++;
+            _frameDst->duration = 1;
+
+            if (_enableHdrSignaling)
+            {
+                AttachHdrMetadata(_frameDst, _streamMaximumBrightness, _streamMaxCll, _streamMaxFall);
+            }
+
+            EncodeFrame(_frameDst);
+
+            Index++;
+        }
+
+        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
+        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
+        public void Append(IPicture source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            if (source.bitPerPixel == IPicture.PicturePixelMode.UShortPicture) Append((IPicture<ushort>)source);
+            else if (source.bitPerPixel == IPicture.PicturePixelMode.BytePicture) Append((IPicture<byte>)source);
+            else throw new NotSupportedException("Unsupported pixel mode.");
+        }
+
+        private void FillUshortSourceFrame(IPicture<ushort> picture)
+        {
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
@@ -263,7 +395,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             fixed (ushort* pb = picture.b)
             fixed (float* pa = picture.a)
             {
-                if (colorDepth == 16)
+                if (_sourceColorDepth == 16)
                 {
                     for (int y = 0; y < _height; y++)
                     {
@@ -327,37 +459,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     }
                 }
             }
-
-
-            ffmpeg.sws_scale(
-                _sws,
-                _frameSrc->data,
-                _frameSrc->linesize,
-                0,
-                Height,
-                _frameDst->data,
-                _frameDst->linesize);
-
-            _frameDst->pts = _frameIndex++;
-
-            EncodeFrame(_frameDst);
-
-            Index++;
         }
 
-
-        public void Append(IPicture<byte> picture)
+        private void FillByteSourceFrame(IPicture<byte> picture)
         {
-            if (picture == null) throw new ArgumentNullException(nameof(picture));
-            if (picture.Width != Width || picture.Height != Height)
-                throw new ArgumentException("The result size is different from original size. Please check the source.");
-            if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
-
-            EnsureHeader();
-
-            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
-            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
-
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
@@ -372,7 +477,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             fixed (byte* pb = picture.b)
             fixed (float* pa = picture.a)
             {
-                if (colorDepth == 16)
+                if (_sourceColorDepth == 16)
                 {
                     for (int y = 0; y < _height; y++)
                     {
@@ -437,37 +542,97 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     }
                 }
             }
-
-            ffmpeg.sws_scale(
-            _sws,
-            _frameSrc->data,
-            _frameSrc->linesize,
-            0,
-            Height,
-            _frameDst->data,
-            _frameDst->linesize);
-
-            _frameDst->pts = _frameIndex++;
-
-            EncodeFrame(_frameDst);
-
-            Index++;
         }
 
-        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
-        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
-        public void Append(IPicture source)
+        private void FillHdrSourceFrame(IHDRPicture<ushort> picture)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            if (source.bitPerPixel == IPicture.PicturePixelMode.UShortPicture) Append((IPicture<ushort>)source);
-            else if (source.bitPerPixel == IPicture.PicturePixelMode.BytePicture) Append((IPicture<byte>)source);
-            else throw new NotSupportedException($"Unsupported pixel mode.");
+            byte* srcData0 = _frameSrc->data[0];
+            int srcLinesize = _frameSrc->linesize[0];
+
+            int rLen = picture.r?.Length ?? 0;
+            int gLen = picture.g?.Length ?? 0;
+            int bLen = picture.b?.Length ?? 0;
+            int aLen = picture.a?.Length ?? 0;
+            bool hasAlpha = picture.hasAlphaChannel;
+            int pixels = _width * _height;
+
+            float[]? brightness = (picture.Brightness != null && picture.Brightness.Length == pixels)
+                ? picture.Brightness
+                : null;
+
+            float frameMaximumBrightness = NormalizeMaximumBrightness(picture.MaximumBrightness);
+            var lightLevel = ComputeContentLightLevel(picture, brightness, frameMaximumBrightness);
+            _streamMaximumBrightness = Math.Max(_streamMaximumBrightness, frameMaximumBrightness);
+            _streamMaxCll = Math.Max(_streamMaxCll, lightLevel.MaxCLL);
+            _streamMaxFall = Math.Max(_streamMaxFall, lightLevel.MaxFALL);
+
+            fixed (ushort* pr = picture.r)
+            fixed (ushort* pg = picture.g)
+            fixed (ushort* pb = picture.b)
+            fixed (float* pa = picture.a)
+            fixed (float* pBrightness = brightness)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                    int baseIndex = y * _width;
+                    for (int x = 0; x < _width; x++)
+                    {
+                        int k = baseIndex + x;
+                        float r = ((pr != null && k < rLen) ? pr[k] : (ushort)0) / 65535f;
+                        float g = ((pg != null && k < gLen) ? pg[k] : (ushort)0) / 65535f;
+                        float b = ((pb != null && k < bLen) ? pb[k] : (ushort)0) / 65535f;
+
+                        float luma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
+                        float relativeBrightness = luma;
+                        if (pBrightness != null)
+                        {
+                            relativeBrightness = pBrightness[k];
+                            if (!float.IsFinite(relativeBrightness)) relativeBrightness = 0f;
+                            if (relativeBrightness < 0f) relativeBrightness = 0f;
+                            if (relativeBrightness > 1f) relativeBrightness = 1f;
+                        }
+
+                        float luminanceNits = Math.Clamp(relativeBrightness * frameMaximumBrightness, 0f, PqReferencePeakNits);
+                        float pqSignal = EncodePqSignal(luminanceNits / PqReferencePeakNits);
+
+                        float gain = (luma > 1e-6f) ? (pqSignal / luma) : 0f;
+                        float mappedR = Math.Clamp(r * gain, 0f, 1f);
+                        float mappedG = Math.Clamp(g * gain, 0f, 1f);
+                        float mappedB = Math.Clamp(b * gain, 0f, 1f);
+
+                        ushort a16 = 65535;
+                        if (hasAlpha && pa != null && k < aLen)
+                        {
+                            float af = pa[k];
+                            if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                            if (af < 0f) af = 0f;
+                            if (af > 1f) af = 1f;
+                            a16 = (ushort)(af * 65535f + 0.5f);
+                        }
+
+                        int off = x * 4;
+                        row16[off + 0] = (ushort)(mappedR * 65535f + 0.5f);
+                        row16[off + 1] = (ushort)(mappedG * 65535f + 0.5f);
+                        row16[off + 2] = (ushort)(mappedB * 65535f + 0.5f);
+                        row16[off + 3] = a16;
+                    }
+                }
+            }
         }
 
         private void EnsureHeader()
         {
             if (_isHeaderWritten) return;
-            FFmpegHelper.Throw(ffmpeg.avformat_write_header(_fmtCtx, null), "avformat_write_header");
+
+            AVDictionary* muxerOpts = null;
+            if (_preferAppleHevcTag)
+            {
+                ffmpeg.av_dict_set(&muxerOpts, "movflags", "+faststart+write_colr", 0);
+            }
+
+            FFmpegHelper.Throw(ffmpeg.avformat_write_header(_fmtCtx, &muxerOpts), "avformat_write_header");
+            ffmpeg.av_dict_free(&muxerOpts);
             _isHeaderWritten = true;
         }
 
@@ -478,19 +643,29 @@ namespace projectFrameCut.Render.EncodeAndDecode
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
+                if (pkt == null)
+                {
+                    throw new InvalidOperationException("Failed to allocate AVPacket.");
+                }
+
                 int ret = ffmpeg.avcodec_receive_packet(_codecCtx, pkt);
                 if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
                 {
                     ffmpeg.av_packet_free(&pkt);
                     return;
                 }
+
                 FFmpegHelper.Throw(ret, "avcodec_receive_packet");
+
+                if (pkt->duration <= 0)
+                {
+                    pkt->duration = 1;
+                }
 
                 ffmpeg.av_packet_rescale_ts(pkt, _codecCtx->time_base, _videoStream->time_base);
                 pkt->stream_index = _videoStream->index;
 
                 FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "av_interleaved_write_frame");
-
                 ffmpeg.av_packet_free(&pkt);
             }
         }
@@ -503,13 +678,23 @@ namespace projectFrameCut.Render.EncodeAndDecode
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
+                if (pkt == null)
+                {
+                    throw new InvalidOperationException("Failed to allocate AVPacket.");
+                }
+
                 int ret = ffmpeg.avcodec_receive_packet(_codecCtx, pkt);
                 if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
                 {
                     ffmpeg.av_packet_free(&pkt);
                     break;
                 }
+
                 FFmpegHelper.Throw(ret, "avcodec_receive_packet(flush)");
+                if (pkt->duration <= 0)
+                {
+                    pkt->duration = 1;
+                }
                 ffmpeg.av_packet_rescale_ts(pkt, _codecCtx->time_base, _videoStream->time_base);
                 pkt->stream_index = _videoStream->index;
                 FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "write_frame(flush)");
@@ -521,8 +706,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 FFmpegHelper.Throw(ffmpeg.av_write_trailer(_fmtCtx), "av_write_trailer");
             }
 
-            Log($"[VideoBuilder] Successfully finished video writer for {OutputPath}, total {Index} frame written.");
-
+            Log($"[HDRVideoWriter] Successfully finished video writer for {OutputPath}, total {Index} frame written.");
         }
 
         private void ReleaseUnmanaged()
@@ -579,26 +763,228 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
             catch
             {
-
             }
             ReleaseUnmanaged();
             _isDisposed = true;
             GC.SuppressFinalize(this);
         }
 
-        ~VideoWriter()
+        ~HDRVideoWriter()
         {
-            // Never call into FFmpeg encoding APIs from the finalizer thread.
-            // This type must be disposed deterministically; finalizer is best-effort cleanup only.
             try
             {
                 ReleaseUnmanaged();
             }
             catch
             {
-                // Suppress all exceptions on finalizer thread.
+            }
+        }
+
+        private static bool IsHdrPixelFormat(AVPixelFormat fmt)
+        {
+            return fmt == AVPixelFormat.AV_PIX_FMT_YUV420P10LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_YUV422P10LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_YUV444P10LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_YUV420P12LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_YUV422P12LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_YUV444P12LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_P010LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_P012LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_GBRP10LE
+                || fmt == AVPixelFormat.AV_PIX_FMT_GBRP12LE;
+        }
+
+        private static bool IsMp4FamilyOutput(string outputPath)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                return false;
+            }
+
+            string ext = Path.GetExtension(outputPath);
+            return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static uint MakeFourCC(char c0, char c1, char c2, char c3)
+        {
+            return (uint)c0
+                | ((uint)c1 << 8)
+                | ((uint)c2 << 16)
+                | ((uint)c3 << 24);
+        }
+
+        private static void ConfigureHdrEncoderOptions(AVCodec* codec, AVDictionary** opts, float maximumBrightness, uint maxCll, uint maxFall)
+        {
+            if (codec == null || codec->name == null)
+            {
+                return;
+            }
+
+            string codecName = Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? string.Empty;
+            if (!codecName.Equals("libx265", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            string masterDisplay = BuildX265MasterDisplay(maximumBrightness);
+            string x265Params =
+                $"hdr-opt=1:repeat-headers=1:master-display={masterDisplay}:max-cll={maxCll},{maxFall}";
+
+            ffmpeg.av_dict_set(opts, "x265-params", x265Params, 0);
+        }
+
+        private static string BuildX265MasterDisplay(float maximumBrightness)
+        {
+            int maxL = (int)Math.Clamp(Math.Round(maximumBrightness * 10000.0), 1, int.MaxValue);
+            const int minL = 50;
+            return $"G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)L({maxL},{minL})";
+        }
+
+        private static float NormalizeMaximumBrightness(float input)
+        {
+            if (!float.IsFinite(input) || input <= 0f)
+                return DefaultHdrMaximumBrightness;
+
+            return Math.Clamp(input, DefaultSdrMaximumBrightness, PqReferencePeakNits);
+        }
+
+        private static (uint MaxCLL, uint MaxFALL) ComputeContentLightLevel(IPicture<ushort> picture, float[]? brightness, float maximumBrightness)
+        {
+            if (brightness != null && brightness.Length == picture.Pixels)
+            {
+                double sumNits = 0;
+                float maxNits = 0f;
+
+                for (int i = 0; i < brightness.Length; i++)
+                {
+                    float b = brightness[i];
+                    if (!float.IsFinite(b) || b < 0f) b = 0f;
+                    if (b > 1f) b = 1f;
+                    float nits = Math.Clamp(b * maximumBrightness, 0f, PqReferencePeakNits);
+                    if (nits > maxNits) maxNits = nits;
+                    sumNits += nits;
+                }
+
+                uint maxCll = (uint)Math.Clamp((int)Math.Round(maxNits), 1, 65535);
+                uint maxFall = (uint)Math.Clamp((int)Math.Round(sumNits / brightness.Length), 1, 65535);
+                if (maxFall > maxCll) maxFall = maxCll;
+                return (maxCll, maxFall);
+            }
+
+            double sumSignal = 0;
+            float maxSignal = 0f;
+            for (int i = 0; i < picture.Pixels; i++)
+            {
+                float r = picture.r[i] / 65535f;
+                float g = picture.g[i] / 65535f;
+                float b = picture.b[i] / 65535f;
+                float luma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
+                if (luma > maxSignal) maxSignal = luma;
+                sumSignal += luma;
+            }
+
+            uint fallbackMaxCll = (uint)Math.Clamp((int)Math.Round(maxSignal * maximumBrightness), 1, 65535);
+            uint fallbackMaxFall = (uint)Math.Clamp((int)Math.Round((sumSignal / picture.Pixels) * maximumBrightness), 1, 65535);
+            if (fallbackMaxFall > fallbackMaxCll) fallbackMaxFall = fallbackMaxCll;
+            return (fallbackMaxCll, fallbackMaxFall);
+        }
+
+        private static float EncodePqSignal(float normalizedLuminance)
+        {
+            float l = Math.Clamp(normalizedLuminance, 0f, 1f);
+
+            const float m1 = 2610f / 16384f;
+            const float m2 = 2523f / 32f;
+            const float c1 = 3424f / 4096f;
+            const float c2 = 2413f / 128f;
+            const float c3 = 2392f / 128f;
+
+            if (l <= 0f)
+            {
+                return 0f;
+            }
+
+            double p = Math.Pow(l, m1);
+            double num = c1 + c2 * p;
+            double den = 1.0 + c3 * p;
+            double e = Math.Pow(num / den, m2);
+            return (float)Math.Clamp(e, 0.0, 1.0);
+        }
+
+        private static void AttachHdrMetadata(AVFrame* frame, float maximumBrightness, uint maxCll, uint maxFall)
+        {
+            frame->color_primaries = AVColorPrimaries.AVCOL_PRI_BT2020;
+            frame->color_trc = AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084;
+            frame->colorspace = AVColorSpace.AVCOL_SPC_BT2020_NCL;
+            frame->color_range = AVColorRange.AVCOL_RANGE_MPEG;
+
+            AVFrameSideData* masteringSideData = ffmpeg.av_frame_new_side_data(
+                frame,
+                AVFrameSideDataType.AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
+                (ulong)sizeof(AVMasteringDisplayMetadata));
+
+            if (masteringSideData != null && masteringSideData->data != null)
+            {
+                AVMasteringDisplayMetadata* mastering = (AVMasteringDisplayMetadata*)masteringSideData->data;
+                *mastering = default;
+
+                mastering->has_primaries = 1;
+                mastering->has_luminance = 1;
+
+                AVRational_array2 red = default;
+                red.UpdateFrom(new[]
+                {
+                    new AVRational { num = 35400, den = 50000 },
+                    new AVRational { num = 14600, den = 50000 }
+                });
+
+                AVRational_array2 green = default;
+                green.UpdateFrom(new[]
+                {
+                    new AVRational { num = 8500, den = 50000 },
+                    new AVRational { num = 39850, den = 50000 }
+                });
+
+                AVRational_array2 blue = default;
+                blue.UpdateFrom(new[]
+                {
+                    new AVRational { num = 6550, den = 50000 },
+                    new AVRational { num = 2300, den = 50000 }
+                });
+
+                AVRational_array3x2 primaries = default;
+                primaries.UpdateFrom(new[] { red, green, blue });
+                mastering->display_primaries = primaries;
+
+                AVRational_array2 whitePoint = default;
+                whitePoint.UpdateFrom(new[]
+                {
+                    new AVRational { num = 15635, den = 50000 },
+                    new AVRational { num = 16450, den = 50000 }
+                });
+                mastering->white_point = whitePoint;
+                mastering->max_luminance = new AVRational
+                {
+                    num = (int)Math.Clamp(Math.Round(maximumBrightness * 10000.0), 1, int.MaxValue),
+                    den = 10000
+                };
+                mastering->min_luminance = new AVRational { num = 50, den = 10000 };
+            }
+
+            AVFrameSideData* contentLightSideData = ffmpeg.av_frame_new_side_data(
+                frame,
+                AVFrameSideDataType.AV_FRAME_DATA_CONTENT_LIGHT_LEVEL,
+                (ulong)sizeof(AVContentLightMetadata));
+
+            if (contentLightSideData != null && contentLightSideData->data != null)
+            {
+                AVContentLightMetadata* contentLight = (AVContentLightMetadata*)contentLightSideData->data;
+                *contentLight = default;
+                contentLight->MaxCLL = maxCll;
+                contentLight->MaxFALL = maxFall;
             }
         }
     }
-
 }

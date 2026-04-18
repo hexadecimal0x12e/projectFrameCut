@@ -2,6 +2,7 @@
 using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -77,7 +78,7 @@ namespace projectFrameCut.StandaloneRender
                         [-GCOptions=0,1,2]
                         [-outputIntermediatePath=<intermediate output path>]
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
-                        [-diagReportPath=<path to .csv file or output directory>]
+                        [-diagReportPath=<path diag report output directory>]
 
 
                     Mode 'bench':
@@ -487,6 +488,10 @@ namespace projectFrameCut.StandaloneRender
                 var clips = JSONToIClips(timeline, assets, bpp);
 
                 switches.TryGetValue("diagReportPath", out var diagReportPath);
+                if (PictureLifecycleTracker.Enabled)
+                {
+                    PictureLifecycleTracker.Clear();
+                }
 
                 builder = new VideoBuilder(resultPath, width, height, fps, outputEncoder, outputFormat.ToString())
                 {
@@ -561,7 +566,9 @@ namespace projectFrameCut.StandaloneRender
                 {
                     try
                     {
+                        Log("Export diag data...");
                         DiagReportExporter.ExportCsv(diagReportPath!, renderer);
+                        await PictureLifecycleTracker.ExportPictureLifecycleTrackerSnapshots(Path.Combine(diagReportPath!, $"PictureLifeCycle-{Guid.NewGuid()}.csv"));
                     }
                     catch (Exception ex)
                     {

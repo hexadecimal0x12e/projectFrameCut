@@ -50,6 +50,7 @@ namespace projectFrameCut.Shared
         AudioNormalEffect,
         AudioContinuousEffect,
         AudioBindableEffect,
+        SpeedVarianceProvider,
         NotSpecified = -1,
     }
 

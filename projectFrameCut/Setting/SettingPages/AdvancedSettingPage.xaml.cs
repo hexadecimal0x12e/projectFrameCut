@@ -1,3 +1,4 @@
+using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -38,9 +39,16 @@ public partial class AdvancedSettingPage : ContentPage
     {
         Title = Localized.MainSettingsPage_Tab_Advanced;
         string[] codecs = ["Unknown"];
+        string ffVersion = "unknown", ffArgs = "unknown";
         try
         {
-            codecs = FFmpegHelper.CodecUtils.GetAllCodecs().Select(C => C.Name).Order().ToArray();
+            codecs = FFmpegHelper.CodecUtils
+                .GetCodecsByType(FFmpeg.AutoGen.AVMediaType.AVMEDIA_TYPE_VIDEO, true)
+                .Select(c => c.Name)
+                .Order()
+                .ToArray();
+            ffVersion = $"FFmpeg {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}";
+            ffArgs = ffmpeg.avcodec_configuration();
         }
         catch (Exception ex)
         {
@@ -155,6 +163,7 @@ public partial class AdvancedSettingPage : ContentPage
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
         .AddPicker("codecs", SettingLocalizedResources.Advanced_TestCodec, codecs, "", null)
+        .AddCustomChild(ffVersion, new Label { Text = ffArgs})
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
@@ -374,30 +383,27 @@ public partial class AdvancedSettingPage : ContentPage
                             }
                             await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
                         }
-                        else if (e.Id == "OverrideCulture")
-                        {
-                            var DispName = e.Value?.ToString() ?? "default";
-                            if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
-                            {
-                                Settings.Remove("OverrideCulture", out _);
-                                ToggleSaveSignal();
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    var overrideLocate = overrideOpts.ReverseLookup(DispName);
-                                    WriteSetting("OverrideCulture", overrideLocate);
-                                }
-                                catch { }
-                            }
-
-                            await MainSettingsPage.RebootApp(this);
-
-                        }
                         return;
                     }
+                case "OverrideCulture":
+                    var DispName = e.Value?.ToString() ?? "default";
+                    if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
+                    {
+                        Settings.Remove("OverrideCulture", out _);
+                        ToggleSaveSignal();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var overrideLocate = overrideOpts.ReverseLookup(DispName);
+                            WriteSetting("OverrideCulture", overrideLocate);
+                        }
+                        catch { }
+                    }
 
+                    await MainSettingsPage.RebootApp(this);
+                    break;
                 case "codecs":
                     {
                         var cid = e.Value?.ToString();
@@ -406,7 +412,7 @@ public partial class AdvancedSettingPage : ContentPage
                             try
                             {
                                 var writer = PluginManager.CreateVideoWriter(cid);
-                                await DisplayAlertAsync(Localized._Info, $"Successfully create video writer with codec {writer.CodecName}.", Localized._OK);
+                                await DisplayAlertAsync(Localized._Info, $"Successfully create video writer with codec {writer.CodecName} ({cid}).", Localized._OK);
                             }
                             catch (Exception ex)
                             {

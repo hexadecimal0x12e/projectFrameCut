@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace projectFrameCut.Render.Rendering
+namespace projectFrameCut.Render.Compose
 {
     public class AudioComposer<T>
     {

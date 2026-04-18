@@ -33,6 +33,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Gets currently selected clip if any.
         /// </summary>
         IClipElementUI? SelectedClip { get; }
+        public event EventHandler? SelectedClipChanged;
         bool UnNullUseCompactLayout { get; }
         string WorkingPath { get; set; }
 

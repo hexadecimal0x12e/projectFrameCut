@@ -124,7 +124,9 @@ public class InternalPluginBase : IPluginBase
             : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HDRDecoderContext", new((p) => new HDRDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("FFmpegDeviceDecoderContext", new((p) => new FFmpegDeviceDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
         .ToDictionary();
 
@@ -147,6 +149,8 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
     {
         {"VideoWriter", new((_) => new VideoWriter()) },
+        {"HDRVideoWriter", new((_) => new HDRVideoWriter()) },
+        {"HDRWriter", new((_) => new HDRVideoWriter()) },
         {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 

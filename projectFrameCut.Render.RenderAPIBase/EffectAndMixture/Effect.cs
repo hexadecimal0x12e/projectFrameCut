@@ -50,7 +50,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the effect is created.
-        /// If set, it should be a Guid.
+        /// If set, it <b>should be a Guid</b>.
         /// </remarks>
         public string Id { get; set; }
 

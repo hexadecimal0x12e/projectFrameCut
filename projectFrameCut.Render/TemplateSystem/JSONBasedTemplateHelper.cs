@@ -64,8 +64,6 @@ namespace projectFrameCut.Render.TemplateSystem
             draft.Clips = FillElements(draft.Clips, values, template.Variables, options).Cast<object>().ToArray();
             draft.SoundTracks = FillElements(draft.SoundTracks, values, template.Variables, options).Cast<object>().ToArray();
 
-            proj.TargetFrameRate = draft.TargetFrameRate;
-
             return new MaterializedProjectDraft
             {
                 Project = proj,
