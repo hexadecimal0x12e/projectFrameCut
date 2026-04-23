@@ -175,6 +175,10 @@
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
 		<AndroidKeyStore>False</AndroidKeyStore>
 	</PropertyGroup>
+	
+	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
+	</ItemGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
 		<AndroidKeyStore>True</AndroidKeyStore>
@@ -193,13 +197,13 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Asset\AssetPicker.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Asset\ProjectAssetView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="CreatePage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\DraftEffectBindingView.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -211,7 +215,7 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="InteractableEditor\ClipCropConfiguratorView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="MainPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -235,13 +239,13 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\UserDataManagePage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="SetupPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TemplateViewPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -263,7 +267,7 @@
 		</Compile>
 
 		<Compile Update="TemplateViewPage.xaml.cs">
-		  <DependentUpon>TemplateViewPage.xaml</DependentUpon>
+			<DependentUpon>TemplateViewPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
@@ -326,7 +330,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="AIAssistance\AgentSystem\" />
+		<Folder Include="AIAssistance\AgentSystem\" />
 	</ItemGroup>
 
 

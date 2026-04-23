@@ -671,7 +671,7 @@ public partial class TestPage : ContentPage
     {
         try
         {
-            var p = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
+            var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
             var w = new HDRVideoWriter
             {
                 OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
@@ -694,25 +694,37 @@ public partial class TestPage : ContentPage
                 y = 50,
                 fontSize = 120,
             };
-            var f = p;
             f.Brightness = new float[f.Pixels];
             for (int idx = 0; idx < f.Pixels; idx++)
             {
                 int x = idx % f.Width;
-                f.Brightness[idx] = f.Width > 1 ? x / (float)(f.Width - 1) : 1f;
+                if (f.Width > 1)
+                {
+                    float center = (f.Width - 1) * 0.5f;
+                    float distanceToCenter = MathF.Abs(x - center);
+                    float normalized = center > 0 ? distanceToCenter / center : 1f;
+                    // Center stays darkest; both sides brighten smoothly.
+                    f.Brightness[idx] = MathF.Pow(normalized, 0.6f);
+                }
+                else
+                {
+                    f.Brightness[idx] = 1f;
+                }
             }
+            f.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
 
-            for (int i = 0; i < 60; i++)
+            for (int i = 0; i < 1; i++)
             {
-                //c.TextEntries = [te with { text = $"Frame {i}" }];
-                //var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
-                //var f = textFrame.ToHDRPicture(1, 5000);
-
-                // Fill HDR brightness with a horizontal gradient from left (0) to right (1).
-
-                //var r = OverlayMixture.Mix(p, f, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
-                w.Append(f);
-                Log($"Wrote frame {i}, r:{f.GetDiagnosticsInfo()}");
+                c.TextEntries = [te with { text = $"Frame {i}" }];
+                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
+                textFrame.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                var t = textFrame.ToHDRPicture(1, 5000);
+                Log(t.GetDiagnosticsInfo());
+                t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                var r = OverlayMixture.Mix(f, t, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
+                r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                w.Append(r);
+                Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
             w.Finish();
         }
@@ -720,6 +732,54 @@ public partial class TestPage : ContentPage
         {
             if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
         }
+    }
+
+    private async void HDRTestButton2_Clicked(object sender, EventArgs e)
+    {
+        var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
+        f.Brightness = new float[f.Pixels];
+        for (int idx = 0; idx < f.Pixels; idx++)
+        {
+            f.Brightness[idx] = Random.Shared.NextSingle();
+        }
+        var fThrowBrightness = new Picture16bpp(f)
+        {
+        r = f.r,
+        g = f.g,
+        b = f.b,
+        a = f.a
+        };
+        fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16,true).ToPJFCPicture(16);
+        fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fReplaceAlpha = new Picture16bpp(f)
+        {
+            r = f.r,
+            g = f.g,
+            b = f.b,
+            a = f.Brightness
+        };
+        fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fReplaceAlphaAndComposeMask = OverlayMixture.Mix(fThrowBrightness, new Picture16bpp(f)
+        {
+            r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            g = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
+        }, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
+        fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var w = new HDRVideoWriter
+        {
+            OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+            Width = 2560,
+            Height = 1440,
+            FramePerSecond = 30,
+            CodecName = "libx265",
+            PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
+        };
+        w.Initialize();
+        w.Append(f);
+        w.Finish();
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
@@ -781,7 +841,7 @@ public partial class TestPage : ContentPage
             {
                 var src = new HDRDecoderContext(vidFile);
                 src.Initialize();
-                var frame = src.GetFrame(42U, false);
+                var frame = src.GetFrame(0U, false);
                 if (frame is not HDRPicture16bpp h)
                 {
                     await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
@@ -799,7 +859,7 @@ public partial class TestPage : ContentPage
             else
             {
                 var src = PluginManager.CreateVideoSource(vidFile);
-                var frame = src.GetFrame(42U, false);
+                var frame = src.GetFrame(0U, false);
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
@@ -870,7 +930,8 @@ public partial class TestPage : ContentPage
     {
 
 #if ANDROID
-        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+        Render.AndroidOpenGL.ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
+        Render.AndroidOpenGL.ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS

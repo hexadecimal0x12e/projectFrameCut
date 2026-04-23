@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -158,6 +159,38 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
             => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
 
+        /// <summary>
+        /// Gets the effective timeline duration for this clip after applying speed ratio/profile.
+        /// </summary>
+        [DebuggerNonUserCode()]
+        public uint GetEffectiveDuration() => SpeedVarianceMapCache.GetOrBuild(this).EffectiveDurationFrames;
+
+        /// <summary>
+        /// Returns true if the given draft-global frame is inside this clip's visible range.
+        /// </summary>
+        [DebuggerNonUserCode()]
+        public bool ContainsFrame(uint targetFrame)
+        {
+            if(ExtendToWholeDraft)
+            {
+                return true;
+            }
+
+            if (targetFrame < StartFrame)
+            {
+                return false;
+            }
+
+            uint effectiveDuration = GetEffectiveDuration();
+            if (effectiveDuration == 0)
+            {
+                return false;
+            }
+
+            ulong endExclusive = (ulong)StartFrame + effectiveDuration;
+            return (ulong)targetFrame < endExclusive;
+        }
+
 
         /// <summary>
         /// Get the frame index relative to the source clip for the specified target frame in the draft.
@@ -169,57 +202,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public uint? GetRelativeFrameIndex(uint targetFrame)
         {
             long offsetFromClipStart = (long)targetFrame - StartFrame;
-
-#pragma warning disable CS0618
-            float fallbackRatio = SecondPerFrameRatio;
-#pragma warning restore CS0618
-            if (fallbackRatio <= 0 || float.IsNaN(fallbackRatio) || float.IsInfinity(fallbackRatio))
-            {
-                fallbackRatio = 1f;
-            }
-
-            float speedRatio = fallbackRatio;
-            if (SpeedVarianceProviderInstance is not null)
-            {
-                float progress = 0f;
-                if (Duration > 0 && offsetFromClipStart > 0)
-                {
-                    progress = Math.Clamp((float)offsetFromClipStart / Duration, 0f, 1f);
-                }
-
-                try
-                {
-                    float providerRatio = SpeedVarianceProviderInstance.GetRatio(progress);
-                    if (providerRatio > 0 && !float.IsNaN(providerRatio) && !float.IsInfinity(providerRatio))
-                    {
-                        speedRatio = providerRatio;
-                    }
-                }
-                catch
-                {
-                    speedRatio = fallbackRatio;
-                }
-            }
-
-            uint effectiveDuration;
-            if (Duration == 0)
-            {
-                effectiveDuration = 0;
-            }
-            else
-            {
-                double scaledDuration = Math.Round(Duration * speedRatio, MidpointRounding.AwayFromZero);
-                if (scaledDuration < 1)
-                {
-                    scaledDuration = 1;
-                }
-                else if (scaledDuration > uint.MaxValue)
-                {
-                    scaledDuration = uint.MaxValue;
-                }
-
-                effectiveDuration = (uint)scaledDuration;
-            }
+            var profile = SpeedVarianceMapCache.GetOrBuild(this);
+            uint effectiveDuration = profile.EffectiveDurationFrames;
 
             if (offsetFromClipStart == effectiveDuration)
             {
@@ -228,10 +212,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             if (offsetFromClipStart < 0 || offsetFromClipStart >= effectiveDuration)
             {
-                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + effectiveDuration}).");
+                ulong endExclusive = (ulong)StartFrame + effectiveDuration;
+                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {endExclusive}).");
             }
 
-            ulong mappedOffset = (ulong)Math.Round(offsetFromClipStart / speedRatio, MidpointRounding.AwayFromZero);
+            ulong mappedOffset = profile.MapTimelineOffsetToSourceOffset((uint)offsetFromClipStart);
             ulong sourceIndexLong = (ulong)RelativeStartFrame + mappedOffset;
             if (sourceIndexLong > uint.MaxValue)
             {
@@ -253,6 +238,204 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public Dictionary<string, object> ExtraData { get; set; }
 
 
+    }
+
+    internal sealed class SpeedVarianceProfile
+    {
+        public required uint Duration { get; init; }
+        public required float FallbackRatio { get; init; }
+        public required ISpeedVarianceProvider? Provider { get; init; }
+        public required uint EffectiveDurationFrames { get; init; }
+
+        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset)
+        {
+            if (Duration == 0)
+            {
+                return 0;
+            }
+
+            if (Provider is null)
+            {
+                double mapped = Math.Round(timelineOffset / Math.Max(FallbackRatio, 1e-6f), MidpointRounding.AwayFromZero);
+                if (mapped < 0)
+                {
+                    mapped = 0;
+                }
+
+                ulong maxOffset = Duration - 1;
+                ulong offset = (ulong)Math.Min(mapped, maxOffset);
+                return offset;
+            }
+
+            return MapTimelineOffsetWithProvider(timelineOffset);
+        }
+
+        private ulong MapTimelineOffsetWithProvider(uint timelineOffset)
+        {
+            ulong maxSourceOffset = Duration - 1;
+            ulong left = 0;
+            ulong right = maxSourceOffset;
+            ulong best = 0;
+
+            while (left <= right)
+            {
+                ulong mid = left + ((right - left) / 2);
+                uint mappedTarget = ResolveTargetFrameForSourceOffset((uint)mid);
+
+                if (mappedTarget <= timelineOffset)
+                {
+                    best = mid;
+                    if (mid == maxSourceOffset)
+                    {
+                        break;
+                    }
+
+                    left = mid + 1;
+                    continue;
+                }
+
+                if (mid == 0)
+                {
+                    break;
+                }
+
+                right = mid - 1;
+            }
+
+            return best;
+        }
+
+        private uint ResolveTargetFrameForSourceOffset(uint sourceOffset)
+        {
+            try
+            {
+                return Provider!.GetTargetFrame(sourceOffset);
+            }
+            catch
+            {
+                double mapped = sourceOffset * Math.Max(FallbackRatio, 1e-6f);
+                if (mapped >= uint.MaxValue)
+                {
+                    return uint.MaxValue;
+                }
+
+                return (uint)Math.Round(mapped, MidpointRounding.AwayFromZero);
+            }
+        }
+    }
+
+    internal static class SpeedVarianceMapCache
+    {
+        private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
+
+        public static SpeedVarianceProfile GetOrBuild(IClip clip)
+        {
+            if (Cache.TryGetValue(clip, out var cached)
+                && cached.Duration == clip.Duration
+                && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+            {
+                return cached;
+            }
+
+            Cache.Remove(clip);
+            var rebuilt = Build(clip);
+            Cache.Add(clip, rebuilt);
+            return rebuilt;
+        }
+
+        private static SpeedVarianceProfile Build(IClip clip)
+        {
+            uint duration = clip.Duration;
+            float fallbackRatio = ResolveFallbackRatio(clip);
+            var provider = clip.SpeedVarianceProviderInstance;
+
+            if (duration == 0)
+            {
+                return new SpeedVarianceProfile
+                {
+                    Duration = 0,
+                    FallbackRatio = fallbackRatio,
+                    Provider = provider,
+                    EffectiveDurationFrames = 0,
+                };
+            }
+
+            if (provider is null)
+            {
+                double total = duration * fallbackRatio;
+                uint effective = ClampDurationToFrameCount(total, duration);
+
+                return new SpeedVarianceProfile
+                {
+                    Duration = duration,
+                    FallbackRatio = fallbackRatio,
+                    Provider = null,
+                    EffectiveDurationFrames = effective,
+                };
+            }
+
+            uint effectiveDuration = ResolveEffectiveDuration(provider, duration, fallbackRatio);
+            return new SpeedVarianceProfile
+            {
+                Duration = duration,
+                FallbackRatio = fallbackRatio,
+                Provider = provider,
+                EffectiveDurationFrames = effectiveDuration,
+            };
+        }
+
+        private static uint ClampDurationToFrameCount(double scaledDuration, uint originalDuration)
+        {
+            if (originalDuration == 0)
+            {
+                return 0;
+            }
+
+            if (scaledDuration < 1d)
+            {
+                return 1;
+            }
+
+            if (scaledDuration > uint.MaxValue)
+            {
+                return uint.MaxValue;
+            }
+
+            return (uint)Math.Round(scaledDuration, MidpointRounding.AwayFromZero);
+        }
+
+        private static float ResolveFallbackRatio(IClip clip)
+        {
+#pragma warning disable CS0618
+            float fallback = clip.SecondPerFrameRatio;
+#pragma warning restore CS0618
+            if (fallback <= 0f || float.IsNaN(fallback) || float.IsInfinity(fallback))
+            {
+                return 1f;
+            }
+
+            return fallback;
+        }
+
+        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration, float fallbackRatio)
+        {
+            try
+            {
+                uint effective = provider.GetEffectiveLength(duration);
+                if (effective > 0)
+                {
+                    return effective;
+                }
+            }
+            catch
+            {
+            }
+
+            return ClampDurationToFrameCount(duration * fallbackRatio, duration);
+        }
+
+        private static bool AreClose(float a, float b)
+            => Math.Abs(a - b) < 1e-6f;
     }
 
     public class ClipEquabilityComparer : IEqualityComparer<IClip>

@@ -63,6 +63,7 @@ public class InternalPluginBase : IPluginBase
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
         {"Rotation",  new(() => new RotationEffect_ImageSharp())},
+        {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -73,6 +74,7 @@ public class InternalPluginBase : IPluginBase
         {"RemoveColor", new RemoveColorEffectFactory()},
         {"Blur", new BlurEffectFactory()},
         {"Rotation", new RotationEffectFactory()},
+        {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>

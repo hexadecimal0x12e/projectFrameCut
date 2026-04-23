@@ -40,7 +40,7 @@ namespace projectFrameCut.Setting.SettingManager
         }
 
         [DebuggerNonUserCode()]
-        public static T GetSettingAs<T>(string key, T onNotExist, T? onFail = default) where T : notnull
+        public static T GetSettingAs<T>(string key, T onNotExist, T? onFail = default) where T : notnull, IParsable<T>
         {
             if (Settings.TryGetValue(key, out var value))
             {
@@ -65,7 +65,8 @@ namespace projectFrameCut.Setting.SettingManager
             }
             else
             {
-                if (onNotExist is not null) WriteSetting(key, onNotExist.ToString());
+                if(onNotExist is null) throw new KeyNotFoundException($"Setting '{key}' not found and no default value provided.");
+                WriteSetting(key, Convert.ToString(onNotExist) ?? "");
                 return onNotExist;
             }
 

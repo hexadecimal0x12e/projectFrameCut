@@ -28,6 +28,8 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
 using projectFrameCut.Render.EncodeAndDecode;
+using FFmpeg.AutoGen.Native;
+
 
 
 
@@ -69,7 +71,7 @@ namespace projectFrameCut
         public static string FFmpegRoot { get; private set; }
 
         private static readonly string[] FoldersNeedInUserdata =
-            [
+        [
             "My Drafts",
             "My Assets",
             "My Templates",
@@ -155,8 +157,15 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
-
+            string config = "?", commit = "?";
+            try
+            {
+                config = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                commit = new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray());
+            }
+            catch { }
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
+                $"                  {config}@{commit},\r\n" +
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
                 $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
@@ -205,7 +214,7 @@ namespace projectFrameCut
                         Preferences.Clear();
                     }
 
-                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
+                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics") || config == "Debug")
                         MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
                 else
@@ -290,9 +299,6 @@ namespace projectFrameCut
                     if (!Directory.Exists(newPath))
                     {
                         Log($"User defined UserData path '{newPath}' is not exist, ignore the override.");
-#if WINDOWS
-                        //_ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot setup the UserData because of the path your defined is not exist now.\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path later.", "projectFrameCut", 0U);
-#endif
                     }
                     else
                     {
@@ -359,11 +365,12 @@ namespace projectFrameCut
                 builder.ConfigureMauiHandlers(handlers =>
                 {
                     handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
+                    handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
                 });
 
                 try
                 {
-                    MyLoggerExtensions.OnLog += (msg, level) =>
+                    MyLoggerExtensions.OnLog += [DebuggerNonUserCode()] (msg, level) =>
                     {
                         switch (level.ToLower())
                         {
@@ -451,7 +458,7 @@ namespace projectFrameCut
                             try
                             {
 #if WINDOWS
-                                HelperProgram.UpdateStatus($"Loading font: {item}");
+                                //HelperProgram.UpdateStatus($"Loading font: {item}");
 #endif
                                 var info = TextHelper.ReadFontFileInfo(item);
                                 builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
@@ -634,7 +641,7 @@ namespace projectFrameCut
                     {
                         internalBase,
 #if ANDROID
-                        new OpenGLPlugin(),
+                        new OpenGLPlugin() {DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
 #elif WINDOWS
                         new ILGPUPlugin(),
 #endif
@@ -736,9 +743,43 @@ namespace projectFrameCut
                 ffmpeg.RootPath = FFmpegRoot;
                 Log($"FFmpeg library root path: {ffmpeg.RootPath}");
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
-                FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                try
+                {
+                    if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                    {
+                        if (OperatingSystem.IsWindows())
+                        {
+                            ffmpegFailMessage = ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}");
+                        }
+                        else
+                        {
+                            Log($"FFmpeg fail to load. {ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")}");
+                        }
+
+                    }
+                }
+                catch
+                {
+                    try
+                    {
+                        DynamicallyLoadedBindings.FunctionResolver = FunctionResolverFactory.Create();
+                        DynamicallyLoadedBindings.InitializeInternal();
+                    }
+                    catch (Exception ex)
+                    {
+                        ffmpegFailMessage = $"FFmpeg fail to load. {ex.ToString()}";
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
+                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                    }
+                    catch { }
+                }
+
             }
             catch (Exception ex)
             {

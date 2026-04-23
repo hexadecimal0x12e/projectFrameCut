@@ -381,6 +381,7 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     else if (id == "external")
                     {
+                        await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
                         var libsDir = await FileSystemService.PickFolderAsync();
                         if (!string.IsNullOrWhiteSpace(libsDir))
                         {

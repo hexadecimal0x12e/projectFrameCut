@@ -223,7 +223,7 @@ namespace projectFrameCut.Asset
 
                                 if (!File.Exists(asset.ThumbnailPath))
                                 {
-                                    using var stream = TaskHelper.SyncWait(() => FileSystem.OpenAppPackageFileAsync("Images/unknown_music.png"), 10000, null);
+                                    using var stream = TaskHelper.SyncWait(() => FileSystem.OpenAppPackageFileAsync("Images/unknown_music.png"), 10000, DefaultValue: null);
                                     using FileStream fileStream = File.Create(asset.ThumbnailPath);
                                     stream?.CopyTo(fileStream);
                                 }

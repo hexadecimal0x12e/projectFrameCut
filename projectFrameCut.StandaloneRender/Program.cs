@@ -275,10 +275,20 @@ namespace projectFrameCut.StandaloneRender
         private static async Task<int> GoRender(ConcurrentDictionary<string, string> switches)
         {
             #region init encoder
+            bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             Log("Initiliazing FFmpeg...");
             ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
             FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-            FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+            if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+            {
+                FFmpegHelper.SetupFFmpegLogging(trace ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
+                Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+            }
+            else
+            {
+                Log($"FFmpeg library failed to load. ({ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")})", "error");
+                return 1;
+            }
             FFmpegHelper.SetupFFmpegLogging();
             Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
@@ -295,16 +305,12 @@ namespace projectFrameCut.StandaloneRender
             height = int.Parse(outputOptions[1]);
             fps = int.Parse(outputOptions[2]);
 
-            Type pxfmtEnumType = typeof(FFmpeg.AutoGen.AVPixelFormat);
-            var pxfmtFields = pxfmtEnumType.GetFields(BindingFlags.Public | BindingFlags.Static);
-            var pxfmtInfo = pxfmtFields.Where((s) => s.Name == outputOptions[3]).FirstOrDefault(defaultValue: null);
-            if (pxfmtInfo == null)
+            if (!Enum.TryParse(outputOptions[3], out outputFormat) || outputFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
                 return 1;
             }
 
-            outputFormat = (FFmpeg.AutoGen.AVPixelFormat)Convert.ToInt64(pxfmtInfo.GetValue(null)!);
             outputEncoder = outputOptions[4];
 
             var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
@@ -434,7 +440,6 @@ namespace projectFrameCut.StandaloneRender
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
 
-            bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 

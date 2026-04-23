@@ -29,6 +29,13 @@ public partial class RenderSettingPage : ContentPage
             { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
     };
 
+    Dictionary<string, string> AndroidHWAccelImpTypeMapping = new Dictionary<string, string>
+    {
+        {SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan, "vulkan" },
+        {SettingLocalizedResources.Render_AndroidHwAccleImpType_OpenGL, "opengl" },
+
+    };
+
     string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
     string[] framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
     string[] encodings = new[] { "h264", "h265/hevc", "av1" };
@@ -167,6 +174,10 @@ public partial class RenderSettingPage : ContentPage
         }
         catch (Exception ex) { Log(ex); }
         finally { rootPPB.AddSeparator(); }
+#elif ANDROID
+        rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
+            .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
 
 
@@ -233,7 +244,7 @@ public partial class RenderSettingPage : ContentPage
                     {
                         showMoreOpts = true;
                         BuildPPB();
-                        break;
+                        return;
                     }
                 case "accel_enableMultiAccel":
                     if (args.Value is bool en)
@@ -335,6 +346,13 @@ public partial class RenderSettingPage : ContentPage
                         }
                         return;
                     }
+                case "render_AndroidHWAccelType":
+                    {
+                        var type = AndroidHWAccelImpTypeMapping.TryGetValue(args.Value as string, out var hwt) ? hwt : "vulkan";
+                        WriteSetting("render_AndroidHWAccelType", type);
+                        await MainSettingsPage.RebootApp(this);
+                        return;
+                    }
 
                 case var _ when args.Id != null && args.Id.StartsWith("effectImplement,"):
                     {
@@ -360,10 +378,10 @@ public partial class RenderSettingPage : ContentPage
 
             }
 
-            if (args.Value != null)
-            {
-                WriteSetting(args.Id, args.Value?.ToString() ?? "");
-            }
+            //if (args.Value != null)
+            //{
+            //    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+            //}
         }
         catch (Exception ex)
         {

@@ -151,7 +151,7 @@ namespace projectFrameCut.Render.Compose
                     continue;
                 }
 
-                float ratio = clip.SecondPerFrameRatio <= 0f ? 1f : clip.SecondPerFrameRatio;
+                float ratio = ResolveSpeedRatio(clip);
                 int clipStartSample = FrameToSample(clip.StartFrame, videoFramerate, outputSampleRate);
                 int durationFrames = (int)Math.Max(0, Math.Round(clip.Duration * ratio));
                 int clipDurationSamples = FrameToSample(durationFrames, videoFramerate, outputSampleRate);
@@ -504,6 +504,47 @@ namespace projectFrameCut.Render.Compose
             }
 
             return (int)Math.Max(0, Math.Round(frame / fps * sampleRate));
+        }
+
+        private static float ResolveSpeedRatio(IClip clip)
+        {
+            if (clip.Duration == 0)
+            {
+                return 1f;
+            }
+
+            ISpeedVarianceProvider? provider = clip.SpeedVarianceProviderInstance;
+            if (provider is null)
+            {
+                return 1f;
+            }
+
+            if (provider is ClassicSpeedVarianceProvider classic)
+            {
+                float ratio = classic.Ratio;
+                if (ratio > 0f && !float.IsNaN(ratio) && !float.IsInfinity(ratio))
+                {
+                    return ratio;
+                }
+            }
+
+            try
+            {
+                uint effectiveDuration = provider.GetEffectiveLength(clip.Duration);
+                if (effectiveDuration > 0)
+                {
+                    float ratio = effectiveDuration / (float)clip.Duration;
+                    if (ratio > 0f && !float.IsNaN(ratio) && !float.IsInfinity(ratio))
+                    {
+                        return ratio;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return 1f;
         }
 
         private static int SafeAdd(int left, int right)

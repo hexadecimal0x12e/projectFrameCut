@@ -51,6 +51,7 @@ namespace projectFrameCut.Render.Plugin
             loadedPlugins.Clear();
             foreach (var plugin in plugins)
             {
+                if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
                 loadedPlugins.Add(plugin.PluginID, plugin);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
 #if DEBUG
@@ -59,7 +60,7 @@ namespace projectFrameCut.Render.Plugin
 #endif
             }
 
-            
+
         }
 
         public static void Unload(string id)
@@ -104,7 +105,7 @@ namespace projectFrameCut.Render.Plugin
                 }
                 else
                 {
-                   throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
+                    throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
                 }
             }
             catch (Exception ex)

@@ -180,6 +180,7 @@ public partial class HomePage : ContentPage
             {
                 path = Preferences.Get("LaunchedPJFCUri", "");
             }
+            LogDiagnostic($"Launch target from cli args:{path}");
             if (string.IsNullOrWhiteSpace(path)) return;
             switch (Path.GetExtension(path))
             {
@@ -235,6 +236,7 @@ public partial class HomePage : ContentPage
                         {
                             try
                             {
+                                await DisplayAlertAsync(Localized._Warn, SettingsManager.SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
                                 await PluginService.AddAPlugin(path, this);
                             }
                             catch (Exception ex)
@@ -922,6 +924,21 @@ public partial class HomePage : ContentPage
                     }
                     catch { }
 
+                    try
+                    {
+                        if (WinUI.App.IsPackaged())
+                        {
+                            var jumpList = await Windows.UI.StartScreen.JumpList.LoadCurrentAsync();
+                            var task = Windows.UI.StartScreen.JumpListItem.CreateWithArguments($"\"{Path.Combine(draftSourcePath, "project.pjfc")}\"", project?.ProjectName ?? "Project");
+                            task.GroupName = Localized.AppShell_ProjectsTab;
+                            task.Description = $"Continue work on {project?.ProjectName ?? "Project"}";
+
+                            jumpList.Items.Add(task);
+                            await jumpList.SaveAsync();
+                        }
+                    }
+                    catch { }
+
                 });
 #endif
             }
@@ -994,7 +1011,7 @@ public partial class HomePage : ContentPage
     {
         try
         {
-            if (SettingsManager.IsBoolSettingTrue("General_NoRebootAfterCrash")) return;
+            if (SettingsManager.IsBoolSettingTrue("General_NoRebootAfterCrash") || Debugger.IsAttached) return;
             if (string.IsNullOrWhiteSpace(draftSourcePath) || !Directory.Exists(draftSourcePath)) return;
 
             projectFrameCut.Helper.CrashHandler.BootHandler(Path.GetFullPath(draftSourcePath));

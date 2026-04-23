@@ -58,6 +58,7 @@ namespace projectFrameCut.Shared
     {
         Video,
         Audio,
+        SpeedVariance,
         NotSpecified = -1,
     }
 
@@ -217,4 +218,27 @@ namespace projectFrameCut.Shared
     }
 
     public record struct AcceleratorInfo(uint index, string name, string Type);
+
+    /// <summary>
+    /// Determines the method to degrade HDR image to SDR when the renderer or display does not support HDR.
+    /// </summary>
+    public enum HDRImageDegradeToSDRMode
+    {
+        /// <summary>
+        /// Normalize the pixels from the <see cref="IHDRPicture{T}.Brightness"/> channel to the range of RGB channels.
+        /// </summary>
+        NormalizeBrightnessToRGB,
+        /// <summary>
+        /// Overlay a black mask which has <see cref="IPicture{T}.a"/> channel from <see cref="IHDRPicture{T}.Brightness"/> to the RGB(A) channels.
+        /// </summary>
+        OverlayMaskFromBrightness,
+        /// <summary>
+        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away.
+        /// </summary>
+        DiscardBrightnessChannel,
+        /// <summary>
+        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.bitPerPixel"/>.
+        /// </summary>
+        DisallowDowngrade
+    }
 }

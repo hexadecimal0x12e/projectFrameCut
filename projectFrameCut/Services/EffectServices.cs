@@ -24,14 +24,14 @@ namespace projectFrameCut.Services
 
             newEffect.RelativeWidth = page?.ProjectInfo?.RelativeWidth ?? 1920;
             newEffect.RelativeHeight = page?.ProjectInfo?.RelativeHeight ?? 1080;
-            
+
             // Preserve IBindableArgumentEffect properties
             if (effect is IBindableArgumentEffect oldBindable && newEffect is IBindableArgumentEffect newBindable)
             {
                 newBindable.Id = oldBindable.Id;
                 newBindable.BindedArgumentProviderID = oldBindable.BindedArgumentProviderID;
             }
-            
+
             // Preserve BindedEffectGroupID
             newEffect.BindedEffectGroupID = effect.BindedEffectGroupID;
 
@@ -92,10 +92,12 @@ namespace projectFrameCut.Services
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffectBundle>> e)
             {
                 var instance = e.Value();
-                var type = instance switch
+                var type = instance.TypeOfEffect switch
                 {
-                    var t when t.IsContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    var t when t.IsBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                    Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                    Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
                 if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))

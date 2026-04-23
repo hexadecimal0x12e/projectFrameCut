@@ -248,7 +248,7 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="0">
                 <mw:MultiWindowItem x:Name="PreviewSubwindow" Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False" IsPopOutVisible="True">
-                        <ContentView x:Name="ClipEditorHost"
+                    <ContentView x:Name="ClipEditorHost"
                             Padding="16"                            
                             BackgroundColor="Transparent"
                             InputTransparent="False"

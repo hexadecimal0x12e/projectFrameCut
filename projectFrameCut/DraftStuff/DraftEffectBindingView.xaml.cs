@@ -1338,7 +1338,7 @@ public partial class DraftEffectBindingView : ContentView
         public required IEffectBundle? Bundle;
         public View? View;
         public double X, Y;
-        public bool IsBindable => Bundle?.IsBindableEffect ?? false;
+        public bool IsBindable => Bundle is not null && (Bundle.TypeOfEffect == EffectType.BindableEffect || Bundle.TypeOfEffect == EffectType.AudioBindableEffect);
         public string[]? InputPortNames;
 
         public Guid InputAnchorID { get => Bundle?.BindedInputId ?? field; set { if (Bundle != null) Bundle.BindedInputId = value; else field = value; } }
@@ -1373,6 +1373,7 @@ public partial class DraftEffectBindingView : ContentView
 
 
         AddEffectsPanel.Children.Add(ClipInfoBuilder.BuildAddEffectPanel(
+            _clip.ClipType switch { ClipMode.Special => EffectTarget.NotSpecified, ClipMode.MarkingClip => EffectTarget.NotSpecified, ClipMode.AudioClip => EffectTarget.Audio, _ => EffectTarget.Video },
             _page,
             EffectServices.GetAvailableEffectBundles(),
             new(),

@@ -167,15 +167,31 @@ Exception data:
     [DebuggerNonUserCode()]
     public static class MyLoggerExtensions
     {
+        /// <summary>
+        /// Write the message from <see cref="Logger.LogDiagnostic(string)"/>'s log message when this is true.
+        /// </summary>
         public static bool LoggingDiagnosticInfo = false;
-
+        /// <summary>
+        /// Called when a log action happens.
+        /// </summary>
         public static event Action<string, string>? OnLog;
+        /// <summary>
+        /// Called when a exception log action happens.
+        /// </summary>
         public static event Action<Exception>? OnExceptionLog;
-
+        /// <summary>
+        /// Manual announce a log message.
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="level"></param>
         public static void Announce(string msg, string level = "info")
         {
             OnLog?.Invoke(msg, level);
         }
+        /// <summary>
+        /// Manual announce a exception message.
+        /// </summary>
+        /// <param name="exc"></param>
         public static void AnnounceException(Exception exc)
         {
             OnExceptionLog?.Invoke(exc);

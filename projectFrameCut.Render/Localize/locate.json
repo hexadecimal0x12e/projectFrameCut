@@ -539,8 +539,165 @@
         "DontTranslate": false
       },
       {
+        "Id": "General_VideoCodec",
+        "Value": "\u89C6\u9891\u89E3\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u6E90\u6587\u4EF6\u8DEF\u5F84",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode",
+        "Value": "\u76EE\u6807\u683C\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_16bpp",
+        "Value": "16 \u4F4D SDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bpp",
+        "Value": "8 \u4F4D SDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
+        "Value": "8 \u4F4D SDR (\u786C\u4EF6\u52A0\u901F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Auto",
+        "Value": "\u81EA\u52A8\u68C0\u6D4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
+        "Value": "FFmpeg \u517C\u5BB9\u8BBE\u5907\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_hdr",
+        "Value": "16 \u4F4D HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_http",
+        "Value": "HTTP \u8FDC\u7A0B\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_rpsv",
+        "Value": "projectFrameCut RPSV\u4E13\u6709\u683C\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_TargetMode_Unknown",
+        "Value": "\u672A\u77E5/\u63D2\u4EF6 ({id})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "PropertyPanel",
         "Value": "\u5C5E\u6027\u9762\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u65F6\u957F: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u9519\u8BEF\uFF1A\u68C0\u6D4B\u5230\u591A\u4E2A\u53D8\u901F\u5668\u3002\u8BF7\u5728\u201C\u6548\u679C\u201D\u6807\u7B7E\u9875\u91CC\u5220\u9664\u591A\u4F59\u7684\u53D8\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u6CA1\u6709\u914D\u7F6E\u53D8\u901F\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -572,7 +729,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u901F\u5EA6\u548C\u53D8\u901F",
+        "Value": "\u53D8\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -934,7 +1091,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u8F93\u5165\u4E00\u4E2A\u957F\u5EA6\uFF08\u5E27\uFF09",
+        "Value": "\u8F93\u5165\u957F\u5EA6\uFF08\u5E27\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -998,113 +1155,6 @@
             "Value": ""
           }
         ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec",
-        "Value": "\u89C6\u9891\u89E3\u7801",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode",
-        "Value": "\u76EE\u6807\u683C\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "\u81EA\u52A8\u68C0\u6D4B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "8 \u4F4D SDR",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "16 \u4F4D SDR",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "16 \u4F4D HDR",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "HTTP \u8FDC\u7A0B\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "projectFrameCut RPSV\u4E13\u6709\u683C\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "FFmpeg \u517C\u5BB9\u8BBE\u5907\u6E90",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "8 \u4F4D SDR (\u786C\u4EF6\u52A0\u901F)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "\u672A\u77E5/\u63D2\u4EF6 ({id})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "id"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "id",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VideoCodec_Source",
-        "Value": "\u6E90\u6587\u4EF6\u8DEF\u5F84",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -1427,7 +1477,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Speed \u0026 Rate",
+        "Value": "Variable Speed",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2061,7 +2111,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Enter a length (frames)",
+        "Value": "Input length (frames)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2187,115 +2237,112 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Color",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Solid color settings",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Video Decoding",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Target Format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Auto Detect",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8-bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16-bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16-bit HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP Remote File",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV-specific format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Do not translate \u0027projectFrameCut\u0027 and \u0027RPSV\u0027",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg Compatible Device Source",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8-bit SDR (Hardware Acceleration)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Unknown/Plugin ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2309,7 +2356,68 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Source file path",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Variable Speed",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "No inverter configured.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Error: Multiple variable frequency drives detected. Please delete the redundant drives in the Effects tab page.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Duration: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -2632,7 +2740,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u901F\u5EA6\u8207\u8B8A\u901F",
+        "Value": "\u8B8A\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3266,7 +3374,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u8F38\u5165\u4E00\u500B\u9577\u5EA6\uFF08\u5E40\uFF09",
+        "Value": "\u8F38\u5165\u9577\u5EA6\uFF08\u5E40\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3392,115 +3500,114 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\u984F\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\u8272\u584A\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\u5F71\u7247\u89E3\u78BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\u76EE\u6A19\u683C\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "\u81EA\u52D5\u6AA2\u6E2C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8 \u4F4D\u5143 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16 \u4F4D\u5143 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16 \u4F4D\u5143 HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP \u9060\u7AEF\u6A94\u6848",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV\u5C08\u6709\u683C\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8B6F\u300CprojectFrameCut\u300D\u548C\u300CRPSV\u300D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg \u76F8\u5BB9\u8A2D\u5099\u4F86\u6E90",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8 \u4F4D\u5143 SDR\uFF08\u786C\u9AD4\u52A0\u901F\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\u672A\u77E5/\u63D2\u4EF6 ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3514,7 +3621,70 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4FDD\u6301\u4E0E\u539F\u7B80\u4F53\u4E2D\u6587\u4E00\u81F4\u7684\u8868\u8FF0",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u4F86\u6E90\u6A94\u6848\u8DEF\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u8B8A\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u6C92\u6709\u914D\u7F6E\u8B8A\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u932F\u8AA4\uFF1A\u5075\u6E2C\u5230\u591A\u500B\u8B8A\u901F\u5668\u3002\u8ACB\u5728\u300C\u6548\u679C\u300D\u6A19\u7C64\u9801\u88E1\u522A\u9664\u591A\u9918\u7684\u8B8A\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u6642\u9577: {orig} -\u003E {cur} ({(cur / orig):n2}\u500D)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "Duration interpolation string for speed/ratio display (zh-TW)",
         "DontTranslate": false
       }
     ],
@@ -3837,7 +4007,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u901F\u5EA6\u3068\u5909\u901F",
+        "Value": "\u5909\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4471,7 +4641,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u9577\u3055\u3092\u5165\u529B\uFF08\u30D5\u30EC\u30FC\u30E0\uFF09",
+        "Value": "\u5165\u529B\u9577\uFF08\u30D5\u30EC\u30FC\u30E0\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4597,115 +4767,113 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u989C\u8272",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\u5358\u8272\u30D6\u30ED\u30C3\u30AF\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u8272\u5757\u914D\u7F6E",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\u52D5\u753B\u30C7\u30B3\u30FC\u30C9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\u30BF\u30FC\u30B2\u30C3\u30C8\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "\u81EA\u52D5\u691C\u51FA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8\u30D3\u30C3\u30C8SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8SDR",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8HDR",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP \u30EA\u30E2\u30FC\u30C8\u30D5\u30A1\u30A4\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV\u5C02\u7528\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg \u4E92\u63DB\u30C7\u30D0\u30A4\u30B9\u30BD\u30FC\u30B9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8\u30D3\u30C3\u30C8SDR\uFF08\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\u4E0D\u660E/\u30D7\u30E9\u30B0\u30A4\u30F3 ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4719,7 +4887,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u30BD\u30FC\u30B9\u30D5\u30A1\u30A4\u30EB\u30D1\u30B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u5909\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u5909\u901F\u6A5F\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u30A8\u30E9\u30FC\uFF1A\u8907\u6570\u306E\u53EF\u5909\u901F\u30C9\u30E9\u30A4\u30D6\u304C\u691C\u51FA\u3055\u308C\u307E\u3057\u305F\u3002\u300C\u52B9\u679C\u300D\u30BF\u30D6\u30DA\u30FC\u30B8\u3067\u4E0D\u8981\u306A\u53EF\u5909\u901F\u30C9\u30E9\u30A4\u30D6\u3092\u524A\u9664\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u518D\u751F\u6642\u9593: {orig} -\u003E {cur} ({(cur / orig):n2}\u500D)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -5042,11 +5272,10 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\uC18D\uB3C4 \uBC0F \uBCC0\uC18D",
+        "Value": "\uBCC0\uC18D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -5676,11 +5905,10 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\uAE38\uC774 \uC785\uB825 (\uD504\uB808\uC784)",
+        "Value": "\uC785\uB825 \uAE38\uC774(\uD504\uB808\uC784)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -5802,115 +6030,112 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\uC0C9\uC0C1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\uC0C9\uC0C1 \uBE14\uB85D \uC124\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Color block settings",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\uBE44\uB514\uC624 \uB514\uCF54\uB529",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\uB300\uC0C1 \uD615\uC2DD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u76EE\u6807\u683C\u5F0F",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "\uC790\uB3D9 \uAC10\uC9C0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8\uBE44\uD2B8 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16\uBE44\uD2B8 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16\uBE44\uD2B8 HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP \uC6D0\uACA9 \uD30C\uC77C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV \uC804\uC6A9 \uD615\uC2DD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg \uD638\uD658 \uC7A5\uCE58 \uC18C\uC2A4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8\uBE44\uD2B8 SDR (\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\uC54C \uC218 \uC5C6\uC74C/\uD50C\uB7EC\uADF8\uC778 ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5924,7 +6149,68 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\uC18C\uC2A4 \uD30C\uC77C \uACBD\uB85C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6E90\u6587\u4EF6\u8DEF\u5F84",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\uBCC0\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\uBCC0\uC18D\uAE30\uAC00 \uAD6C\uC131\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\uC624\uB958: \uC5EC\uB7EC \uAC1C\uC758 \uAC00\uBCC0\uC18D\uB3C4 \uB4DC\uB77C\uC774\uBE0C\uAC00 \uAC10\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \u0027\uD6A8\uACFC\u0027 \uD0ED \uD398\uC774\uC9C0\uC5D0\uC11C \uBD88\uD544\uC694\uD55C \uB4DC\uB77C\uC774\uBE0C\uB97C \uC81C\uAC70\uD558\uC2ED\uC2DC\uC624.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\uC2DC\uAC04: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -6247,7 +6533,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Vitesse et variation",
+        "Value": "Changement de vitesse",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6881,11 +7167,10 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Entrez une dur\u00E9e (en trames)",
+        "Value": "Longueur d\u0027entr\u00E9e (images)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -7007,115 +7292,111 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Couleur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Configuration de la couleur unie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "D\u00E9codage vid\u00E9o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Format cible",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "D\u00E9tection automatique",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "SDR 8 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Format vid\u00E9o 8 bits SDR",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "SDR 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Video codec target mode: 16-bit SDR",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "HDR 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Translated \u002716 bit HDR\u0027 to French as \u0027HDR 16 bits\u0027.",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "Fichier distant HTTP",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "Format sp\u00E9cifique RPSV de projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "Sources des p\u00E9riph\u00E9riques compatibles FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "SDR 8 bits (acc\u00E9l\u00E9ration mat\u00E9rielle)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Inconnu/Plugin ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7129,7 +7410,67 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Chemin du fichier source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Changement de vitesse",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "Aucun variateur configur\u00E9.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Erreur : plusieurs variateurs d\u00E9tect\u00E9s. Veuillez supprimer les variateurs en trop dans l\u0027onglet \u00AB Effets \u00BB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Dur\u00E9e : {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -7681,7 +8022,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u901F\u4E0E\u53D8\u901F",
+        "Value": "\u8B8A\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8051,11 +8392,11 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u8F93\u5165\u4E00\u957F\u5EA6\uFF08\u5E27\uFF09",
+        "Value": "\u5E27\u6570\u5165\u957F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u8F93\u5165\u957F\u5EA6\uFF08\u5E27\uFF09\u7684\u6587\u8A00\u6587\u7B80\u5199",
         "DontTranslate": false
       },
       {
@@ -8194,16 +8535,16 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "\u4F4D\u7F6E\u548C\u5927\u5C0F",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4F4D\u7F6E\u8207\u5927\u5C0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4F4D\u7F6E\u8207\u5927\u5C0F",
         "DontTranslate": false
       },
       {
         "Id": "General_Crop",
-        "Value": "\u88C1\u526A",
+        "Value": "\u88C1\u5272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8212,115 +8553,113 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\u984F\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\u8272\u584A\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\u89C6\u9891\u89E3\u78BC\u4E4B\u8853",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u73B0\u4EE3\u672F\u8BED\u201C\u89C6\u9891\u89E3\u7801\u201D\u8F6C\u4E3A\u6587\u8A00\u98CE\u683C\uFF0C\u8BD1\u4E3A\u201C\u89C6\u9891\u89E3\u78BC\u4E4B\u8853\u201D\uFF0C\u610F\u4E3A\u89C6\u9891\u89E3\u78BC\u7684\u65B9\u6CD5\u6216\u6280\u672F\u3002",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\u76EE\u6A19\u683C\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\u96C5\u6587\u8A00\u6587\u7FFB\u8BD1\uFF1A\n\nValue: \u0022\u81EA\u52D5\u6AA2\u6E2C\u0022\nComment: \u4E3A\u901A\u7528\u89C6\u9891\u7F16\u7801\u76EE\u6807\u6A21\u5F0F\u4E0B\u7684\u81EA\u52A8\u68C0\u6D4B\u9009\u9879\u7684\u6587\u8A00\u6587\u8868\u8FBE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\u96C5\u6587\u8A00\u6587\u7FFB\u8BD1\uFF1A\n\nValue: \u0022\u81EA\u52D5\u6AA2\u6E2C\u0022\nComment: \u4E3A\u901A\u7528\u89C6\u9891\u7F16\u7801\u76EE\u6807\u6A21\u5F0F\u4E0B\u7684\u81EA\u52A8\u68C0\u6D4B\u9009\u9879\u7684\u6587\u8A00\u6587\u8868\u8FBE",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "\u516B\u4F4D\u5143 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16\u4F4D\u5143SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u300C16 bpp SDR\u300D\u7684\u6587\u8A00\u6587\u7FFB\u8B6F\uFF0C\u5C0A\u91CD\u539F\u6587\u683C\u5F0F\uFF0C\u4FDD\u7559\u300CSDR\u300D\u5C08\u6709\u540D\u8A5E",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "\u5341\u516D\u4F4D\u9AD8\u52D5\u614B\u7BC4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "HDR\u7684\u5168\u7A31\u4FDD\u7559\u4E0D\u8B6F",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HTTP \u9060\u7A0B\u6587\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HTTP \u9060\u7A0B\u6587\u4EF6",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV\u5C08\u5C6C\u683C\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8B6F\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: FFmpeg \u76F8\u5BB9\u8A2D\u5099\u6E90",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: FFmpeg \u76F8\u5BB9\u8A2D\u5099\u6E90",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8\u8272 SDR (\u786C\u89E3)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6280\u672F\u672F\u8BED\u5728\u6587\u8A00\u6587\u4E2D\u7684\u9002\u914D\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u4E86\u5E38\u89C1\u7684\u82F1\u6587\u7F29\u5199 SDR\uFF0C\u5C06\u0027\u786C\u4EF6\u52A0\u901F\u0027\u7B80\u5316\u4E3A\u0027\u786C\u89E3\u0027\u3002\u6B64\u8BD1\u6CD5\u517C\u987E\u4E86\u6280\u672F\u51C6\u786E\u6027\u4E0E\u6587\u8A00\u6587\u7684\u7B80\u7EC3\u8981\u6C42\u3002",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\u672A\u77E5\uFF0F\u63D2\u4EF6\uFF08{id}\uFF09",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8334,7 +8673,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u8868\u793A\u89C6\u9891\u7F16\u7801\u5668\u76EE\u6807\u6A21\u5F0F\u4E3A\u672A\u77E5\u6216\u63D2\u4EF6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u6E90\u6A94\u6848\u8DEF\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u89C6\u9891\u6E90\u6587\u4EF6\u7684\u6240\u5728\u8DEF\u5F84",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u6613\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u610F\u4E3A\u6539\u53D8\u901F\u5EA6\uFF0C\u7528\u2018\u6613\u2019\u4EE3\u2018\u53D8\u2019\uFF0C\u66F4\u663E\u6587\u96C5\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u7121\u914D\u7F6E\u8B8A\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u932F\u8AA4\uFF1A\u5075\u6E2C\u5230\u591A\u500B\u8B8A\u901F\u5668\u3002\u8ACB\u5728\u300C\u6548\u679C\u300D\u6A19\u7C64\u9801\u88E1\u522A\u9664\u591A\u9918\u7684\u8B8A\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u6642\u9577: {orig} \u2192 {cur} ({(cur / orig):n2}\u500D)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -8886,7 +9287,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u0627\u0644\u0646\u0633\u0628\u0629 \u0648\u0627\u0644\u0633\u0631\u0639\u0629 \u0627\u0644\u0645\u062A\u063A\u064A\u0631\u0629",
+        "Value": "\u0627\u0644\u062A\u062D\u0643\u0645 \u0641\u064A \u0627\u0644\u0633\u0631\u0639\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9256,7 +9657,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u0623\u062F\u062E\u0644 \u0637\u0648\u0644\u064B\u0627 (\u0625\u0637\u0627\u0631)",
+        "Value": "\u0637\u0648\u0644 \u0627\u0644\u0625\u062F\u062E\u0627\u0644 (\u0625\u0637\u0627\u0631)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9399,7 +9800,7 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u062D\u062C\u0645",
+        "Value": "\u0627\u0644\u0645\u0648\u0636\u0639 \u0648\u0627\u0644\u062D\u062C\u0645",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9417,115 +9818,115 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\u0644\u0648\u0646",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0643\u062A\u0644\u0629 \u0627\u0644\u0644\u0648\u0646\u064A\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\u0641\u0643 \u062A\u0634\u0641\u064A\u0631 \u0627\u0644\u0641\u064A\u062F\u064A\u0648",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\u0627\u0644\u062A\u0646\u0633\u064A\u0642 \u0627\u0644\u0647\u062F\u0641",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "\u0627\u0643\u062A\u0634\u0627\u0641 \u062A\u0644\u0642\u0627\u0626\u064A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8 \u0628\u062A SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16 \u0628\u062A SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16 \u0628\u062A HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "\u0645\u0644\u0641 HTTP \u0639\u0646 \u0628\u0639\u062F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "\u062A\u0646\u0633\u064A\u0642 RPSV \u0627\u0644\u062E\u0627\u0635 \u0628\u0640 projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "\u0645\u0635\u0627\u062F\u0631 \u0623\u062C\u0647\u0632\u0629 \u0645\u062A\u0648\u0627\u0641\u0642\u0629 \u0645\u0639 FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8 \u0628\u062A SDR (\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641/\u0625\u0636\u0627\u0641\u0629 ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9539,7 +9940,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u0645\u0633\u0627\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0645\u0635\u062F\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0633\u0631\u0639\u0629 \u0648\u0627\u0644\u0646\u0633\u0628\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u4E8E\u8868\u793A\u53D8\u901F\u6216\u901F\u5EA6\u4E0E\u6BD4\u4F8B\u8C03\u6574\u7684\u529F\u80FD",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062D\u0648\u0644 \u0633\u0631\u0639\u0629 \u0645\u0647\u064A\u0623.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u062E\u0637\u0623: \u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641 \u0645\u062D\u0648\u0644\u0627\u062A \u0633\u0631\u0639\u0629 \u0645\u062A\u0639\u062F\u062F\u0629. \u064A\u0631\u062C\u0649 \u062D\u0630\u0641 \u0645\u062D\u0648\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u0639\u0629 \u0627\u0644\u0632\u0627\u0626\u062F\u0629 \u0641\u064A \u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u0022\u062A\u0623\u062B\u064A\u0631\u0627\u062A\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u0627\u0644\u0645\u062F\u0629: {orig} \u2190 {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u65F6\u957F: {orig} -\u003E {cur} ({(cur/orig):n2}x)\u3002\u7BAD\u5934\u65B9\u5411\u8C03\u6574\u4E3A\u963F\u62C9\u4F2F\u8BED\u9605\u8BFB\u65B9\u5411",
         "DontTranslate": false
       }
     ],
@@ -10091,7 +10554,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Geschwindigkeit und \u00C4nderung",
+        "Value": "Geschwindigkeits\u00E4nderung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10461,11 +10924,10 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Eine L\u00E4nge eingeben (Frames)",
+        "Value": "Eingabel\u00E4nge (Frames)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -10608,7 +11070,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -10622,115 +11083,108 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Farbe",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Farbblock-Einstellungen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Videodecoder",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Zielformat",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Automatische Erkennung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u81EA\u52A8\u68C0\u6D4B",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8-Bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16-Bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16-Bit HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Target mode for HDR video codec",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP-Remotedatei",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "HTTP\u8FDC\u7A0B\u6587\u4EF6",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV-eigenes Format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg-kompatible Ger\u00E4tequellen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8-Bit SDR (Hardwarebeschleunigung)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Unbekannt/Plugin ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -10744,7 +11198,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Display label for unknown or plugin-based video codec mode",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Quelldateipfad",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Gangschaltung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6807\u9898\uFF0C\u8868\u793A\u53D8\u901F\u529F\u80FD\u6216\u64CD\u4F5C\uFF0C\u7528\u4E8E\u6C7D\u8F66\u6216\u673A\u68B0\u573A\u666F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "Kein Getriebe konfiguriert.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Fehler: Es wurden mehrere Umrichter erkannt. Bitte l\u00F6schen Sie die \u00FCberfl\u00FCssigen Umrichter auf der Registerkarte \u201EEffekt\u201C.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Dauer: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -11296,7 +11812,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Velocidad y variaci\u00F3n",
+        "Value": "Velocidad variable",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11666,7 +12182,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Introduce una duraci\u00F3n (en fotogramas)",
+        "Value": "Longitud de entrada (fotogramas)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11813,7 +12329,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -11827,115 +12342,109 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Color",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Configuraci\u00F3n de bloque de color",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Decodificaci\u00F3n de video",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Formato destino",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Detecci\u00F3n autom\u00E1tica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "SDR de 8 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Traducci\u00F3n de \u00278-bit SDR\u0027 con la estructura de nomenclatura de c\u00F3decs",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "SDR de 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "HDR de 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "Archivo remoto HTTP",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "Formato exclusivo RPSV de projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "No traducir \u0022projectFrameCut\u0022 ni \u0022RPSV\u0022",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "Fuentes de dispositivos compatibles con FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "SDR de 8 bits (aceleraci\u00F3n por hardware)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Desconocido/Complemento ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11949,7 +12458,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Ruta del archivo de origen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Relaci\u00F3n de transmisi\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Referente a la relaci\u00F3n de velocidad en mec\u00E1nica",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "No hay un variador configurado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "No hay un variador configurado",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Error: Se detectaron m\u00FAltiples variadores. Elimine los variadores sobrantes en la pesta\u00F1a \u0022Efectos\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Error message when multiple variable speed drives are detected",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Duraci\u00F3n: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "La hora se expresa en formato num\u00E9rico, manteniendo la interpolaci\u00F3n y el formato de relaci\u00F3n.",
         "DontTranslate": false
       }
     ],
@@ -12501,7 +13072,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Velocit\u00E0 e rapporto",
+        "Value": "Velocit\u00E0 variabile",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12871,11 +13442,11 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Inserisci una lunghezza (frame)",
+        "Value": "Lunghezza input (fotogrammi)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Timing input length in frames",
         "DontTranslate": false
       },
       {
@@ -13014,7 +13585,7 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "Posizione e dimensione",
+        "Value": "Posizione e dimensioni",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13032,115 +13603,111 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Colore",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Configurazione colore solido",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Decodifica video",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Formato di destinazione",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Rilevamento automatico",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "SDR a 8 bit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "SDR a 16 bit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "HDR a 16 bit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "File remoto HTTP",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut formato proprietario RPSV",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u975E\u53EF\u8BD1\u90E8\u5206\u4FDD\u6301\u4E0D\u53D8\uFF0C\u4EC5\u7FFB\u8BD1\u0027\u4E13\u6709\u683C\u5F0F\u0027\u4E3A\u0027formato proprietario\u0027",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "Dispositivi compatibili con FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u7FFB\u8BD1\u81EA\u201CFFmpeg \u517C\u5BB9\u8BBE\u5907\u6E90\u201D\uFF0C\u6307\u4F7F\u7528FFmpeg\u9A71\u52A8\u7684\u8BBE\u5907\u6355\u83B7\u6E90",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "SDR a 8 bit (accelerazione hardware)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Sconosciuto / Plugin ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13154,7 +13721,68 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Percorso del file originale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Variabile",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u53D8\u901F\u0027 (variable speed) for SpeedAndRatio context",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "Nessuna configurazione del cambio presente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Errore: rilevati pi\u00F9 inverter. Rimuovere gli inverter aggiuntivi nella scheda \u0027Effetti\u0027.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Durata: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -13706,7 +14334,7 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Pr\u0119dko\u015B\u0107 i zmiana pr\u0119dko\u015Bci",
+        "Value": "Zmienna pr\u0119dko\u015B\u0107",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14076,11 +14704,11 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Wprowad\u017A d\u0142ugo\u015B\u0107 (w klatkach)",
+        "Value": "D\u0142ugo\u015B\u0107 wej\u015Bcia (klatki)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Input length (frames)",
         "DontTranslate": false
       },
       {
@@ -14223,7 +14851,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -14237,115 +14864,110 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Kolor",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Konfiguracja bloku koloru",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Dekodowanie wideo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Docelowy format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Automatyczne wykrywanie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8-bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16-bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16-bit HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "Zdalny plik HTTP",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "Format specyficzny dla projektFrameCut RPSV",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Nie t\u0142umacz \u0022projectFrameCut\u0022 i \u0022RPSV\u0022",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "\u0179r\u00F3d\u0142a urz\u0105dze\u0144 zgodne z FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8-bit SDR (przyspieszenie sprz\u0119towe)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Nieznany/Wtyczka ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -14359,7 +14981,67 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u015Acie\u017Cka \u017Ar\u00F3d\u0142owa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Zmienna pr\u0119dko\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "Nie skonfigurowano przek\u0142adni.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "B\u0142\u0105d: wykryto wiele przetwornic cz\u0119stotliwo\u015Bci. Usu\u0144 nadmiarowe przetwornice w karcie \u201EEfekty\u201D.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Czas trwania: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -14911,11 +15593,10 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "Velocidade e Varia\u00E7\u00E3o",
+        "Value": "Velocidade vari\u00E1vel",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -15281,7 +15962,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Insira um comprimento (quadros)",
+        "Value": "Comprimento de entrada (quadros)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15424,7 +16105,7 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "Posi\u00E7\u00E3o e Tamanho",
+        "Value": "Posi\u00E7\u00E3o e tamanho",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15437,120 +16118,113 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Cor",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Color field label",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "Configura\u00E7\u00E3o de cor s\u00F3lida",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Decodifica\u00E7\u00E3o de v\u00EDdeo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Formato de destino",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Detec\u00E7\u00E3o Autom\u00E1tica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "SDR de 8 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "SDR de 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "HDR de 16 bits",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "Arquivo remoto HTTP",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "formato exclusivo RPSV do projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "N\u00E3o traduza \u0022projectFrameCut\u0022 e \u0022RPSV\u0022",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "Fonte de dispositivos compat\u00EDveis com FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "SDR de 8 bits (Acelera\u00E7\u00E3o por Hardware)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Desconhecido/Plug-in ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -15564,7 +16238,68 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Unknown/Plugin mode for video codec target",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Caminho do arquivo de origem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "Velocidade Vari\u00E1vel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "Nenhum conversor de velocidade configurado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Erro: detectados v\u00E1rios drives de velocidade vari\u00E1vel. Exclua os drives extras na guia \u0022Efeitos\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "Dura\u00E7\u00E3o: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -16116,11 +16851,10 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0438 \u0440\u0435\u0433\u0443\u043B\u0438\u0440\u043E\u0432\u043A\u0430",
+        "Value": "\u0420\u0435\u0433\u0443\u043B\u0438\u0440\u043E\u0432\u043A\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -16486,11 +17220,10 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 (\u043A\u0430\u0434\u0440\u044B)",
+        "Value": "\u0414\u043B\u0438\u043D\u0430 \u0432\u0432\u043E\u0434\u0430 (\u043A\u0430\u0434\u0440\u043E\u0432)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -16629,11 +17362,10 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "\u0420\u0430\u0437\u043C\u0435\u0440 \u0438 \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
+        "Value": "\u041F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0440\u0430\u0437\u043C\u0435\u0440",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -16647,115 +17379,115 @@
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "\u0426\u0432\u0435\u0442",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "\u0426\u0432\u0435\u0442\u043D\u043E\u0439 \u0431\u043B\u043E\u043A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Color block settings",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "\u0412\u0438\u0434\u0435\u043E\u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "\u0426\u0435\u043B\u0435\u0432\u043E\u0439 \u0444\u043E\u0440\u043C\u0430\u0442",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8-\u0431\u0438\u0442\u043D\u044B\u0439 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16-\u0431\u0438\u0442\u043D\u044B\u0439 SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16-\u0431\u0438\u0442\u043D\u044B\u0439 HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP \u0443\u0434\u0430\u043B\u0435\u043D\u043D\u044B\u0439 \u0444\u0430\u0439\u043B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "\u0441\u043F\u0435\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 projectFrameCut RPSV",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u041D\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0442\u0435 \u0022projectFrameCut\u0022 \u0438 \u0022RPSV\u0022",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "\u0421\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u044B\u0435 \u0441 FFmpeg \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8-\u0431\u0438\u0442\u043D\u044B\u0439 SDR (\u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E/\u043F\u043B\u0430\u0433\u0438\u043D ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16769,7 +17501,70 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u672A\u77E5/\u63D2\u4EF6\uFF0C\u4FDD\u7559\u63D2\u503C\u53C2\u6570 id",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "\u041F\u0443\u0442\u044C \u0438\u0441\u0445\u043E\u0434\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0430\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u041F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "\u041E\u0448\u0438\u0431\u043A\u0430: \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u0430\u0440\u0438\u0430\u0442\u043E\u0440\u043E\u0432. \u0423\u0434\u0430\u043B\u0438\u0442\u0435 \u043B\u0438\u0448\u043D\u0438\u0435 \u0432\u0430\u0440\u0438\u0430\u0442\u043E\u0440\u044B \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u00AB\u042D\u0444\u0444\u0435\u043A\u0442\u044B\u00BB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "\u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -17321,11 +18116,10 @@
       },
       {
         "Id": "Tabs_SpeedRatio",
-        "Value": "H\u0131z ve H\u0131z De\u011Fi\u015Fimi",
+        "Value": "H\u0131z",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -17691,7 +18485,7 @@
       },
       {
         "Id": "Timing_InfLength_Input",
-        "Value": "Bir uzunluk (kare) girin",
+        "Value": "Giri\u015F Uzunlu\u011Fu (kare)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17847,120 +18641,114 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u88C1\u526A\u64CD\u4F5C",
         "DontTranslate": false
       },
       {
         "Id": "General_Color",
-        "Value": "Unset localization item:General_Color()",
+        "Value": "Renk",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_SolidColor",
-        "Value": "Unset localization item:General_SolidColor()",
+        "Value": "D\u00FCz Renk Yap\u0131land\u0131rmas\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec",
-        "Value": "Unset localization item:General_VideoCodec()",
+        "Value": "Video Kod \u00C7\u00F6z\u00FCc\u00FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode()",
+        "Value": "Hedef Format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Auto()",
+        "Value": "Otomatik Alg\u0131lama",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bpp()",
+        "Value": "8 bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "T\u00FCrk\u00E7e\u0027de \u00278 bit SDR\u0027 ifadesi yayg\u0131n kullan\u0131ld\u0131\u011F\u0131 i\u00E7in oldu\u011Fu gibi b\u0131rak\u0131ld\u0131. \u00278 bpp SDR\u0027 de teknik olarak anla\u015F\u0131l\u0131r, ancak yayg\u0131n kullan\u0131m \u00278 bit SDR\u0027 \u015Feklindedir.",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_16bpp()",
+        "Value": "16 bit SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_hdr()",
+        "Value": "16 bit HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_http()",
+        "Value": "HTTP Uzaktan Dosya",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_rpsv",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_rpsv()",
+        "Value": "projectFrameCut RPSV\u0027ye \u00F6zg\u00FC format",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\u548C\u201CRPSV\u201D",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_ffmpegDevices()",
+        "Value": "FFmpeg uyumlu cihaz kayna\u011F\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_8bppHWaccel",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_8bppHWaccel()",
+        "Value": "8 bit SDR (Donan\u0131m H\u0131zland\u0131rma)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_Unknown",
-        "Value": "Unset localization item:General_VideoCodec_TargetMode_Unknown(string id: {id})",
+        "Value": "Bilinmeyen/Eklenti ({id})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -17974,7 +18762,68 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_Source",
+        "Value": "Kaynak dosya yolu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio",
+        "Value": "De\u011Fi\u015Fken H\u0131z",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_None",
+        "Value": "\u015Eanz\u0131man yap\u0131land\u0131r\u0131lmam\u0131\u015F.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_ErrMultiplePvd",
+        "Value": "Hata: Birden fazla VSD alg\u0131land\u0131. L\u00FCtfen \u0027Efektler\u0027 sekmesinde fazla VSD\u0027leri silin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "SpeedAndRatio_Duration",
+        "Value": "S\u00FCre: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "orig"
+          },
+          {
+            "Key": "uint",
+            "Value": "cur"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "orig",
+            "Value": ""
+          },
+          {
+            "Key": "cur",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ]

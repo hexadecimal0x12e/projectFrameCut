@@ -31,6 +31,30 @@ namespace projectFrameCut.Render.Effect
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
+        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
+        {
+            if (Effects is null || Effects.Length == 0)
+            {
+                return (Array.Empty<IEffect>(), null);
+            }
+            List<IEffect> effects = new();
+            bool haveSpeedVarProvider = false;
+            ISpeedVarianceProvider? provider = null;
+            foreach (var item in Effects)
+            {
+                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                effects.Add(e);
+                if (e is ISpeedVarianceProvider p)
+                {
+                    if (haveSpeedVarProvider) throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
+                    haveSpeedVarProvider = true;
+                    provider = p;
+                }
+
+            }
+
+            return (effects.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).OrderBy(c => c.Index).ToArray(), provider);
+        }
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {
             if (Effects is null || Effects.Length == 0)
@@ -40,22 +64,13 @@ namespace projectFrameCut.Render.Effect
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
-                effects.Add(PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
-            }
-            return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
-        }
+                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                effects.Add(e);
 
-        public static ISpeedVarianceProvider? GetSpeedVarianceProvider(IEffect[]? effects)
-        {
-            if (effects is null || effects.Length == 0)
-            {
-                return null;
+
             }
-            if(effects.Count(c => c.TypeOfEffect == EffectType.SpeedVarianceProvider) > 1)
-            {
-                throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
-            }
-            return effects.FirstOrDefault(c => c.TypeOfEffect == EffectType.SpeedVarianceProvider) as ISpeedVarianceProvider;
+
+            return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
 
         public static Dictionary<string, Func<IEffect>> EffectsEnum =>

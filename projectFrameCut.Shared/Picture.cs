@@ -38,6 +38,9 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Allow convert a IPicture to a lower <see cref="bitPerPixel"/>.
         /// </summary>
+        /// <remarks>
+        /// When this is false, an <see cref="InvalidOperationException"/> will be thrown when attempting to convert to a lower pixel mode, either in <see cref="ToBitPerPixel(int)"/> or in VideoWriter.
+        /// </remarks>
         public static bool AllowPixelModeDowngrade = true;
         /// <summary>
         /// Get how much bits in one pixel.
@@ -826,7 +829,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}";
+        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
     }
 
     #endregion
@@ -1421,7 +1424,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}";
+        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
 
 
     }
@@ -1805,8 +1808,7 @@ namespace projectFrameCut.Shared
             return pic;
         }
 
-        public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average() * MaximumBrightness}nit";
-
+        public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average()}(0..1), {Brightness.Average() * MaximumBrightness}nit";
 
 
     }

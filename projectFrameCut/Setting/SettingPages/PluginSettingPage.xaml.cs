@@ -104,7 +104,8 @@ public partial class PluginSettingPage : ContentPage
                 [
                     internalBase,
 #if ANDROID
-                    new Render.AndroidOpenGL.Platforms.Android.OpenGLPlugin(),
+                    new Render.AndroidOpenGL.Platforms.Android.OpenGLPlugin() { DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
+
 #elif WINDOWS
                     new projectFrameCut.Render.WindowsRender.ILGPUPlugin(),
 #elif iDevices
@@ -164,7 +165,7 @@ public partial class PluginSettingPage : ContentPage
 
     private async Task BuildAdvancedConfig(string id)
     {
-        if(!PluginManager.LoadedPlugins.TryGetValue(id, out var plugin))
+        if (!PluginManager.LoadedPlugins.TryGetValue(id, out var plugin))
         {
             await Navigation.PopAsync();
             BuildPPB();
@@ -185,7 +186,10 @@ public partial class PluginSettingPage : ContentPage
                 {
                     ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
                 }
-                ppb.AddCustomChild(settingPage);
+                else
+                {
+                    ppb.AddCustomChild(settingPage);
+                }
             }
             catch (Exception ex)
             {
@@ -276,6 +280,7 @@ public partial class PluginSettingPage : ContentPage
             currentPage ??= this;
             if (args.Id == "addButton")
             {
+                await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
                 var result = await FilePicker.Default.PickAsync(new PickOptions
                 {
                     FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
@@ -316,7 +321,7 @@ public partial class PluginSettingPage : ContentPage
                 return;
             }
 
-            if(args.Id == "DisablePluginEngine")
+            if (args.Id == "DisablePluginEngine")
             {
                 SettingManager.SettingsManager.WriteSetting("DisablePluginEngine", args.Value?.ToString() ?? "false");
                 await MainSettingsPage.RebootApp(this);

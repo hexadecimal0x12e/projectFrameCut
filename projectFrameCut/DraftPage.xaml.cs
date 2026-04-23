@@ -538,7 +538,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
 #if ANDROID
-        ComputerHelper.AddGLViewHandler = new((v) =>
+        ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
         {
             ComputeView.Children.Clear();
             v.WidthRequest = 50;
@@ -546,6 +546,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ComputeView.Children.Add(v);
 
         });
+        ComputerHelper.Init();
 #elif iDevices
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
@@ -995,7 +996,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             element.ClipType = sourceElement.ClipType;
             element.FromPlugin = sourceElement.FromPlugin;
-            element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
+            //element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
             element.SourcePath = sourceElement.SourcePath;
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
@@ -1025,7 +1026,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         elem.ClipType = asset.GetClipMode();
         elem.FromPlugin = fromPlugin;
         elem.sourceSecondPerFrame = asset.SecondPerFrame;
-        elem.SecondPerFrameRatio = 1f;
+        //elem.SecondPerFrameRatio = 1f;
         elem.ExtraData = new();
         if (asset.IsAIGenerated)
         {
@@ -2954,7 +2955,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.ShouldDisplayInUI = dto.ShouldDisplayInUI;
             pasted.Clip.IsVisible = dto.ShouldDisplayInUI;
             pasted.sourceSecondPerFrame = dto.FrameTime;
-            pasted.SecondPerFrameRatio = dto.SecondPerFrameRatio > 0 ? dto.SecondPerFrameRatio : 1f;
+            //pasted.SecondPerFrameRatio = dto.SecondPerFrameRatio > 0 ? dto.SecondPerFrameRatio : 1f;
             pasted.TargetWidth = dto.TargetWidth;
             pasted.TargetHeight = dto.TargetHeight;
             pasted.TargetX = dto.TargetX;

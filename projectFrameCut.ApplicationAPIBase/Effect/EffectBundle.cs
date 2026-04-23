@@ -54,15 +54,6 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// </summary>
         public bool Enabled { get; set; }
 
-
-
-        [Obsolete("Use TypeOfEffect instead.",false)]
-        public bool IsNormalEffect { get; }
-        [Obsolete("Use TypeOfEffect instead.", false)]
-        public bool IsContinuousEffect { get; }
-        [Obsolete("Use TypeOfEffect instead.", false)]
-        public bool IsBindableEffect { get; }
-
         /// <summary>
         /// The id of the EffectGroup.
         /// </summary>
@@ -185,6 +176,11 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <returns></returns>
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null);
 
+        /// <summary>
+        /// Get whether this effect is visible to the user in UI.
+        /// </summary>
+        public virtual bool IsUserVisibleEffect => TypeOfEffect != EffectType.NotSpecified;
+
     }
 
     public class EffectBundleComparer : IEqualityComparer<IEffectBundle>
@@ -233,21 +229,4 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public EffectParameterInfo? Parameters { get; set; }
     }
 
-    //public class EffectBundleData
-    //{
-    //    public string Id { get; set; } = Guid.NewGuid().ToString();
-    //    public string BundleTypeName { get; set; }
-    //    public Dictionary<string, object> Parameters { get; set; } = new();
-    //    public bool Enabled { get; set; } = true;
-    //    public string Name { get; set; }
-        
-    //    public string? BindedInputId { get; set; }
-    //    public string? BindedOutputId { get; set; }
-    //    public List<string>? BindedInputIds { get; set; }
-    //    public int StartPoint { get; set; }
-    //    public int EndPoint { get; set; }
-
-    //    public double InteractiveEditorX { get; set; } = -1;
-    //    public double InteractiveEditorY { get; set; } = -1;
-    //}
 }

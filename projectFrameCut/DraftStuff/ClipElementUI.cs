@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -12,7 +13,6 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Path = System.IO.Path;
-using projectFrameCut.ApplicationAPIBase.Project;
 
 
 namespace projectFrameCut.DraftStuff
@@ -81,7 +81,7 @@ namespace projectFrameCut.DraftStuff
         public uint relativeStartFrame { get; set; } = 0u;
 
         public float sourceSecondPerFrame { get; set; } = 1f;
-        public float SecondPerFrameRatio { get; set; } = 1f;
+        public float SecondPerFrameRatio  => GetAverageSpeedRatio(); 
 
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string FromPlugin { get; set; } = string.Empty;
@@ -104,9 +104,36 @@ namespace projectFrameCut.DraftStuff
         public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
+        public float GetAverageSpeedRatio()
+        {
+            float ratio = 0;
+
+            var spvProvider = Effects?.FirstOrDefault(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider);
+            if (spvProvider?.Value is ISpeedVarianceProvider pvd)
+            {
+                uint sourceLength = maxFrameCount;
+                if (sourceLength == 0)
+                {
+                    sourceLength = 1;
+                }
+
+                try
+                {
+                    uint effectiveLength = pvd.GetEffectiveLength(sourceLength);
+                    ratio = (float)effectiveLength / sourceLength;
+                }
+                catch
+                {
+                    ratio = 1f;
+                }
+            }
+            return ratio > 0 ? ratio : 1;
+        }
+
         public void ApplySpeedRatio()
         {
-            Clip.WidthRequest = origLength * SecondPerFrameRatio;
+            Clip.WidthRequest = origLength * GetAverageSpeedRatio();
+
         }
 
         public void ApplyClipColor()

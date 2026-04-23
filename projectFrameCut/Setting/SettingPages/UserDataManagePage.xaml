@@ -11,6 +11,13 @@
                 Margin="12,0"
                 FontSize="14"
                 TextColor="Gray" />
+            <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{l:Localized Key=UserDataManagePage_CategoryCahce}" FontSize="20" FontAttributes="Bold" />
+                    <Label x:Name="CacheStatusLabel" FontSize="13" TextColor="Gray" />
+                    <Button x:Name="ClearCacheButton" Clicked="ClearCacheButton_Clicked" Text="Clean cache"/>
+                </VerticalStackLayout>
+            </Border>
 
             <Border StrokeThickness="1" Stroke="#40333333" StrokeShape="RoundRectangle 12" Padding="12">
                 <VerticalStackLayout Spacing="8">

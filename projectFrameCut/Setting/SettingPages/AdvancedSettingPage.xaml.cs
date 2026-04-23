@@ -163,13 +163,14 @@ public partial class AdvancedSettingPage : ContentPage
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
         .AddPicker("codecs", SettingLocalizedResources.Advanced_TestCodec, codecs, "", null)
-        .AddCustomChild(ffVersion, new Label { Text = ffArgs})
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
         .AddSeparator()
-
+        .AddEntry("argsFromEnv", "Environment.GetCommandLineArgs()", string.Join(',', Environment.GetCommandLineArgs()), "", c => c.IsReadOnly = true)
+        .AddEntry("argsParsed", "MauiProgram.CmdlineArgs", string.Join(',', MauiProgram.CmdlineArgs), "", c => c.IsReadOnly = true)
+        .AddSeparator()
         .AddText(SettingLocalizedResources.General_UserData, fontSize: 20)
         .AddButton(SettingLocalizedResources.Diag_OpenBaseData, async (s, e) =>
         {
@@ -180,6 +181,7 @@ public partial class AdvancedSettingPage : ContentPage
             var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
             await FileSystemService.OpenFileAsync(jsonPath);
         })
+        .AddSeparator()
         .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 20))
         .AddButton(SettingLocalizedResources.Advanced_ShowWelcomePage, async (_, _) => await Navigation.PushAsync(new SetupPage()))
         .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>

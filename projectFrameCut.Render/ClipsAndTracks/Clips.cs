@@ -58,23 +58,23 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public VideoClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
-            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
-
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
-            if(string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
-            if(!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+            if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+            if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
             {
                 var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
-                Decoder = supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath); 
+                Decoder = supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
                 return;
             }
             Decoder = PluginManager.CreateVideoSource(FilePath);
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+
         }
 
 
@@ -126,9 +126,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public PhotoClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
-            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
-
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
         }
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
@@ -150,6 +148,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+
         }
 
 
@@ -236,12 +236,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
-            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+
         }
 
         public void ReInit()
         {
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
 
         }
 
@@ -495,15 +496,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return rendered.DeepCopy();
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-        {
-            throw new NotSupportedException();
-        }
 
         public TextClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects); 
-            SpeedVarianceProviderInstance = EffectHelper.GetSpeedVarianceProvider(EffectsInstances);
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -514,6 +511,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 fontsCache.Add(FontPath);
             }
+            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
 
         }
 

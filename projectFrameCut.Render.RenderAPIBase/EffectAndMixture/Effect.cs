@@ -29,10 +29,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get which kind of effect is. 
         /// </summary>
-        /// <remarks>
-        /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
-        /// </remarks>
-        public virtual EffectType TypeOfEffect => EffectType.NotSpecified;
+        public EffectType TypeOfEffect { get; }
 
         /// <summary>
         /// Get how this effect is implemented.

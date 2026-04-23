@@ -525,7 +525,6 @@ namespace projectFrameCut.Render.Rendering
             BlankFrame = Use16Bit
                 ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0)
                 : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
             BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
 
@@ -926,83 +925,7 @@ namespace projectFrameCut.Render.Rendering
         #region misc
 
         private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
-        {
-            if (targetFrame < clip.StartFrame)
-            {
-                return false;
-            }
-
-            float speedRatio = ResolveSpeedRatioAtTargetFrame(clip, targetFrame);
-            uint effectiveDuration = ScaleDurationForSpeed(clip.Duration, speedRatio);
-            if (effectiveDuration == 0)
-            {
-                return false;
-            }
-
-            ulong endExclusive = (ulong)clip.StartFrame + effectiveDuration;
-            return (ulong)targetFrame < endExclusive;
-        }
-
-        private static float ResolveSpeedRatioAtTargetFrame(IClip clip, uint targetFrame)
-        {
-            float fallback = clip.SecondPerFrameRatio;
-            if (fallback <= 0 || float.IsNaN(fallback) || float.IsInfinity(fallback))
-            {
-                fallback = 1f;
-            }
-
-            var provider = clip.SpeedVarianceProviderInstance;
-            if (provider is null)
-            {
-                return fallback;
-            }
-
-            uint duration = clip.Duration;
-            float progress = 0f;
-            if (duration > 0)
-            {
-                long offset = (long)targetFrame - clip.StartFrame;
-                if (offset > 0)
-                {
-                    progress = Math.Clamp((float)offset / duration, 0f, 1f);
-                }
-            }
-
-            try
-            {
-                float providerRatio = provider.GetRatio(progress);
-                if (providerRatio > 0 && !float.IsNaN(providerRatio) && !float.IsInfinity(providerRatio))
-                {
-                    return providerRatio;
-                }
-            }
-            catch
-            {
-            }
-
-            return fallback;
-        }
-
-        private static uint ScaleDurationForSpeed(uint duration, float speedRatio)
-        {
-            if (duration == 0)
-            {
-                return 0;
-            }
-
-            double scaled = Math.Round(duration * speedRatio, MidpointRounding.AwayFromZero);
-            if (scaled < 1)
-            {
-                return 1;
-            }
-
-            if (scaled > uint.MaxValue)
-            {
-                return uint.MaxValue;
-            }
-
-            return (uint)scaled;
-        }
+            => clip.ContainsFrame(targetFrame);
 
         private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
         {
@@ -1120,6 +1043,7 @@ namespace projectFrameCut.Render.Rendering
             EffectCache.Clear();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
+                item.ReInit(_ppb);
                 bool isAI = false;
                 if (item.ExtraData.TryGetValue("IsAI", out var aiMark))
                 {

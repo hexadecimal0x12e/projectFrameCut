@@ -321,6 +321,41 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
+            // Compatibility fallback: the serialized flags may be stale or inferred from interfaces.
+            // Resolve by TypeName across all factory registries before failing.
+            if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackFactory))
+            {
+                if (implementType != EffectImplementType.NotSpecified && fallbackFactory.SupportsImplementTypes.Contains(implementType))
+                {
+                    return ApplyCommonProperties(fallbackFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
+                }
+
+                return ApplyCommonProperties(fallbackFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
+            }
+
+            if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackContinuousFactory))
+            {
+                if (implementType != EffectImplementType.NotSpecified && fallbackContinuousFactory.SupportsImplementTypes.Contains(implementType))
+                {
+                    return ApplyCommonProperties(fallbackContinuousFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
+                }
+
+                return ApplyCommonProperties(fallbackContinuousFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
+            }
+
+            if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackBindableFactory))
+            {
+                if (fallbackBindableFactory is IBindableEffectFactory fallbackBindable)
+                {
+                    if (implementType != EffectImplementType.NotSpecified && fallbackBindable.SupportsImplementTypes.Contains(implementType))
+                    {
+                        return ApplyCommonProperties(fallbackBindable.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
+                    }
+
+                    return ApplyCommonProperties(fallbackBindable.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
+                }
+            }
+
             throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
         }
 

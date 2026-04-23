@@ -147,6 +147,8 @@ namespace projectFrameCut.Services
         public static void LoadFonts()
         {
             Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache"));
+            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "dark"));
+            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "light"));
             LoadedFonts.Clear();
             foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
             {

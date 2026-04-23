@@ -94,339 +94,6 @@ namespace projectFrameCut.DraftStuff
             };
         }
 
-        private static int ReadIntExtraData(Dictionary<string, object>? data, string key, int fallback)
-        {
-            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
-            {
-                if (raw is int i) return Math.Max(1, i);
-                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
-                if (raw is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
-                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
-                }
-
-                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
-            }
-
-            return Math.Max(1, fallback);
-        }
-
-        private static int ReadIntValue(object? raw, int fallback)
-        {
-            if (raw is null)
-            {
-                return fallback;
-            }
-
-            if (raw is int i)
-            {
-                return i;
-            }
-
-            if (raw is long l)
-            {
-                return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
-            }
-
-            if (raw is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var parsedNumber))
-                {
-                    return parsedNumber;
-                }
-
-                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedString))
-                {
-                    return parsedString;
-                }
-            }
-
-            return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
-        }
-
-        private static float ReadFloatValue(object? raw, float fallback)
-        {
-            if (raw is null)
-            {
-                return fallback;
-            }
-
-            if (raw is float f)
-            {
-                return f;
-            }
-
-            if (raw is double d)
-            {
-                return (float)d;
-            }
-
-            if (raw is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var parsedNumber))
-                {
-                    return parsedNumber;
-                }
-
-                if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedString))
-                {
-                    return parsedString;
-                }
-            }
-
-            return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
-        }
-
-        private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
-            => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
-
-        private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
-            => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
-
-        private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            return ReadDictionaryIntValue(effect.Parameters, key, fallback);
-        }
-
-        private static float ReadEffectFloatParameter(IEffect effect, string key, float fallback)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
-        }
-
-        private static bool TryGetCropSize(IEffect effect, out int width, out int height)
-        {
-            width = Math.Max(0, ReadEffectIntParameter(effect, "Width", 0));
-            height = Math.Max(0, ReadEffectIntParameter(effect, "Height", 0));
-            return width > 0 && height > 0;
-        }
-
-        private static bool IsCropEffect(IEffect effect)
-            => string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal);
-
-        private static bool TryFindInternalCropEffect(ClipElementUI clip, out IEffect effect)
-        {
-            effect = null!;
-            if (clip.Effects == null || clip.Effects.Count == 0)
-            {
-                return false;
-            }
-
-            if (clip.Effects.TryGetValue(InternalCropID, out var legacyCrop) && IsCropEffect(legacyCrop))
-            {
-                effect = legacyCrop;
-                return true;
-            }
-
-            var fromBundle = clip.Effects.Values.FirstOrDefault(e =>
-                IsCropEffect(e)
-                && string.Equals(e.BindedEffectGroupID, InternalCropBundleGuid.ToString(), StringComparison.Ordinal));
-            if (fromBundle != null)
-            {
-                effect = fromBundle;
-                return true;
-            }
-
-            var fromName = clip.Effects.Values.FirstOrDefault(e =>
-                IsCropEffect(e)
-                && string.Equals(e.Name, InternalCropID, StringComparison.Ordinal));
-            if (fromName != null)
-            {
-                effect = fromName;
-                return true;
-            }
-
-            return false;
-        }
-
-        private static EffectImplementType ResolveConfiguredImplementType(IEffectFactory factory, EffectImplementType fallback)
-        {
-            var configured = EffectHelper.DefaultImplementsType.GetValueOrDefault(
-                $"{factory.FromPlugin}.{factory.TypeName}",
-                EffectImplementType.NotSpecified);
-
-            if (configured != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(configured))
-            {
-                return configured;
-            }
-
-            return fallback;
-        }
-
-        private bool ShouldUseLegacyPlaceResizeEffects()
-            => SettingsManager.IsBoolSettingTrue(LegacyPlaceResizeSettingKey);
-
-        private static bool HasExplicitTargetRect(ClipElementUI clip)
-            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
-
-        private static void ReadLegacyPlaceResizeFromEffects(ClipElementUI clip, int relativeWidth, int relativeHeight, ref int x, ref int y, ref int w, ref int h)
-        {
-            if (clip.Effects == null)
-            {
-                return;
-            }
-
-            if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_IPicture p)
-            {
-                x = p.StartX;
-                y = p.StartY;
-                if (p.RelativeWidth > 0 && p.RelativeWidth != relativeWidth)
-                {
-                    x = (int)Math.Round(p.StartX * ((double)relativeWidth / p.RelativeWidth));
-                    y = (int)Math.Round(p.StartY * ((double)relativeHeight / p.RelativeHeight));
-                }
-            }
-
-            if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
-            {
-                w = r.Width;
-                h = r.Height;
-                if (r.RelativeWidth > 0 && r.RelativeWidth != relativeWidth)
-                {
-                    w = (int)Math.Round(r.Width * ((double)relativeWidth / r.RelativeWidth));
-                    h = (int)Math.Round(r.Height * ((double)relativeHeight / r.RelativeHeight));
-                }
-            }
-        }
-
-        private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
-        {
-            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
-            {
-                return changed;
-            }
-
-            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
-            {
-                return parsed;
-            }
-
-            return fallback;
-        }
-
-        private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)
-        {
-            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
-            {
-                if (raw is bool b)
-                {
-                    return b;
-                }
-
-                if (raw is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.True) return true;
-                    if (je.ValueKind == JsonValueKind.False) return false;
-                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsedFromJe)) return parsedFromJe;
-                }
-
-                if (bool.TryParse(raw.ToString(), out var parsed))
-                {
-                    return parsed;
-                }
-            }
-
-            return fallback;
-        }
-
-        private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
-        {
-            var fromExtraData = ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
-            if (clip.ExtraData != null && clip.ExtraData.ContainsKey(AllowFreeScaleResizeKey))
-            {
-                return fromExtraData;
-            }
-
-            if (clip.Effects != null
-                && clip.Effects.TryGetValue(InternalResizeID, out var effect)
-                && effect is ResizeEffect_ImageSharp resize)
-            {
-                return !resize.PreserveAspectRatio;
-            }
-
-            return false;
-        }
-
-        private bool TryGetSourceAspectRatio(ClipElementUI clip, out double aspect)
-        {
-            aspect = 0;
-
-            if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
-            {
-                return false;
-            }
-
-            if (TryFindInternalCropEffect(clip, out var cropEffect))
-            {
-                if (TryGetCropSize(cropEffect, out var cropW, out var cropH))
-                {
-                    aspect = (double)cropW / cropH;
-                    return aspect > 0;
-                }
-                return false; // If there's a crop effect, we can't reliably get the source aspect ratio, so return false to let the caller handle it.
-            }
-
-            AssetItem? asset = null;
-
-            if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
-            {
-                var assetId = clip.SourcePath.Substring(1);
-                if (page.Assets.TryGetValue(assetId, out var byPathAsset))
-                {
-                    asset = byPathAsset;
-                }
-            }
-
-            if (asset == null && page.Assets.TryGetValue(clip.Id, out var byClipAsset))
-            {
-                asset = byClipAsset;
-            }
-
-            if (asset != null && asset.Width > 0 && asset.Height > 0)
-            {
-                aspect = (double)asset.Width / asset.Height;
-                return aspect > 0;
-            }
-            else if (File.Exists(clip.SourcePath))
-            {
-                if (clip.ClipType == ClipMode.PhotoClip)
-                {
-                    try
-                    {
-                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
-                        aspect = (double)img.Width / img.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-                if (clip.ClipType == ClipMode.VideoClip)
-                {
-                    try
-                    {
-                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
-                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-            }
-
-            return false;
-        }
-
-        private static void RemoveLegacyPlaceResizeEffects(ClipElementUI clip)
-        {
-            if (clip.Effects == null)
-            {
-                return;
-            }
-
-            clip.Effects.Remove(InternalPlaceID);
-            clip.Effects.Remove(InternalResizeID);
-        }
-
 
         public ClipInfoBuilder(DraftPage page)
         {
@@ -890,10 +557,12 @@ namespace projectFrameCut.DraftStuff
                     selectedVideoDecoderLabel),
                     cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup((TargetInstance as VideoClip)?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown((TargetInstance as VideoClip)?.DecoderName ?? "Unknown")) }))
                  .AppendWhen(
-                    clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath), 
-                        pp => pp.AppendWhen(clip.SourcePath.StartsWith("$"), 
-                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source,  new Label { 
-                                Text = AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset) ?  $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})" : $"Unknown asset: {clip.SourcePath.Substring(1)}" }),
+                    clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath),
+                        pp => pp.AppendWhen(clip.SourcePath.StartsWith("$"),
+                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label
+                            {
+                                Text = AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset) ? $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})" : $"Unknown asset: {clip.SourcePath.Substring(1)}"
+                            }),
                             pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = System.IO.Path.GetFullPath(clip.SourcePath) })),
                     pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
                 )
@@ -1130,16 +799,16 @@ namespace projectFrameCut.DraftStuff
                             }
                             break;
                         }
-                    case "speedRatio":
-                        {
-                            if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
-                            {
-                                if (ratio != 0f)
-                                    clip.SecondPerFrameRatio = (float)ratio;
-                            }
+                    //case "speedRatio":
+                    //    {
+                    //        if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
+                    //        {
+                    //            if (ratio != 0f)
+                    //                clip.SecondPerFrameRatio = (float)ratio;
+                    //        }
 
-                            break;
-                        }
+                    //        break;
+                    //    }
                     default:
                         {
 
@@ -2251,18 +1920,23 @@ namespace projectFrameCut.DraftStuff
                 Dictionary<string, TextClipEntry> t = new();
                 Setting.SettingPages.EditSettingPage.LoadTextTemplates(ref t);
                 var picked = await page.DisplayActionSheetAsync(PPLocalizedResources.TextOption_AddAEntry, null, null, t.Keys.ToArray());
-                entries.Add(t[picked] ?? new TextClipEntry
+                if (string.IsNullOrWhiteSpace(picked)) return;
+                if (!t.TryGetValue(picked, out var value))
                 {
-                    text = "",
-                    x = 0,
-                    y = 0,
-                    fontFamily = "Arial",
-                    fontSize = 24f,
-                    r = 65535,
-                    g = 65535,
-                    b = 65535,
-                    a = 1f
-                });
+                    value = new TextClipEntry
+                    {
+                        text = "",
+                        x = 0,
+                        y = 0,
+                        fontFamily = "Arial",
+                        fontSize = 24f,
+                        r = 65535,
+                        g = 65535,
+                        b = 65535,
+                        a = 1f
+                    };
+                }
+                entries.Add(value);
                 UpdateStoredEntries();
                 RebuildEntriesUI();
             };
@@ -2478,10 +2152,10 @@ namespace projectFrameCut.DraftStuff
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
-
+            var haveManySpeedVariancePorvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles)
+                foreach (var bundleKvp in clip.EffectBundles.Where(c => haveManySpeedVariancePorvider || c.Value.TypeOfEffect != EffectType.SpeedVarianceProvider))
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2570,7 +2244,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(page, bundlesFactories, ppb, handler));
+            ppb.AddCustomChild(BuildAddEffectPanel(clip.ClipType switch { ClipMode.AudioClip => EffectTarget.Audio, ClipMode.MarkingClip => EffectTarget.NotSpecified, _ => EffectTarget.Video }, page, bundlesFactories, ppb, handler));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -2780,6 +2454,7 @@ namespace projectFrameCut.DraftStuff
         }
 
         public static View BuildAddEffectPanel(
+            EffectTarget target,
             Page page,
             Dictionary<string, Func<IEffectBundle>> bundlesFactories,
             PropertyPanelBuilder ppb,
@@ -2811,7 +2486,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserVisibleEffect).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target == target).Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -3035,10 +2710,10 @@ namespace projectFrameCut.DraftStuff
                     }
                     ppb.AddSeparator();
                     ppb.AddCustomChild("Implement type", new Label { Text = effect.ImplementType.ToString() });
+                    ppb.AppendWhen(!string.IsNullOrWhiteSpace(effect.Id), c => c.AddCustomChild("ID", new Label { Text = effect.Id }));
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
-                        ppb.AddCustomChild("ID", new Label { Text = be.Id });
                         switch (be.EffectRole)
                         {
                             case BindableArgumentEffectType.ValueProvider:
@@ -3338,24 +3013,181 @@ namespace projectFrameCut.DraftStuff
 
         #endregion
 
-        #region misc
+        #region speed and ratio
 
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            PropertyPanelBuilder ppb = new();
-            ppb.AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1");
-            ppb.AddButton("applyButton", Localized._Apply);
-            ppb.ListenToChanges(e =>
-            {
-                if (e.Id == "speedRatio")
+            static bool IsSpeedVarianceBundle(IEffectBundle bundle) => bundle.TypeOfEffect == EffectType.SpeedVarianceProvider && bundle.Target == EffectTarget.SpeedVariance;
+
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames();
+
+            var speedBundleFactoryItems = allBundleFactories
+                .Where(kvp =>
                 {
-                    clip.SecondPerFrameRatio = float.TryParse(e.Value as string, out var result) ? result : 1;
-                    clip.ApplySpeedRatio();
+                    try
+                    {
+                        var sample = kvp.Value();
+                        return IsSpeedVarianceBundle(sample);
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .Select(kvp => new
+                {
+                    TypeName = kvp.Key,
+                    Factory = kvp.Value,
+                    DisplayName = localizedBundleNames.GetValueOrDefault(kvp.Key, kvp.Key)
+                })
+                .OrderBy(x => x.DisplayName, StringComparer.Ordinal)
+                .ToList();
+
+            var speedBundleIds = new HashSet<Guid>();
+            foreach (var effect in clip.Effects.Values)
+            {
+                if (effect.TypeOfEffect == EffectType.SpeedVarianceProvider
+                    && Guid.TryParse(effect.BindedEffectGroupID, out var groupId))
+                {
+                    speedBundleIds.Add(groupId);
                 }
-            });
-            var panel = ppb.BuildWithScrollView();
-            return panel;
+            }
+
+            foreach (var bundleKvp in clip.EffectBundles)
+            {
+                if (IsSpeedVarianceBundle(bundleKvp.Value))
+                {
+                    speedBundleIds.Add(bundleKvp.Key);
+                }
+            }
+
+            var speedBundles = speedBundleIds
+                .Select(id => clip.EffectBundles.TryGetValue(id, out var bundle) ? bundle : null)
+                .Where(bundle => bundle is not null)
+                .Cast<IEffectBundle>()
+                .ToList();
+
+            var ppb = new PropertyPanelBuilder();
+
+            if (speedBundles.Count > 1)
+            {
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.SpeedAndRatio_ErrMultiplePvd,
+                    TextColor = Colors.Orange
+                });
+            }
+
+            if (speedBundles.Count == 0)
+            {
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.SpeedAndRatio_None,
+                    TextColor = Colors.Gray
+                });
+            }
+            var bundle = speedBundles.FirstOrDefault();
+            if (bundle is not null)
+            {
+                var bundleId = bundle.Id;
+                string keyPrefix = $"SpeedBundle|{bundleId}|";
+                string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
+
+                ppb.AddText(new TitleAndDescriptionLineLabel(bundle.Name ?? localizedName, bundle.TypeName));
+
+                try
+                {
+                    var bundlePpb = bundle.CreateUI();
+                    ppb.AddFromAnother(bundlePpb, bundle);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"loading speed variance bundle {bundle.TypeName}", this);
+                    ppb.AddText(new Label
+                    {
+                        Text = $"Error loading bundle UI: {ex.Message}",
+                        TextColor = Colors.Yellow
+                    });
+                }
+
+                ppb.AddButton($"{keyPrefix}Remove", PPLocalizedResources.EffectProp_Remove);
+                ppb.AddSeparator();
+                var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
+                ppb.AddCustomChild(new Label { Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration(clip.lengthInFrame, effLength) : "", FontSize = 12, TextColor = Colors.Gray });
+            }
+            var bundlesFactories = EffectServices.GetAvailableEffectBundles();
+            ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, bundlesFactories, ppb, handler)));
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id.StartsWith("SpeedBundle|", StringComparison.Ordinal))
+                {
+                    var parts = e.Id.Split('|');
+                    if (parts.Length >= 3 && Guid.TryParse(parts[1], out var bundleId) && clip.EffectBundles.TryGetValue(bundleId, out var bundle))
+                    {
+                        switch (parts[2])
+                        {
+                            case "Remove":
+                                clip.EffectBundles.Remove(bundleId);
+                                RebuildAllEffects(clip);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                return;
+                        }
+                    }
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    int currentCount = clip.EffectBundles.Values.Count(IsSpeedVarianceBundle);
+                    if (currentCount >= 1)
+                    {
+                        page.Dispatcher.Dispatch(async () =>
+                        {
+                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one SpeedVarianceProvider.", Localized._OK);
+                        });
+                        return;
+                    }
+                    if (ppb.Properties.TryGetValue("NewBundleType", out var typeObj) && typeObj is string bundleTypeName)
+                    {
+                        if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
         }
+
+        #endregion
+
+        #region timing
 
         private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -3483,12 +3315,41 @@ namespace projectFrameCut.DraftStuff
                         Placeholder = "42"
                     };
 
+                    var add1sButton = new Button
+                    {
+                        Text = "+1s",
+                        Command = new Command(() =>
+                        {
+                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) + (1 / page.SecondsPerFrame)).ToString());
+                        })
+                    };
+                    var minus1sButton = new Button
+                    {
+                        Text = "-1s",
+                        Command = new Command(() =>
+                        {
+                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) - (1 / page.SecondsPerFrame)).ToString());
+                        })
+                    };
+
+                    var smallAddLine = new HorizontalStackLayout
+                    {
+                        Children =
+                        {
+                            minus1sButton,
+                            add1sButton,
+                        },
+                        HorizontalOptions = LayoutOptions.End,
+                        Spacing = 8
+                    };
+
                     // 实时秒数提示
                     var secHintLabel = new Label
                     {
                         Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
                         FontSize = 11,
-                        TextColor = Color.FromArgb("#AAAAAA")
+                        TextColor = Color.FromArgb("#AAAAAA"),
+                        HorizontalOptions = LayoutOptions.Start
                     };
                     lengthEntry.TextChanged += (s, e) =>
                     {
@@ -3516,7 +3377,7 @@ namespace projectFrameCut.DraftStuff
                     };
 
                     stack.Children.Add(lengthEntry);
-                    stack.Children.Add(secHintLabel);
+                    stack.Children.Add(new Grid { Children = { secHintLabel, smallAddLine } });
                     stack.Children.Add(applyBtn);
                 }
                 if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
@@ -3590,9 +3451,341 @@ namespace projectFrameCut.DraftStuff
 
             return new ScrollView { Content = stack };
         }
+        #endregion
 
+        #region misc
+        private static int ReadIntExtraData(Dictionary<string, object>? data, string key, int fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i) return Math.Max(1, i);
+                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
+                }
 
+                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
+            }
 
+            return Math.Max(1, fallback);
+        }
+
+        private static int ReadIntValue(object? raw, int fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is int i)
+            {
+                return i;
+            }
+
+            if (raw is long l)
+            {
+                return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static float ReadFloatValue(object? raw, float fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is float f)
+            {
+                return f;
+            }
+
+            if (raw is double d)
+            {
+                return (float)d;
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
+
+        private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
+
+        private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryIntValue(effect.Parameters, key, fallback);
+        }
+
+        private static float ReadEffectFloatParameter(IEffect effect, string key, float fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
+        }
+
+        private static bool TryGetCropSize(IEffect effect, out int width, out int height)
+        {
+            width = Math.Max(0, ReadEffectIntParameter(effect, "Width", 0));
+            height = Math.Max(0, ReadEffectIntParameter(effect, "Height", 0));
+            return width > 0 && height > 0;
+        }
+
+        private static bool IsCropEffect(IEffect effect)
+            => string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal);
+
+        private static bool TryFindInternalCropEffect(ClipElementUI clip, out IEffect effect)
+        {
+            effect = null!;
+            if (clip.Effects == null || clip.Effects.Count == 0)
+            {
+                return false;
+            }
+
+            if (clip.Effects.TryGetValue(InternalCropID, out var legacyCrop) && IsCropEffect(legacyCrop))
+            {
+                effect = legacyCrop;
+                return true;
+            }
+
+            var fromBundle = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.BindedEffectGroupID, InternalCropBundleGuid.ToString(), StringComparison.Ordinal));
+            if (fromBundle != null)
+            {
+                effect = fromBundle;
+                return true;
+            }
+
+            var fromName = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.Name, InternalCropID, StringComparison.Ordinal));
+            if (fromName != null)
+            {
+                effect = fromName;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static EffectImplementType ResolveConfiguredImplementType(IEffectFactory factory, EffectImplementType fallback)
+        {
+            var configured = EffectHelper.DefaultImplementsType.GetValueOrDefault(
+                $"{factory.FromPlugin}.{factory.TypeName}",
+                EffectImplementType.NotSpecified);
+
+            if (configured != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(configured))
+            {
+                return configured;
+            }
+
+            return fallback;
+        }
+
+        private bool ShouldUseLegacyPlaceResizeEffects()
+            => SettingsManager.IsBoolSettingTrue(LegacyPlaceResizeSettingKey);
+
+        private static bool HasExplicitTargetRect(ClipElementUI clip)
+            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+        private static void ReadLegacyPlaceResizeFromEffects(ClipElementUI clip, int relativeWidth, int relativeHeight, ref int x, ref int y, ref int w, ref int h)
+        {
+            if (clip.Effects == null)
+            {
+                return;
+            }
+
+            if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_IPicture p)
+            {
+                x = p.StartX;
+                y = p.StartY;
+                if (p.RelativeWidth > 0 && p.RelativeWidth != relativeWidth)
+                {
+                    x = (int)Math.Round(p.StartX * ((double)relativeWidth / p.RelativeWidth));
+                    y = (int)Math.Round(p.StartY * ((double)relativeHeight / p.RelativeHeight));
+                }
+            }
+
+            if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
+            {
+                w = r.Width;
+                h = r.Height;
+                if (r.RelativeWidth > 0 && r.RelativeWidth != relativeWidth)
+                {
+                    w = (int)Math.Round(r.Width * ((double)relativeWidth / r.RelativeWidth));
+                    h = (int)Math.Round(r.Height * ((double)relativeHeight / r.RelativeHeight));
+                }
+            }
+        }
+
+        private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
+        {
+            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
+            {
+                return changed;
+            }
+
+            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+
+            return fallback;
+        }
+
+        private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is bool b)
+                {
+                    return b;
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsedFromJe)) return parsedFromJe;
+                }
+
+                if (bool.TryParse(raw.ToString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return fallback;
+        }
+
+        private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
+        {
+            var fromExtraData = ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
+            if (clip.ExtraData != null && clip.ExtraData.ContainsKey(AllowFreeScaleResizeKey))
+            {
+                return fromExtraData;
+            }
+
+            if (clip.Effects != null
+                && clip.Effects.TryGetValue(InternalResizeID, out var effect)
+                && effect is ResizeEffect_ImageSharp resize)
+            {
+                return !resize.PreserveAspectRatio;
+            }
+
+            return false;
+        }
+
+        private bool TryGetSourceAspectRatio(ClipElementUI clip, out double aspect)
+        {
+            aspect = 0;
+
+            if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
+            {
+                return false;
+            }
+
+            if (TryFindInternalCropEffect(clip, out var cropEffect))
+            {
+                if (TryGetCropSize(cropEffect, out var cropW, out var cropH))
+                {
+                    aspect = (double)cropW / cropH;
+                    return aspect > 0;
+                }
+                return false; // If there's a crop effect, we can't reliably get the source aspect ratio, so return false to let the caller handle it.
+            }
+
+            AssetItem? asset = null;
+
+            if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
+            {
+                var assetId = clip.SourcePath.Substring(1);
+                if (page.Assets.TryGetValue(assetId, out var byPathAsset))
+                {
+                    asset = byPathAsset;
+                }
+            }
+
+            if (asset == null && page.Assets.TryGetValue(clip.Id, out var byClipAsset))
+            {
+                asset = byClipAsset;
+            }
+
+            if (asset != null && asset.Width > 0 && asset.Height > 0)
+            {
+                aspect = (double)asset.Width / asset.Height;
+                return aspect > 0;
+            }
+            else if (File.Exists(clip.SourcePath))
+            {
+                if (clip.ClipType == ClipMode.PhotoClip)
+                {
+                    try
+                    {
+                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
+                        aspect = (double)img.Width / img.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+                if (clip.ClipType == ClipMode.VideoClip)
+                {
+                    try
+                    {
+                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
+                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+            }
+
+            return false;
+        }
+
+        private static void RemoveLegacyPlaceResizeEffects(ClipElementUI clip)
+        {
+            if (clip.Effects == null)
+            {
+                return;
+            }
+
+            clip.Effects.Remove(InternalPlaceID);
+            clip.Effects.Remove(InternalResizeID);
+        }
         private class DummyEffectBundle : IEffectBundle
         {
             public Guid Id { get; set; }

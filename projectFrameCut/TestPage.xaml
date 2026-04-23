@@ -43,6 +43,7 @@
                     <Button x:Name="TestMixtureButton" Text="Test mixture" Clicked="TestMixtureButton_Clicked"/>
                     <Button x:Name="TestPlaceAndResizeButton" Text="Test place and resize" Clicked="TestPlaceAndResizeButton_Clicked"/>
                     <Button x:Name="HDRTestButton" Text="Test HDR" Clicked="HDRTestButton_Clicked"/>
+                    <Button x:Name="HDRTestButton2" Text="Test HDR 2" Clicked="HDRTestButton2_Clicked"/>
                     <Image x:Name="PlaceResizeTestImage" />
                 </VerticalStackLayout>
             </Border>

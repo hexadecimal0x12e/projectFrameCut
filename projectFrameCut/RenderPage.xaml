@@ -162,7 +162,7 @@
             </Grid>
 
             <Editor Grid.Row="4" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
-            <VerticalStackLayout Opacity="50" Grid.Row="5" x:Name="ComputeView" Background="Black" />
+            <VerticalStackLayout Opacity="50" Grid.Row="5" x:Name="ComputeView" Background="#01000000" />
         </Grid>
     </Grid>
 </ContentPage>

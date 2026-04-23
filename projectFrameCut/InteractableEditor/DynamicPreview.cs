@@ -18,6 +18,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using IPicture = projectFrameCut.Shared.IPicture;
+using projectFrameCut.Asset;
+using Path = System.IO.Path;
 
 namespace projectFrameCut.InteractableEditor;
 
@@ -31,11 +33,13 @@ public sealed class DynamicPreview : ContentView, IDisposable
     private readonly Label _placeholder;
     private IClip[]? _clips;
     private LivePreviewer? _previewer;
-    private string? _preferredClipId;
     private uint _currentFrame;
     private long _renderVersion;
     private int _viewportWidth;
     private int _viewportHeight;
+    private readonly object _clipsGate = new();
+    private int _activePreviewOps;
+    private readonly List<IClip[]> _pendingDisposeClipBatches = new();
 
     public DynamicPreview()
     {
@@ -82,18 +86,98 @@ public sealed class DynamicPreview : ContentView, IDisposable
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight)
     {
         _currentFrame = frameIndex;
-        var requests = ResolveRequests(frameIndex);
-        var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
-        var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-        return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false).ConfigureAwait(false);
+        var clipsSnapshot = AcquireClipsSnapshot();
+        try
+        {
+            var requests = ResolveRequests(clipsSnapshot, frameIndex);
+            var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
+            var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
+            return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false).ConfigureAwait(false);
+        }
+        finally
+        {
+            ReleaseClipsSnapshot();
+        }
     }
 
     public async Task UpdateDraft(DraftStructureJSON json)
     {
         ArgumentNullException.ThrowIfNull(json);
+        var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
-        DisposeClips();
-        _clips = await Task.Run(() => DraftImportAndExportHelper.JSONToIClips(json, true, 8));
+        var clipsList = new List<IClip>();
+
+        foreach (var clip in elements.Cast<JsonElement>())
+        {
+            if (clip.TryGetProperty("ClipType", out var clipTypeProp)
+                && clipTypeProp.ValueKind == JsonValueKind.Number
+                && clipTypeProp.TryGetInt32(out var clipTypeValue)
+                && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+            {
+                continue;
+            }
+
+            var clipInstance = PluginManager.CreateClip(clip);
+            if (clipInstance.FilePath is not null)
+            {
+                if (clipInstance.FilePath.StartsWith('$'))
+                {
+                    var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
+                    clipInstance.FilePath = asset.Path;
+                    var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
+                    if (Path.Exists(proxyPath))
+                    {
+                        clipInstance.FilePath = proxyPath;
+                        Log($"The proxy for {clipInstance.Name} is used.");
+                    }
+                    else
+                    {
+                        Log($"The proxy for {clipInstance.Name} does not exist.");
+                    }
+                }
+                else if (_previewer?.ProxyRoot is not null && clipInstance.FilePath is not null)
+                {
+                    var proxiedPath = Path.Combine(_previewer.ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
+
+                    if (Path.Exists(proxiedPath))
+                    {
+                        clipInstance.FilePath = proxiedPath;
+                        Log($"The proxy for {clipInstance.Name} is used.");
+                    }
+                    else
+                    {
+                        Log($"The proxy for {clipInstance.Name} does not exist.");
+                    }
+                }
+            }
+            await Task.Run(() => clipInstance.ReInit(8));
+            clipsList.Add(clipInstance);
+        }
+        
+        var newClips = clipsList.ToArray();
+
+        IClip[]? batchToDispose = null;
+        lock (_clipsGate)
+        {
+            var oldClips = _clips;
+            _clips = newClips;
+            if (oldClips is not null)
+            {
+                if (_activePreviewOps > 0)
+                {
+                    _pendingDisposeClipBatches.Add(oldClips);
+                }
+                else
+                {
+                    batchToDispose = oldClips;
+                }
+            }
+        }
+
+        if (batchToDispose is not null)
+        {
+            DisposeClipBatch(batchToDispose);
+        }
     }
 
     public void SetLivePreviewer(ref LivePreviewer? previewer)
@@ -114,19 +198,23 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
     }
 
-    public void SetPreferredClipId(string? clipId)
-    {
-        _preferredClipId = clipId;
-    }
-
     public async Task<bool> RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
     {
         _currentFrame = frameIndex;
         var renderVersion = Interlocked.Increment(ref _renderVersion);
-        var requests = ResolveRequests(frameIndex);
+        var clipsSnapshot = AcquireClipsSnapshot();
+        IReadOnlyList<PreparedPreview> prepared;
         var viewportWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
         var viewportHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-        var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true).ConfigureAwait(false);
+        try
+        {
+            var requests = ResolveRequests(clipsSnapshot, frameIndex);
+            prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true).ConfigureAwait(false);
+        }
+        finally
+        {
+            ReleaseClipsSnapshot();
+        }
 
         if (Dispatcher.IsDispatchRequired)
         {
@@ -325,31 +413,18 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
     }
 
-    private IReadOnlyList<PreviewRequest> ResolveRequests(uint frameIndex)
+    private IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
     {
-        if (_clips is null || _clips.Length == 0)
+        if (clips is null || clips.Count == 0)
         {
             return [];
         }
 
-        var activeClips = GetActiveClips(frameIndex).ToList();
-        if (activeClips.Count == 0)
-        {
-            return [];
-        }
-
-        var preferredClip = TryGetPreferredClip(frameIndex);
-        if (preferredClip is not null)
-        {
-            var preferredIndex = activeClips.FindIndex(clip => clip.Id == preferredClip.Id);
-            if (preferredIndex > 0)
-            {
-                activeClips.RemoveAt(preferredIndex);
-                activeClips.Insert(0, preferredClip);
-            }
-        }
-
-        return activeClips
+        return clips
+            .Where(c => c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
+            .Where(c => c.ContainsFrame(frameIndex))
+            .OrderByDescending(c => c.LayerIndex)
+            .ThenByDescending(c => c.SubLayerIndex)
             .Select(clip => new PreviewRequest(clip, ResolveProvider(clip)))
             .ToArray();
     }
@@ -945,50 +1020,6 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return false;
     }
 
-    private IClip? TryGetPreferredClip(uint frameIndex)
-    {
-        if (string.IsNullOrWhiteSpace(_preferredClipId) || _clips is null)
-        {
-            return null;
-        }
-
-        var clip = _clips.FirstOrDefault(c => c.Id == _preferredClipId);
-        if (clip is null)
-        {
-            return null;
-        }
-
-        return IsClipVisibleAtFrame(clip, frameIndex) ? clip : null;
-    }
-
-    [DebuggerStepThrough()]
-    private IEnumerable<IClip> GetActiveClips(uint frameIndex)
-    {
-        return (_clips ?? [])
-            .Where(c => c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
-            .Where(c => IsClipVisibleAtFrame(c, frameIndex))
-            .OrderByDescending(c => c.LayerIndex)
-            .ThenByDescending(c => c.SubLayerIndex);
-    }
-
-    [DebuggerStepThrough()]
-    private static bool IsClipVisibleAtFrame(IClip clip, uint frameIndex)
-    {
-        if (clip.ExtendToWholeDraft)
-        {
-            return true;
-        }
-
-        try
-        {
-            return clip.GetRelativeFrameIndex(frameIndex) is not null;
-        }
-        catch (IndexOutOfRangeException)
-        {
-            return false;
-        }
-    }
-
     [DebuggerStepThrough()]
     private static IClipDynamicPreviewProvider? ResolveProvider(IClip clip)
     {
@@ -1132,12 +1163,83 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
     private void DisposeClips()
     {
-        if (_clips is null)
+        List<IClip[]>? batchesToDispose = null;
+        lock (_clipsGate)
+        {
+            if (_clips is not null)
+            {
+                if (_activePreviewOps > 0)
+                {
+                    _pendingDisposeClipBatches.Add(_clips);
+                }
+                else
+                {
+                    batchesToDispose ??= new List<IClip[]>();
+                    batchesToDispose.Add(_clips);
+                }
+            }
+
+            _clips = null;
+
+            if (_activePreviewOps == 0 && _pendingDisposeClipBatches.Count > 0)
+            {
+                batchesToDispose ??= new List<IClip[]>();
+                batchesToDispose.AddRange(_pendingDisposeClipBatches);
+                _pendingDisposeClipBatches.Clear();
+            }
+        }
+
+        if (batchesToDispose is null)
         {
             return;
         }
 
-        foreach (var clip in _clips)
+        foreach (var batch in batchesToDispose)
+        {
+            DisposeClipBatch(batch);
+        }
+    }
+
+    private IClip[] AcquireClipsSnapshot()
+    {
+        lock (_clipsGate)
+        {
+            _activePreviewOps++;
+            return _clips ?? Array.Empty<IClip>();
+        }
+    }
+
+    private void ReleaseClipsSnapshot()
+    {
+        List<IClip[]>? batchesToDispose = null;
+        lock (_clipsGate)
+        {
+            if (_activePreviewOps > 0)
+            {
+                _activePreviewOps--;
+            }
+
+            if (_activePreviewOps == 0 && _pendingDisposeClipBatches.Count > 0)
+            {
+                batchesToDispose = new List<IClip[]>(_pendingDisposeClipBatches);
+                _pendingDisposeClipBatches.Clear();
+            }
+        }
+
+        if (batchesToDispose is null)
+        {
+            return;
+        }
+
+        foreach (var batch in batchesToDispose)
+        {
+            DisposeClipBatch(batch);
+        }
+    }
+
+    private static void DisposeClipBatch(IReadOnlyList<IClip> clips)
+    {
+        foreach (var clip in clips)
         {
             try
             {
@@ -1147,8 +1249,6 @@ public sealed class DynamicPreview : ContentView, IDisposable
             {
             }
         }
-
-        _clips = null;
     }
 
     private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);

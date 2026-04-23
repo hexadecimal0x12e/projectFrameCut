@@ -353,7 +353,8 @@ public partial class RenderPage : ContentPage
     {
         try
         {
-            var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+            var cacheDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+            Directory.CreateDirectory(cacheDir);
             await PrepareUIForRender();
 
             if (BindingContext is RenderPageViewModel vm)
@@ -380,14 +381,12 @@ public partial class RenderPage : ContentPage
                     _ => ".mp4"
                 };
 
-
-
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
                 Log("Output options:\r\n" + vm.BuildSummary());
-                string vidOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                string audOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                string compOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
+                string vidOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                string audOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                string compOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
                 var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
                 if (string.IsNullOrWhiteSpace(resultPath)) return;
@@ -406,7 +405,7 @@ public partial class RenderPage : ContentPage
 
                     Log(ex, "compose audio", this);
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached) throw;
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
                 if (_cts.IsCancellationRequested) return;
@@ -419,7 +418,7 @@ public partial class RenderPage : ContentPage
                 {
                     Log(ex, "render frames", this);
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached) throw;
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
 
@@ -459,7 +458,7 @@ public partial class RenderPage : ContentPage
                     catch (Exception ex)
                     {
                         Log(ex, "compose media", this);
-                        if (Debugger.IsAttached) throw;
+                        if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                         await Dispatcher.DispatchAsync(async () =>
                         {
                             await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
@@ -505,7 +504,7 @@ public partial class RenderPage : ContentPage
         {
             Log(ex, "render", this);
             await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-            if (Debugger.IsAttached) throw;
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
             return;
         }
         finally
@@ -583,13 +582,14 @@ public partial class RenderPage : ContentPage
             int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
 
 #if ANDROID
-            ComputerHelper.AddGLViewHandler = new((v) =>
+            ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
             {
                 ComputeView.Children.Clear();
                 v.WidthRequest = 50;
                 v.HeightRequest = 50;
                 ComputeView.Children.Add(v);
             });
+            ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS
@@ -621,7 +621,7 @@ public partial class RenderPage : ContentPage
             if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
-            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite") || OperatingSystem.IsAndroid(); //on Android there is a issue on parallel rendering, use sync render as workaround
+            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
 
             Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
@@ -1131,7 +1131,20 @@ public partial class RenderPage : ContentPage
 #else
         string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
 #endif
-        await ComposeAudio(vm, resultPath);
+        try
+        { 
+            await ComposeAudio(vm, resultPath); 
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
 #if ANDROID
         var ext = ".wav";
         var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
@@ -1167,9 +1180,25 @@ public partial class RenderPage : ContentPage
 #else
         string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
 #endif
-        await PrepareUIForRender();
-        await DoCompute(vm, resultPath);
-        await CleanupUIForRenderDone();
+        try
+        {
+            await PrepareUIForRender();
+            await DoCompute(vm, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
 #if ANDROID
         var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
         if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
@@ -1193,9 +1222,25 @@ public partial class RenderPage : ContentPage
 #else
         string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
 #endif
-        await PrepareUIForRender();
-        await DoCompute(new RenderPageViewModel { Encoding = "ffv1", BitDepth = "16bit", Width = vm.Width, Height = vm.Height, Framerate = vm.Framerate }, resultPath);
-        await CleanupUIForRenderDone();
+        try
+        {
+            await PrepareUIForRender();
+            await DoCompute(new RenderPageViewModel { Encoding = "ffv1", BitDepth = "16bit", Width = vm.Width, Height = vm.Height, Framerate = vm.Framerate }, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
 #if ANDROID
         var ext = ".mkv";
         var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);

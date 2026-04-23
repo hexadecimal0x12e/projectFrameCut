@@ -41,14 +41,12 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
+                clip.ReInit(ppb);
                 if (IsFrameInClipRange(clip, targetFrame))
                 {
-                    if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
-                    {
-                        continue; //keep same behavior in Renderer
-
-                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
-                    }
+                    var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
+                    var actualFrame = clip.GetRelativeFrameIndex(targetFrame) ?? endPoint;
+                    LogDiagnostic($"Clip {clip.Name}, ID {clip.Id}, Start {clip.StartFrame}, End {endPoint}, Duration {clip.Duration}, EffectiveDuration {clip.GetEffectiveDuration()}, GetRelativeFrameIndex for target frame {targetFrame} is {actualFrame}");
                     IPicture frame = null!;
                     int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
@@ -78,7 +76,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        frame = clip.GetFrame(targetFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
+                        frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -281,85 +279,7 @@ namespace projectFrameCut.Render.Rendering
         };
 
         private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
-        {
-            if (targetFrame < clip.StartFrame)
-            {
-                return false;
-            }
-
-            float speedRatio = ResolveSpeedRatioAtTargetFrame(clip, targetFrame);
-            uint effectiveDuration = ScaleDurationForSpeed(clip.Duration, speedRatio);
-            if (effectiveDuration == 0)
-            {
-                return false;
-            }
-
-            ulong endExclusive = (ulong)clip.StartFrame + effectiveDuration;
-            return (ulong)targetFrame < endExclusive;
-        }
-
-        private static float ResolveSpeedRatioAtTargetFrame(IClip clip, uint targetFrame)
-        {
-#pragma warning disable CS0618
-            float fallback = clip.SecondPerFrameRatio;
-#pragma warning restore CS0618
-            if (fallback <= 0 || float.IsNaN(fallback) || float.IsInfinity(fallback))
-            {
-                fallback = 1f;
-            }
-
-            var provider = clip.SpeedVarianceProviderInstance;
-            if (provider is null)
-            {
-                return fallback;
-            }
-
-            uint duration = clip.Duration;
-            float progress = 0f;
-            if (duration > 0)
-            {
-                long offset = (long)targetFrame - clip.StartFrame;
-                if (offset > 0)
-                {
-                    progress = Math.Clamp((float)offset / duration, 0f, 1f);
-                }
-            }
-
-            try
-            {
-                float providerRatio = provider.GetRatio(progress);
-                if (providerRatio > 0 && !float.IsNaN(providerRatio) && !float.IsInfinity(providerRatio))
-                {
-                    return providerRatio;
-                }
-            }
-            catch
-            {
-            }
-
-            return fallback;
-        }
-
-        private static uint ScaleDurationForSpeed(uint duration, float speedRatio)
-        {
-            if (duration == 0)
-            {
-                return 0;
-            }
-
-            double scaled = Math.Round(duration * speedRatio, MidpointRounding.AwayFromZero);
-            if (scaled < 1)
-            {
-                return 1;
-            }
-
-            if (scaled > uint.MaxValue)
-            {
-                return uint.MaxValue;
-            }
-
-            return (uint)scaled;
-        }
+            => clip.ContainsFrame(targetFrame);
 
         private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
         {
@@ -556,7 +476,7 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
             }
 
-            Effects = effectInstances;
+            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
         }
     }
 }

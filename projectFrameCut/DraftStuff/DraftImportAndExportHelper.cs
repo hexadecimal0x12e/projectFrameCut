@@ -286,7 +286,7 @@ namespace projectFrameCut.DraftStuff
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
                         IsMixture = false,
-                        IsContinuousEffect = effect is IContinuousEffect,
+                        IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
                         IsVariableArgumentEffect = effect is IBindableArgumentEffect,
                         ImplementType = effect.ImplementType,
                         BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
@@ -697,12 +697,11 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
-                element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
+                //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.TargetWidth = dto.TargetWidth;
                 element.TargetHeight = dto.TargetHeight;
                 element.TargetX = dto.TargetX;
                 element.TargetY = dto.TargetY;
-                element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
                 element.Effects = dto.Effects?.ToDictionary(
@@ -732,6 +731,10 @@ namespace projectFrameCut.DraftStuff
                 {
                     element.Effects = new Dictionary<string, IEffect>();
                 }
+
+                // Rebuild generated effects from bundles before applying UI width from speed ratio.
+                ClipInfoBuilder.RebuildAllEffects(element);
+                element.ApplySpeedRatio();
 
                 if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
                 {
@@ -798,7 +801,7 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
-                element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
+                //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
@@ -940,15 +943,11 @@ namespace projectFrameCut.DraftStuff
             element.ClipType = clip.ClipType;
             element.ExtraData = clip.MetaData ?? new();
             element.sourceSecondPerFrame = clip.FrameTime;
-            element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
+            //element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
             element.TargetWidth = clip.TargetWidth;
             element.TargetHeight = clip.TargetHeight;
             element.TargetX = clip.TargetX;
             element.TargetY = clip.TargetY;
-
-            // Apply visual properties
-            element.ApplySpeedRatio();
-            element.ApplyClipColor();
 
             element.TypeName = clip.TypeName;
             element.FromPlugin = clip.FromPlugin;
@@ -983,6 +982,13 @@ namespace projectFrameCut.DraftStuff
             {
                 element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
             }
+
+            // Rebuild generated effects from bundles before applying UI width from speed ratio.
+            ClipInfoBuilder.RebuildAllEffects(element);
+
+            // Apply visual properties after speed/effects are fully restored.
+            element.ApplySpeedRatio();
+            element.ApplyClipColor();
 
             if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
             {
