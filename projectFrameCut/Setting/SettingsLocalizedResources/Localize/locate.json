@@ -3858,7 +3858,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: I see that the source text is already in Chinese (zh-CN), and the target language is en-US. Also, \u0060{Localized.AppBrand}\u0060 appears to be a template variable used within the string itself (or a nested localizable key), which should remain unchanged. Additionally, the \u0060\\\u0027\u0060 in the string represents a literal single quote, which should be preserved in translation.\n\nHere\u0027s my translation:\n\nThe original string talks about opening the \u0022Files\u0022 app on a device, navigating to \u0022My {idiom} -\u003E {Localized.AppBrand}\u0022, and finding user data there. It also mentions downloading the \u0022Files\u0022 app from the App Store if not found.\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022Open the \\\u0022Files\\\u0022 app on the device, navigate to \\\u0027My {idiom} -\u003E {Localized.AppBrand}\\\u0027, and you will find your user data.\\r\\nIf you cannot find the \\\u0022Files\\\u0022 app, try downloading it from the App Store.\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "Open the \u0022Files\u0022 app on your device, navigate to \u0027My {idiom} -\u003E {Localized.AppBrand}\u0027, and you will find the user data.\r\nIf you cannot find the \u0022Files\u0022 app, try downloading it from the App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3872,7 +3872,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: I see that the source text is already in Chinese (zh-CN), and the target language is en-US. Also, \u0060{Localized.AppBrand}\u0060 appears to be a template variable used within the string itself (or a nested localizable key), which should remain unchanged. Additionally, the \u0060\\\u0027\u0060 in the string represents a literal single quote, which should be preserved in translation.\n\nHere\u0027s my translation:\n\nThe original string talks about opening the \u0022Files\u0022 app on a device, navigating to \u0022My {idiom} -\u003E {Localized.AppBrand}\u0022, and finding user data there. It also mentions downloading the \u0022Files\u0022 app from the App Store if not found.\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022Open the \\\u0022Files\\\u0022 app on the device, navigate to \\\u0027My {idiom} -\u003E {Localized.AppBrand}\\\u0027, and you will find your user data.\\r\\nIf you cannot find the \\\u0022Files\\\u0022 app, try downloading it from the App Store.\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -12251,11 +12251,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0022Value\u0022: \u0022\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uC5D4\uC9C4\u0022, \u0022Comment\u0022: \u0022\u0022",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uC5D4\uC9C4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0022Value\u0022: \u0022\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uC5D4\uC9C4\u0022, \u0022Comment\u0022: \u0022\u0022",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -14747,11 +14747,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Value": "Moteur d\u0027acc\u00E9l\u00E9ration mat\u00E9rielle",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Comment": "Hardware acceleration engine",
         "DontTranslate": false
       },
       {
@@ -15610,7 +15610,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786E\u5B9A\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\uFF1F\n\n\u82E5\u53EA\u662F\u60F3\u66F4\u65B0\u63D2\u4EF6\u5305\u4E2D\u7684\u300C{name}\u300D\uFF0C\u8BF7\u4E8E\u7BA1\u7406\u63D2\u4EF6\u4E3B\u754C\u9762\u6DFB\u52A0\u6240\u4E0B\u8F7D\u7684\u65B0\u63D2\u4EF6\u5305\uFF0C\u56E0\u4E3A\u79FB\u9664\u63D2\u4EF6\u540E\uFF0C\u5176\u81EA\u5B9A\u4E49\u914D\u7F6E\u4EA6\u4F1A\u88AB\u79FB\u9664\u3002\n\n\u53E6\u8BF7\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u7684\u7B7E\u540D\u4E0D\u4F1A\u88AB\u79FB\u9664\u3002\u82E5\u6B32\u79FB\u9664\u5176\u7B7E\u540D\u5E76\u4ECE\u4E0D\u540C\u6765\u6E90\u5B89\u88C5\u6B64\u63D2\u4EF6\uFF0C\u8BF7\u4E8E\u9AD8\u7EA7\u8BBE\u7F6E\u4E2D\u53D6\u6D88\u4FE1\u4EFB\u67D0\u4E2A\u63D2\u4EF6\u3002",
+        "Value": "\u78BA\u8A8D\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\uFF1F\r\r\u82E5\u53EA\u662F\u6B32\u5F9E\u63D2\u4EF6\u5305\u66F4\u65B0\u300C{name}\u300D\uFF0C\u8ACB\u65BC\u7BA1\u7406\u63D2\u4EF6\u4E4B\u4E3B\u4ECB\u9762\u4E2D\u6DFB\u52A0\u6240\u4E0B\u8F09\u4E4B\u65B0\u63D2\u4EF6\u5305\uFF0C\u56E0\u79FB\u9664\u5F8C\u63D2\u4EF6\u4E4B\u81EA\u8A02\u914D\u7F6E\u5C07\u4E00\u4F75\u79FB\u9664\u3002\r\r\u8ACB\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u4E4B\u7C3D\u540D\u4E0D\u6703\u88AB\u79FB\u9664\u3002\u6B32\u79FB\u9664\u5176\u7C3D\u540D\u4E26\u5F9E\u4E0D\u540C\u4F86\u6E90\u5B89\u88DD\u6B64\u63D2\u4EF6\uFF0C\u8ACB\u81F3\u9032\u968E\u8A2D\u5B9A\u4E2D\u53D6\u6D88\u4FE1\u4EFB\u67D0\u500B\u63D2\u4EF6\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -15624,7 +15624,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786E\u5B9A\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\uFF1F\n\n\u82E5\u53EA\u662F\u60F3\u66F4\u65B0\u63D2\u4EF6\u5305\u4E2D\u7684\u300C{name}\u300D\uFF0C\u8BF7\u4E8E\u7BA1\u7406\u63D2\u4EF6\u4E3B\u754C\u9762\u6DFB\u52A0\u6240\u4E0B\u8F7D\u7684\u65B0\u63D2\u4EF6\u5305\uFF0C\u56E0\u4E3A\u79FB\u9664\u63D2\u4EF6\u540E\uFF0C\u5176\u81EA\u5B9A\u4E49\u914D\u7F6E\u4EA6\u4F1A\u88AB\u79FB\u9664\u3002\n\n\u53E6\u8BF7\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u7684\u7B7E\u540D\u4E0D\u4F1A\u88AB\u79FB\u9664\u3002\u82E5\u6B32\u79FB\u9664\u5176\u7B7E\u540D\u5E76\u4ECE\u4E0D\u540C\u6765\u6E90\u5B89\u88C5\u6B64\u63D2\u4EF6\uFF0C\u8BF7\u4E8E\u9AD8\u7EA7\u8BBE\u7F6E\u4E2D\u53D6\u6D88\u4FE1\u4EFB\u67D0\u4E2A\u63D2\u4EF6\u3002",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -16219,11 +16219,11 @@
       },
       {
         "Id": "GeneralCodec_SelectProvider_Internal",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u96C6\u6210FFmpeg\u5E93",
+        "Value": "\u96C6\u6210 FFmpeg \u5E93",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u96C6\u6210FFmpeg\u5E93",
+        "Comment": "\u5B57\u9762\u610F\u601D\uFF0C\u6307\u5C06FFmpeg\u4F5C\u4E3A\u5E93\u96C6\u6210\u8FDB\u6765",
         "DontTranslate": false
       },
       {
@@ -17259,20 +17259,19 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType_OpenGL",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\uFF1AOpenGL\uFF08\u517C\u5BB9\uFF09",
+        "Value": "OpenGL (\u901A)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\uFF1AOpenGL\uFF08\u517C\u5BB9\uFF09",
         "DontTranslate": false
       },
       {
         "Id": "Render_AndroidHwAccleImpType_Vulkan",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vulkan\uFF08\u6027\u80FD\uFF09",
+        "Value": "Vulkan\uFF08\u6548\u80FD\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vulkan\uFF08\u6027\u80FD\uFF09",
+        "Comment": "\u6027\u80FD\u8BD1\u4E3A\u201C\u6548\u80FD\u201D\u66F4\u7B26\u5408\u6587\u8A00\u8BED\u5883",
         "DontTranslate": false
       },
       {
@@ -24748,29 +24747,28 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Motor de aceleraci\u00F3n por hardware",
+        "Value": "Motor de aceleraci\u00F3n por hardware",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Motor de aceleraci\u00F3n por hardware",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Render_AndroidHwAccleImpType_OpenGL",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OpenGL (Compatibilidad)",
+        "Value": "OpenGL (Compatibilidad)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OpenGL (Compatibilidad)",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Render_AndroidHwAccleImpType_Vulkan",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vulkan (rendimiento)",
+        "Value": "Vulkan (Rendimiento)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vulkan (rendimiento)",
         "DontTranslate": false
       },
       {
@@ -27246,11 +27244,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Value": "Motore di accelerazione hardware",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -28562,11 +28560,11 @@
       },
       {
         "Id": "GeneralCodec_SelectProvider_Internal",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Wbudowana biblioteka FFmpeg",
+        "Value": "Zintegruj bibliotek\u0119 FFmpeg",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Wbudowana biblioteka FFmpeg",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -29033,11 +29031,10 @@
       },
       {
         "Id": "Plugin_FailLoad_Disabled",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Wtyczy\u0142e\u015B t\u0119 wtyczk\u0119. W\u0142\u0105cz j\u0105 poni\u017Cej, aby nadal z niej korzysta\u0107.",
+        "Value": "Wy\u0142\u0105czy\u0142e\u015B t\u0119 wtyczk\u0119. W\u0142\u0105cz j\u0105 poni\u017Cej, aby kontynuowa\u0107 jej u\u017Cywanie.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Wtyczy\u0142e\u015B t\u0119 wtyczk\u0119. W\u0142\u0105cz j\u0105 poni\u017Cej, aby nadal z niej korzysta\u0107.",
         "DontTranslate": false
       },
       {
@@ -29747,11 +29744,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Value": "Silnik akceleracji sprz\u0119towej",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -32245,11 +32242,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Value": "Mecanismo de acelera\u00E7\u00E3o de hardware",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -37256,11 +37253,11 @@
       },
       {
         "Id": "Render_AndroidHwAccleImpType_OpenGL",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OpenGL (Uyumlu)",
+        "Value": "OpenGL (Uyumlu)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OpenGL (Uyumlu)",
+        "Comment": "",
         "DontTranslate": false
       },
       {

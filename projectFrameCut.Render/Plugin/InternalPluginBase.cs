@@ -63,7 +63,8 @@ public class InternalPluginBase : IPluginBase
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
         {"Rotation",  new(() => new RotationEffect_ImageSharp())},
-        {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) }
+        {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -75,6 +76,7 @@ public class InternalPluginBase : IPluginBase
         {"Blur", new BlurEffectFactory()},
         {"Rotation", new RotationEffectFactory()},
         {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
+        {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
@@ -113,13 +115,6 @@ public class InternalPluginBase : IPluginBase
     };
 
 
-    public Dictionary<string, Func<string, string, IClip>> ClipProvider => new Dictionary<string, Func<string, string, IClip>>
-    {
-        {"VideoClip", new((i,n) => new VideoClip{Id = i, Name = n}) },
-        {"PhotoClip", new((i,n) => new PhotoClip{Id = i, Name = n}) },
-        {"SolidColorClip", new((i,n) => new SolidColorClip{Id = i, Name = n}) },
-        {"TextClip", new((i,n) => new TextClip{Id = i, Name = n}) }
-    };
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
         (HWAccelOptionGetter() ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
@@ -206,8 +201,8 @@ public class InternalPluginBase : IPluginBase
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
         var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
-        var result = loc.DynamicLookup(key, "!!!NULL!!!");
-        return result == "!!!NULL!!!" ? null : result;
+        if (!loc.IsItemExist(key)) return null;
+        return loc.DynamicLookup(key, key);
     }
 
     bool IPluginBase.OnLoaded(out string FailedReason)

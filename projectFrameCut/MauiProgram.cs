@@ -539,8 +539,7 @@ namespace projectFrameCut
                 PluginManager.CurrentLocale = Localized._LocaleId_;
                 PluginManager.ExtenedLocalizationGetter = new((k) =>
                 {
-                    var r = Localized.DynamicLookup(k, "!!!NULL!!!");
-                    return r == "!!!NULL!!!" ? null : r;
+                    return Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null;
                 });
 
 

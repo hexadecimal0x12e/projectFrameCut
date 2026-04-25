@@ -97,7 +97,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 ushort.MaxValue,
                 tolerance,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             return panel;
         }
 

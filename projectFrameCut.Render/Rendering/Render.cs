@@ -13,6 +13,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -35,10 +36,12 @@ namespace projectFrameCut.Render.Rendering
         public bool LogProcessStack = false;
         public bool AutoCenterImplicitClip { get; set; } = false;
 
+        public bool RenderByLayers { get; set; } = false;
         public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
+        public int GCOption = 0;
+
         public int MaxRenderScheduleTimeout { get; set; } = 10;
-        public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; } 
-        // Scheduler/worker launch controls for GoRender async mode.
+        public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
         public int RenderWorkerBootstrapDelayMs { get => field >= 0 ? field : 0; set; } = 50;
         public int RenderWatchdogNoProgressTimeoutMs { get => field > 0 ? field : 60_000; set; } = 60_000;
         public bool EnableRenderWatchdogForceStart { get; set; } = true;
@@ -46,17 +49,20 @@ namespace projectFrameCut.Render.Rendering
         public int RenderSchedulerPreparePollDelayMs { get => field > 0 ? field : 5; set; } = 5;
         public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
         public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
-        public int GCOption = 0;
+        public int ThrottleThreshold { get => field > 0 ? field : MaxThreads; set; }
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
         public int TargetWidth { get; set; }
         public int TargetHeight { get; set; }
         public bool Use16Bit { get; set; } = true;
+        public bool UseHDR { get; set; } = false;
+        public int SDRClipsBrightnessInHDRMode { get; set; } = 5000;
+        public int MaximumHDRBrightness { get; set; } = -1;
 
-        private bool IsAndroid => OperatingSystem.IsAndroid();
         Dictionary<Guid, IClip> IndexedClipList = new();
-        Dictionary<string, bool> IsClipGeneratedByAI = new();
+        Dictionary<Guid, int> PerClipHDRBrightness = new();
+        Dictionary<Guid, bool> IsClipGeneratedByAI = new();
 
         public void ClearCaches()
         {
@@ -96,6 +102,7 @@ namespace projectFrameCut.Render.Rendering
 
         public static bool IsProfilerAttached =>
             string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
+
 
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
         ConcurrentDictionary<uint, byte> PreparedFlag = new();
@@ -171,15 +178,14 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
 
-            int throttleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
             var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
                 // Throttling: limit only by prepared source-frame queue depth.
                 // Do not use TotalEnqueued here because it includes blank frames and can deadlock with many blanks.
-                while (!IsProfilerAttached && PreparedFrames.Count > throttleThreshold && !token.IsCancellationRequested)
+                while (!IsProfilerAttached && PreparedFrames.Count > ThrottleThreshold && !token.IsCancellationRequested)
                 {
-                    Log($"[Preparer] Waiting for more render slots... prepared source frames pending: {PreparedFrames.Count} (threshold: {throttleThreshold})");
+                    Log($"[Preparer] Waiting for more render slots... prepared source frames pending: {PreparedFrames.Count} (threshold: {ThrottleThreshold})");
                     Thread.Sleep(500);
                 }
 
@@ -216,7 +222,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         if (frame != null)
                         {
-                            if (IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)
+                            if (IsClipGeneratedByAI.TryGetValue(item.IdAsGUID, out var aiMark) && aiMark)
                             {
                                 frame = EffectProcessing.ProcessAIWatermark(frame, null);
                             }
@@ -255,8 +261,18 @@ namespace projectFrameCut.Render.Rendering
             // Initialize thread limiter
             _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
 
-            BlankFrame = Use16Bit ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
+            if (UseHDR)
+            {
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+            }
+            else if (Use16Bit)
+            {
+                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
+            else
+            {
+                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
             BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
@@ -307,7 +323,7 @@ namespace projectFrameCut.Render.Rendering
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
                                 $"total write frames: {wrote} wrote and {builder.TotalFramesCount - wrote} pended, " +
                                 $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
-                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)","STAT");
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)", "STAT");
                             Thread.Sleep(10000);
                         }
                         catch { }
@@ -411,7 +427,7 @@ namespace projectFrameCut.Render.Rendering
                             await Task.Delay(preparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
-                                Log($"[Render] Wait timeout reached (platform: {(IsAndroid ? "Android" : "Other")}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
+                                Log($"[Render] Wait timeout reached (platform: {RuntimeInformation.RuntimeIdentifier}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
                                 break;
                             }
                         }
@@ -522,9 +538,18 @@ namespace projectFrameCut.Render.Rendering
             ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
             ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
-            BlankFrame = Use16Bit
-                ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0)
-                : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            if (UseHDR)
+            {
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+            }
+            else if (Use16Bit)
+            {
+                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
+            else
+            {
+                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
             BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
 
@@ -553,7 +578,7 @@ namespace projectFrameCut.Render.Rendering
                             Log($"Finished {finished / d:p2}. ETA: {GetEstimated(finished / d)}, " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                                 $"       ({finished} of {d} finished, already elapsed {_renderTotalStopwatch.Elapsed}, " +
-                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)","STAT");
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)", "STAT");
                             Thread.Sleep(10000);
                         }
                         catch { }
@@ -703,7 +728,7 @@ namespace projectFrameCut.Render.Rendering
                     framesToRender.Add((clip, null));
                     continue;
                 }
-                if (IsClipGeneratedByAI.TryGetValue(clip.Id, out var aiMark) && aiMark)
+                if (IsClipGeneratedByAI.TryGetValue(clip.IdAsGUID, out var aiMark) && aiMark)
                 {
                     frame = EffectProcessing.ProcessAIWatermark(frame, null);
 
@@ -874,8 +899,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        var threadMixComputer = GetOrCreateComputer(OverlayMixture.ComputerId);
-                        result = OverlayMixture.Mix(BlankFrame, frame, threadMixComputer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                        result = OverlayMixture.Mix(BlankFrame, frame, GetOrCreateComputer(OverlayMixture.ComputerId), _ppb, clipX, clipY, TargetWidth, TargetHeight);
                         if (usedFrames is null)
                             try { frame.Dispose(); } catch { }
                     }
@@ -883,8 +907,23 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     // Multi-clip blending with per-clip position in the target canvas.
-                    var threadMixComputer = GetOrCreateComputer(OverlayMixture.ComputerId);
-                    var temp = OverlayMixture.Mix(result, frame, threadMixComputer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                    if (UseHDR)
+                    {
+                        if (result is IHDRPicture<ushort> u)
+                        {
+                            if (u.MaximumBrightness > MaximumHDRBrightness)
+                            {
+                                u.MaximumBrightness = MaximumHDRBrightness;
+                            }
+                        }
+                        else
+                        {
+                            result = result.ToHDRPicture(1, PerClipHDRBrightness[clip.IdAsGUID]);
+                        }
+
+
+                    }
+                    var temp = OverlayMixture.Mix(result, frame, GetOrCreateComputer(OverlayMixture.ComputerId), _ppb, clipX, clipY, TargetWidth, TargetHeight);
                     result.Dispose();
                     result = temp;
                     if (usedFrames is null)
@@ -1033,13 +1072,13 @@ namespace projectFrameCut.Render.Rendering
         {
             _ppb = Use16Bit ? 16 : 8;
             if (MinSchedulePreparedFrames <= 0) MinSchedulePreparedFrames = MaxThreads;
-            int prepareThrottleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
-            if (MinSchedulePreparedFrames > prepareThrottleThreshold)
+            if (ThrottleThreshold <= 0) ThrottleThreshold = MaxThreads;
+            if (MinSchedulePreparedFrames > ThrottleThreshold)
             {
-                Log($"[Preparer] MinSchedulePreparedFrames ({MinSchedulePreparedFrames}) exceeds prepare throttle threshold ({prepareThrottleThreshold}); clamped to avoid scheduler/preparer deadlock.", "warn");
-                MinSchedulePreparedFrames = prepareThrottleThreshold;
+                Log($"[Preparer] MinSchedulePreparedFrames ({MinSchedulePreparedFrames}) exceeds prepare throttle threshold ({ThrottleThreshold}); clamped to avoid scheduler/preparer deadlock.", "warn");
+                MinSchedulePreparedFrames = ThrottleThreshold;
             }
-
+            if (SDRClipsBrightnessInHDRMode > MaximumHDRBrightness) SDRClipsBrightnessInHDRMode = MaximumHDRBrightness;
             EffectCache.Clear();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
@@ -1051,7 +1090,7 @@ namespace projectFrameCut.Render.Rendering
                     else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
                     else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
                 }
-                if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
+                if (isAI) IsClipGeneratedByAI.TryAdd(item.IdAsGUID, isAI);
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
 
                 if (HasExplicitTargetRect(item))
@@ -1073,6 +1112,7 @@ namespace projectFrameCut.Render.Rendering
             mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
 
             IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be a GUID."));
+            PerClipHDRBrightness = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be a GUID."), c => c.ExtraData.TryGetValue("HDRBrightness", out var value) ? Convert.ToInt32(value) : SDRClipsBrightnessInHDRMode);
 
         }
 

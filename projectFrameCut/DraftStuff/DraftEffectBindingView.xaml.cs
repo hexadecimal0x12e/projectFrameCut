@@ -292,7 +292,7 @@ public partial class DraftEffectBindingView : ContentView
             // The logic to load factories and instantiate IEffectBundle has been removed.
             // We iterate bundleData directly to create visual nodes.
 
-            foreach (var bundle in _clip.EffectBundles.Values)
+            foreach (var bundle in _clip.EffectBundles.Values.Where(c => c.Target == _clip.GetEffectTarget()))
             {
                 // Placeholder Node Creation
                 // We assume 1 input port "Input" because we cannot inspect the real effect logic anymore.

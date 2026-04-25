@@ -25,13 +25,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         EffectType IEffect.TypeOfEffect => EffectType.SpeedVarianceProvider;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
-        bool IEffect.Enabled { get => false; set => throw new InvalidOperationException("Cannot enable a ISpeedVarianceProvider. It should be used within the render system."); } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
+        bool IEffect.Enabled { get => false; set => Logger.Log("Cannot enable a ISpeedVarianceProvider. It should be used within the render system.", "warn"); } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
         string? IEffect.NeedComputer => null;
         bool IEffect.YieldProcessStep => false;
-        int IEffect.RelativeWidth { get => -1; set => throw new InvalidOperationException("Cannot set RelativeWidth for a ISpeedVarianceProvider."); }
-        int IEffect.RelativeHeight { get => -1; set => throw new InvalidOperationException("Cannot set RelativeWidth for a ISpeedVarianceProvider."); }
-        int IEffect.Index { get => int.MaxValue; set => throw new InvalidOperationException("Cannot set Index for a ISpeedVarianceProvider."); }
-        string? IEffect.BindedEffectGroupID { get => null; set => throw new InvalidOperationException("Cannot set BindedEffectGroupID for a ISpeedVarianceProvider."); }
+        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
+        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
+        int IEffect.Index { get => int.MaxValue; set => Logger.Log("Cannot set Index for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
     }
     /// <summary>
     /// A classic speed variance provider that provides a constant speed ratio. The ratio can be set through the "Ratio" parameter. This is useful for implementing effects like "Fast Forward" or "Slow Motion".
@@ -39,19 +38,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public class ClassicSpeedVarianceProvider : ISpeedVarianceProvider
     {
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
-
         public string TypeName => "ClassicSpeedVarianceProvider";
-
         public string Name { get; set; } = "ClassicSpeedVarianceProvider";
         public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        // Keep mutable IEffect members so this provider can flow through the generic effect pipeline.
-        public bool Enabled { get; set; } = true;
-        public int RelativeWidth { get; set; } = -1;
-        public int RelativeHeight { get; set; } = -1;
-        public int Index { get; set; }
         public string? BindedEffectGroupID { get; set; }
-
         public Dictionary<string, object> Parameters { get; set; } = new();
 
         public float Ratio { get; set; } = 1f;

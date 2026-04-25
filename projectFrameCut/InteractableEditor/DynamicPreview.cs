@@ -438,9 +438,15 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return null;
         }
 
+        var sourceColorAdjustEffects = clip.EffectsInstances?
+            .Where(e => e.Enabled)
+            .OfType<IColorAdjustEffect>()
+            .OrderBy(e => e.Index)
+            .ToArray() ?? Array.Empty<IColorAdjustEffect>();
+
         View? generatedView = null;
         var usedFullRenderFallback = false;
-        if (request.Provider is not null && request.Provider.IsAvailable(clip))
+        if (sourceColorAdjustEffects.Length == 0 && request.Provider is not null && request.Provider.IsAvailable(clip))
         {
             try
             {
@@ -453,9 +459,17 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
         else
         {
-            Log($"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
-            var useFullRenderFallback = _previewer is not null;
-            generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback);
+            if (sourceColorAdjustEffects.Length > 0)
+            {
+                Log($"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
+            }
+            else
+            {
+                Log($"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
+            }
+
+            var useFullRenderFallback = _previewer is not null && sourceColorAdjustEffects.Length == 0;
+            generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback, sourceColorAdjustEffects);
             usedFullRenderFallback = useFullRenderFallback;
         }
 
@@ -483,6 +497,11 @@ public sealed class DynamicPreview : ContentView, IDisposable
                 .Where(e => e.Enabled)
                 .OrderBy(e => e.Index))
             {
+                if (effect is IColorAdjustEffect)
+                {
+                    continue;
+                }
+
                 var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
                 if (isLegacyLayoutEffect)
                 {
@@ -1071,7 +1090,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
     }
 
-    private View GenerateFrameFallbackView(IClip clip, int targetWidth, int targetHeight, uint frameIndex, bool fullRender = false)
+    private View GenerateFrameFallbackView(IClip clip, int targetWidth, int targetHeight, uint frameIndex, bool fullRender = false, IReadOnlyList<IColorAdjustEffect>? sourceColorAdjustEffects = null)
     {
         IPicture frame = null!;
         if (!fullRender)
@@ -1090,6 +1109,22 @@ public sealed class DynamicPreview : ContentView, IDisposable
                 frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
             }
         }
+
+        if (sourceColorAdjustEffects is { Count: > 0 })
+        {
+            foreach (var effect in sourceColorAdjustEffects)
+            {
+                try
+                {
+                    frame = effect.Process(frame, PluginManager.CreateComputer(effect.NeedComputer));
+                }
+                catch (Exception ex)
+                {
+                    Log($"Clip {clip.Id}/{clip.Name}'s color adjust effect {effect.TypeName}/{effect.Name} failed during source rendering: {ex.Message}");
+                }
+            }
+        }
+
         return new Image
         {
             Source = frame.ToImageSource(),

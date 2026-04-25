@@ -74,6 +74,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ClipMode ClipType => ClipMode.AudioClip;
 
         public string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public string Name { get; init; }
         public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }

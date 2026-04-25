@@ -49,7 +49,7 @@ namespace projectFrameCut.DraftStuff
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
 
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true)
+        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true, bool fixOverlap = false)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -151,7 +151,17 @@ namespace projectFrameCut.DraftStuff
                 SavedAt = DateTime.Now
             };
             if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
-            FixSmallOverlaps(d, 3);
+            if (fixOverlap)
+            {
+                try
+                {
+                    FixSmallOverlaps(d, 3);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Fix small overlap");
+                }
+            }
             return d;
         }
 
@@ -327,7 +337,7 @@ namespace projectFrameCut.DraftStuff
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
-            if(!elements.Any())
+            if (!elements.Any())
             {
                 if (json.Clips.Any())
                 {
@@ -348,7 +358,7 @@ namespace projectFrameCut.DraftStuff
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping})})");
+                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -379,7 +389,7 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                if(InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
+                if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
                 clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
                 if (clipInstance is null) throw new NullReferenceException();
                 clipsList.Add(clipInstance);

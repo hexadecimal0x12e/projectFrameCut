@@ -1,7 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Setting.SettingManager;
@@ -28,13 +27,10 @@ namespace projectFrameCut.InteractableEditor
         private AssetItem? _currentAsset;
         private Func<Task>? _updateCallback;
 
-        private const string InternalPlaceKey = "__Internal_Place__";
-        private const string InternalResizeKey = "__Internal_Resize__";
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
-        private const string LegacyPlaceResizeSettingKey = "Edit_UseLegacyPlaceResizeEffects";
 
         private double _canvasWidth = 800;
         private double _canvasHeight = 240;
@@ -89,7 +85,6 @@ namespace projectFrameCut.InteractableEditor
         private double _tracksZoomOffset = 1d;
         private float _secondPerFrameRatio = 1f;
 
-        public bool UseLegacyPlaceResizeEffects { get; set; }
         public bool ShowRenderRectOverlay { get; set; } = true;
         public bool ShowClipPreviewOverlays
         {
@@ -143,7 +138,6 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor()
         {
             InitializeComponent();
-            UseLegacyPlaceResizeEffects = SettingsManager.IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects");
 
             var canvasTap = new TapGestureRecognizer();
             canvasTap.Tapped += OnEditorCanvasTapped;
@@ -1388,26 +1382,16 @@ namespace projectFrameCut.InteractableEditor
                 return true;
             }
 
-            if (HasExplicitTargetRect(clip))
+            x = clip.TargetX;
+            y = clip.TargetY;
+            if (clip.TargetWidth > 0)
             {
-                x = clip.TargetX;
-                y = clip.TargetY;
-                if (clip.TargetWidth > 0)
-                {
-                    w = clip.TargetWidth;
-                }
-
-                if (clip.TargetHeight > 0)
-                {
-                    h = clip.TargetHeight;
-                }
-
-                // Fill only missing fields from legacy effects for partially migrated clips.
-                ApplyLegacyRectFallbackForMissingTargetFields(clip, ref x, ref y, ref w, ref h);
+                w = clip.TargetWidth;
             }
-            else
+
+            if (clip.TargetHeight > 0)
             {
-                TryReadRectFromLegacyEffects(clip, ref x, ref y, ref w, ref h);
+                h = clip.TargetHeight;
             }
 
             if (clip.ClipType == ClipMode.SolidColorClip)
@@ -1493,15 +1477,6 @@ namespace projectFrameCut.InteractableEditor
                     w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
                     h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
 
-                    // 从legacy effects补全缺失字段（兼容部分target字段的旧数据）
-                    if (HasExplicitTargetRect(clip))
-                    {
-                        ApplyLegacyRectFallbackForMissingTargetFields(clip, ref x, ref y, ref w, ref h);
-                    }
-                    else
-                    {
-                        TryReadRectFromLegacyEffects(clip, ref x, ref y, ref w, ref h);
-                    }
                 }
 
                 // Clamp to keep UI stable.
@@ -1683,40 +1658,6 @@ namespace projectFrameCut.InteractableEditor
 
             // 检查当前帧是否在clip的范围内
             return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
-        }
-
-        private void ApplyLegacyRectFallbackForMissingTargetFields(ClipElementUI clip, ref double x, ref double y, ref double w, ref double h)
-        {
-            double legacyX = x;
-            double legacyY = y;
-            double legacyW = w;
-            double legacyH = h;
-
-            if (!TryReadRectFromLegacyEffects(clip, ref legacyX, ref legacyY, ref legacyW, ref legacyH))
-            {
-                return;
-            }
-
-            var hasTargetWidth = clip.TargetWidth > 0;
-            var hasTargetHeight = clip.TargetHeight > 0;
-            // When size is already explicit, treat (0,0) as intentional position.
-            var hasExplicitPosition = clip.TargetX != 0 || clip.TargetY != 0 || (hasTargetWidth && hasTargetHeight);
-
-            if (!hasExplicitPosition)
-            {
-                x = legacyX;
-                y = legacyY;
-            }
-
-            if (!hasTargetWidth)
-            {
-                w = legacyW;
-            }
-
-            if (!hasTargetHeight)
-            {
-                h = legacyH;
-            }
         }
 
         private void OnClipPanUpdated(ClipOverlayState state, PanUpdatedEventArgs e)
@@ -2374,33 +2315,16 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            if (ShouldUseLegacyPlaceResizeEffects())
+            x = _currentClip.TargetX;
+            y = _currentClip.TargetY;
+            if (_currentClip.TargetWidth > 0)
             {
-                TryReadRectFromLegacyEffects(ref x, ref y, ref w, ref h);
+                w = _currentClip.TargetWidth;
             }
-            else
+
+            if (_currentClip.TargetHeight > 0)
             {
-                if (HasExplicitTargetRect(_currentClip))
-                {
-                    x = _currentClip.TargetX;
-                    y = _currentClip.TargetY;
-                    if (_currentClip.TargetWidth > 0)
-                    {
-                        w = _currentClip.TargetWidth;
-                    }
-
-                    if (_currentClip.TargetHeight > 0)
-                    {
-                        h = _currentClip.TargetHeight;
-                    }
-
-                    // Fill only missing fields from legacy effects for partially migrated clips.
-                    ApplyLegacyRectFallbackForMissingTargetFields(_currentClip, ref x, ref y, ref w, ref h);
-                }
-                else
-                {
-                    TryReadRectFromLegacyEffects(ref x, ref y, ref w, ref h);
-                }
+                h = _currentClip.TargetHeight;
             }
 
             if (_currentClip.ClipType == ClipMode.SolidColorClip)
@@ -2699,12 +2623,6 @@ namespace projectFrameCut.InteractableEditor
             x = Math.Clamp(x, 0, _videoWidth - w);
             y = Math.Clamp(y, 0, _videoHeight - h);
 
-            if (ShouldUseLegacyPlaceResizeEffects())
-            {
-                UpdateLegacyPlaceResizeEffects(x, y, w, h);
-                return;
-            }
-
             _currentClip.TargetX = (int)Math.Round(x, MidpointRounding.AwayFromZero);
             _currentClip.TargetY = (int)Math.Round(y, MidpointRounding.AwayFromZero);
             _currentClip.TargetWidth = Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero));
@@ -2713,139 +2631,6 @@ namespace projectFrameCut.InteractableEditor
             if (_currentClip.ClipType == ClipMode.SolidColorClip)
             {
                 UpdateSolidColorOutputSize(w, h);
-            }
-
-            RemoveLegacyPlaceResizeEffects();
-        }
-
-        private bool ShouldUseLegacyPlaceResizeEffects()
-            => UseLegacyPlaceResizeEffects || SettingsManager.IsBoolSettingTrue(LegacyPlaceResizeSettingKey);
-
-        private static bool HasExplicitTargetRect(ClipElementUI clip)
-            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
-
-        private bool TryReadRectFromLegacyEffects(ref double x, ref double y, ref double w, ref double h)
-        {
-            if (_currentClip is null)
-            {
-                return false;
-            }
-
-            return TryReadRectFromLegacyEffects(_currentClip, ref x, ref y, ref w, ref h);
-        }
-
-        private bool TryReadRectFromLegacyEffects(ClipElementUI clip, ref double x, ref double y, ref double w, ref double h)
-        {
-            if (clip.Effects == null)
-            {
-                return false;
-            }
-
-            var resolved = false;
-            if (clip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_IPicture place)
-            {
-                int relW = place.RelativeWidth > 0 ? place.RelativeWidth : (int)_videoWidth;
-                int relH = place.RelativeHeight > 0 ? place.RelativeHeight : (int)_videoHeight;
-
-                x = (double)place.StartX * _videoWidth / relW;
-                y = (double)place.StartY * _videoHeight / relH;
-                resolved = true;
-            }
-
-            if (clip.ClipType != ClipMode.SolidColorClip
-                && clip.Effects.TryGetValue(InternalResizeKey, out var r)
-                && r is ResizeEffect_ImageSharp resize)
-            {
-                int relW = resize.RelativeWidth > 0 ? resize.RelativeWidth : (int)_videoWidth;
-                int relH = resize.RelativeHeight > 0 ? resize.RelativeHeight : (int)_videoHeight;
-
-                w = (double)resize.Width * _videoWidth / relW;
-                h = (double)resize.Height * _videoHeight / relH;
-                resolved = true;
-            }
-
-            return resolved;
-        }
-
-        private void UpdateLegacyPlaceResizeEffects(double x, double y, double w, double h)
-        {
-            if (_currentClip == null) return;
-            if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
-
-            int relW = (int)Math.Round(_videoWidth);
-            int relH = (int)Math.Round(_videoHeight);
-
-            // Place - Always store in current video coordinate space
-            if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_IPicture place)
-            {
-                relW = place.RelativeWidth > 0 ? place.RelativeWidth : relW;
-                relH = place.RelativeHeight > 0 ? place.RelativeHeight : relH;
-
-                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect_IPicture
-                {
-                    StartX = (int)Math.Round(x * relW / _videoWidth),
-                    StartY = (int)Math.Round(y * relH / _videoHeight),
-                    Enabled = place.Enabled,
-                    Index = place.Index,
-                    Name = string.IsNullOrWhiteSpace(place.Name) ? InternalPlaceKey : place.Name,
-                    RelativeWidth = relW,
-                    RelativeHeight = relH
-                };
-            }
-            else
-            {
-                _currentClip.Effects[InternalPlaceKey] = new PlaceEffect_IPicture
-                {
-                    StartX = (int)Math.Round(x),
-                    StartY = (int)Math.Round(y),
-                    Enabled = true,
-                    Index = int.MaxValue - 100,
-                    Name = InternalPlaceKey,
-                    RelativeWidth = relW,
-                    RelativeHeight = relH
-                };
-            }
-
-            if (!_isTextClip)
-            {
-                if (_currentClip.ClipType == ClipMode.SolidColorClip)
-                {
-                    UpdateSolidColorOutputSize(w, h);
-                    _currentClip.Effects.Remove(InternalResizeKey);
-                    return;
-                }
-
-                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
-                {
-                    int resizeRelW = resize.RelativeWidth > 0 ? resize.RelativeWidth : relW;
-                    int resizeRelH = resize.RelativeHeight > 0 ? resize.RelativeHeight : relH;
-
-                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect_ImageSharp
-                    {
-                        Width = (int)Math.Round(w * resizeRelW / _videoWidth, MidpointRounding.AwayFromZero),
-                        Height = (int)Math.Round(h * resizeRelH / _videoHeight, MidpointRounding.AwayFromZero),
-                        PreserveAspectRatio = false,
-                        Enabled = resize.Enabled,
-                        Index = resize.Index,
-                        Name = string.IsNullOrWhiteSpace(resize.Name) ? InternalResizeKey : resize.Name,
-                        RelativeWidth = resizeRelW,
-                        RelativeHeight = resizeRelH
-                    };
-                }
-                else
-                {
-                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect_ImageSharp
-                    {
-                        Width = (int)Math.Round(w, MidpointRounding.AwayFromZero),
-                        Height = (int)Math.Round(h, MidpointRounding.AwayFromZero),
-                        PreserveAspectRatio = false,
-                        Enabled = true,
-                        Index = int.MinValue + 50,
-                        Name = InternalResizeKey,
-                        RelativeWidth = relW,
-                        RelativeHeight = relH
-                    };
-                }
             }
         }
 
@@ -2859,17 +2644,6 @@ namespace projectFrameCut.InteractableEditor
             _currentClip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
         }
 
-        private void RemoveLegacyPlaceResizeEffects()
-        {
-            if (_currentClip?.Effects == null)
-            {
-                return;
-            }
-
-            _currentClip.Effects.Remove(InternalPlaceKey);
-            _currentClip.Effects.Remove(InternalResizeKey);
-        }
-
         private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
         {
             if (clip.ClipType == ClipMode.SolidColorClip) return true;
@@ -2877,13 +2651,6 @@ namespace projectFrameCut.InteractableEditor
             if (ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, out var allowFreeScale))
             {
                 return allowFreeScale;
-            }
-
-            if (clip.Effects != null
-                && clip.Effects.TryGetValue(InternalResizeKey, out var effect)
-                && effect is ResizeEffect_ImageSharp resize)
-            {
-                return !resize.PreserveAspectRatio;
             }
 
             return false;

@@ -78,6 +78,9 @@ public partial class RenderPage : ContentPage
     private System.Timers.Timer? _moveHintTimer;
     private const int ScreenSaverTimeout = 15000;
 
+    public bool ProjectUsesHDR => _project.Properties.TryGetValue("EnableHDR", out var enableHDR) && bool.TryParse(enableHDR, out var enableHDRBool) && enableHDRBool;
+
+
 #if WINDOWS
     Platforms.Windows.ffmpegHelper ffmpeg = new projectFrameCut.Platforms.Windows.ffmpegHelper();
 #endif
@@ -115,11 +118,14 @@ public partial class RenderPage : ContentPage
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
+        OnPropertyChanged(nameof(ProjectUsesHDR));
+        HDRHintLabel.IsVisible = ProjectUsesHDR;
+
         _draft = draft;
         Title = Localized.RenderPage_ExportTitle(projectInfo.ProjectName);
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
-        var vm = new RenderPageViewModel();
+        var vm = new RenderPageViewModel(ProjectUsesHDR);
         try
         {
             vm.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vm.Resoultion);
@@ -129,6 +135,19 @@ public partial class RenderPage : ContentPage
             if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
             {
                 vm.SelectedPostRenderActionEnum = action;
+            }
+            if (ProjectUsesHDR)
+            {
+                vm.Encoding = vm.Encoding switch
+                {
+                    "h265/hevc" => "h265",
+                    "hevc" => "h265",
+                    "libx265" => "h265",
+                    "h265" => "h265",
+                    "av1" => "av1",
+                    _ => "av1"
+                };
+                vm.BitDepth = "12bit";
             }
         }
         catch { }
@@ -517,6 +536,8 @@ public partial class RenderPage : ContentPage
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
     VideoBuilder? builder = null;
+
+
     void SetSubProg(string s)
     {
         lastProg = totalProg;
@@ -567,6 +588,13 @@ public partial class RenderPage : ContentPage
                 "8bit" => IPicture.PicturePixelMode.BytePicture,
                 _ => IPicture.PicturePixelMode.UShortPicture
             };
+
+            if (ProjectUsesHDR)
+            {
+                bpp = IPicture.PicturePixelMode.UShortPicture;
+                fmt = "AV_PIX_FMT_YUV444P12LE";
+                ext = ".mov";
+            }
             bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
 
             if (dumpDiagData && PictureLifecycleTracker.Enabled)
@@ -686,7 +714,10 @@ public partial class RenderPage : ContentPage
                     var t when t == DeviceIdiom.Tablet => 30,
                     _ => 15
                 },
-                MinSchedulePreparedFrames = parallelThreadCount / 4
+                MinSchedulePreparedFrames = parallelThreadCount,
+                UseHDR = ProjectUsesHDR,
+                MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 5000,
+                SDRClipsBrightnessInHDRMode = _project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessInHdr) && int.TryParse(sdrBrightnessInHdr, out var sdrBrightnessInHdrInt) ? sdrBrightnessInHdrInt : 5000
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -1132,8 +1163,8 @@ public partial class RenderPage : ContentPage
         string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
 #endif
         try
-        { 
-            await ComposeAudio(vm, resultPath); 
+        {
+            await ComposeAudio(vm, resultPath);
         }
         catch (Exception ex)
         {
@@ -1359,6 +1390,18 @@ public partial class RenderPage : ContentPage
 
 public class RenderPageViewModel : INotifyPropertyChanged
 {
+    bool HDREnabled = false;
+
+    public RenderPageViewModel()
+    {
+
+    }
+
+    public RenderPageViewModel(bool hdrEnabled)
+    {
+        HDREnabled = hdrEnabled;
+    }
+
     public string[] ExportOptions_Resolution { get; } = [
         "1280x720",
         "1920x1080",
@@ -1371,14 +1414,44 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public string[] ExportOptions_Framerate { get; } =
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
-    public string[] ExportOptions_Encoding { get; } = [
-        "av1", "h264", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
-        Localized.RenderPage_CustomOption
-    ];
+    public string[] ExportOptions_Encoding
+    {
+        get
+        {
+            if (HDREnabled)
+            {
+                return
+                [
+                    "av1", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
+                    Localized.RenderPage_CustomOption
+                ];
+            }
+            else
+            {
+                return
+                [
+                    "av1", "h264", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
+                    Localized.RenderPage_CustomOption
+                ];
+            }
+        }
+    }
 
-    public string[] ExportOptions_BitDepth { get; } = [
-        "8bit", "10bit", "12bit"
-    ];
+    public string[] ExportOptions_BitDepth
+    {
+        get
+        {
+            if (HDREnabled)
+            {
+                return ["12bit"];
+            }
+            else
+            {
+                return ["8bit", "10bit", "12bit"];
+            }
+        }
+
+    }
 
     public static Dictionary<string, PostRenderAction> PostRenderActionNames = Enum.GetNames(typeof(PostRenderAction))
         .Select(s => (Localized.DynamicLookup($"RenderPage_PostRenderAction_{s}"), Enum.Parse<PostRenderAction>(s)))

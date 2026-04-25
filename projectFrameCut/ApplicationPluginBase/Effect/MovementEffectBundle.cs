@@ -110,7 +110,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 20000,
                 duration,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             return panel;
         }
 

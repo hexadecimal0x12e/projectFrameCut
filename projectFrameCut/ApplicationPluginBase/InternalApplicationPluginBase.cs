@@ -22,7 +22,8 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
             { "Crop", () => new Effect.CropEffectBundle() },
-            { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() }
+            { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() },
+            { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

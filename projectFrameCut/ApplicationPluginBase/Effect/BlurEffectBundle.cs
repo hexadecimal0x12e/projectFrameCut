@@ -83,7 +83,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 128,
                 sigma,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             return panel;
         }
 

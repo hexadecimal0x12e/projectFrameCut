@@ -200,6 +200,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
+        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             bool lockTaken = false;
@@ -210,6 +211,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     locker.Enter();
                     lockTaken = true;
                 }
+
+                if (Disposed)
+                    throw new ObjectDisposedException(nameof(DecoderContext16Bit), $"Decoder for '{_path}' was disposed while waiting for lock (frame {targetFrame}).");
 
                 EnsureDecoderReady(targetFrame);
 
@@ -287,6 +291,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
 
                 Index++;
+                if (_frm->width != _width || _frm->height != _height)
+                    Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");
+
                 int scaledRows = ffmpeg.sws_scale(
                     _sws,
                     _frm->data,
@@ -298,8 +305,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 );
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+                if (scaledRows < _height)
+                    Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
             }
             finally
             {
@@ -310,7 +319,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         [DebuggerNonUserCode()]
-        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
         {
             // Validate input parameters
             if (data == null)
@@ -326,9 +335,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new ushort[size],
                 b = new ushort[size],
             };
+            int validRows = Math.Min(height, maxRows);
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
-            for (y = 0; y < height; y++)
+            for (y = 0; y < validRows; y++)
             {
                 srcRow = data + y * stride;
                 baseIndex = y * width;
@@ -336,6 +346,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     idx = baseIndex + x;
                     offset = x * 6;
+                    if (offset + 5 >= stride) break;
 
                     result.b[idx] = (ushort)(srcRow[offset] | (srcRow[offset + 1] << 8));
                     result.g[idx] = (ushort)(srcRow[offset + 2] | (srcRow[offset + 3] << 8));
@@ -358,7 +369,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public void Dispose()
         {
             if (Disposed) return;
-            Disposed = true;
+
+            locker.Enter();
+            try
+            {
+                if (Disposed) return;
+                Disposed = true;
+            }
+            finally
+            {
+                locker.Exit();
+            }
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
@@ -568,6 +589,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
+        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             bool lockTaken = false;
@@ -578,6 +600,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     locker.Enter();
                     lockTaken = true;
                 }
+
+                if (Disposed)
+                    throw new ObjectDisposedException(nameof(HDRDecoderContext), $"Decoder for '{_path}' was disposed while waiting for lock (frame {targetFrame}).");
 
                 EnsureDecoderReady(targetFrame);
 
@@ -669,8 +694,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 );
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+                if (scaledRows < _height)
+                    Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for HDR '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness);
+                return PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows);
             }
             finally
             {
@@ -766,7 +793,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private static float ComputeBrightness(float r, float g, float b, AVColorTransferCharacteristic transferCharacteristic, float maximumBrightness)
         {
+            if (!float.IsFinite(r) || !float.IsFinite(g) || !float.IsFinite(b))
+                return 0f;
+
             float signalLuma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
+            if (!float.IsFinite(signalLuma))
+                return 0f;
 
             if (transferCharacteristic == AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084)
             {
@@ -790,7 +822,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         [DebuggerNonUserCode()]
-        private static HDRPicture16bpp PixelsToHDRPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, AVColorTransferCharacteristic transferCharacteristic = AVColorTransferCharacteristic.AVCOL_TRC_UNSPECIFIED, float maximumBrightness = DefaultSdrMaximumBrightness)
+        private static HDRPicture16bpp PixelsToHDRPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, AVColorTransferCharacteristic transferCharacteristic = AVColorTransferCharacteristic.AVCOL_TRC_UNSPECIFIED, float maximumBrightness = DefaultSdrMaximumBrightness, int maxRows = int.MaxValue)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -815,9 +847,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 a = hasAlpha ? Enumerable.Repeat(1f, size).ToArray() : null,
             };
 
+            int validRows = Math.Min(height, maxRows);
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
-            for (y = 0; y < height; y++)
+            for (y = 0; y < validRows; y++)
             {
                 srcRow = data + y * stride;
                 baseIndex = y * width;
@@ -825,6 +858,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     idx = baseIndex + x;
                     offset = x * 6;
+                    if (offset + 5 >= stride) break;
 
                     ushort blue = (ushort)(srcRow[offset] | (srcRow[offset + 1] << 8));
                     ushort green = (ushort)(srcRow[offset + 2] | (srcRow[offset + 3] << 8));
@@ -861,7 +895,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public void Dispose()
         {
             if (Disposed) return;
-            Disposed = true;
+
+            locker.Enter();
+            try
+            {
+                if (Disposed) return;
+                Disposed = true;
+            }
+            finally
+            {
+                locker.Exit();
+            }
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
@@ -1097,6 +1141,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
 
+        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         [DebuggerNonUserCode()]
         public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
         {
@@ -1108,6 +1153,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     locker.Enter();
                     lockTaken = true;
                 }
+
+                if (Disposed)
+                    throw new ObjectDisposedException(nameof(DecoderContext8Bit), $"Decoder for '{_path}' was disposed while waiting for lock (frame {targetFrame}).");
 
                 EnsureDecoderReady(targetFrame);
 
@@ -1209,6 +1257,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
 
                 Index++;
+                if (_frm->width != _width || _frm->height != _height)
+                    Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");
+
                 int scaledRows = ffmpeg.sws_scale(
                     _sws,
                     _frm->data,
@@ -1219,8 +1270,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     _rgb->linesize);
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+                if (scaledRows < _height)
+                    Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
             }
             finally
             {
@@ -1232,7 +1285,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         //[DebuggerNonUserCode()]
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
         {
             // Validate input parameters
             if (data == null)
@@ -1257,9 +1310,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     ProcessingFuncStackTrace = new StackTrace(true),
                 }
             };
+            int validRows = Math.Min(height, maxRows);
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
-            for (y = 0; y < height; y++)
+            for (y = 0; y < validRows; y++)
             {
                 srcRow = data + y * stride;
                 baseIndex = y * width;
@@ -1267,6 +1321,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     idx = baseIndex + x;
                     offset = x * 3;
+                    if (offset + 2 >= stride) break;
                     result.r[idx] = srcRow[offset + 2];
                     result.g[idx] = srcRow[offset + 1];
                     result.b[idx] = srcRow[offset + 0];
@@ -1279,7 +1334,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public void Dispose()
         {
             if (Disposed) return;
-            Disposed = true;
+
+            locker.Enter();
+            try
+            {
+                if (Disposed) return;
+                Disposed = true;
+            }
+            finally
+            {
+                locker.Exit();
+            }
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }

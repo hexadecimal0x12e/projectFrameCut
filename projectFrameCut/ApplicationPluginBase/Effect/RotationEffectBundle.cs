@@ -64,7 +64,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 180,
                 angle,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             panel.AddCheckbox(
                 "ExpandCanvas",
                 EffectBundleUiHelper.L("Effect_Rotation_ExpandCanvas", "Expand Canvas"),

@@ -25,6 +25,8 @@ namespace projectFrameCut.Shared
 {
     public static class PictureExtensions
     {
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IPicture DeepCopy(this IPicture source)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
@@ -232,10 +234,12 @@ namespace projectFrameCut.Shared
 
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SaveAsPng16bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null) //compatibility
             => SaveAsPng(image, path, 16, null, imageEncoder);
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SaveAsPng8bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null)
             => SaveAsPng(image, path, 8, null, imageEncoder);
 
@@ -249,8 +253,12 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
+        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false) 
         {
+            if (image is IHDRPicture<ushort> hdrImage)
+            {
+                return SaveToSixLaborsImage(hdrImage, resultPPB, saveAlpha, DefaultHDRImageDegradeToSDRMode);
+            }
             lock (image)
             {
                 float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
@@ -265,32 +273,14 @@ namespace projectFrameCut.Shared
                     ArgumentNullException.ThrowIfNull(rr, nameof(IPicture<ushort>.r));
                     ArgumentNullException.ThrowIfNull(gg, nameof(IPicture<ushort>.g));
                     ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<ushort>.b));
-
-                    if (!force && image is IHDRPicture<ushort> hdrImage
-                        && hdrImage.Brightness != null
-                        && hdrImage.Brightness.Length == image.Pixels)
+                    if (alpha)
                     {
-                        if (alpha)
-                        {
-                            var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
-                            result = _SaveToInternalHDR16bppWithAlpha(image, rr, gg, bb, alphaArray, hdrImage.Brightness, hdrImage.MaximumBrightness);
-                        }
-                        else
-                        {
-                            result = _SaveToInternalHDR16bppWithNoAlpha(image, rr, gg, bb, hdrImage.Brightness, hdrImage.MaximumBrightness);
-                        }
+                        var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                        result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, alphaArray);
                     }
                     else
                     {
-                        if (alpha)
-                        {
-                            var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
-                            result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, alphaArray);
-                        }
-                        else
-                        {
-                            result = _SaveToInternal16bppWithNoAlpha(image, rr, gg, bb);
-                        }
+                        result = _SaveToInternal16bppWithNoAlpha(image, rr, gg, bb);
                     }
                 }
                 else if (image.bitPerPixel == 8)
@@ -318,6 +308,28 @@ namespace projectFrameCut.Shared
                 return result;
             }
         }
+        [DebuggerStepThrough()]
+        public static Image SaveToSixLaborsImage(this IHDRPicture<ushort> image, int resultPPB = 16, bool? saveAlpha = null, HDRImageDegradeToSDRMode? degradeToSDRMode = null)
+        {
+            var mode = degradeToSDRMode ??= DefaultHDRImageDegradeToSDRMode;
+            lock (image)
+            {
+                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+
+                Image result;
+                if (alpha)
+                {
+                    var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                    result = _SaveToInternalHDR16bppWithAlpha(image, image.r, image.g, image.b, alphaArray, image.Brightness, image.MaximumBrightness, mode);
+                }
+                else
+                {
+                    result = _SaveToInternalHDR16bppWithNoAlpha(image, image.r, image.g, image.b, image.Brightness, image.MaximumBrightness, mode);
+                }
+                return result;
+            }
+        }
 
         /// <summary>
         /// A shared instance of a <see cref="PngEncoder"/>.
@@ -338,6 +350,7 @@ namespace projectFrameCut.Shared
         private const float HdrLumaEpsilon = 1e-6f;
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
@@ -364,6 +377,7 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
@@ -419,7 +433,8 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        private static Image _SaveToInternalHDR16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa, ReadOnlySpan<float> brightness, float maximumBrightness)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Image _SaveToInternalHDR16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
             int x = 0, y = 0;
@@ -428,7 +443,7 @@ namespace projectFrameCut.Shared
                 ushort mappedR = rr[i];
                 ushort mappedG = gg[i];
                 ushort mappedB = bb[i];
-                switch (DefaultHDRImageDegradeToSDRMode)
+                switch (degradeMode)
                 {
                     case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
                         _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
@@ -469,7 +484,8 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        private static Image _SaveToInternalHDR16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> brightness, float maximumBrightness)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Image _SaveToInternalHDR16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
             int x = 0, y = 0;
@@ -478,7 +494,7 @@ namespace projectFrameCut.Shared
                 ushort mappedR = rr[i];
                 ushort mappedG = gg[i];
                 ushort mappedB = bb[i];
-                switch (DefaultHDRImageDegradeToSDRMode)
+                switch (degradeMode)
                 {
                     case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
                         _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
@@ -516,6 +532,7 @@ namespace projectFrameCut.Shared
             return result;
         }
 
+        [DebuggerStepThrough()]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void _MapHDRSignalPixelToDisplaySignal(ushort sourceR, ushort sourceG, ushort sourceB, float brightness, float maximumBrightness, out ushort mappedR, out ushort mappedG, out ushort mappedB)
         {
@@ -560,6 +577,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba32>(image.Width, image.Height);
@@ -586,6 +604,7 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
         {
             var result = new Image<Rgb24>(image.Width, image.Height);
@@ -612,6 +631,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IPicture ToPJFCPicture(this Image source, int targetPPB)
         {
             return targetPPB switch
@@ -622,10 +642,12 @@ namespace projectFrameCut.Shared
             };
         }
 
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static HDRPicture16bpp ToHDRPicture(this IPicture source, float brightness, int maximumBrightness = 5000)
         {
             var s = source.ToBitPerPixel(16) as IPicture<ushort>;
-            if(s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
+            if (s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
             float normalizedBrightness = float.IsFinite(brightness) ? Math.Clamp(brightness, 0f, 1f) : 1f;
             return new HDRPicture16bpp(s, false)
             {

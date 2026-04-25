@@ -557,6 +557,21 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// which provides a easy-use to modify <see cref="Properties"/> call <see cref="PropertyChanged"/> safely.
         /// </remarks>
         /// <param name="child">The view to add as a child to the property panel.</param>
+        public PropertyPanelBuilder AddCustomChildWithID(string id, View child)
+        {
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
+            children.Add(child);
+            return this;
+        }
+        /// <summary>
+        /// Adds a custom child view to the property panel layout.
+        /// </summary>
+        /// <remarks>
+        /// If you'd like to add a Child that modify the <see cref="Properties"/>, 
+        /// please use <seealso cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>, 
+        /// which provides a easy-use to modify <see cref="Properties"/> call <see cref="PropertyChanged"/> safely.
+        /// </remarks>
+        /// <param name="child">The view to add as a child to the property panel.</param>
         public PropertyPanelBuilder AddCustomChild(View child)
         {
             children.Add(child);
@@ -883,6 +898,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             var e = new pppcea(id, value, b.Properties.TryGetValue(id, out var val) ? val : null);
             b._InvokeInternal(e);
             b.Properties[id] = value;
+        }
+        /// <summary>
+        /// Manually invokes the <see cref="PropertyPanelBuilder.PropertyChanged"/> event on the specified <see cref="PropertyPanelBuilder"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// It's not recommended to call this method directly. 
+        /// Instead, use the provided mechanisms in the <see cref="PropertyPanelBuilder"/> class to trigger property change events.
+        /// </remarks>
+        /// <param name="s">source <see cref="PropertyPanelBuilder"/> for the target.</param>
+        /// <param name="e">The <see cref="pppcea"/> message body.</param>
+        public static void CreateAndInvoke(PropertyPanelBuilder s, pppcea e)
+        {
+            s._InvokeInternal(e);
+            s.Properties[e.Id] = e.Value;
         }
 
     }

@@ -59,6 +59,7 @@ namespace projectFrameCut.Shared
         Video,
         Audio,
         SpeedVariance,
+        ColorAdjustment,
         NotSpecified = -1,
     }
 

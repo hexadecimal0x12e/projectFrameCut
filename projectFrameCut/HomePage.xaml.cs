@@ -1069,7 +1069,7 @@ public partial class HomePage : ContentPage
 
     private async Task ShowManyAlertsAsync()
     {
-        if (SimpleLocalizer.IsFallbackMatched)
+        if (SimpleLocalizer.IsFallbackMatched && !OperatingSystem.IsAndroid())
         {
             List<string> localeDispName = new();
             foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
@@ -1155,9 +1155,7 @@ public partial class HomePage : ContentPage
         IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
         PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
         PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-#if DEBUG
         PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-#endif
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 #endif
@@ -1341,6 +1339,15 @@ public partial class HomePage : ContentPage
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
     }
 
+    public async Task ManageProject(ProjectsViewModel vmItem)
+    {
+        var draftSourcePath = vmItem._projectPath;
+        var settingPage = new DraftSettingPage(vmItem._projectPath);
+        var page = new ContentPage { Content = settingPage.tabView };
+        await Navigation.PushAsync(page);
+    }
+
+
     private async void ItemBorder_Loaded(object? sender, EventArgs e)
     {
         if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
@@ -1456,6 +1463,7 @@ public partial class HomePage : ContentPage
             Localized.HomePage_ProjectContextMenu_ToTemplate,
             Localized.HomePage_ProjectContextMenu_Export,
             Localized.HomePage_ProjectContextMenu_OpenInFileManager,
+            Localized.DraftPage_MenuBar_Project_Option,
             Localized.HomePage_ProjectContextMenu_Clone,
             Localized.HomePage_ProjectContextMenu_Rename,
             Localized.HomePage_ProjectContextMenu_Delete
@@ -1513,13 +1521,16 @@ public partial class HomePage : ContentPage
                 case 5: //OpenInFileManager
                     await FileSystemService.OpenFolderAsync(vmItem._projectPath);
                     break;
-                case 6: //Clone
+                case 6: //ManageProject
+                    await ManageProject(vmItem);
+                    break;
+                case 7: //Clone
                     await CloneDraft(vmItem);
                     break;
-                case 7: //Rename
+                case 8: //Rename
                     await RenameProject(vmItem);
                     break;
-                case 8: //Delete
+                case 9: //Delete
                     await DeleteProject(vmItem);
                     break;
                 default: //unknown/cancel
@@ -1628,13 +1639,13 @@ public partial class HomePage : ContentPage
 
     private void ContentPage_Appearing(object sender, EventArgs e)
     {
-        Dispatcher.DispatchAsync(async () =>
-        {
-            await Task.Delay(5000);
-            Window?.Width = Window.Width - 8; //avoid the contents go inside navigation bar
-            Thread.Sleep(50);
-            Window?.Width = Window.Width + 8;
-        });
+        //Dispatcher.DispatchAsync(async () =>
+        //{
+        //    await Task.Delay(5000);
+        //    Window?.Width = Window.Width - 8; //avoid the contents go inside navigation bar
+        //    Thread.Sleep(50);
+        //    Window?.Width = Window.Width + 8;
+        //});
 
     }
 

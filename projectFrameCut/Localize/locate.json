@@ -2889,6 +2889,30 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u653E\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u7684\u672A\u5E94\u7528\u66F4\u6539",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u5F3A\u5236\u5347\u7EA7\u9879\u76EE\u5143\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
         "Value": "\u81EA\u5B9A\u4E49\u914D\u7F6E",
         "Mode": "ConstString",
@@ -2929,8 +2953,25 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u4F1A\u5BF9\u4F60\u7684\u9879\u76EE\u505A\u51FA\u4E0D\u53EF\u9006\u66F4\u6539\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F\r\u5728\u4E0B\u65B9\u8F93\u5165\u201Cyes\u201D\u6765\u7EE7\u7EED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_General_EnableHDR",
         "Value": "\u542F\u7528 HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR \u6700\u5927\u4EAE\u5EA6 (nit)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2945,8 +2986,155 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR \u5185\u5BB9\u4EAE\u5EA6 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_General_TargetFramerate",
         "Value": "\u76EE\u6807\u5E27\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\u7247\u6BB5\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u88AB {n} \u4E2A\u7247\u6BB5\u5F15\u7528\u4E86\uFF0C\u8981\u4E00\u8D77\u5220\u9664\u88AB\u5F15\u7528\u7684\u7247\u6BB5\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u6C38\u4E45\u5220\u9664\u7D20\u6750\u300C{asset}\u300D\uFF0C\u548C\u8FD9\u4E9B\u7247\u6BB5\uFF1A\r{clips}\r\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u5728\u4E0B\u65B9\u8F93\u5165\u201Cyes\u201D\u6765\u7EE7\u7EED\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\u6CA1\u6709\u4EFB\u4F55\u6570\u636E\u53EF\u4F9B\u663E\u793A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u9879\u76EE\u7D20\u6750 (\u5171 {n} \u4E2A)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u9879\u76EE \u300C{path}\u300D | {n} \u4E2A\u7247\u6BB5",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "\u88AB {n} \u4E2A\u7247\u6BB5\u5F15\u7528",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u5904\u7684\u64CD\u4F5C\u4E0D\u80FD\u64A4\u56DE\uFF1B\u8BF7\u8C28\u614E\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4259,6 +4447,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "\u7531\u4E8EHDR\u5DF2\u88AB\u542F\u7528\uFF0C\u4F60\u53EF\u80FD\u65E0\u6CD5\u914D\u7F6E\u4E00\u4E9B\u5C5E\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -11359,6 +11555,212 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR Max Luminance (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR content brightness (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "You may not be able to configure some properties because HDR is enabled.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Clip Management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Project \u0022{path}\u0022 | {n} clips",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Project Assets ({n} items)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "No data available to display.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Warning: This operation cannot be undone. Please proceed with caution.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of Chinese warning message for clipboard management tab",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Clear save slots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Force upgrade project metadata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022This operation will make irreversible changes to your project. Do you want to continue?\\nEnter \\\u0022yes\\\u0022 in the field below to proceed.\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022This operation will make irreversible changes to your project. Do you want to continue?\\nEnter \\\u0022yes\\\u0022 in the field below to proceed.\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "The asset \u0022{name}\u0022 is referenced by {n} clips. Do you want to delete the referenced clips as well?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "This operation will permanently delete the material \u0022{asset}\u0022 and these clips:\r{clips}\r\rThis operation cannot be undone. Type \u0022yes\u0022 below to proceed.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "Do not translate \u0022yes\u0022, it\u0027s what the user needs to type",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "Referenced by {n} clip(s)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Indicates the number of clips that reference this item",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -13794,11 +14196,11 @@
       },
       {
         "Id": "HomePage_SourceNotFound",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EE5\u4E0B\u7247\u6BB5\u7684\u6E90\u4F3C\u4E4E\u4E22\u5931\u6216\u8005\u4E0D\u53EF\u7528\uFF1A",
+        "Value": "\u4EE5\u4E0B\u7247\u6BB5\u7684\u6765\u6E90\u4F3C\u4E4E\u907A\u5931\u6216\u4E0D\u53EF\u7528\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EE5\u4E0B\u7247\u6BB5\u7684\u6E90\u4F3C\u4E4E\u4E22\u5931\u6216\u8005\u4E0D\u53EF\u7528\uFF1A",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -17280,6 +17682,212 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u7121\u9700\u984D\u5916\u8AAA\u660E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR \u6700\u5927\u4EAE\u5EA6 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR \u5167\u5BB9\u4EAE\u5EA6 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "\u7531\u65BCHDR\u5DF2\u555F\u7528\uFF0C\u4F60\u53EF\u80FD\u7121\u6CD5\u8A2D\u5B9A\u4E00\u4E9B\u5C6C\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\u7247\u6BB5\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u5C08\u6848\u300C{path}\u300D | {n} \u500B\u7247\u6BB5",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u9805\u76EE\u7D20\u6750 (\u5171 {n} \u500B)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\u6C92\u6709\u4EFB\u4F55\u6578\u64DA\u53EF\u4F9B\u986F\u793A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u8655\u7684\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF1B\u8ACB\u8B39\u614E\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u6E05\u9664\u5B58\u6A94\u6B04\u4F4D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u5F37\u5236\u5347\u7D1A\u9805\u76EE\u5143\u6578\u64DA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u6368\u68C4\u5728\u5132\u5B58\u69FD\u4E2D\u7684\u672A\u5957\u7528\u8B8A\u66F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u5C0D\u4F60\u7684\u9805\u76EE\u505A\u51FA\u4E0D\u53EF\u9006\u66F4\u6539\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F\r\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4F86\u7E7C\u7E8C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u300Cyes\u300D\u70BA\u7528\u6236\u9700\u8F38\u5165\u7684\u78BA\u8A8D\u8A5E\uFF0C\u8ACB\u52FF\u7FFB\u8B6F\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u88AB {n} \u500B\u7247\u6BB5\u5F15\u7528\u4E86\uFF0C\u8981\u4E00\u8D77\u522A\u9664\u88AB\u5F15\u7528\u7684\u7247\u6BB5\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u7D20\u6750\u300C{asset}\u300D\uFF0C\u548C\u9019\u4E9B\u7247\u6BB5\uFF1A\r{clips}\r\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u5FA9\u539F\uFF0C\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4F86\u7E7C\u7E8C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6B64\u8B66\u544A\u8A0A\u606F\u63D0\u9192\u4F7F\u7528\u8005\u522A\u9664\u7D20\u6750\u8207\u76F8\u95DC\u7247\u6BB5\u7684\u5F8C\u679C\uFF0C\u4E26\u8981\u6C42\u8F38\u5165\u300Cyes\u300D\u78BA\u8A8D\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "\u88AB {n} \u500B\u7247\u6BB5\u5F15\u7528",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -23206,6 +23814,213 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR \u6700\u5927\u8F1D\u5EA6 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR \u6700\u5927\u8F1D\u5EA6 (nit)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR \u30B3\u30F3\u30C6\u30F3\u30C4\u306E\u8F1D\u5EA6\uFF08\u30CB\u30C8\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "HDR\u304C\u6709\u52B9\u306B\u306A\u3063\u3066\u3044\u308B\u305F\u3081\u3001\u4E00\u90E8\u306E\u30D7\u30ED\u30D1\u30C6\u30A3\u3092\u8A2D\u5B9A\u3067\u304D\u306A\u3044\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\u30AF\u30EA\u30C3\u30D7\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{path}\u300D| {n} \u30AF\u30EA\u30C3\u30D7",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u7247\u6BB5\u6570\u7528\u300C\u30AF\u30EA\u30C3\u30D7\u300D\u800C\u4E0D\u662F\u300C\u500B\u300D\uFF0C\u66F4\u7B26\u5408\u526A\u8F91\u7BA1\u7406\u754C\u9762\u7684\u672F\u8BED\u4E60\u60EF",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u7D20\u6750\uFF08\u5168 {n} \u500B\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\u8868\u793A\u3067\u304D\u308B\u30C7\u30FC\u30BF\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u614E\u91CD\u306B\u64CD\u4F5C\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u4FDD\u5B58\u30B9\u30ED\u30C3\u30C8\u3092\u30AF\u30EA\u30A2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30C7\u30FC\u30BF\u306E\u5F37\u5236\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u4FDD\u5B58\u30B9\u30ED\u30C3\u30C8\u306E\u672A\u9069\u7528\u306E\u5909\u66F4\u3092\u7834\u68C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u653E\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u7684\u672A\u5E94\u7528\u66F4\u6539",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\\r\\n\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\\r\\n\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u306F {n} \u500B\u306E\u30AF\u30EA\u30C3\u30D7\u304B\u3089\u53C2\u7167\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u53C2\u7167\u3055\u308C\u3066\u3044\u308B\u30AF\u30EA\u30C3\u30D7\u3082\u4E00\u7DD2\u306B\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: {\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001\u7D20\u6750\u300C{asset}\u300D\u3068\u4EE5\u4E0B\u306E\u30AF\u30EA\u30C3\u30D7\u304C\u5B8C\u5168\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\\r{clips}\\r\\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u4E0B\u8A18\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u9700\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: {\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001\u7D20\u6750\u300C{asset}\u300D\u3068\u4EE5\u4E0B\u306E\u30AF\u30EA\u30C3\u30D7\u304C\u5B8C\u5168\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\\r{clips}\\r\\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u4E0B\u8A18\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u9700\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "{n} \u500B\u306E\u30AF\u30EA\u30C3\u30D7\u306B\u53C2\u7167\u3055\u308C\u3066\u3044\u307E\u3059",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -29114,6 +29929,214 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR \uCD5C\uB300 \uBC1D\uAE30 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR \uCF58\uD150\uCE20 \uBC1D\uAE30(nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "HDR\uC774 \uD65C\uC131\uD654\uB418\uC5B4 \uC788\uC5B4 \uC77C\uBD80 \uC18D\uC131\uC744 \uAD6C\uC131\uD558\uC9C0 \uBABB\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "HDR\u5F00\u542F\u65F6\u53EF\u80FD\u65E0\u6CD5\u914D\u7F6E\u90E8\u5206\u5C5E\u6027",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\uD074\uB9BD \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \u300C{path}\u300D | {n}\uAC1C \uD074\uB9BD",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Display project path and clip count",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC790\uB8CC (\uCD1D {n}\uAC1C)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Project materials, displaying count with {n} as total number",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\uD45C\uC2DC\uD560 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\uACBD\uACE0: \uC774 \uC791\uC5C5\uC740 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC2E0\uC911\uD788 \uC9C4\uD589\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Warning message about irreversible operation",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\uC800\uC7A5 \uC2AC\uB86F \uBE44\uC6B0\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uBA54\uD0C0\uB370\uC774\uD130 \uAC15\uC81C \uC5C5\uADF8\uB808\uC774\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Force upgrade project metadata",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\uC800\uC7A5\uB418\uC9C0 \uC54A\uC740 \uBCC0\uACBD \uC0AC\uD56D\uC744 \uCDE8\uC18C\uD569\uB2C8\uB2E4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uD504\uB85C\uC81D\uD2B8\uC5D0 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uB294 \uBCC0\uACBD\uC744 \uAC00\uD569\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uACC4\uC18D\uD558\uB824\uBA74 \uC544\uB798\uC5D0 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\uC774(\uAC00) {n}\uAC1C \uD074\uB9BD\uC5D0\uC11C \uCC38\uC870 \uC911\uC785\uB2C8\uB2E4. \uCC38\uC870\uB41C \uD074\uB9BD\uB3C4 \uD568\uAED8 \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uC790\uB8CC\u300C{asset}\u300D\uC640 \uB2E4\uC74C \uD074\uB9BD\uB4E4\uC744 \uC601\uAD6C \uC0AD\uC81C\uD569\uB2C8\uB2E4:\r{clips}\r\r\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uB824\uBA74 \uC544\uB798\uC5D0 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "{n}\uAC1C \uD074\uB9BD\uC5D0\uC11C \uCC38\uC870\uB428",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -35025,6 +36048,213 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "Luminance max HDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "Luminosit\u00E9 du contenu SDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "Certaines propri\u00E9t\u00E9s peuvent ne pas \u00EAtre configurables car HDR est activ\u00E9.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Gestion des clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Segments management tab label",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Projet \u00AB{path}\u00BB | {n} segments",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5728\u6CD5\u8BED\u6587\u6863/\u754C\u9762\u4E2D\uFF0C\u9879\u76EE\u540D\u79F0\u7528\u00AB\u00BB\u62EC\u8D77\u6765\uFF1Bsegments\u91C7\u7528\u590D\u6570\u5F62\u5F0F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Ressources du projet ({n} au total)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Tab label for project assets, showing total count",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "Aucune donn\u00E9e \u00E0 afficher.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indique qu\u0027il n\u0027y a pas de donn\u00E9es disponibles pour l\u0027affichage.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Attention : cette action est irr\u00E9versible. Veuillez proc\u00E9der avec prudence.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Supprimer les emplacements de sauvegarde",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Forcer la mise \u00E0 niveau des donn\u00E9es du projet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Abandonner les modifications non appliqu\u00E9es dans l\u0027espace de stockage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Abandonner les modifications non enregistr\u00E9es dans le cache de sauvegarde",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Cette action apportera des modifications irr\u00E9versibles \u00E0 votre projet. Voulez-vous continuer ?\nSaisissez \u00AB yes \u00BB ci-dessous pour continuer.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Ne pas traduire \u0022yes\u0022, c\u0027est ce que l\u0027utilisateur doit taper",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "Le m\u00E9dia \u00AB {name} \u00BB est r\u00E9f\u00E9renc\u00E9 par {n} s\u00E9quence(s). Voulez-vous aussi supprimer les s\u00E9quences qui le r\u00E9f\u00E9rencent ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u786E\u8BA4\u662F\u5426\u4E00\u5E76\u5220\u9664\u5F15\u7528\u8BE5\u7D20\u6750\u7684\u7247\u6BB5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Cette action supprimera d\u00E9finitivement l\u0027\u00E9l\u00E9ment \u00AB\u202F{asset}\u202F\u00BB et ces clips\u202F:\r{clips}\r\rCette action est irr\u00E9versible. Saisissez \u00AB\u202Fyes\u202F\u00BB ci-dessous pour continuer.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "Ne pas traduire \u0022yes\u0022, c\u0027est ce que l\u0027utilisateur doit saisir",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "R\u00E9f\u00E9renc\u00E9 par {n} segment(s)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -40225,11 +41455,11 @@
       },
       {
         "Id": "DraftSettingPage_Tab_Compatibility_UpgradePlaceResize",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF\u3002",
         "DontTranslate": false
       },
       {
@@ -40261,11 +41491,11 @@
       },
       {
         "Id": "DraftSettingPage_Tab_History",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2",
+        "Value": "\u53F2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2",
+        "Comment": "\u62DF\u53E4\u7528\u8BED\uFF0C\u7B80\u6D01\u660E\u4E86",
         "DontTranslate": false
       },
       {
@@ -40578,11 +41808,11 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_History",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2\u8BB0\u5F55",
+        "Value": "\u53F2\u5F55",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2\u8BB0\u5F55",
+        "Comment": "\u5BF9\u5E94\u0027\u5386\u53F2\u8BB0\u5F55\u0027\uFF0C\u6587\u8A00\u8868\u8FBE",
         "DontTranslate": false
       },
       {
@@ -40615,11 +41845,10 @@
       },
       {
         "Id": "TemplateExtractPage_Stage2",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6B65\u9AA4\u4E8C\uFF1A\u914D\u7F6E\u6BCF\u9879\u6316\u7A7A\u53D8\u91CF\u4E4B\u5C5E\u6027",
+        "Value": "\u7B2C\u4E8C\u6B65\uFF1A\u5B9A\u8BF8\u5360\u4F4D\u7B26\u4E4B\u5C5E\u6027",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6B65\u9AA4\u4E8C\uFF1A\u914D\u7F6E\u6BCF\u9879\u6316\u7A7A\u53D8\u91CF\u4E4B\u5C5E\u6027",
         "DontTranslate": false
       },
       {
@@ -40765,20 +41994,20 @@
       },
       {
         "Id": "TemplateExtractPage_SelectReferencedAssets",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u52FE\u9078\u5DF2\u5F15\u7528\u7D20\u6750",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5DF2\u52FE\u9009\u4E4B\u5F15\u6750",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u52FE\u9078\u5DF2\u5F15\u7528\u7D20\u6750",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5DF2\u52FE\u9009\u4E4B\u5F15\u6750",
         "DontTranslate": false
       },
       {
         "Id": "TemplateExtractPage_ClearAssetSelection",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u6750\u9078",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u7D20\u6750\u9009\u62E9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u6750\u9078",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u7D20\u6750\u9009\u62E9",
         "DontTranslate": false
       },
       {
@@ -40944,11 +42173,218 @@
       },
       {
         "Id": "UserDataManagePage_CategoryCahce",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7F13\u5B58\u6570\u636E",
+        "Value": "\u6682\u5B58\u4E4B\u6570\u636E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7F13\u5B58\u6570\u636E",
+        "Comment": "\u6307\u7CFB\u7EDF\u7F13\u5B58\u4E2D\u7684\u6570\u636E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR \u6700\u5927\u4EAE\u5EA6\uFF08\u5C3C\u7279\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: SDR \u5167\u5BB9\u4EAE\u5EA6 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: SDR \u5167\u5BB9\u4EAE\u5EA6 (nit)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "\u76D6HDR\u5DF2\u542F\uFF0C\u6545\u6216\u4E0D\u80FD\u914D\u7F6E\u8BF8\u5C5E\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7247\u6BB5\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7247\u6BB5\u7BA1\u7406",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u9805\u76EE\u300C{path}\u300D | {n} \u6BB5",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u9879\u76EE\u540D\u79F0\u4E0E\u7247\u6BB5\u6570\u91CF\uFF0C\u6587\u8A00\u6587\u8868\u8FF0",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u9805\u76EE\u7D20\u6750\uFF08\u5171{n}\u4EF6\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u8868\u793A\uFF0C\u6BD4\u201C\u500B\u201D\u66F4\u6587\u96C5\uFF0C\u9002\u5408\u6B63\u5F0F\u754C\u9762\u5C55\u793A",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u660E\u7A97\u51C0\u51E0\uFF0C\u6BEB\u696E\u7CBE\u826F\uFF0C\u7136\u6848\u4E0A\u7A7A\u65E0\u4E00\u7269\uFF0C\u672A\u6709\u53EF\u4EE5\u70B9\u67D3\u8005\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u660E\u7A97\u51C0\u51E0\uFF0C\u6BEB\u696E\u7CBE\u826F\uFF0C\u7136\u6848\u4E0A\u7A7A\u65E0\u4E00\u7269\uFF0C\u672A\u6709\u53EF\u4EE5\u70B9\u67D3\u8005\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u8655\u4E4B\u64CD\u4F5C\u4E0D\u53EF\u64A4\u56DE\uFF1B\u8ACB\u614E\u884C\u4E4B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u6E05\u9664\u5B58\u50A8\u69FD\u4F4D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BBE\u7F6E\u9875\u9762\u9AD8\u7EA7\u9009\u9879\u4E2D\u7684\u529F\u80FD\uFF0C\u7528\u4E8E\u5220\u9664\u5DF2\u4FDD\u5B58\u7684\u5B58\u6863\u69FD\u4F4D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u5F37\u5236\u5347\u7D1A\u9805\u76EE\u5143\u6578\u64DA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u68C4\u65BC\u5B58\u69FD\u4E4B\u672A\u6539",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7FFB\u8BD1\u8BF4\u660E\uFF1A\u539F\u6587\u4E3A\u2018\u653E\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u7684\u672A\u5E94\u7528\u66F4\u6539\u2019\uFF0C\u6587\u8A00\u5316\u540E\u7B80\u6D01\u8868\u8FBE\u4E3A\u2018\u653E\u68C4\u672A\u4FDD\u5B58\u4E4B\u6539\u52D5\u2019\u66F4\u901A\u7528\u3002\u4F46\u4E3A\u8D34\u8FD1\u539F\u610F\u2018\u5728\u4FDD\u5B58\u69FD\u4E2D\uFF08\u7684\u672A\u5E94\u7528\u66F4\u6539\uFF09\u2019\uFF0C\u91C7\u7528\u4E86\u2018\u68C4\u65BC\u5B58\u69FD\u4E4B\u672A\u6539\u2019\u3002\u6B64\u53E5\u8F83\u4E3A\u7CBE\u70BC\uFF0C\u9002\u7528\u4E8E\u6309\u94AE\u6216\u63D0\u793A\u6587\u6848\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5BF9\u4F60\u7684\u9879\u76EE\u4F5C\u51FA\u4E0D\u53EF\u9006\u66F4\u6539\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F\r\u5728\u4E0B\u65B9\u8F93\u5165\u201Cyes\u201D\u6765\u7EE7\u7EED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u6237\u9700\u8981\u5728\u8F93\u5165\u6846\u4E2D\u8F93\u5165yes\u6765\u786E\u8BA4\u64CD\u4F5C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u70BA {n} \u500B\u7247\u6BB5\u6240\u5F15\u7528\uFF0C\u662F\u5426\u4E00\u4F75\u522A\u9664\u88AB\u5F15\u7528\u4E4B\u7247\u6BB5\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u63D0\u793A\u7528\u6237\u5220\u9664\u7D20\u6750\u65F6\u662F\u5426\u8FDE\u5E26\u5220\u9664\u5F15\u7528\u7247\u6BB5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7FFB\u8BD1\u5982\u4E0B\uFF1A\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u7D20\u6750\u300C{asset}\u300D\u53CA\u4EE5\u4E0B\u7247\u6BB5\uFF1A\\r{clips}\\r\\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4EE5\u7E7C\u7E8C\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u65E0\u9700\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}\n\u0060\u0060\u0060",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7FFB\u8BD1\u5982\u4E0B\uFF1A\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u7D20\u6750\u300C{asset}\u300D\u53CA\u4EE5\u4E0B\u7247\u6BB5\uFF1A\\r{clips}\\r\\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4EE5\u7E7C\u7E8C\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u65E0\u9700\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}\n\u0060\u0060\u0060",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "\u70BA {n} \u6BB5\u6240\u5F15",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u88ABn\u4E2A\u7247\u6BB5\u6240\u5F15\u7528",
         "DontTranslate": false
       }
     ],
@@ -46194,11 +47630,11 @@
       },
       {
         "Id": "DraftSettingPage_Tab_History_NotAvailable",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u597D\u7684\uFF0C\u8BF7\u63D0\u4F9B\u60A8\u5E0C\u671B\u6211\u7FFB\u8BD1\u7684JSON\u8D44\u6E90\u5185\u5BB9\u3002",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u0639\u0645\u0644\u064A\u0627\u062A \u0633\u0627\u0628\u0642\u0629 \u064A\u0645\u0643\u0646 \u0627\u0633\u062A\u0639\u0627\u062F\u062A\u0647\u0627.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u597D\u7684\uFF0C\u8BF7\u63D0\u4F9B\u60A8\u5E0C\u671B\u6211\u7FFB\u8BD1\u7684JSON\u8D44\u6E90\u5185\u5BB9\u3002",
+        "Comment": "\u63D0\u793A\u7528\u6237\u6CA1\u6709\u5386\u53F2\u64CD\u4F5C\u53EF\u4EE5\u8FD8\u539F",
         "DontTranslate": false
       },
       {
@@ -46863,6 +48299,214 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0633\u0637\u0648\u0639 HDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "\u0633\u0637\u0648\u0639 \u0645\u062D\u062A\u0648\u0649 SDR (\u0646\u062A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "\u0642\u062F \u0644\u0627 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u062A\u0643\u0648\u064A\u0646 \u0628\u0639\u0636 \u0627\u0644\u062E\u0635\u0627\u0626\u0635 \u0644\u0623\u0646 HDR \u0645\u0645\u0643\u0651\u0646.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0642\u0627\u0637\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0022{path}\u0022 | {n} \u0645\u0642\u0637\u0639",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Tab title for clip management project info",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u0623\u0635\u0648\u0644 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 ({n} \u0641\u064A \u0627\u0644\u0645\u062C\u0645\u0648\u0639)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u9879\u76EE\u7D20\u6750 (\u5171 n \u4E2A)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0639\u0631\u0636\u0647\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0647\u0646\u0627\u061B \u064A\u0631\u062C\u0649 \u062A\u0648\u062E\u064A \u0627\u0644\u062D\u0630\u0631.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8B66\u544A\u4FE1\u606F\uFF0C\u63D0\u793A\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u062D\u0630\u0641 \u0641\u062A\u062D\u0627\u062A \u0627\u0644\u062D\u0641\u0638",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D\u7684\u64CD\u4F5C\u6309\u94AE\u6587\u672C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u062A\u0631\u0642\u064A\u0629 \u0625\u0644\u0632\u0627\u0645\u064A\u0629 \u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0634\u0631\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u062A\u062C\u0627\u0647\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0645\u0637\u0628\u0642\u0629 \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E22\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u672A\u5E94\u7528\u7684\u66F4\u6539",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u0633\u064A\u0643\u0648\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u062A\u0639\u062F\u064A\u0644\u0627\u064B \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647 \u0641\u064A \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F\\n\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.\u0022,\n    \u0022Comment\u0022: \u0022\u0644\u0627 \u062A\u062A\u0631\u062C\u0645 \u0022yes\u0022\u060C \u0647\u0630\u0627 \u0645\u0627 \u0633\u064A\u0643\u062A\u0628\u0647 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0022\n}\n\u0060\u0060\u0060",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u0633\u064A\u0643\u0648\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u062A\u0639\u062F\u064A\u0644\u0627\u064B \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647 \u0641\u064A \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F\\n\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.\u0022,\n    \u0022Comment\u0022: \u0022\u0644\u0627 \u062A\u062A\u0631\u062C\u0645 \u0022yes\u0022\u060C \u0647\u0630\u0627 \u0645\u0627 \u0633\u064A\u0643\u062A\u0628\u0647 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0022\n}\n\u0060\u0060\u0060",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u0627\u0644\u0639\u0646\u0635\u0631 \u00AB{name}\u00BB \u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u0634\u0647\u0627\u062F \u0628\u0647 \u0641\u064A {n} \u0645\u0642\u0637\u0639\u060C \u0647\u0644 \u062A\u0631\u063A\u0628 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0627\u0644\u0645\u0633\u062A\u0634\u0647\u062F \u0628\u0647\u0627 \u0645\u0639\u064B\u0627\u061F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u062D\u0630\u0641 \u0627\u0644\u0645\u0627\u062F\u0629 \u00AB{asset}\u00BB \u0648\u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0627\u0644\u062A\u0627\u0644\u064A\u0629 \u0646\u0647\u0627\u0626\u064A\u064B\u0627:\r{clips}\r\r\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621. \u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4FDD\u7559\u63D2\u503C\u53C2\u6570 {asset} \u548C {clips} \u4E0D\u53D8\uFF0C\u5E76\u5C06\u201Cyes\u201D\u4FDD\u7559\u4E3A\u82F1\u6587\uFF0C\u56E0\u4E3A\u7528\u6237\u9700\u8F93\u5165\u8BE5\u8BCD\u786E\u8BA4\u3002\u6DFB\u52A0\u4E86\u65B9\u5411\u9002\u5E94\u548C\u6807\u70B9\u89C4\u8303\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u0634\u0647\u0627\u062F \u0628\u0647 \u0628\u0648\u0627\u0633\u0637\u0629 {n} \u0645\u0642\u0637\u0639",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u88ABn\u4E2A\u7247\u6BB5\u5F15\u7528",
         "DontTranslate": false
       }
     ],
@@ -52780,6 +54424,212 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR-Spitzenhelligkeit (Nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR-Inhaltshelligkeit (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "M\u00F6glicherweise k\u00F6nnen einige Eigenschaften nicht konfiguriert werden, da HDR aktiviert ist.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Clip-Verwaltung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Projekt \u201E{path}\u201C | {n} Clips",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Project info tab title in clip management page; shows project path and clip count",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Projektmaterialien (insgesamt {n})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "Keine Daten zum Anzeigen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Keine Daten zum Anzeigen",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Warnung: Diese Aktion kann nicht r\u00FCckg\u00E4ngig gemacht werden. Bitte gehen Sie vorsichtig vor.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Speicherpl\u00E4tze leeren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Projektmetadaten f\u00FCr Zwangsaktualisierung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Nicht gespeicherte \u00C4nderungen im Bearbeitungsfenster verwerfen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Dieser Vorgang f\u00FChrt zu irreversiblen \u00C4nderungen an Ihrem Projekt. M\u00F6chten Sie fortfahren?\r\nGeben Sie unten \u201Eyes\u201C ein, um fortzufahren.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "Das Material \u201E{name}\u201C wird von {n} Clip(s) referenziert. M\u00F6chten Sie die referenzierten Clips mit l\u00F6schen?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Dieser Vorgang l\u00F6scht dauerhaft das Material \u201E{asset}\u201C und diese Clips:\r{clips}\r\rDieser Vorgang kann nicht r\u00FCckg\u00E4ngig gemacht werden. Gib unten \u201Eyes\u201C ein, um fortzufahren.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "Von {n} Clip(s) referenziert",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u663E\u793A\u88AB\u591A\u5C11\u4E2A\u7247\u6BB5\u5F15\u7528",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -57959,11 +59809,11 @@
       },
       {
         "Id": "HomePage_NoSupportAccel_SeeSupport",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte el documento de soporte",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte la documentaci\u00F3n de soporte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte el documento de soporte",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte la documentaci\u00F3n de soporte",
         "DontTranslate": false
       },
       {
@@ -58689,6 +60539,214 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "Brillo m\u00E1ximo de HDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "Brillo de contenido SDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "Es posible que no puedas configurar algunas propiedades porque HDR est\u00E1 habilitado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Gesti\u00F3n de clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Proyecto \u00AB{path}\u00BB | {n} fragmentos",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Recursos del proyecto ({n} en total)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Tab label showing project assets count",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "No hay datos disponibles para mostrar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Advertencia: Las operaciones aqu\u00ED no se pueden deshacer; proceda con precauci\u00F3n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Vaciar espacios guardados",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Actualizar forzosamente los datos del proyecto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Descartar cambios no guardados en el b\u00FAfer de almacenamiento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation for DiscardUnsavedChange",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Esta operaci\u00F3n realizar\u00E1 cambios irreversibles en tu proyecto. \u00BFQuieres continuar?\nEscribe \u0022yes\u0022 en el campo de abajo para continuar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "El recurso \u00AB{name}\u00BB est\u00E1 siendo usado por {n} fragmento(s). \u00BFDeseas eliminar tambi\u00E9n los fragmentos que lo referencian?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Esta acci\u00F3n eliminar\u00E1 permanentemente el material \u00AB{asset}\u00BB y estos clips:\r{clips}\r\rEsta acci\u00F3n no se puede deshacer. Escribe \u00AByes\u00BB a continuaci\u00F3n para continuar.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "No traducir \u0022yes\u0022, es lo que el usuario debe escribir",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "Referenciado por {n} clips",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -64606,6 +66664,214 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "Luminosit\u00E0 massima HDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "Luminosit\u00E0 contenuti SDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "Alcune propriet\u00E0 potrebbero non essere configurabili perch\u00E9 HDR \u00E8 abilitato.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Informa l\u0027utente che l\u0027HDR attivo impedisce la configurazione di alcune propriet\u00E0.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Gestione clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Progetto \u00AB{path}\u00BB | {n} frammenti",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Risorse del progetto ({n} in totale)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Asset count indicator in project tab",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "Nessun dato disponibile da visualizzare.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Attenzione: questa operazione non pu\u00F2 essere annullata; si prega di procedere con cautela.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Warning about irreversible operation",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Cancella slot di salvataggio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Aggiornamento forzato dei dati del progetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Abbandona le modifiche non applicate nel salvataggio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u653E\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u7684\u672A\u5E94\u7528\u66F4\u6539\uFF08\u6309\u94AE\u6587\u672C\uFF09",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Questa operazione apporter\u00E0 modifiche irreversibili al progetto. Continuare? Digita \u0022yes\u0022 qui sotto per procedere.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "L\u0027utente deve digitare \u0022yes\u0022 per confermare, non tradurre \u0022yes\u0022",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "Il materiale \u0022{name}\u0022 \u00E8 referenziato da {n} clip. Vuoi eliminare anche i clip che lo referenziano?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Questa operazione eliminer\u00E0 permanentemente il materiale \u0022{asset}\u0022 e queste clip:\r{clips}\r\rQuesta operazione non pu\u00F2 essere annullata. Digita \u0022yes\u0022 qui sotto per continuare.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "Non tradurre \u0022yes\u0022, \u00E8 ci\u00F2 che l\u0027utente deve digitare",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "Referenziato da {n} clip",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -70518,6 +72784,214 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR Maksymalna jasno\u015B\u0107 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR Maksymalna jasno\u015B\u0107 (nit)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "Jasno\u015B\u0107 tre\u015Bci SDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "Niekt\u00F3re w\u0142a\u015Bciwo\u015Bci mog\u0105 by\u0107 niedost\u0119pne, poniewa\u017C HDR jest w\u0142\u0105czony.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Informacja, \u017Ce w\u0142\u0105czenie HDR mo\u017Ce blokowa\u0107 dost\u0119p do niekt\u00F3rych ustawie\u0144",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Zarz\u0105dzanie klipami",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Projekt \u201E{path}\u201D | {n} segment(y/\u00F3w)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "path - \u015Bcie\u017Cka projektu; n - liczba segment\u00F3w",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Materia\u0142y projektu (Razem {n})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6807\u7B7E\u9875\u6807\u9898\uFF0C\u663E\u793A\u9879\u76EE\u4E2D\u7684\u7D20\u6750\u603B\u6570\uFF0C{n}\u66FF\u6362\u4E3A\u5177\u4F53\u6570\u91CF",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "Nie ma \u017Cadnych danych do wy\u015Bwietlenia.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Ostrze\u017Cenie: tych dzia\u0142a\u0144 nie mo\u017Cna cofn\u0105\u0107; dzia\u0142aj ostro\u017Cnie.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Wymu\u015B aktualizacj\u0119 metadanych projektu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Odrzu\u0107 niezapisane zmiany w gnie\u017Adzie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Ta operacja wprowadzi nieodwracalne zmiany w twoim projekcie. Czy chcesz kontynuowa\u0107?\nWpisz \u201Eyes\u201D poni\u017Cej, aby kontynuowa\u0107.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "Materia\u0142 \u201E{name}\u201D jest u\u017Cywany przez {n} klip\u00F3w. Czy usun\u0105\u0107 r\u00F3wnie\u017C klipy, kt\u00F3re go wykorzystuj\u0105?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Asks the user if they want to delete the clips that reference the asset when deleting it",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Ta operacja trwale usunie materia\u0142 \u201E{asset}\u201D oraz nast\u0119puj\u0105ce klipy:\n{clips}\n\nTej operacji nie mo\u017Cna cofn\u0105\u0107. Aby kontynuowa\u0107, wpisz poni\u017Cej \u201Eyes\u201D.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "This is a warning dialog for deleting an asset referenced by clips. The word \u0022yes\u0022 should not be translated.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "U\u017Cywane przez {n} klip(y/\u00F3w)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Displayed in Polish; first variant for n=1, second for other numbers. Context: clips management tab.",
         "DontTranslate": false
       }
     ],
@@ -76432,6 +78906,210 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "Brilho m\u00E1ximo do HDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "Brilho do conte\u00FAdo SDR (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "Talvez voc\u00EA n\u00E3o consiga configurar algumas propriedades porque o HDR est\u00E1 ativado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Gerenciamento de Clipes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "Projeto \u300C{path}\u300D | {n} clipes",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Materiais do projeto ({n} no total)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Projeto: materiais do projeto, {n} representa a contagem total",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "Nenhum dado dispon\u00EDvel para exibi\u00E7\u00E3o.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Aviso: esta opera\u00E7\u00E3o n\u00E3o pode ser desfeita; proceda com cautela.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Limpar slots de salvamento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "For\u00E7ar atualiza\u00E7\u00E3o dos metadados do projeto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Descartar altera\u00E7\u00F5es n\u00E3o aplicadas no slot de salvamento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u653E\u5F03\u5728\u4FDD\u5B58\u69FD\u4E2D\u7684\u672A\u5E94\u7528\u66F4\u6539",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Esta opera\u00E7\u00E3o far\u00E1 altera\u00E7\u00F5es irrevers\u00EDveis no seu projeto. Deseja continuar?\nDigite \u0022yes\u0022 abaixo para continuar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "N\u00E3o traduza \u0022yes\u0022, \u00E9 algo que o usu\u00E1rio precisa digitar",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "O material \u0022{name}\u0022 est\u00E1 sendo referenciado por {n} clipe(s). Deseja tamb\u00E9m excluir os clipes que o referenciam?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u8BE2\u95EE\u7528\u6237\u662F\u5426\u540C\u65F6\u5220\u9664\u5F15\u7528\u4E86\u8BE5\u7D20\u6750\u7684\u7247\u6BB5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Esta opera\u00E7\u00E3o excluir\u00E1 permanentemente o material\u300C{asset}\u300De estes trechos:\r{clips}\r\rEsta opera\u00E7\u00E3o n\u00E3o pode ser desfeita. Digite \u0022yes\u0022 abaixo para continuar.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "N\u00E3o traduza \u0022yes\u0022, \u00E9 o que o usu\u00E1rio deve digitar",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "Referenciado por {n} clipes",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -81982,11 +84660,11 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_History",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2\u8BB0\u5F55",
+        "Value": "\u0418\u0441\u0442\u043E\u0440\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5386\u53F2\u8BB0\u5F55",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -82347,6 +85025,212 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "HDR \u041C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u0430\u044F \u044F\u0440\u043A\u043E\u0441\u0442\u044C (\u043D\u0438\u0442)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "\u042F\u0440\u043A\u043E\u0441\u0442\u044C SDR-\u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0430 (\u043D\u0438\u0442)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "\u0418\u0437-\u0437\u0430 \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u043E\u0433\u043E HDR \u043D\u0435\u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u043E\u0433\u0443\u0442 \u0431\u044B\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043A\u043B\u0438\u043F\u0430\u043C\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "\u041F\u0440\u043E\u0435\u043A\u0442 \u00AB{path}\u00BB | {n} \u0441\u0435\u0433\u043C\u0435\u043D(\u0442/\u0442\u0430/\u0442\u043E\u0432)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "InterpolationString: path - \u043F\u0443\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0430, n - \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u043E\u0432. \u0414\u043B\u044F n \u043D\u0443\u0436\u043D\u043E \u0443\u0447\u0438\u0442\u044B\u0432\u0430\u0442\u044C \u0441\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 \u0432 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435, \u043D\u043E \u0437\u0434\u0435\u0441\u044C \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0441 \u043E\u0431\u0449\u0438\u043C \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u043C, \u0442\u0430\u043A \u043A\u0430\u043A \u0444\u043E\u0440\u043C\u0430\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0441 dependent plural \u0432 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u0438\u043D\u0442\u0435\u0440\u043F\u043E\u043B\u044F\u0446\u0438\u0438 \u0441\u0442\u0440\u043E\u043A \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "\u0420\u0435\u0441\u0443\u0440\u0441\u044B \u043F\u0440\u043E\u0435\u043A\u0442\u0430 ({n} \u0448\u0442.)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Tab title showing project assets count",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "\u041D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445 \u0434\u043B\u044F \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u0434\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0411\u0443\u0434\u044C\u0442\u0435 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0441\u043B\u043E\u0442\u044B \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "\u041F\u0440\u0438\u043D\u0443\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u0435\u0442\u0430\u0434\u0430\u043D\u043D\u044B\u0445 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u043D\u0435\u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0432 \u0441\u043B\u043E\u0442\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0432\u043D\u0435\u0441\u0435\u0442 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0432 \u0432\u0430\u0448 \u043F\u0440\u043E\u0435\u043A\u0442. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?\\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.\u0022,\n    \u0022Comment\u0022: \u0022DraftSettingPage_Advanced_Warn - \u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0432\u043D\u0435\u0441\u0435\u0442 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0432 \u0432\u0430\u0448 \u043F\u0440\u043E\u0435\u043A\u0442. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?\\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.\u0022,\n    \u0022Comment\u0022: \u0022DraftSettingPage_Advanced_Warn - \u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\u0022\n}\n\u0060\u0060\u0060",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u041C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u00AB{name}\u00BB \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u0432 {n} \u043A\u043B\u0438\u043F\u0430\u0445. \u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0449\u0438\u043C\u0438 \u0435\u0433\u043E \u043A\u043B\u0438\u043F\u0430\u043C\u0438?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "\u042D\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u0443\u0434\u0430\u043B\u0438\u0442 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u00AB{asset}\u00BB \u0438 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043A\u043B\u0438\u043F\u044B:\r{clips}\r\r\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u0432 {n} \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430\u0445",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -87527,11 +90411,11 @@
       },
       {
         "Id": "HomePage_NoSupportAccel_SeeSupport",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: View Support Documents",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u67E5\u770B\u652F\u6301\u6587\u6863",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: View Support Documents",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u67E5\u770B\u652F\u6301\u6587\u6863",
         "DontTranslate": false
       },
       {
@@ -88260,6 +91144,209 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_HDRLimit",
+        "Value": "Maksimum HDR Parlakl\u0131\u011F\u0131 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_SDRBrightness",
+        "Value": "SDR \u0130\u00E7erik Parlakl\u0131\u011F\u0131 (nit)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "SDR\u5185\u5BB9\u4EAE\u5EA6\u8BBE\u7F6E\u9879\uFF0C\u5355\u4F4Dnit",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_HDREnabledNotAvailable",
+        "Value": "HDR etkin oldu\u011Fu i\u00E7in baz\u0131 \u00F6zellikleri yap\u0131land\u0131ramayabilirsiniz.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt",
+        "Value": "Klip Y\u00F6netimi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7247\u6BB5\u7BA1\u7406",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9879\u76EE\u201C{path}\u201D | {n} \u4E2A\u7247\u6BB5\n\n\u6839\u636E\u76EE\u6807\u8BED\u8A00\uFF08\u571F\u8033\u5176\u8BED\uFF09\u7684\u8BED\u6CD5\u89C4\u5219\uFF0C\u5EFA\u8BAE\u7FFB\u8BD1\u4E3A\uFF1A\n\n{Value}: \u0022Proje \\\u0022{path}\\\u0022 | {n} klip\u0022\n\n{Comment}: \u0022\u6807\u9898\u680F\u683C\u5F0F\uFF0C\u7528\u4E8E\u663E\u793A\u5F53\u524D\u9879\u76EE\u8DEF\u5F84\u53CA\u5176\u5305\u542B\u7684\u7247\u6BB5\uFF08\u526A\u8F91\uFF09\u6570\u91CF\u3002\u0022",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9879\u76EE\u201C{path}\u201D | {n} \u4E2A\u7247\u6BB5\n\n\u6839\u636E\u76EE\u6807\u8BED\u8A00\uFF08\u571F\u8033\u5176\u8BED\uFF09\u7684\u8BED\u6CD5\u89C4\u5219\uFF0C\u5EFA\u8BAE\u7FFB\u8BD1\u4E3A\uFF1A\n\n{Value}: \u0022Proje \\\u0022{path}\\\u0022 | {n} klip\u0022\n\n{Comment}: \u0022\u6807\u9898\u680F\u683C\u5F0F\uFF0C\u7528\u4E8E\u663E\u793A\u5F53\u524D\u9879\u76EE\u8DEF\u5F84\u53CA\u5176\u5305\u542B\u7684\u7247\u6BB5\uFF08\u526A\u8F91\uFF09\u6570\u91CF\u3002\u0022",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ProjAssetInfo",
+        "Value": "Proje Varl\u0131klar\u0131 (toplam {n} adet)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
+        "Value": "G\u00F6sterilecek herhangi bir veri bulunmamaktad\u0131r.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_Warn",
+        "Value": "Uyar\u0131: Buradaki i\u015Flemler geri al\u0131namaz; l\u00FCtfen dikkatli olun.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
+        "Value": "Kay\u0131t Yuvalar\u0131n\u0131 Temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ForceUpgrade",
+        "Value": "Proje meta verilerini zorla y\u00FCkselt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
+        "Value": "Kaydedilmemi\u015F de\u011Fi\u015Fiklikleri taslakta b\u0131rak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u6237\u5728\u4FDD\u5B58\u69FD\u4E2D\u6709\u672A\u5E94\u7528\u7684\u66F4\u6539\u65F6\uFF0C\u9009\u62E9\u653E\u5F03\u8FD9\u4E9B\u66F4\u6539",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Warn",
+        "Value": "Bu i\u015Flem projenizde geri al\u0131namaz de\u011Fi\u015Fiklikler yapacakt\u0131r. Devam etmek istiyor musunuz?\nDevam etmek i\u00E7in a\u015Fa\u011F\u0131ya \u0022yes\u0022 yaz\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Bu i\u015Flem projenizde geri al\u0131namaz de\u011Fi\u015Fikliklere neden olur. Kullan\u0131c\u0131n\u0131n onaylamas\u0131 i\u00E7in \u0022yes\u0022 yazmas\u0131 gerekir. \u0022yes\u0022 kelimesi \u00E7evrilmemi\u015Ftir.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced",
+        "Value": "\u201C{name}\u201D materyali {n} klipte kullan\u0131l\u0131yor, bu klipleri de birlikte silmek ister misiniz?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5220\u9664\u7D20\u6750\u65F6\u63D0\u793A\u7528\u6237\u8BE5\u7D20\u6750\u88AB\u591A\u4E2A\u7247\u6BB5\u5F15\u7528\uFF0C\u8BE2\u95EE\u662F\u5426\u540C\u65F6\u5220\u9664\u5F15\u7528\u7684\u7247\u6BB5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
+        "Value": "Bu i\u015Flem, \u0022{asset}\u0022 materyalini ve a\u015Fa\u011F\u0131daki klipleri kal\u0131c\u0131 olarak silecek:\r{clips}\r\rBu i\u015Flem geri al\u0131namaz. Devam etmek i\u00E7in a\u015Fa\u011F\u0131ya \u0022yes\u0022 yaz\u0131n.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "asset"
+          },
+          {
+            "Key": "string",
+            "Value": "clips"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "asset",
+            "Value": ""
+          },
+          {
+            "Key": "clips",
+            "Value": ""
+          }
+        ],
+        "Comment": "Do not translate \u0022yes\u0022, it is what the user needs to type",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_ClipMgnt_ReferenceBy",
+        "Value": "{n} klip taraf\u0131ndan referans al\u0131nd\u0131",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }

@@ -179,8 +179,8 @@ namespace projectFrameCut
                     var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                     shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
-                    shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
                     shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
+                    shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
                     shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
                     return mauiWindow;
 
@@ -267,8 +267,8 @@ namespace projectFrameCut
 
 
                 nav.MenuItems.Add(homeItem);
-                nav.MenuItems.Add(templateItem);
                 nav.MenuItems.Add(assetItem);
+                nav.MenuItems.Add(templateItem);
 
                 settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };

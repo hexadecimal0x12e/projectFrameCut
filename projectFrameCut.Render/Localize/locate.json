@@ -111,6 +111,182 @@
         "DontTranslate": false
       },
       {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u9AD8\u7EA7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\u4F3D\u9A6C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u8272\u6E29",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\u57FA\u7840",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u5BF9\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u8272\u8C03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "\u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u8272\u76F8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "\u81EA\u7136\u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\u7070\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u53CD\u8F6C\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u4E0D\u900F\u660E\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u8272\u8C03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "\u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "\u5BF9\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u901A\u8FC7\u4EAE\u5EA6\u3001\u5BF9\u6BD4\u5EA6\u3001\u9971\u548C\u5EA6\u3001\u8272\u76F8\u3001\u4F3D\u9A6C\u3001\u81EA\u7136\u9971\u548C\u5EA6\u3001\u8272\u6E29\u3001\u53CD\u8F6C\u3001\u7070\u5EA6\u548C\u4E0D\u900F\u660E\u5EA6\u8FDB\u884C\u7EFC\u5408\u989C\u8272\u8C03\u6574\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "\u6052\u5B9A\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u8C03\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DisplayName_Effect_Crop",
         "Value": "\u88C1\u5207",
         "Mode": "ConstString",
@@ -663,15 +839,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u65F6\u957F: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "\u65F6\u957F: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -698,6 +874,14 @@
       {
         "Id": "SpeedAndRatio_None",
         "Value": "\u6CA1\u6709\u914D\u7F6E\u53D8\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u8C03\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2395,15 +2579,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Duration: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Duration: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -2417,6 +2601,212 @@
             "Value": ""
           }
         ],
+        "Comment": "Duration conversion display",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "Constant Speed Variation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Color Adjust",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Basic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Brightness",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Contrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Hue",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Advanced",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Gamma value adjustment in Color Adjustment - Advanced tab",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Color Temperature",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Hue",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Natural Saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Grayscale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Invert Colors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opacity",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Color adjustment tab effect opacity",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Tone",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "Brightness",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Contrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Comprehensive color adjustment using brightness, contrast, saturation, hue, gamma, natural saturation, color temperature, invert, grayscale, and opacity.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Color Adjustment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -3662,15 +4052,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u6642\u9577: {orig} -\u003E {cur} ({(cur / orig):n2}\u500D)",
+        "Value": "\u6642\u9577: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}\u500D)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -3684,7 +4074,209 @@
             "Value": ""
           }
         ],
-        "Comment": "Duration interpolation string for speed/ratio display (zh-TW)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u594F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u594F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u8ABF\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\u57FA\u672C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u5C0D\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u8272\u8ABF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u9032\u968E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\u4F3D\u99AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u8272\u6EAB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\u984F\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u8272\u76F8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\u98FD\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "\u81EA\u7136\u98FD\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\u7070\u968E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u53CD\u8F49\u984F\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u4E0D\u900F\u660E\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u8272\u8ABF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "\u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "\u5C0D\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u901A\u904E\u4EAE\u5EA6\u3001\u5C0D\u6BD4\u5EA6\u3001\u98FD\u548C\u5EA6\u3001\u8272\u76F8\u3001\u4F3D\u746A\u3001\u81EA\u7136\u98FD\u548C\u5EA6\u3001\u8272\u6EAB\u3001\u53CD\u8F49\u3001\u7070\u968E\u548C\u4E0D\u900F\u660E\u5EA6\u9032\u884C\u7D9C\u5408\u984F\u8272\u8ABF\u6574\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u8ABF\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -4819,20 +5411,20 @@
       },
       {
         "Id": "General_VideoCodec_TargetMode_16bpp",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8SDR",
+        "Value": "16\u30D3\u30C3\u30C8SDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8SDR",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_VideoCodec_TargetMode_hdr",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8HDR",
+        "Value": "16 \u30D3\u30C3\u30C8 HDR",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: 16\u30D3\u30C3\u30C8HDR",
+        "Comment": "\u89C6\u9891\u7F16\u7801\u5668\u76EE\u6807\u6A21\u5F0F\uFF1A16\u4F4DHDR",
         "DontTranslate": false
       },
       {
@@ -4927,15 +5519,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u518D\u751F\u6642\u9593: {orig} -\u003E {cur} ({(cur / orig):n2}\u500D)",
+        "Value": "\u6642\u9593: {(int)orig}s \u2192 {(int)cur}s ({(cur / orig):n2}\u500D)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -4950,6 +5542,210 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u5909\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u5909\u901F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u8272\u8ABF\u6574",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\u57FA\u672C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\u660E\u308B\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u30B3\u30F3\u30C8\u30E9\u30B9\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "\u5F69\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u8272\u76F8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u8A73\u7D30\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\u30AC\u30F3\u30DE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u8272\u6E29\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Color adjustment tab label",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u8272\u76F8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\u5F69\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u5F69\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u5F69\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\u30B0\u30EC\u30FC\u30B9\u30B1\u30FC\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u8272\u306E\u53CD\u8EE2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u4E0D\u900F\u660E\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u8272\u8ABF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "\u30B3\u30F3\u30C8\u30E9\u30B9\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u660E\u308B\u3055\u3001\u30B3\u30F3\u30C8\u30E9\u30B9\u30C8\u3001\u5F69\u5EA6\u3001\u8272\u76F8\u3001\u30AC\u30F3\u30DE\u3001\u81EA\u7136\u306A\u5F69\u5EA6\u3001\u8272\u6E29\u5EA6\u3001\u53CD\u8EE2\u3001\u30B0\u30EC\u30FC\u30B9\u30B1\u30FC\u30EB\u3001\u4E0D\u900F\u660E\u5EA6\u3092\u4F7F\u7528\u3057\u3066\u7DCF\u5408\u7684\u306B\u8272\u8ABF\u6574\u3092\u884C\u3044\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u8272\u8ABF\u88DC\u6B63",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -6188,15 +6984,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\uC2DC\uAC04: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "\uC2DC\uAC04: {(int)orig}\uCD08 -\u003E {(int)cur}\uCD08 ({(cur / orig):n2}\uBC30)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -6210,6 +7006,210 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "\uC77C\uC815 \uBCC0\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\uC0C9\uC0C1 \uC870\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\uAE30\uBCF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\uBC1D\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\uB300\uBE44",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "\uCC44\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\uC0C9\uC870",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\uACE0\uAE09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\uAC10\uB9C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\uC0C9\uC628\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\uC0C9\uC0C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\uC0C9\uC870",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\uCC44\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "\uC790\uC5F0 \uCC44\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\uB80C\uB354\uB9C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\uD68C\uC0C9\uC870",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\uC0C9\uC0C1 \uBC18\uC804",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\uBD88\uD22C\uBA85\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\uC0C9\uC870",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "\uBC1D\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "\uB300\uBE44",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\uBC1D\uAE30, \uB300\uBE44, \uCC44\uB3C4, \uC0C9\uC870, \uAC10\uB9C8, \uC790\uC5F0 \uCC44\uB3C4, \uC0C9\uC628\uB3C4, \uBC18\uC804, \uD68C\uC0C9\uC870 \uBC0F \uBD88\uD22C\uBA85\uB3C4\uB85C \uC885\uD569 \uC0C9\uC0C1 \uC870\uC815\uC744 \uC218\uD589\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7EFC\u5408\u989C\u8272\u8C03\u6574\u529F\u80FD\u63CF\u8FF0",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\uC0C9\uC0C1 \uC870\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -7449,15 +8449,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Dur\u00E9e : {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Dur\u00E9e: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -7471,6 +8471,203 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "R\u00E9glage des couleurs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Basique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Luminosit\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Contrast",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Teinte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Avanc\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Temp\u00E9rature de couleur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Color temperature adjustment",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Couleur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Teinte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vibrance",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vibrance",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Niveaux de gris",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Inverser les couleurs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opacit\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Teinte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "Luminosit\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Ajustement complet des couleurs via la luminosit\u00E9, le contraste, la saturation, la teinte, le gamma, la saturation naturelle, la temp\u00E9rature de couleur, l\u0027inversion, le niveau de gris et l\u0027opacit\u00E9.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "R\u00E9glage des couleurs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -8588,11 +9785,11 @@
       },
       {
         "Id": "General_VideoCodec_TargetMode_Auto",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\u96C5\u6587\u8A00\u6587\u7FFB\u8BD1\uFF1A\n\nValue: \u0022\u81EA\u52D5\u6AA2\u6E2C\u0022\nComment: \u4E3A\u901A\u7528\u89C6\u9891\u7F16\u7801\u76EE\u6807\u6A21\u5F0F\u4E0B\u7684\u81EA\u52A8\u68C0\u6D4B\u9009\u9879\u7684\u6587\u8A00\u6587\u8868\u8FBE",
+        "Value": "\u81EA\u52D5\u6E2C\u7109",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587\u96C5\u6587\u8A00\u6587\u7FFB\u8BD1\uFF1A\n\nValue: \u0022\u81EA\u52D5\u6AA2\u6E2C\u0022\nComment: \u4E3A\u901A\u7528\u89C6\u9891\u7F16\u7801\u76EE\u6807\u6A21\u5F0F\u4E0B\u7684\u81EA\u52A8\u68C0\u6D4B\u9009\u9879\u7684\u6587\u8A00\u6587\u8868\u8FBE",
+        "Comment": "\u81EA\u52A8\u68C0\u6D4B\u7684\u6587\u8A00\u8868\u8FF0\uFF0C\u610F\u4E3A\u81EA\u52A8\u5316\u5730\u68C0\u6D4B\u8BC6\u522B",
         "DontTranslate": false
       },
       {
@@ -8713,15 +9910,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u6642\u9577: {orig} \u2192 {cur} ({(cur / orig):n2}\u500D)",
+        "Value": "\u6642\u9577: {(int)orig}s \u2192 {(int)cur}s ({(cur / orig):n2}\u500D)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -8735,6 +9932,211 @@
             "Value": ""
           }
         ],
+        "Comment": "Duration format showing original, current, and ratio in Classical Chinese",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5E38\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5E38\u53D8\u901F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u8C03\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6\u8005\uFF0C\u660E\u6697\u4E4B\u5EA6\u4E5F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6\u8005\uFF0C\u660E\u6697\u4E4B\u5EA6\u4E5F\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u5C0D\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u8272\u8ABF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u9032\u968E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u201C\u9AD8\u7EA7\u201D\u9009\u9879\u5361\u7684\u6587\u8A00\u7FFB\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Gamma",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u8272\u6EAB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8272\u6E29\u7684\u6587\u8A00\u8868\u8FF0\uFF0C\u6307\u989C\u8272\u7684\u51B7\u6696\u7A0B\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u989C\u8272",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u8272\u76F8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u98FD\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u98FD\u548C\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E32\u6C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E32\u6C0F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7070\u9636",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7070\u9636",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u53CD\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u201C\u53CD\u8F6C\u989C\u8272\u201D\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u7B80\u6D01\u4E3A\u201C\u53CD\u8272\u201D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u4E0D\u900F\u660E\u4E4B\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6307\u8272\u5F69\u8C03\u6574\u4E2D\u201C\u4E0D\u900F\u660E\u5EA6\u201D\u7684\u6587\u8A00\u8BD1\u6CD5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u8272\u8ABF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6 -\u003E \u660E\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6 -\u003E \u660E\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u4EE5\u4EAE\u5EA6\u3001\u5BF9\u6BD4\u3001\u9971\u548C\u5EA6\u3001\u8272\u76F8\u3001\u4F3D\u9A6C\u3001\u81EA\u7136\u9971\u548C\u5EA6\u3001\u8272\u6E29\u3001\u53CD\u8272\u3001\u7070\u5EA6\u53CA\u4E0D\u900F\u660E\u5EA6\u7EFC\u8C03\u989C\u8272\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Description for the Color Adjustment effect in Classical Chinese",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u8ABF\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -9980,15 +11382,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u0627\u0644\u0645\u062F\u0629: {orig} \u2190 {cur} ({(cur / orig):n2}x)",
+        "Value": "\u0627\u0644\u0645\u062F\u0629: {(int)orig}\u062B \u2190 {(int)cur}\u062B (\u00D7{(cur / orig):n2})",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -10002,7 +11404,208 @@
             "Value": ""
           }
         ],
-        "Comment": "\u65F6\u957F: {orig} -\u003E {cur} ({(cur/orig):n2}x)\u3002\u7BAD\u5934\u65B9\u5411\u8C03\u6574\u4E3A\u963F\u62C9\u4F2F\u8BED\u9605\u8BFB\u65B9\u5411",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F\u6548\u679C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u0636\u0628\u0637 \u0627\u0644\u0623\u0644\u0648\u0627\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\u0627\u0644\u0623\u0633\u0627\u0633\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\u0627\u0644\u0633\u0637\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u0627\u0644\u062A\u0628\u0627\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "\u0627\u0644\u062A\u0634\u0628\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u062F\u0631\u062C\u0629 \u0627\u0644\u0644\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8272\u8C03\u8C03\u8282\u9009\u9879\u7684\u6807\u7B7E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u0645\u062A\u0642\u062F\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\u062C\u0627\u0645\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Gamma \u7684\u97F3\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u062F\u0631\u062C\u0629 \u062D\u0631\u0627\u0631\u0629 \u0627\u0644\u0644\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\u0644\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u062F\u0631\u062C\u0629 \u0627\u0644\u0644\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\u0627\u0644\u062A\u0634\u0628\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "\u0627\u0644\u062A\u0634\u0628\u0639 \u0627\u0644\u0637\u0628\u064A\u0639\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\u0639\u0631\u0636",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\u062A\u062F\u0631\u062C \u0627\u0644\u0631\u0645\u0627\u062F\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u0639\u0643\u0633 \u0627\u0644\u0623\u0644\u0648\u0627\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u0627\u0644\u0639\u062A\u0627\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u062F\u0631\u062C\u0629 \u0627\u0644\u0644\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "\u0627\u0644\u0633\u0637\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "\u0627\u0644\u062A\u0628\u0627\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u0636\u0628\u0637 \u0623\u0644\u0648\u0627\u0646 \u0634\u0627\u0645\u0644 \u0645\u0646 \u062E\u0644\u0627\u0644 \u0627\u0644\u0633\u0637\u0648\u0639 \u0648\u0627\u0644\u062A\u0628\u0627\u064A\u0646 \u0648\u0627\u0644\u062A\u0634\u0628\u0639 \u0648\u062F\u0631\u062C\u0629 \u0627\u0644\u0644\u0648\u0646 \u0648\u063A\u0627\u0645\u0627 \u0648\u0627\u0644\u062A\u0634\u0628\u0639 \u0627\u0644\u0637\u0628\u064A\u0639\u064A \u0648\u062F\u0631\u062C\u0629 \u062D\u0631\u0627\u0631\u0629 \u0627\u0644\u0644\u0648\u0646 \u0648\u0627\u0644\u0639\u0643\u0633 \u0648\u0627\u0644\u062A\u062F\u0631\u062C \u0627\u0644\u0631\u0645\u0627\u062F\u064A \u0648\u0627\u0644\u0639\u062A\u0627\u0645\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0623\u0644\u0648\u0627\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -11238,15 +12841,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Dauer: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Dauer: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -11260,6 +12863,202 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Farbabstimmung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Grundeinstellungen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Helligkeit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "S\u00E4ttigung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Farbton",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Erweitert",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gammakorrektur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Farbtemperatur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Farbe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Farbton",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "S\u00E4ttigung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Nat\u00FCrliche S\u00E4ttigung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Darstellung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Graustufen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Farben umkehren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Deckkraft",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Farbton",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Umfassende Farbanpassung \u00FCber Helligkeit, Kontrast, S\u00E4ttigung, Farbton, Gamma, Nat\u00FCrliche S\u00E4ttigung, Farbtemperatur, Invertierung, Graustufen und Deckkraft.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Farbanpassung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -12498,15 +14297,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Duraci\u00F3n: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Duraci\u00F3n: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -12520,7 +14319,205 @@
             "Value": ""
           }
         ],
-        "Comment": "La hora se expresa en formato num\u00E9rico, manteniendo la interpolaci\u00F3n y el formato de relaci\u00F3n.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "Variaci\u00F3n de velocidad constante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Nombre del efecto de variaci\u00F3n de velocidad constante",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Ajuste de color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "B\u00E1sico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Brillo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Saturaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Tono",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Avanzado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Temperatura de color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Tono",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Saturaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Saturaci\u00F3n natural",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Saturaci\u00F3n natural",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Renderizado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Tab label for render effects",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Escala de grises",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Invertir colores",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opacidad",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Tono",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "Brillo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Ajuste integral del color mediante brillo, contraste, saturaci\u00F3n, tono, gamma, saturaci\u00F3n natural, temperatura de color, inversi\u00F3n, escala de grises y opacidad.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Ajuste de color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -13760,15 +15757,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Durata: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Durata: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -13782,6 +15779,211 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "Variazione di velocit\u00E0 costante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Regolazione colore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8C03\u8272\uFF0C\u5BF9\u5E94\u82F1\u6587 Tabs_ColorAdjust \u6807\u7B7E\u9875\u6807\u9898",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Base",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "tab label for basic color adjustment",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Luminosit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Contrasto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Saturazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Tonalit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Avanzato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Gamma correction value for display adjustment",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Temperatura colore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Colore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Tonalit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Saturazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Saturazione naturale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of natural saturation/saturazione naturale for Color Adjustment tab",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Tab label for rendering effects in color adjustment settings",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Scala di grigi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Inverti colori",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opacit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Tonalit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Contrasto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Regola il colore in modo completo tramite luminosit\u00E0, contrasto, saturazione, tonalit\u00E0, gamma, saturazione naturale, temperatura colore, inversione, scala di grigi e opacit\u00E0.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Regolazione colore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -15019,15 +17221,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Czas trwania: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Czas: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -15042,6 +17244,206 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "Sta\u0142a zmienna pr\u0119dko\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Dopasowanie kolor\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Podstawowe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Jasno\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Nasycenie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Odcie\u0144",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Zaawansowane",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gamma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Gamma - termin techniczny dotycz\u0105cy regulacji kolor\u00F3w; pozostawiono bez t\u0142umaczenia, poniewa\u017C jest to standardowy termin w oprogramowaniu graficznym",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Temperatura barwy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Kolor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Barwa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Nasycenie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Naturalne nasycenie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Renderowanie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Skala szaro\u015Bci",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Odwr\u00F3\u0107 kolory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Nieprzezroczysto\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Odcienie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "Jasno\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Kompleksowa regulacja kolor\u00F3w za pomoc\u0105 jasno\u015Bci, kontrastu, nasycenia, odcienia, gamma, naturalnego nasycenia, temperatury barwowej, negatywu, skali szaro\u015Bci i przezroczysto\u015Bci.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of a color adjustment effect description",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Dostosowanie kolor\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -16277,15 +18679,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "Dura\u00E7\u00E3o: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "Dura\u00E7\u00E3o: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -16300,6 +18702,204 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u901F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Ajuste de cor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "B\u00E1sico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Brilho",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u4EAE\u5EA6\u0027 (Brightness) for the Basic tab in Color Adjustment settings.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Satura\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Matiz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Avan\u00E7ado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gama",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Temperatura de cor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Cor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Matiz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Satura\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Satura\u00E7\u00E3o Natural",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Renderiza\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: grayscale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: grayscale",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Inverter Cores",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Invert colors",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opacidade",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Tom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "Brilho",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Contraste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Ajuste abrangente de cores atrav\u00E9s de Brilho, Contraste, Satura\u00E7\u00E3o, Matiz, Gama, Satura\u00E7\u00E3o Natural, Temperatura de Cor, Invers\u00E3o, Escala de Cinza e Opacidade.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Ajuste de cor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -17542,15 +20142,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "\u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "\u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: {(int)orig}\u0441 \u2192 {(int)cur}\u0441 ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -17564,6 +20164,208 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "\u041F\u043E\u0441\u0442\u043E\u044F\u043D\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "\u041A\u043E\u0440\u0440\u0435\u043A\u0446\u0438\u044F \u0446\u0432\u0435\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6807\u7B7E\uFF1A\u8C03\u8272\u529F\u80FD",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "\u041E\u0441\u043D\u043E\u0432\u043D\u044B\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "\u042F\u0440\u043A\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "\u041A\u043E\u043D\u0442\u0440\u0430\u0441\u0442\u043D\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "\u041E\u0442\u0442\u0435\u043D\u043E\u043A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "\u0420\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u043D\u044B\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "\u0413\u0430\u043C\u043C\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "\u0426\u0432\u0435\u0442\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "\u0426\u0432\u0435\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "\u041E\u0442\u0442\u0435\u043D\u043E\u043A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "\u041D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "\u0415\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "\u042D\u0444\u0444\u0435\u043A\u0442\u044B \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "\u041E\u0442\u0442\u0435\u043D\u043A\u0438 \u0441\u0435\u0440\u043E\u0433\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "\u0418\u043D\u0432\u0435\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0446\u0432\u0435\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "\u041D\u0435\u043F\u0440\u043E\u0437\u0440\u0430\u0447\u043D\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "\u0422\u043E\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "\u041A\u043E\u043C\u043F\u043B\u0435\u043A\u0441\u043D\u0430\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0446\u0432\u0435\u0442\u0430 \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u044F\u0440\u043A\u043E\u0441\u0442\u0438, \u043A\u043E\u043D\u0442\u0440\u0430\u0441\u0442\u043D\u043E\u0441\u0442\u0438, \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u0438, \u043E\u0442\u0442\u0435\u043D\u043A\u0430, \u0433\u0430\u043C\u043C\u044B, \u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u0438, \u0446\u0432\u0435\u0442\u043E\u0432\u043E\u0439 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B, \u0438\u043D\u0432\u0435\u0440\u0441\u0438\u0438, \u0441\u0435\u0440\u043E\u0433\u043E \u0438 \u043D\u0435\u043F\u0440\u043E\u0437\u0440\u0430\u0447\u043D\u043E\u0441\u0442\u0438.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "\u0426\u0432\u0435\u0442\u043E\u043A\u043E\u0440\u0440\u0435\u043A\u0446\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -18801,15 +21603,15 @@
       },
       {
         "Id": "SpeedAndRatio_Duration",
-        "Value": "S\u00FCre: {orig} -\u003E {cur} ({(cur / orig):n2}x)",
+        "Value": "S\u00FCre: {(int)orig}s -\u003E {(int)cur}s ({(cur / orig):n2}x)",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "orig"
           },
           {
-            "Key": "uint",
+            "Key": "double",
             "Value": "cur"
           }
         ],
@@ -18824,6 +21626,204 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
+        "Value": "Sabit De\u011Fi\u015Fken H\u0131z",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_ColorAdjust",
+        "Value": "Renk Ayar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic",
+        "Value": "Temel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Brightness",
+        "Value": "Parlakl\u0131k",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Saturation",
+        "Value": "Doygunluk",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabBasic_Hue",
+        "Value": "Ton",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced",
+        "Value": "Geli\u015Fmi\u015F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Gamma",
+        "Value": "Gama",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabAdvanced_Temperature",
+        "Value": "Renk S\u0131cakl\u0131\u011F\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Renk s\u0131cakl\u0131\u011F\u0131 ayar\u0131 sekmesi ba\u015Fl\u0131\u011F\u0131",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor",
+        "Value": "Renk",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Hue",
+        "Value": "Renk Tonu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Saturation",
+        "Value": "Doygunluk",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabColor_Vibrance",
+        "Value": "Do\u011Fal Doygunluk",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects",
+        "Value": "Olu\u015Fturma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Grayscale",
+        "Value": "Gri Tonlama",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Grayscale effect for color adjustment tab",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Invert",
+        "Value": "Renkleri Ters \u00C7evir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabEffects_Opacity",
+        "Value": "Opakl\u0131k",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone",
+        "Value": "Renk Tonu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Brightness",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ColorAdjust_TabTone_Contrast",
+        "Value": "Kontrast",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Color adjustment tone tab - contrast setting",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ColorAdjustment",
+        "Value": "Parlakl\u0131k, kontrast, doygunluk, renk tonu, gama, do\u011Fal doygunluk, renk s\u0131cakl\u0131\u011F\u0131, ters \u00E7evirme, gri tonlama ve opakl\u0131k ile kapsaml\u0131 renk ayarlamalar\u0131 yap\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Color adjustment effect description",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ColorAdjustment",
+        "Value": "Renk Ayar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ]

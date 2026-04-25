@@ -87,7 +87,7 @@ namespace projectFrameCut.Services
             return bundles;
         }
 
-        public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ")
+        public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ", bool haveSubFix = true)
         {
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffectBundle>> e)
             {
@@ -100,7 +100,11 @@ namespace projectFrameCut.Services
                     Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
-                if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
+                if (!haveSubFix)
+                {
+                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);   
+                }
+                else if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                     return $"{dispName}{splitter}({type})";

@@ -253,10 +253,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
-                effect.RelativeWidth = s.RelativeWidth;
-                effect.RelativeHeight = s.RelativeHeight;
-                effect.Enabled = s.Enabled;
                 effect.BindedEffectGroupID = s.BindedEffectGroupID;
+                if(effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
+                {
+                    effect.RelativeWidth = s.RelativeWidth;
+                    effect.RelativeHeight = s.RelativeHeight;
+                    effect.Enabled = s.Enabled;
+                }
 
                 // Restore IBindableArgumentEffect properties
                 if (effect is IBindableArgumentEffect bindableEffect)

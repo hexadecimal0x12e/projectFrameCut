@@ -42,6 +42,7 @@ using Thickness = Microsoft.Maui.Thickness;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Converters;
+using projectFrameCut.ApplicationPluginBase.Effect;
 
 
 
@@ -66,6 +67,7 @@ namespace projectFrameCut.DraftStuff
         private const string InternalRotationID = "__Internal_Rotation__";
         private const string InternalCropID = "__Internal_Crop__";
         private static readonly Guid InternalCropBundleGuid = new("a3a744cc-53b7-4d5e-8dd5-4c66077d9401");
+        private static readonly Guid InternalColorAdjustmentBundleGuid = new("dc3cfef8-1782-4428-8862-f9a0995c02d9");
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
@@ -133,6 +135,11 @@ namespace projectFrameCut.DraftStuff
                 {
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
                     Content = BuildSizeAndPositionTab(clip, handler)
+                });
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_ColorAdjust,
+                    Content = BuildColorAdjustmentTab(clip, handler)
                 });
             }
             if (clip.ClipType != ClipMode.MarkingClip)
@@ -2152,10 +2159,10 @@ namespace projectFrameCut.DraftStuff
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
-            var haveManySpeedVariancePorvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
+            var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles.Where(c => haveManySpeedVariancePorvider || c.Value.TypeOfEffect != EffectType.SpeedVarianceProvider))
+                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2244,7 +2251,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(clip.ClipType switch { ClipMode.AudioClip => EffectTarget.Audio, ClipMode.MarkingClip => EffectTarget.NotSpecified, _ => EffectTarget.Video }, page, bundlesFactories, ppb, handler));
+            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -3013,6 +3020,132 @@ namespace projectFrameCut.DraftStuff
 
         #endregion
 
+        #region color adjustment
+        private View BuildColorAdjustmentTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var colorAdjustBundleFactories = EffectServices.GetAvailableEffectBundles().Select(c => (c, c.Value())).Where(c => c.Item2.Target == EffectTarget.ColorAdjustment && c.Item2.TypeName != "ColorAdjustment").Select(C => C.c).ToDictionary(c => c.Key, c => c.Value);
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
+            ColorAdjustmentEffectBundle bundle = null!;
+            if (!clip.EffectBundles.TryGetValue(InternalColorAdjustmentBundleGuid, out var b) || b is not ColorAdjustmentEffectBundle cb)
+            {
+                bundle = new ColorAdjustmentEffectBundle() { Id = InternalColorAdjustmentBundleGuid };
+            }
+            else
+            {
+                bundle = cb;
+            }
+
+            var ppb = new PropertyPanelBuilder();
+            ppb.AddFromAnother(bundle.CreateUI(), bundle);
+            foreach (var item in clip.EffectBundles.Where(c => c.Value.Target == EffectTarget.ColorAdjustment && c.Value.Id != InternalColorAdjustmentBundleGuid))
+            {
+                var bundleId = item.Key;
+                var bundleInstance = item.Value;
+                var locedName = localizedBundleNames.TryGetValue(item.Value.Name, out var locName) ? locName : item.Value.TypeName;
+                ppb.AddSeparator();
+                ppb.AddText(new SingleLineLabel(locedName, 25));
+                ppb.AddCheckbox($"Effect|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
+                ppb.AddFromAnother(item.Value.CreateUI(), item.Value);
+                ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
+            }
+            ppb.AppendWhen(colorAdjustBundleFactories.Any(), c => c.AddSeparator());
+            foreach (var item in colorAdjustBundleFactories)
+            {
+                ppb.AddCustomChild(localizedBundleNames.TryGetValue(item.Key, out var value) ? value : item.Key, new Button
+                {
+                    Text = Localized.DraftPage_CenterMenuBar_AddClip,
+                    Command = new Command(
+                        () =>
+                        {
+                            PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, "AddBundle", item.Key);
+                        })
+                });
+            }
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        handler?.Invoke(s, e);
+                    }
+                    else
+                    {
+                        clip.EffectBundles[InternalColorAdjustmentBundleGuid] = 
+                            new ColorAdjustmentEffectBundle() 
+                            { 
+                                Id = InternalColorAdjustmentBundleGuid, 
+                                Parameters = senderBundle.HandlePropertyPanelChange(e) 
+                            };
+
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id.StartsWith("Bundle|"))
+                {
+                    var parts = e.Id.Split('|');
+                    if (parts.Length >= 3)
+                    {
+                        Guid bundleId = new(parts[1]);
+                        string action = parts[2];
+                        if (!clip.EffectBundles?.ContainsKey(bundleId) ?? false) return;
+
+                        switch (action)
+                        {
+                            case "Remove":
+                                clip.EffectBundles?.Remove(bundleId);
+                                RebuildAllEffects(clip);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                break;
+                            case "Enabled":
+                                if (clip.EffectBundles.TryGetValue(bundleId, out var enabledBundle))
+                                {
+                                    if (bool.TryParse(e.Value?.ToString(), out var enabled))
+                                    {
+                                        enabledBundle.Enabled = enabled;
+                                        RebuildAllEffects(clip);
+                                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    if (e.Value is string bundleTypeName)
+                    {
+                        if (colorAdjustBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
+        }
+        #endregion
+
         #region speed and ratio
 
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
@@ -3023,21 +3156,10 @@ namespace projectFrameCut.DraftStuff
             clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
 
             var allBundleFactories = EffectServices.GetAvailableEffectBundles();
-            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames();
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
 
             var speedBundleFactoryItems = allBundleFactories
-                .Where(kvp =>
-                {
-                    try
-                    {
-                        var sample = kvp.Value();
-                        return IsSpeedVarianceBundle(sample);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                })
+                .Where(kvp => kvp.Value().Target == EffectTarget.SpeedVariance)
                 .Select(kvp => new
                 {
                     TypeName = kvp.Key,
@@ -3047,29 +3169,10 @@ namespace projectFrameCut.DraftStuff
                 .OrderBy(x => x.DisplayName, StringComparer.Ordinal)
                 .ToList();
 
-            var speedBundleIds = new HashSet<Guid>();
-            foreach (var effect in clip.Effects.Values)
-            {
-                if (effect.TypeOfEffect == EffectType.SpeedVarianceProvider
-                    && Guid.TryParse(effect.BindedEffectGroupID, out var groupId))
-                {
-                    speedBundleIds.Add(groupId);
-                }
-            }
-
-            foreach (var bundleKvp in clip.EffectBundles)
-            {
-                if (IsSpeedVarianceBundle(bundleKvp.Value))
-                {
-                    speedBundleIds.Add(bundleKvp.Key);
-                }
-            }
-
-            var speedBundles = speedBundleIds
-                .Select(id => clip.EffectBundles.TryGetValue(id, out var bundle) ? bundle : null)
-                .Where(bundle => bundle is not null)
-                .Cast<IEffectBundle>()
-                .ToList();
+            var speedBundles = clip.EffectBundles
+                ?.Where(kvp => kvp.Value.Target == EffectTarget.SpeedVariance)
+                ?.Select(c => c.Value)
+                ?.ToList() ?? [];
 
             var ppb = new PropertyPanelBuilder();
 
@@ -3084,20 +3187,15 @@ namespace projectFrameCut.DraftStuff
 
             if (speedBundles.Count == 0)
             {
-                ppb.AddText(new Label
-                {
-                    Text = PPLocalizedResources.SpeedAndRatio_None,
-                    TextColor = Colors.Gray
-                });
+                ppb.AddText(new SingleLineLabel(PPLocalizedResources.SpeedAndRatio_None, 20));
             }
             var bundle = speedBundles.FirstOrDefault();
             if (bundle is not null)
             {
                 var bundleId = bundle.Id;
-                string keyPrefix = $"SpeedBundle|{bundleId}|";
                 string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
 
-                ppb.AddText(new TitleAndDescriptionLineLabel(bundle.Name ?? localizedName, bundle.TypeName));
+                ppb.AddText(new SingleLineLabel(localizedName ?? bundle.Name, 25));
 
                 try
                 {
@@ -3114,13 +3212,21 @@ namespace projectFrameCut.DraftStuff
                     });
                 }
 
-                ppb.AddButton($"{keyPrefix}Remove", PPLocalizedResources.EffectProp_Remove);
+                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                {
+                    clip.EffectBundles?.Remove(bundleId);
+                    RebuildAllEffects(clip);
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return;
+                });
                 ppb.AddSeparator();
                 var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
-                ppb.AddCustomChild(new Label { Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration(clip.lengthInFrame, effLength) : "", FontSize = 12, TextColor = Colors.Gray });
+                ppb.AddCustomChildWithID("durationHintLabel", new Label { Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "", FontSize = 12, TextColor = Colors.Gray });
             }
-            var bundlesFactories = EffectServices.GetAvailableEffectBundles();
-            ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, bundlesFactories, ppb, handler)));
+            else
+            {
+                ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, allBundleFactories, ppb, handler)));
+            }
 
             ppb.PropertyChanged += (s, e) =>
             {
@@ -3132,24 +3238,14 @@ namespace projectFrameCut.DraftStuff
                         editingBundle.Parameters = updated;
                         RebuildAllEffects(clip);
                         clip.ApplySpeedRatio();
+                        if (ppb.Components.TryGetValue("durationHintLabel", out var la) && la is Label l)
+                        {
+                            var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
+                            l.Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "";
+                        }
                         handler?.Invoke(s, e);
                     }
                     return;
-                }
-                else if (e.Id.StartsWith("SpeedBundle|", StringComparison.Ordinal))
-                {
-                    var parts = e.Id.Split('|');
-                    if (parts.Length >= 3 && Guid.TryParse(parts[1], out var bundleId) && clip.EffectBundles.TryGetValue(bundleId, out var bundle))
-                    {
-                        switch (parts[2])
-                        {
-                            case "Remove":
-                                clip.EffectBundles.Remove(bundleId);
-                                RebuildAllEffects(clip);
-                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                                return;
-                        }
-                    }
                 }
                 else if (e.Id == "AddBundle")
                 {
@@ -3164,7 +3260,7 @@ namespace projectFrameCut.DraftStuff
                     }
                     if (ppb.Properties.TryGetValue("NewBundleType", out var typeObj) && typeObj is string bundleTypeName)
                     {
-                        if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
+                        if (allBundleFactories.TryGetValue(bundleTypeName, out var factory))
                         {
                             var instance = factory();
                             instance.Id = Guid.NewGuid();

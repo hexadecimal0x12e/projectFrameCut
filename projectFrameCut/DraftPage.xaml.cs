@@ -44,6 +44,8 @@ using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+
 
 
 #if WINDOWS
@@ -70,6 +72,7 @@ using Microsoft.Maui.Platform;
 using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
 using Google.Android.Material.Chip;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 
 #endif
 
@@ -3809,6 +3812,64 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region resize clip
+    private void FinalizeLeftHandleResize(Border border, ClipElementUI clip, bool triggeredByCancel)
+    {
+        HandleStartWidth.TryRemove(clip.Id, out _);
+        clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
+        clip.origLength = (clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width;
+
+        double deltaPx = clip.Clip.TranslationX - clip.layoutX;
+        long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * clip.SecondPerFrameRatio * tracksZoomOffest);
+        long newRel = (long)clip.relativeStartFrame + deltaFrames;
+        if (newRel < 0) newRel = 0;
+        uint maxRelAllowed = (clip.maxFrameCount >= clip.lengthInFrame) ? (clip.maxFrameCount - clip.lengthInFrame) : 0u;
+        if ((ulong)newRel > maxRelAllowed) newRel = maxRelAllowed;
+        clip.relativeStartFrame = (uint)newRel;
+
+        clip.Clip.BatchCommit();
+        string leftResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
+        OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+        {
+            SourceId = clip.Id,
+            SourceName = leftResizeClipName,
+            Reason = ClipUpdateReason.ClipResized,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                ClipUpdateReason.ClipResized,
+                leftResizeClipName,
+                triggeredByCancel
+                    ? $"Left handle resize canceled, keep lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}"
+                    : $"Left handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
+        });
+
+        clip.MovingStatus = ClipMovingStatus.Free;
+        LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
+    }
+
+    private void FinalizeRightHandleResize(Border border, ClipElementUI clip, bool triggeredByCancel)
+    {
+        HandleStartWidth.TryRemove(clip.Id, out _);
+        clip.Clip.BatchCommit();
+        clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
+        clip.origLength = (clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width;
+
+        string rightResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
+        OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+        {
+            SourceId = clip.Id,
+            SourceName = rightResizeClipName,
+            Reason = ClipUpdateReason.ClipResized,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                ClipUpdateReason.ClipResized,
+                rightResizeClipName,
+                triggeredByCancel
+                    ? $"Right handle resize canceled, keep lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}"
+                    : $"Right handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
+        });
+
+        clip.MovingStatus = ClipMovingStatus.Free;
+        LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
+    }
+
     private void LeftHandlePanded(object? sender, PanUpdatedEventArgs e)
     {
         if (sender is not Border border) return;
@@ -3847,29 +3908,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 break;
 
             case GestureStatus.Completed:
-                HandleStartWidth.TryRemove(clip.Id, out _);
-                clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
-                double deltaPx = clip.Clip.TranslationX - clip.layoutX;
-                long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * clip.SecondPerFrameRatio * tracksZoomOffest);
-                long newRel = (long)clip.relativeStartFrame + deltaFrames;
-                if (newRel < 0) newRel = 0;
-                uint maxRelAllowed = (clip.maxFrameCount >= clip.lengthInFrame) ? (clip.maxFrameCount - clip.lengthInFrame) : 0u;
-                if ((ulong)newRel > maxRelAllowed) newRel = maxRelAllowed;
-                clip.relativeStartFrame = (uint)newRel;
-                clip.Clip.BatchCommit();
-                string leftResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
-                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = clip.Id,
-                    SourceName = leftResizeClipName,
-                    Reason = ClipUpdateReason.ClipResized,
-                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                        ClipUpdateReason.ClipResized,
-                        leftResizeClipName,
-                        $"Left handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
-                });
-                clip.MovingStatus = ClipMovingStatus.Free;
-                LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
+                FinalizeLeftHandleResize(border, clip, triggeredByCancel: false);
+                break;
+
+            case GestureStatus.Canceled:
+                FinalizeLeftHandleResize(border, clip, triggeredByCancel: true);
                 break;
         }
     }
@@ -3907,22 +3950,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 break;
 
             case GestureStatus.Completed:
-                HandleStartWidth.TryRemove(clip.Id, out _);
-                clip.Clip.BatchCommit();
-                clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
-                string rightResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
-                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = clip.Id,
-                    SourceName = rightResizeClipName,
-                    Reason = ClipUpdateReason.ClipResized,
-                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                        ClipUpdateReason.ClipResized,
-                        rightResizeClipName,
-                        $"Right handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
-                });
-                clip.MovingStatus = ClipMovingStatus.Free;
-                LogDiagnostic("clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
+                FinalizeRightHandleResize(border, clip, triggeredByCancel: false);
+                break;
+
+            case GestureStatus.Canceled:
+                FinalizeRightHandleResize(border, clip, triggeredByCancel: true);
                 break;
         }
     }
@@ -5663,7 +5695,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (MainMultiWindowView?.ActiveWindow?.IsClosable ?? false) MainMultiWindowView?.ActiveWindow?.Close(false);
                 break;
             case "history":
-                ToggleAssistantSubWindow(HistorySubWindow);
+                SettingsClick(this, new());
+                if(Popup.Content is TabbedView tv)
+                {
+                    tv.SelectByTag("history");
+                }
                 break;
             //case "preview":
             //    ActivateMultiWindowItem(PreviewSubwindow);
@@ -6605,7 +6641,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
-
 #else
             await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), Localized._OK);
 #endif

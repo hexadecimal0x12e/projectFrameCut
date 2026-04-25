@@ -21,6 +21,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class VideoClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -56,6 +57,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public string? DecoderName => Decoder?.TypeName;
 
+
         public VideoClip()
         {
             (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
@@ -89,6 +91,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class PhotoClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -164,6 +167,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class SolidColorClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -324,6 +328,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class TextClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -748,6 +753,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ClipMode ClipType => ClipMode.MarkingClip;
 
         public string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public string Name { get; init; }
         public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }

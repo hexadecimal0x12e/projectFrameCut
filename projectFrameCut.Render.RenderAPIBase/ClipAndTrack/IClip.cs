@@ -28,9 +28,17 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
-        /// The unique identifier of this clip.
+        /// The unique identifier of this clip. <b>SHOULD BE A GUID.</b>
         /// </summary>
+        /// <remarks>
+        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that time.
+        /// </remarks>
         public string Id { get; init; }
+
+        /// <summary>
+        /// The unique identifier of this clip. 
+        /// </summary>
+        public Guid IdAsGUID { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
@@ -149,6 +157,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Gets a frame relative to source start point. Kept for compatibility.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
             => GetFrameRelativeToStartPointOfSource(frameIndex, requiredWidth, requiredHeight, true, targetPPB);
 
@@ -156,6 +165,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Gets a frame at draft-global frame index.
         /// </summary>
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
             => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
 
@@ -243,7 +253,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
     internal sealed class SpeedVarianceProfile
     {
         public required uint Duration { get; init; }
-        public required float FallbackRatio { get; init; }
         public required ISpeedVarianceProvider? Provider { get; init; }
         public required uint EffectiveDurationFrames { get; init; }
 
@@ -256,15 +265,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             if (Provider is null)
             {
-                double mapped = Math.Round(timelineOffset / Math.Max(FallbackRatio, 1e-6f), MidpointRounding.AwayFromZero);
-                if (mapped < 0)
-                {
-                    mapped = 0;
-                }
-
-                ulong maxOffset = Duration - 1;
-                ulong offset = (ulong)Math.Min(mapped, maxOffset);
-                return offset;
+                return Math.Min(timelineOffset, Duration - 1);
             }
 
             return MapTimelineOffsetWithProvider(timelineOffset);
@@ -313,13 +314,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             }
             catch
             {
-                double mapped = sourceOffset * Math.Max(FallbackRatio, 1e-6f);
-                if (mapped >= uint.MaxValue)
-                {
-                    return uint.MaxValue;
-                }
-
-                return (uint)Math.Round(mapped, MidpointRounding.AwayFromZero);
+                return sourceOffset;
             }
         }
     }
@@ -346,7 +341,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         private static SpeedVarianceProfile Build(IClip clip)
         {
             uint duration = clip.Duration;
-            float fallbackRatio = ResolveFallbackRatio(clip);
             var provider = clip.SpeedVarianceProviderInstance;
 
             if (duration == 0)
@@ -354,7 +348,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
                 return new SpeedVarianceProfile
                 {
                     Duration = 0,
-                    FallbackRatio = fallbackRatio,
                     Provider = provider,
                     EffectiveDurationFrames = 0,
                 };
@@ -362,62 +355,24 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             if (provider is null)
             {
-                double total = duration * fallbackRatio;
-                uint effective = ClampDurationToFrameCount(total, duration);
-
                 return new SpeedVarianceProfile
                 {
                     Duration = duration,
-                    FallbackRatio = fallbackRatio,
                     Provider = null,
-                    EffectiveDurationFrames = effective,
+                    EffectiveDurationFrames = duration,
                 };
             }
 
-            uint effectiveDuration = ResolveEffectiveDuration(provider, duration, fallbackRatio);
+            uint effectiveDuration = ResolveEffectiveDuration(provider, duration);
             return new SpeedVarianceProfile
             {
                 Duration = duration,
-                FallbackRatio = fallbackRatio,
                 Provider = provider,
                 EffectiveDurationFrames = effectiveDuration,
             };
         }
 
-        private static uint ClampDurationToFrameCount(double scaledDuration, uint originalDuration)
-        {
-            if (originalDuration == 0)
-            {
-                return 0;
-            }
-
-            if (scaledDuration < 1d)
-            {
-                return 1;
-            }
-
-            if (scaledDuration > uint.MaxValue)
-            {
-                return uint.MaxValue;
-            }
-
-            return (uint)Math.Round(scaledDuration, MidpointRounding.AwayFromZero);
-        }
-
-        private static float ResolveFallbackRatio(IClip clip)
-        {
-#pragma warning disable CS0618
-            float fallback = clip.SecondPerFrameRatio;
-#pragma warning restore CS0618
-            if (fallback <= 0f || float.IsNaN(fallback) || float.IsInfinity(fallback))
-            {
-                return 1f;
-            }
-
-            return fallback;
-        }
-
-        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration, float fallbackRatio)
+        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration)
         {
             try
             {
@@ -431,11 +386,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             {
             }
 
-            return ClampDurationToFrameCount(duration * fallbackRatio, duration);
+            return duration;
         }
-
-        private static bool AreClose(float a, float b)
-            => Math.Abs(a - b) < 1e-6f;
     }
 
     public class ClipEquabilityComparer : IEqualityComparer<IClip>
