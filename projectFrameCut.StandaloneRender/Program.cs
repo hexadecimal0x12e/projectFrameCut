@@ -488,6 +488,7 @@ namespace projectFrameCut.StandaloneRender
 
             CancellationTokenSource cts = new();
             VideoBuilder builder = null!;
+            var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
             async Task composeVideo(string resultPath)
             {
                 var clips = JSONToIClips(timeline, assets, bpp);
@@ -529,11 +530,11 @@ namespace projectFrameCut.StandaloneRender
                     {
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
                         }
                     };
                 }
@@ -659,8 +660,7 @@ namespace projectFrameCut.StandaloneRender
                 t.Change(stopAfter * 1000, Timeout.Infinite);
 
             }
-
-            if (!Environment.GetCommandLineArgs().Contains("--noSigInt"))
+            if (!noSigInt)
             {
                 var cancelled = false;
                 Console.CancelKeyPress += (s, e) =>

@@ -210,7 +210,6 @@ namespace projectFrameCut.Shared
         /// Resize the target picture.
         /// </summary>
         public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
-
     }
 
 
@@ -1756,6 +1755,13 @@ namespace projectFrameCut.Shared
             }
         }
 
+        public HDRPicture16bpp SetBrightnessOffset(double offset)
+        {
+            Brightness = Brightness.Select(br => (float)Math.Clamp(br + offset, 0.0, 1.0)).ToArray();
+            return this;
+        }
+
+
         public static HDRPicture16bpp GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a, float brightness = 1f, float maximumBrightness = DefaultHdrMaximumBrightness)
         {
             int pixels = checked(width * height);
@@ -1810,6 +1816,136 @@ namespace projectFrameCut.Shared
 
         public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average()}(0..1), {Brightness.Average() * MaximumBrightness}nit";
 
+        private const float SdrReferenceNits = 100f;
+        private const float ToneMapKnee = 1.5f;
+        private const float OutputGamma = 2.2f;
+        private const float LumaEpsilon = 1e-6f;
+
+        /// <summary>
+        /// Convert this HDR picture to a standard SDR <see cref="Picture16bpp"/>.
+        /// </summary>
+        /// <param name="mode">
+        /// The degradation strategy:
+        /// <see cref="HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB"/> applies a knee-based tone map
+        /// driven by the brightness channel and maximum brightness;
+        /// <see cref="HDRImageDegradeToSDRMode.OverlayMaskFromBrightness"/> multiplies RGB by the brightness value;
+        /// <see cref="HDRImageDegradeToSDRMode.DiscardBrightnessChannel"/> copies RGB unchanged.
+        /// </param>
+        public Picture16bpp DegradeToSDR(HDRImageDegradeToSDRMode? DegradeMode = null)
+        {
+            var mode = DegradeMode ?? PictureExtensions.DefaultHDRImageDegradeToSDRMode;
+            var sw = Stopwatch.StartNew();
+            if (mode == HDRImageDegradeToSDRMode.DisallowDowngrade)
+                throw new InvalidOperationException($"HDR to SDR degrade is disabled. Mode: {mode}.");
+
+            var result = new Picture16bpp(Width, Height)
+            {
+                frameIndex = frameIndex,
+                filePath = filePath,
+            };
+
+            if (hasAlphaChannel && a != null)
+            {
+                result.a = new float[Pixels];
+                Array.Copy(a, result.a, Pixels);
+                result.hasAlphaChannel = true;
+            }
+
+            result.ProcessStack = new List<PictureProcessStack>(ProcessStack);
+
+            bool hasBrightness = Brightness != null && Brightness.Length == Pixels;
+
+            float validMaximumBrightness = MaximumBrightness > 0f && float.IsFinite(MaximumBrightness)
+                ? MaximumBrightness
+                : SdrReferenceNits;
+
+            for (int i = 0; i < Pixels; i++)
+            {
+                if (!hasBrightness || mode == HDRImageDegradeToSDRMode.DiscardBrightnessChannel)
+                {
+                    result.r[i] = r[i];
+                    result.g[i] = g[i];
+                    result.b[i] = b[i];
+                    continue;
+                }
+
+                float pixelBrightness = Brightness[i];
+
+                switch (mode)
+                {
+                    case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                        MapHDRToSDR(r[i], g[i], b[i], pixelBrightness, validMaximumBrightness,
+                            out var mappedR, out var mappedG, out var mappedB);
+                        result.r[i] = mappedR;
+                        result.g[i] = mappedG;
+                        result.b[i] = mappedB;
+                        break;
+
+                    case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                        float mask = Math.Clamp(pixelBrightness, 0f, 1f);
+                        result.r[i] = (ushort)Math.Clamp((int)Math.Round(r[i] * mask), 0, 65535);
+                        result.g[i] = (ushort)Math.Clamp((int)Math.Round(g[i] * mask), 0, 65535);
+                        result.b[i] = (ushort)Math.Clamp((int)Math.Round(b[i] * mask), 0, 65535);
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown HDR degrade mode.");
+                }
+            }
+
+            result.ProcessStack.Add(new PictureProcessStack
+            {
+                OperationDisplayName = "DegradeToSDR",
+                Operator = typeof(HDRPicture16bpp),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = new Dictionary<string, object>
+                {
+                    { "Mode", mode.ToString() },
+                    { "MaximumBrightness", MaximumBrightness },
+                },
+                Elapsed = sw.Elapsed,
+            });
+
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void MapHDRToSDR(ushort sourceR, ushort sourceG, ushort sourceB, float brightness, float maximumBrightness, out ushort mappedR, out ushort mappedG, out ushort mappedB)
+        {
+            if (!float.IsFinite(brightness))
+            {
+                mappedR = sourceR;
+                mappedG = sourceG;
+                mappedB = sourceB;
+                return;
+            }
+
+            float r = sourceR / 65535f;
+            float g = sourceG / 65535f;
+            float b = sourceB / 65535f;
+            float sourceSignalLuma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
+            if (sourceSignalLuma <= LumaEpsilon)
+            {
+                mappedR = sourceR;
+                mappedG = sourceG;
+                mappedB = sourceB;
+                return;
+            }
+
+            float relativeToSdrWhite = Math.Max(0f, brightness) * (maximumBrightness / SdrReferenceNits);
+            float toneMappedLinearLuma = (relativeToSdrWhite * ToneMapKnee) / (1f + relativeToSdrWhite * ToneMapKnee);
+            toneMappedLinearLuma = Math.Clamp(toneMappedLinearLuma, 0f, 1f);
+            float targetSignalLuma = MathF.Pow(toneMappedLinearLuma, 1f / OutputGamma);
+            float gain = targetSignalLuma / sourceSignalLuma;
+
+            r = Math.Clamp(r * gain, 0f, 1f);
+            g = Math.Clamp(g * gain, 0f, 1f);
+            b = Math.Clamp(b * gain, 0f, 1f);
+
+            mappedR = (ushort)Math.Clamp((int)Math.Round(r * 65535f), 0, 65535);
+            mappedG = (ushort)Math.Clamp((int)Math.Round(g * 65535f), 0, 65535);
+            mappedB = (ushort)Math.Clamp((int)Math.Round(b * 65535f), 0, 65535);
+        }
 
     }
     #endregion

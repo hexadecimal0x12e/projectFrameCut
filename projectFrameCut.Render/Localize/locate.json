@@ -1340,6 +1340,14 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR \u4EAE\u5EA6\u504F\u79FB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -4078,11 +4086,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u594F",
+        "Value": "\u6052\u5B9A\u53D8\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u594F",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -4122,11 +4130,11 @@
       },
       {
         "Id": "ColorAdjust_TabBasic_Saturation",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Value": "\u98FD\u548C\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -5546,11 +5554,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u5909\u901F",
+        "Value": "\u6052\u901F\u5909\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u5909\u901F",
+        "Comment": "\u4E00\u5B9A\u306E\u901F\u5EA6\u5909\u5316\u3092\u793A\u3059\u30A8\u30D5\u30A7\u30AF\u30C8\u540D\u3002\u65E5\u672C\u8A9E\u3068\u3057\u3066\u81EA\u7136\u306A\u9577\u3055\u3068\u8868\u73FE\u306B\u8ABF\u6574\u3002",
         "DontTranslate": false
       },
       {
@@ -5661,11 +5669,11 @@
       },
       {
         "Id": "ColorAdjust_TabColor_Vibrance",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u5F69\u5EA6",
+        "Value": "\u81EA\u7136\u5F69\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u5F69\u5EA6",
+        "Comment": "\u8C03\u6574\u989C\u8272\u81EA\u7136\u9971\u548C\u5EA6",
         "DontTranslate": false
       },
       {
@@ -5715,11 +5723,11 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Value": "\u660E\u308B\u3055",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -8476,11 +8484,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "Value": "Variateur de vitesse constant",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -8586,11 +8594,11 @@
       },
       {
         "Id": "ColorAdjust_TabColor_Vibrance",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vibrance",
+        "Value": "Vibrance naturelle",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Vibrance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -9732,11 +9740,11 @@
       },
       {
         "Id": "Tabs_SizeAndPosition",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4F4D\u7F6E\u8207\u5927\u5C0F",
+        "Value": "\u4F4D\u7F6E\u8207\u5EE3\u72F9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4F4D\u7F6E\u8207\u5927\u5C0F",
+        "Comment": "\u5728\u6587\u8A00\u6587\u4E2D\uFF0C\u201C\u5E7F\u72ED\u201D\u6BD4\u201C\u5927\u5C0F\u201D\u66F4\u8D34\u5408\u8BED\u5883\uFF0C\u610F\u6307\u5BBD\u7A84\u4E0E\u8303\u56F4",
         "DontTranslate": false
       },
       {
@@ -9820,11 +9828,11 @@
       },
       {
         "Id": "General_VideoCodec_TargetMode_http",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HTTP \u9060\u7A0B\u6587\u4EF6",
+        "Value": "HTTP \u9059\u6A94",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HTTP \u9060\u7A0B\u6587\u4EF6",
+        "Comment": "HTTP\u8FDC\u7A0B\u6587\u4EF6\uFF0C\u636E\u201C\u8FDC\u7A0B\u4E4B\u6863\u201D\u7B80\u5316\u4E3A\u201C\u9059\u6A94\u201D\uFF0C\u4FDD\u7559HTTP\u534F\u8BAE\u540D\u3002",
         "DontTranslate": false
       },
       {
@@ -9838,11 +9846,11 @@
       },
       {
         "Id": "General_VideoCodec_TargetMode_ffmpegDevices",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: FFmpeg \u76F8\u5BB9\u8A2D\u5099\u6E90",
+        "Value": "FFmpeg \u517C\u5BB9\u8BBE\u5907\u6E90",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: FFmpeg \u76F8\u5BB9\u8A2D\u5099\u6E90",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -9937,11 +9945,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5E38\u53D8\u901F",
+        "Value": "\u6052\u901F\u6709\u53D8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5E38\u53D8\u901F",
+        "Comment": "\u6052\u5B9A\u53D8\u901F\u7684\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u901F\u5EA6\u6052\u5B9A\u4F46\u6709\u53D8\u5316",
         "DontTranslate": false
       },
       {
@@ -9955,20 +9963,20 @@
       },
       {
         "Id": "ColorAdjust_TabBasic",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587",
+        "Value": "\u57FA\u790E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6587",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabBasic_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6\u8005\uFF0C\u660E\u6697\u4E4B\u5EA6\u4E5F\u3002",
+        "Value": "\u660E\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6\u8005\uFF0C\u660E\u6697\u4E4B\u5EA6\u4E5F\u3002",
+        "Comment": "\u6B64\u5904\u201C\u660E\u5EA6\u201D\u4E3A\u6587\u8A00\u6587\u4E2D\u8868\u793A\u660E\u4EAE\u7A0B\u5EA6\u7684\u5E38\u7528\u8BF4\u6CD5\uFF0C\u7B80\u6D01\u4E14\u7B26\u5408\u8F6F\u4EF6\u754C\u9762\u98CE\u683C",
         "DontTranslate": false
       },
       {
@@ -9981,11 +9989,10 @@
       },
       {
         "Id": "ColorAdjust_TabBasic_Saturation",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Value": "\u9971\u8272\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
         "DontTranslate": false
       },
       {
@@ -10008,11 +10015,11 @@
       },
       {
         "Id": "ColorAdjust_TabAdvanced_Gamma",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Gamma",
+        "Value": "\u4F3D\u746A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Gamma",
+        "Comment": "Gamma\uFF08\u4F3D\u9A6C\uFF09\u4E4B\u97F3\u8BD1\uFF0C\u6307\u663E\u793A\u6216\u56FE\u50CF\u7684\u4EAE\u5EA6\u6821\u6B63\u53C2\u6570\u3002",
         "DontTranslate": false
       },
       {
@@ -10026,11 +10033,11 @@
       },
       {
         "Id": "ColorAdjust_TabColor",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u989C\u8272",
+        "Value": "\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u989C\u8272",
+        "Comment": "\u5BF9\u5E94\u201C\u989C\u8272\u201D\u4E00\u8BCD\u7684\u6587\u8A00\u8868\u8FBE",
         "DontTranslate": false
       },
       {
@@ -10044,38 +10051,38 @@
       },
       {
         "Id": "ColorAdjust_TabColor_Saturation",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Value": "\u5F69\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Comment": "adjusts color saturation in the Color Adjust tab",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabColor_Vibrance",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u98FD\u548C\u5EA6",
+        "Value": "\u81EA\u7136\u98FD\u548C\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u81EA\u7136\u98FD\u548C\u5EA6",
+        "Comment": "\u989C\u8272\u8C03\u6574\u4E2D\u7684\u81EA\u7136\u9971\u548C\u5EA6\u9009\u9879",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabEffects",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E32\u6C0F",
+        "Value": "\u6E32\u67D3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E32\u6C0F",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabEffects_Grayscale",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7070\u9636",
+        "Value": "\u7070\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7070\u9636",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -10106,20 +10113,19 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6 -\u003E \u660E\u5EA6",
+        "Value": "\u660E\u6697\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6 -\u003E \u660E\u5EA6",
+        "Comment": "\u201C\u4EAE\u5EA6\u201D\u8BD1\u4F5C\u6587\u8A00\u6587\uFF0C\u610F\u4E3A\u660E\u4EAE\u7A0B\u5EA6",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabTone_Contrast",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "Value": "\u5C0D\u6BD4\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
         "DontTranslate": false
       },
       {
@@ -11409,11 +11415,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F\u6548\u679C",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F\u6548\u679C",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
         "DontTranslate": false
       },
       {
@@ -12868,11 +12874,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F",
+        "Value": "Konstant variierende Geschwindigkeit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u7684\u53D8\u901F",
+        "Comment": "Display name for effect: constant speed variation",
         "DontTranslate": false
       },
       {
@@ -13030,11 +13036,10 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Value": "Helligkeit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
         "DontTranslate": false
       },
       {
@@ -14435,11 +14440,11 @@
       },
       {
         "Id": "ColorAdjust_TabColor_Vibrance",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Saturaci\u00F3n natural",
+        "Value": "Saturaci\u00F3n natural",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Saturaci\u00F3n natural",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -15954,11 +15959,11 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Value": "Luminosit\u00E0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -18706,11 +18711,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u901F",
+        "Value": "Velocidade Vari\u00E1vel Constante",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u901F\u53D8\u901F",
+        "Comment": "PT-BR translation of \u6052\u5B9A\u53D8\u901F, used as display name for a classic speed variance effect/provider",
         "DontTranslate": false
       },
       {
@@ -18836,11 +18841,11 @@
       },
       {
         "Id": "ColorAdjust_TabEffects_Grayscale",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: grayscale",
+        "Value": "Escala de Cinza",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: grayscale",
+        "Comment": "Grayscale effect adjustment",
         "DontTranslate": false
       },
       {
@@ -20213,11 +20218,11 @@
       },
       {
         "Id": "ColorAdjust_TabBasic_Saturation",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Value": "\u041D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9971\u548C\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -20335,20 +20340,20 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Value": "\u042F\u0440\u043A\u043E\u0441\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "ColorAdjust_TabTone_Contrast",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "Value": "\u041A\u043E\u043D\u0442\u0440\u0430\u0441\u0442\u043D\u043E\u0441\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5BF9\u6BD4\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -21793,11 +21798,11 @@
       },
       {
         "Id": "ColorAdjust_TabTone_Brightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Value": "Parlakl\u0131k",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u4EAE\u5EA6",
+        "Comment": "",
         "DontTranslate": false
       },
       {

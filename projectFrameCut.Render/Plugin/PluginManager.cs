@@ -179,25 +179,6 @@ namespace projectFrameCut.Render.Plugin
             }
         }
 
-        //public static IClip CreateNewClip(string pluginID, string clipType, string id, string name)
-        //{
-        //    if (PluginManager.LoadedPlugins.TryGetValue(pluginID, out var plugin))
-        //    {
-        //        if (plugin.ClipProvider.TryGetValue(clipType, out var creator))
-        //        {
-        //            return creator(id, name);
-        //        }
-        //        else
-        //        {
-        //            throw new ArgumentException($"Clip type not found: {clipType} in plugin {pluginID}");
-        //        }
-        //    }
-        //    else
-        //    {
-        //        throw new ArgumentException($"Plugin not found: {pluginID}");
-        //    }
-        //}
-
         public static ITransform CreateTransform(JsonElement source)
         {
             var plug = source.GetProperty("FromPlugin").GetString();

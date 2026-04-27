@@ -163,7 +163,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 #pragma warning restore CA2022 // 避免使用 "Stream.Read" 进行不准确读取
 
                 var errstr = FFmpegHelper.GetErrorString(averr);
-                throw new InvalidDataException($"File '{path}' seems don't like a video file or it has an unsupported codec. Try install the codec extension. If you continuously encountering this issue, try encode your video again to another format. \r\n('{errstr}', HResult: 0x{averr:x8})")
+                throw new InvalidDataException($"File '{path}' seems don't like a video file or it has an unsupported format by either FFmpeg or projectFrameCut. {Environment.NewLine}Try install the codec extension. If you continuously encountering this issue, use a tool try encode your video again to another format. {Environment.NewLine}(FFmpeg error '{errstr}', HResult: 0x{averr:x8})")
                 {
                     HResult = averr
                 };
@@ -172,7 +172,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
             catch (IOException ex)
             {
-                throw new FileLoadException($"projectFrameCut can't read the video file '{path}', it's maybe because of an error:'{ex.Message}'", ex);
+                throw new FileLoadException($"projectFrameCut can't read the video file '{path}', it's maybe because of a I/O error:'{ex.Message}'", ex);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -306,6 +306,78 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 return encoder
                     ? ffmpeg.avcodec_find_encoder(id)
                     : ffmpeg.avcodec_find_decoder(id);
+            }
+        }
+
+        public static int DetectVideoBitDepth(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentNullException(nameof(path));
+
+            AVFormatContext* fmt = null;
+
+            try
+            {
+                fmt = ffmpeg.avformat_alloc_context();
+                if (fmt == null)
+                    throw new OutOfMemoryException("Failed to allocate AVFormatContext for bit depth detection.");
+
+                int openRet = ffmpeg.avformat_open_input(&fmt, path, null, null);
+                if (openRet != 0)
+                    DetectWhyCannotOpenVideo(path, openRet);
+
+                if (ffmpeg.avformat_find_stream_info(fmt, null) < 0)
+                    throw new InvalidDataException($"Cannot probe stream info for '{path}'.");
+
+                int videoStreamIndex = -1;
+                for (int i = 0; i < fmt->nb_streams; i++)
+                {
+                    if (fmt->streams[i]->codecpar->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+                    {
+                        videoStreamIndex = i;
+                        break;
+                    }
+                }
+
+                if (videoStreamIndex < 0)
+                    throw new InvalidDataException($"No video stream found in '{path}'.");
+
+                AVCodecParameters* par = fmt->streams[videoStreamIndex]->codecpar;
+
+                if (par->bits_per_raw_sample > 0)
+                    return par->bits_per_raw_sample;
+
+                var pixFmt = (AVPixelFormat)par->format;
+                if (pixFmt != AVPixelFormat.AV_PIX_FMT_NONE)
+                {
+                    try
+                    {
+                        AVPixFmtDescriptor* desc = ffmpeg.av_pix_fmt_desc_get(pixFmt);
+                        if (desc != null && desc->nb_components > 0)
+                        {
+                            int depth = desc->comp[0].depth;
+                            if (depth > 0)
+                                return depth;
+                        }
+                    }
+                    catch (EntryPointNotFoundException)
+                    {
+                        // av_pix_fmt_desc_get not exported by this FFmpeg build.
+                    }
+                }
+
+                if (par->bits_per_coded_sample > 0)
+                    return par->bits_per_coded_sample;
+
+                throw new InvalidDataException($"Cannot determine bit depth for video '{path}'. The codec may not expose this information.");
+            }
+            finally
+            {
+                if (fmt != null)
+                {
+                    AVFormatContext* tmp = fmt;
+                    ffmpeg.avformat_close_input(&tmp);
+                }
             }
         }
 

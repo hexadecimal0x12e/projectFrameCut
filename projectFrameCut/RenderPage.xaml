@@ -17,12 +17,12 @@
     </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition x:Name="PreviewRowDefinition" Height="Auto"/>
+            <RowDefinition x:Name="ProgressRowDefinition" Height="*"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Grid.RowSpan="2" BackgroundColor="#80000000" IsVisible="{Binding IsCountdownVisible}" ZIndex="1000">
-            <Border VerticalOptions="Center" HorizontalOptions="Center" BackgroundColor="Grey" Padding="30">
+            <Border VerticalOptions="Center" HorizontalOptions="Center" BackgroundColor="Gray" Padding="30">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="8"/>
                 </Border.StrokeShape>
@@ -129,12 +129,16 @@
 
             </VerticalStackLayout>
 
-            <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">
-                <Label Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,12,0,8"/>
-                <Border StrokeThickness="5"  Padding="4" HorizontalOptions="Center" VerticalOptions="Start">
-                    <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="400" HeightRequest="200" />
+            <Grid x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0" VerticalOptions="Fill" IsClippedToBounds="True" RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Label Grid.Row="0" Text="{l:Localized Key=RenderPage_PreviewLabel}" Margin="0,12,0,0"/>
+                    <Border x:Name="PreviewBorder" Grid.Row="1" StrokeThickness="5" Padding="4" HorizontalOptions="Center" VerticalOptions="Fill" HeightRequest="-1" MinimumHeightRequest="180">
+                    <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Fill" MinimumHeightRequest="160" Background="Black" />
                 </Border>
-            </VerticalStackLayout>
+            </Grid>
 
         </Grid>
 
@@ -144,7 +148,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition x:Name="LoggingRowDefinition" Height="*"/>
                 <RowDefinition Height="10"/>
             </Grid.RowDefinitions>
 

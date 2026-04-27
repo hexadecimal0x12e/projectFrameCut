@@ -45,6 +45,14 @@
                     <Button x:Name="HDRTestButton" Text="Test HDR" Clicked="HDRTestButton_Clicked"/>
                     <Button x:Name="HDRTestButton2" Text="Test HDR 2" Clicked="HDRTestButton2_Clicked"/>
                     <Image x:Name="PlaceResizeTestImage" />
+                    <VerticalStackLayout x:Name="HDROutputPreview">
+                        <Label Text="NormalizeBrightnessToRGB"></Label>
+                        <Image x:Name="NormalizeBrightnessToRGBOutputImage"/>
+                        <Label Text="OverlayMaskFromBrightness"></Label>
+                        <Image x:Name="OverlayMaskFromBrightnessOutputImage"/>
+                        <Label Text="DiscardBrightnessChannel"></Label>
+                        <Image x:Name="DiscardBrightnessChannelOutputImage"/>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
             <Border StrokeThickness="4">

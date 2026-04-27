@@ -15,6 +15,7 @@ using projectFrameCut.Render.Plugin;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -54,7 +55,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
         public string TargetDecoder { get; set; } = string.Empty;
+        public double HDRBrightnessOffset { get; set; } = 0;
 
+        [JsonIgnore()]
         public string? DecoderName => Decoder?.TypeName;
 
 
@@ -63,7 +66,18 @@ namespace projectFrameCut.Render.ClipsAndTracks
             (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            if(Decoder is null)
+            {
+                throw new NullReferenceException("Decoder is null. Please init it.");
+            }
+            if(Decoder is HDRDecoderContext h)
+            {
+                return h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
+            }
+            return (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+        }
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {

@@ -11673,20 +11673,20 @@
       },
       {
         "Id": "DraftSettingPage_Advanced_DiscardUnsavedChange",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Value": "Discard unsaved changes in the staging area",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: OK",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Advanced_Warn",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022This operation will make irreversible changes to your project. Do you want to continue?\\nEnter \\\u0022yes\\\u0022 in the field below to proceed.\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "This operation will make irreversible changes to your project. Do you want to continue?\nType \u0022yes\u0022 below to continue.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022This operation will make irreversible changes to your project. Do you want to continue?\\nEnter \\\u0022yes\\\u0022 in the field below to proceed.\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "This is a warning message. Do NOT translate \u0022yes\u0022 as it is what the user needs to type.",
         "DontTranslate": false
       },
       {
@@ -23817,11 +23817,11 @@
       },
       {
         "Id": "DraftSettingPage_General_HDRLimit",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR \u6700\u5927\u8F1D\u5EA6 (nit)",
+        "Value": "HDR \u6700\u5927\u8F1D\u5EA6 (nit)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR \u6700\u5927\u8F1D\u5EA6 (nit)",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -23942,11 +23942,11 @@
       },
       {
         "Id": "DraftSettingPage_Advanced_Warn",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\\r\\n\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\n\u4E0B\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\\r\\n\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "\u4E0D\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
         "DontTranslate": false
       },
       {
@@ -23978,7 +23978,7 @@
       },
       {
         "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: {\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001\u7D20\u6750\u300C{asset}\u300D\u3068\u4EE5\u4E0B\u306E\u30AF\u30EA\u30C3\u30D7\u304C\u5B8C\u5168\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\\r{clips}\\r\\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u4E0B\u8A18\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u9700\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001\u7D20\u6750\u300C{asset}\u300D\u3068\u4EE5\u4E0B\u306E\u30AF\u30EA\u30C3\u30D7\u304C\u5B8C\u5168\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\r{clips}\r\n\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u7D9A\u884C\u3059\u308B\u306B\u306F\u3001\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24000,7 +24000,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: {\n    \u0022Value\u0022: \u0022\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001\u7D20\u6750\u300C{asset}\u300D\u3068\u4EE5\u4E0B\u306E\u30AF\u30EA\u30C3\u30D7\u304C\u5B8C\u5168\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\\r{clips}\\r\\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u4E0B\u8A18\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u7D9A\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u9700\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}",
+        "Comment": "\u7D20\u6750\u524A\u9664\u306E\u78BA\u8A8D\u30C0\u30A4\u30A2\u30ED\u30B0\u3002\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3053\u3068",
         "DontTranslate": false
       },
       {
@@ -41455,11 +41455,11 @@
       },
       {
         "Id": "DraftSettingPage_Tab_Compatibility_UpgradePlaceResize",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF\u3002",
+        "Value": "\u5347\u7D1AClip\u5B9A\u4F4D\u7CFB\u7D71",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5347\u7EA7\u526A\u8F91\u5B9A\u4F4D\u7CFB\u7EDF\u3002",
+        "Comment": "Tabs/Draft Setting Page - Compatibility section - Upgrade placement resize",
         "DontTranslate": false
       },
       {
@@ -41994,20 +41994,20 @@
       },
       {
         "Id": "TemplateExtractPage_SelectReferencedAssets",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5DF2\u52FE\u9009\u4E4B\u5F15\u6750",
+        "Value": "\u9078\u5DF2\u5F15\u4E4B\u6750",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5DF2\u52FE\u9009\u4E4B\u5F15\u6750",
+        "Comment": "\u52FE\u9009\u5DF2\u5F15\u7528\u7D20\u6750\u7684\u6587\u8A00\u6587\u8868\u8FBE",
         "DontTranslate": false
       },
       {
         "Id": "TemplateExtractPage_ClearAssetSelection",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u7D20\u6750\u9009\u62E9",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u6750\u9078",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u7A7A\u7D20\u6750\u9009\u62E9",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u6750\u9078",
         "DontTranslate": false
       },
       {
@@ -42067,11 +42067,11 @@
       },
       {
         "Id": "TemplateExtractPage_AssetType_Referenced",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5171\u4EAB\u7D20\u6750",
+        "Value": "\u5171\u7528\u6750\u5177",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5171\u4EAB\u7D20\u6750",
+        "Comment": "\u5171\u4EAB\u7D20\u6750\uFF0C\u4F5C\u4E3A\u9875\u9762\u6807\u9898\uFF0C\u53EF\u7406\u89E3\u4E3A\u5171\u540C\u4F7F\u7528\u7684\u6750\u6599\u3001\u7D20\u6750",
         "DontTranslate": false
       },
       {
@@ -42191,11 +42191,11 @@
       },
       {
         "Id": "DraftSettingPage_General_SDRBrightness",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: SDR \u5167\u5BB9\u4EAE\u5EA6 (nit)",
+        "Value": "SDR \u5185\u5BB9\u4EAE\u5EA6 (nit)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: SDR \u5167\u5BB9\u4EAE\u5EA6 (nit)",
+        "Comment": "SDR \u5185\u5BB9\u4EAE\u5EA6\uFF0C\u5355\u4F4Dnit",
         "DontTranslate": false
       },
       {
@@ -42208,11 +42208,11 @@
       },
       {
         "Id": "DraftSettingPage_Tab_ClipMgnt",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7247\u6BB5\u7BA1\u7406",
+        "Value": "\u7247\u6BB5\u7BA1\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7247\u6BB5\u7BA1\u7406",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -42263,11 +42263,10 @@
       },
       {
         "Id": "DraftSettingPage_Tab_ClipMgnt_NoData",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u660E\u7A97\u51C0\u51E0\uFF0C\u6BEB\u696E\u7CBE\u826F\uFF0C\u7136\u6848\u4E0A\u7A7A\u65E0\u4E00\u7269\uFF0C\u672A\u6709\u53EF\u4EE5\u70B9\u67D3\u8005\u3002",
+        "Value": "\u7121\u4EFB\u4F55\u6578\u64DA\u53EF\u4F9B\u986F\u793A\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u660E\u7A97\u51C0\u51E0\uFF0C\u6BEB\u696E\u7CBE\u826F\uFF0C\u7136\u6848\u4E0A\u7A7A\u65E0\u4E00\u7269\uFF0C\u672A\u6709\u53EF\u4EE5\u70B9\u67D3\u8005\u3002",
         "DontTranslate": false
       },
       {
@@ -42343,7 +42342,7 @@
       },
       {
         "Id": "DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7FFB\u8BD1\u5982\u4E0B\uFF1A\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u7D20\u6750\u300C{asset}\u300D\u53CA\u4EE5\u4E0B\u7247\u6BB5\uFF1A\\r{clips}\\r\\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4EE5\u7E7C\u7E8C\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u65E0\u9700\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "\u6B64\u8209\u5C07\u6C38\u9664\u7D20\u6750\u300C{asset}\u300D\uFF0C\u53CA\u4E0B\u5217\u7247\u6BB5\uFF1A\r{clips}\r\r\u6B64\u8209\u4E0D\u53EF\u53CD\u6094\uFF0C\u8ACB\u5728\u4E0B\u6587\u8F38\u5165\u201Cyes\u201D\u4EE5\u7E8C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -42365,7 +42364,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u7FFB\u8BD1\u5982\u4E0B\uFF1A\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u7D20\u6750\u300C{asset}\u300D\u53CA\u4EE5\u4E0B\u7247\u6BB5\uFF1A\\r{clips}\\r\\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4EE5\u7E7C\u7E8C\u3002\u0022,\n    \u0022Comment\u0022: \u0022\u65E0\u9700\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "\u7528\u6237\u786E\u8BA4\u5220\u9664\u64CD\u4F5C\u7684\u8B66\u544A\uFF0C\u4FDD\u7559\u201Cyes\u201D\u4E0D\u53D8",
         "DontTranslate": false
       },
       {
@@ -48429,11 +48428,11 @@
       },
       {
         "Id": "DraftSettingPage_Advanced_Warn",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u0633\u064A\u0643\u0648\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u062A\u0639\u062F\u064A\u0644\u0627\u064B \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647 \u0641\u064A \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F\\n\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.\u0022,\n    \u0022Comment\u0022: \u0022\u0644\u0627 \u062A\u062A\u0631\u062C\u0645 \u0022yes\u0022\u060C \u0647\u0630\u0627 \u0645\u0627 \u0633\u064A\u0643\u062A\u0628\u0647 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0644\u0627 \u0631\u062C\u0639\u0629 \u0641\u064A\u0647\u0627 \u0639\u0644\u0649 \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F\n\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u0633\u064A\u0643\u0648\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u062A\u0639\u062F\u064A\u0644\u0627\u064B \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647 \u0641\u064A \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F\\n\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0641\u064A \u0627\u0644\u0623\u0633\u0641\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.\u0022,\n    \u0022Comment\u0022: \u0022\u0644\u0627 \u062A\u062A\u0631\u062C\u0645 \u0022yes\u0022\u060C \u0647\u0630\u0627 \u0645\u0627 \u0633\u064A\u0643\u062A\u0628\u0647 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "\u4E0D\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
         "DontTranslate": false
       },
       {
@@ -59809,11 +59808,11 @@
       },
       {
         "Id": "HomePage_NoSupportAccel_SeeSupport",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte la documentaci\u00F3n de soporte",
+        "Value": "Consultar la documentaci\u00F3n de soporte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Consulte la documentaci\u00F3n de soporte",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -60176,11 +60175,10 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_History",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Historial",
+        "Value": "Historial",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: Historial",
         "DontTranslate": false
       },
       {
@@ -72788,11 +72786,10 @@
       },
       {
         "Id": "DraftSettingPage_General_HDRLimit",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR Maksymalna jasno\u015B\u0107 (nit)",
+        "Value": "Maksymalna jasno\u015B\u0107 HDR (nit)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: HDR Maksymalna jasno\u015B\u0107 (nit)",
         "DontTranslate": false
       },
       {
@@ -72887,11 +72884,11 @@
       },
       {
         "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "Value": "Usu\u0144 miejsca zapisu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -85154,11 +85151,11 @@
       },
       {
         "Id": "DraftSettingPage_Advanced_Warn",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0432\u043D\u0435\u0441\u0435\u0442 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0432 \u0432\u0430\u0448 \u043F\u0440\u043E\u0435\u043A\u0442. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?\\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.\u0022,\n    \u0022Comment\u0022: \u0022DraftSettingPage_Advanced_Warn - \u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043F\u0440\u0438\u0432\u0435\u0434\u0435\u0442 \u043A \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u043C \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F\u043C \u0432\u0430\u0448\u0435\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?\r\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u0432 \u043F\u043E\u043B\u0435 \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0432\u043D\u0435\u0441\u0435\u0442 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0432 \u0432\u0430\u0448 \u043F\u0440\u043E\u0435\u043A\u0442. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?\\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u043D\u0438\u0436\u0435, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C.\u0022,\n    \u0022Comment\u0022: \u0022DraftSettingPage_Advanced_Warn - \u4E0D\u8981\u7FFB\u8BD1\u0022yes\u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Comment": "\u041D\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0442\u0435 \u00AByes\u00BB, \u044D\u0442\u043E \u0442\u043E, \u0447\u0442\u043E \u0434\u043E\u043B\u0436\u0435\u043D \u0432\u0432\u0435\u0441\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C",
         "DontTranslate": false
       },
       {
@@ -90411,11 +90408,11 @@
       },
       {
         "Id": "HomePage_NoSupportAccel_SeeSupport",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u67E5\u770B\u652F\u6301\u6587\u6863",
+        "Value": "Destek belgelerini g\u00F6r\u00FCnt\u00FCle",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u67E5\u770B\u652F\u6301\u6587\u6863",
+        "Comment": "null",
         "DontTranslate": false
       },
       {
@@ -91183,7 +91180,7 @@
       },
       {
         "Id": "DraftSettingPage_Tab_ClipMgnt_ProjInfo",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9879\u76EE\u201C{path}\u201D | {n} \u4E2A\u7247\u6BB5\n\n\u6839\u636E\u76EE\u6807\u8BED\u8A00\uFF08\u571F\u8033\u5176\u8BED\uFF09\u7684\u8BED\u6CD5\u89C4\u5219\uFF0C\u5EFA\u8BAE\u7FFB\u8BD1\u4E3A\uFF1A\n\n{Value}: \u0022Proje \\\u0022{path}\\\u0022 | {n} klip\u0022\n\n{Comment}: \u0022\u6807\u9898\u680F\u683C\u5F0F\uFF0C\u7528\u4E8E\u663E\u793A\u5F53\u524D\u9879\u76EE\u8DEF\u5F84\u53CA\u5176\u5305\u542B\u7684\u7247\u6BB5\uFF08\u526A\u8F91\uFF09\u6570\u91CF\u3002\u0022",
+        "Value": "Proje \u0022{path}\u0022 | {n} klip",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -91205,7 +91202,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9879\u76EE\u201C{path}\u201D | {n} \u4E2A\u7247\u6BB5\n\n\u6839\u636E\u76EE\u6807\u8BED\u8A00\uFF08\u571F\u8033\u5176\u8BED\uFF09\u7684\u8BED\u6CD5\u89C4\u5219\uFF0C\u5EFA\u8BAE\u7FFB\u8BD1\u4E3A\uFF1A\n\n{Value}: \u0022Proje \\\u0022{path}\\\u0022 | {n} klip\u0022\n\n{Comment}: \u0022\u6807\u9898\u680F\u683C\u5F0F\uFF0C\u7528\u4E8E\u663E\u793A\u5F53\u524D\u9879\u76EE\u8DEF\u5F84\u53CA\u5176\u5305\u542B\u7684\u7247\u6BB5\uFF08\u526A\u8F91\uFF09\u6570\u91CF\u3002\u0022",
+        "Comment": "\u9879\u76EE\u540D\u79F0\u548C\u7247\u6BB5\u6570\u91CF\u663E\u793A\uFF0C{path}\u4E3A\u9879\u76EE\u8DEF\u5F84\uFF0C{n}\u4E3A\u7247\u6BB5\u6570\u91CF",
         "DontTranslate": false
       },
       {

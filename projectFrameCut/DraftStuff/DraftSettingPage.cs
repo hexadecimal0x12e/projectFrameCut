@@ -1418,8 +1418,14 @@ public class DraftSettingPage
         ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
         ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
         ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, enableHDR, null);
-        ppb.AppendWhen(enableHDR, c => c.AddEntry("HdrMaximumBrightness", Localized.DraftSettingPage_General_HDRLimit, parent.ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var hdrMaxiumBrightness) ? hdrMaxiumBrightness : "5000", null, null));
-        ppb.AppendWhen(enableHDR, c => c.AddEntry("sdrClipBrightness", Localized.DraftSettingPage_General_SDRBrightness, parent.ProjectInfo.Properties.TryGetValue("sdrClipBrightness", out var sdrClipBrightness) ? sdrClipBrightness : "5000", null, null));
+        ppb.AppendWhen(enableHDR, c => c.AddEntry("HdrMaximumBrightness", Localized.DraftSettingPage_General_HDRLimit, parent.ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var hdrMaxiumBrightness) ? hdrMaxiumBrightness : "1000", null, null));
+        ppb.AppendWhen(enableHDR, c => c.AddEntry("sdrClipBrightness", Localized.DraftSettingPage_General_SDRBrightness,
+            parent.ProjectInfo.Properties.TryGetValue("SdrClipBrightness", out var sdrClipBrightness)
+                ? sdrClipBrightness
+                : (parent.ProjectInfo.Properties.TryGetValue("sdrClipBrightness", out var legacySdrClipBrightness)
+                    ? legacySdrClipBrightness
+                    : "203"),
+            null, null));
         return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
     }
 

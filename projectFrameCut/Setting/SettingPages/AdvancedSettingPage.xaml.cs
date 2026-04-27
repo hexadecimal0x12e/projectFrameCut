@@ -139,8 +139,8 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSeparator()
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
-        .AddSwitch("Edit_UseLegacyPlaceResizeEffects", SettingLocalizedResources.Edit_UseLegacyPlaceResizeEffects, SettingsManager.IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects"))
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)

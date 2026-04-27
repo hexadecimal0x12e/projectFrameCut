@@ -105,6 +105,7 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vmDefault;
+        SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
@@ -144,14 +145,14 @@ public partial class RenderPage : ContentPage
                     "hevc" => "h265",
                     "libx265" => "h265",
                     "h265" => "h265",
-                    "av1" => "av1",
-                    _ => "av1"
+                    _ => "h265"
                 };
-                vm.BitDepth = "12bit";
+                vm.BitDepth = "10bit";
             }
         }
         catch { }
         BindingContext = vm;
+        SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
@@ -203,10 +204,8 @@ public partial class RenderPage : ContentPage
         _isLogPanelVisible = visible;
         LoggingBox.IsVisible = visible;
         LoggingBox.HeightRequest = visible ? -1 : 0;
-        if (LoggingBox.Parent is Microsoft.Maui.Controls.Grid progressGrid && progressGrid.RowDefinitions.Count > 4)
-        {
-            progressGrid.RowDefinitions[4].Height = visible ? GridLength.Star : new GridLength(0);
-        }
+        LoggingRowDefinition.Height = visible ? GridLength.Star : new GridLength(0);
+        UpdateRenderLayoutForLogPanel();
         UpdateLogPanelToggleText();
         UpdateLogRefreshState();
 
@@ -214,6 +213,75 @@ public partial class RenderPage : ContentPage
         {
             _ = FlushLogQueue();
         }
+    }
+
+    private void UpdateRenderLayoutForLogPanel()
+    {
+        if (!running)
+        {
+            PreviewRowDefinition.Height = GridLength.Auto;
+            ProgressRowDefinition.Height = GridLength.Star;
+            PreviewLayout.VerticalOptions = LayoutOptions.Start;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Auto;
+            }
+            UpdatePreviewViewportSizing();
+            return;
+        }
+
+        if (_isLogPanelVisible)
+        {
+            PreviewRowDefinition.Height = GridLength.Auto;
+            ProgressRowDefinition.Height = GridLength.Star;
+            PreviewLayout.VerticalOptions = LayoutOptions.Start;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Auto;
+            }
+        }
+        else
+        {
+            PreviewRowDefinition.Height = GridLength.Star;
+            ProgressRowDefinition.Height = GridLength.Auto;
+            PreviewLayout.VerticalOptions = LayoutOptions.Fill;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Star;
+            }
+        }
+
+        UpdatePreviewViewportSizing();
+    }
+
+    private void UpdatePreviewViewportSizing()
+    {
+        if (PreviewBorder is null || PreviewLayout is null)
+        {
+            return;
+        }
+
+        if (PreviewLayout.Width <= 0 || PreviewLayout.Height <= 0)
+        {
+            return;
+        }
+
+        var horizontalPadding = 64d;
+        var availableWidth = Math.Max(0, PreviewLayout.Width - horizontalPadding);
+        var availableHeight = Math.Max(0, PreviewLayout.Height - 48);
+
+        if (availableWidth <= 0 || availableHeight <= 0)
+        {
+            return;
+        }
+
+        var heightRatio = _isLogPanelVisible ? 0.72d : 0.9d;
+        var widthRatio = _isLogPanelVisible ? 0.88d : 0.96d;
+
+        PreviewBorder.MaximumWidthRequest = availableWidth * widthRatio;
+        PreviewBorder.MaximumHeightRequest = availableHeight * heightRatio;
+        PreviewImage.MaximumWidthRequest = PreviewBorder.MaximumWidthRequest - 8;
+        PreviewImage.MaximumHeightRequest = PreviewBorder.MaximumHeightRequest - 8;
     }
 
     private void UpdateLogPanelToggleText()
@@ -382,7 +450,7 @@ public partial class RenderPage : ContentPage
                 {
                     "8bit" => "AV_PIX_FMT_YUV420P",
                     "10bit" => "AV_PIX_FMT_YUV420P10LE",
-                    "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                    "12bit" => "AV_PIX_FMT_YUV420P10LE",
                     _ => "AV_PIX_FMT_GBRP16LE"
                 };
                 var enc = vm.BitDepth switch
@@ -395,7 +463,7 @@ public partial class RenderPage : ContentPage
                 var ext = enc switch
                 {
                     "libx264" => ".mp4",
-                    "libx265" => ".mov",
+                    "libx265" => ".mp4",
                     "ffv1" => ".mkv",
                     _ => ".mp4"
                 };
@@ -566,7 +634,7 @@ public partial class RenderPage : ContentPage
             {
                 "8bit" => "AV_PIX_FMT_YUV420P",
                 "10bit" => "AV_PIX_FMT_YUV420P10LE",
-                "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                "12bit" => "AV_PIX_FMT_YUV420P10LE",
                 _ => "AV_PIX_FMT_GBRP16LE"
             };
             var enc = vm.Encoding;
@@ -574,10 +642,10 @@ public partial class RenderPage : ContentPage
             {
                 "libx264" => ".mp4",
                 "h264" => ".mp4",
-                "libx265" => ".mov",
-                "h265" => ".mov",
-                "h265/hevc" => ".mov",
-                "hevc" => ".mov",
+                "libx265" => ".mp4",
+                "h265" => ".mp4",
+                "h265/hevc" => ".mp4",
+                "hevc" => ".mp4",
                 "av1" => ".mkv",
                 "ffv1" => ".mkv",
                 _ => ".mkv"
@@ -592,8 +660,9 @@ public partial class RenderPage : ContentPage
             if (ProjectUsesHDR)
             {
                 bpp = IPicture.PicturePixelMode.UShortPicture;
-                fmt = "AV_PIX_FMT_YUV444P12LE";
-                ext = ".mov";
+                fmt = "AV_PIX_FMT_YUV420P10LE";
+                ext = ".mp4";
+                enc = "libx265";
             }
             bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
 
@@ -682,7 +751,7 @@ public partial class RenderPage : ContentPage
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
             var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
-            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
+            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
             {
                 EnablePreview = true,
                 DoGCAfterEachWrite = gcOption > 0,
@@ -701,23 +770,58 @@ public partial class RenderPage : ContentPage
                 ProjectRelativeWidth = Math.Max(1, _project.RelativeWidth),
                 ProjectRelativeHeight = Math.Max(1, _project.RelativeHeight),
                 Duration = duration,
-                MaxThreads = parallelThreadCount,
                 LogRenderState = false,
                 LogStaticsData = true,
                 LogProcessStack = dumpDiagData,
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
-                EnableRenderWatchdogForceStart = !(DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Idiom == DeviceIdiom.Tablet),
-                MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
-                {
-                    var t when t == DeviceIdiom.Desktop => 60,
-                    var t when t == DeviceIdiom.Tablet => 30,
-                    _ => 15
-                },
+                MaxThreads = parallelThreadCount,
+                EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
+                //MinRemainingFramesForPreparedWait = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => parallelThreadCount,
+                //    var t when t == DeviceIdiom.Tablet => parallelThreadCount * 2,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => parallelThreadCount * 3,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => parallelThreadCount * 4,
+                //    _ => parallelThreadCount * 2
+                //},
+                //RenderWorkerLaunchUtilizationThreshold = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 0.8,
+                //    _ => 1
+                //},
+                //RenderSchedulerPreparePollDelayMs = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 8000,
+                //    var t when t == DeviceIdiom.Tablet => 10000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 12500,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 15000,
+                //    _ => 15000
+                //},
+                //RenderSchedulerIdleDelayMs = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 500,
+                //    var t when t == DeviceIdiom.Tablet => 1000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 1000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 2000,
+                //    _ => 2000
+                //},
+                //MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 0,
+                //    var t when t == DeviceIdiom.Tablet => 25000,
+                //    var t when t == DeviceIdiom.Phone => 30000,
+                //    _ => 40000
+                //},
                 MinSchedulePreparedFrames = parallelThreadCount,
                 UseHDR = ProjectUsesHDR,
-                MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 5000,
-                SDRClipsBrightnessInHDRMode = _project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessInHdr) && int.TryParse(sdrBrightnessInHdr, out var sdrBrightnessInHdrInt) ? sdrBrightnessInHdrInt : 5000
+                MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
+                SDRClipsBrightnessInHDRMode =
+                    _project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessInHdr) && int.TryParse(sdrBrightnessInHdr, out var sdrBrightnessInHdrInt)
+                        ? sdrBrightnessInHdrInt
+                        : (_project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessInHdr) && int.TryParse(legacySdrBrightnessInHdr, out var legacySdrBrightnessInHdrInt)
+                            ? legacySdrBrightnessInHdrInt
+                            : 203)
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -1145,8 +1249,8 @@ public partial class RenderPage : ContentPage
         return bitDepth switch
         {
             "8bit" => ("AV_PIX_FMT_YUV420P", "libx264", ".mp4"),
-            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mov"),
-            "12bit" => ("AV_PIX_FMT_YUV444P12LE", "libx265", ".mov"),
+            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
+            "12bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
             _ => ("AV_PIX_FMT_GBRP16LE", "ffv1", ".mkv")
         };
     }
@@ -1288,10 +1392,12 @@ public partial class RenderPage : ContentPage
 
     private async Task PrepareUIForRender()
     {
+        running = true;
         Shell.SetNavBarIsVisible(this, false);
         RenderOptionPanel.IsVisible = false;
         PreviewLayout.IsVisible = true;
         ProgressBox.IsVisible = true;
+        UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = true;
         MoreOptions.IsEnabled = false;
         ExportAudioOnly.IsEnabled = false;
@@ -1334,6 +1440,7 @@ public partial class RenderPage : ContentPage
         MyLoggerExtensions.OnLog -= _WriteToLogBox;
 
         running = false;
+        UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = false;
         UpdateLogRefreshState();
 
@@ -1422,7 +1529,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
             {
                 return
                 [
-                    "av1", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
+                    "h265", // Apple playback compatibility: force HEVC for HDR exports
                     Localized.RenderPage_CustomOption
                 ];
             }
@@ -1443,7 +1550,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         {
             if (HDREnabled)
             {
-                return ["12bit"];
+                return ["10bit"];
             }
             else
             {

@@ -744,13 +744,13 @@ public partial class TestPage : ContentPage
         }
         var fThrowBrightness = new Picture16bpp(f)
         {
-        r = f.r,
-        g = f.g,
-        b = f.b,
-        a = f.a
+            r = f.r,
+            g = f.g,
+            b = f.b,
+            a = f.a
         };
         fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16,true).ToPJFCPicture(16);
+        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16, true).ToPJFCPicture(16);
         fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
@@ -837,29 +837,46 @@ public partial class TestPage : ContentPage
             var vidFile = await FileSystemService.PickFileAsync();
             if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
             if (string.IsNullOrWhiteSpace(vidFile)) return;
+            if (!uint.TryParse(await DisplayPromptAsync(Localized._Info, "input frame index", initialValue: "0", keyboard: Keyboard.Numeric) ?? "", out var idx)) return;
             if (await DisplayAlertAsync(Title, "Use HDR?", "yes", "no"))
             {
                 var src = new HDRDecoderContext(vidFile);
                 src.Initialize();
-                var frame = src.GetFrame(0U, false);
+                var frame = src.GetFrame(idx, false);
                 if (frame is not HDRPicture16bpp h)
                 {
                     await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
                     return;
                 }
-                PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+                HDROutputPreview.IsVisible = true;
+                NormalizeBrightnessToRGBOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage().SaveAsPng(ms);
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveAsPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
-                await DisplayAlertAsync(Title, h.GetDiagnosticsInfo(), "ok");
+                OverlayMaskFromBrightnessOutputImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                DiscardBrightnessChannelOutputImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                LogDiagnostic(h.GetDiagnosticsInfo());
             }
             else
             {
                 var src = PluginManager.CreateVideoSource(vidFile);
-                var frame = src.GetFrame(0U, false);
+                var frame = src.GetFrame(idx, false);
+                LogDiagnostic(frame.GetDiagnosticsInfo());
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();

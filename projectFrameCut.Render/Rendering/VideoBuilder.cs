@@ -83,17 +83,24 @@ namespace projectFrameCut.Render.Rendering
         /// </remarks>
         public ConcurrentDictionary<uint, bool> FramePendedToWrite { get; private set; } = new();
 
-        public VideoBuilder(string path, int width, int height, int framerate, string encoder, string fmt)
+        public VideoBuilder(string path, int width, int height, int framerate, string encoder, string fmt, string? writerType = null)
         {
             outputPath = path;
             index = 0;
-            writer = PluginManager.CreateVideoWriter(encoder);
+            writer = string.IsNullOrWhiteSpace(writerType)
+                ? PluginManager.CreateVideoWriter(encoder)
+                : PluginManager.CreateVideoWriter(writerType);
             writer.Width = width;
             writer.Height = height;
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
-            if (string.IsNullOrWhiteSpace(writer.CodecName))
+
+            if (!string.IsNullOrWhiteSpace(writerType))
+            {
+                writer.CodecName = encoder;
+            }
+            else if (string.IsNullOrWhiteSpace(writer.CodecName))
             {
                 writer.CodecName = encoder;
             }

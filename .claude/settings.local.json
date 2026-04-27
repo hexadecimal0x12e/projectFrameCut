@@ -4,7 +4,8 @@
       "Bash(dotnet build *)",
       "Bash(splc-edit list-locales *)",
       "Bash(splc-edit list-items *)",
-      "Bash(splc-edit get-item *)"
+      "Bash(splc-edit get-item *)",
+      "Bash(dotnet tool *)"
     ]
   }
 }

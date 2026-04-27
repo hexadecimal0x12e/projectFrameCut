@@ -76,7 +76,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         }
 
         private Guid instanceID;
-        private bool vaild = true;
+        private bool valid = true;
 
         private ColumnDefinitionCollection CreateTwoColumnDefinitions()
         {
@@ -110,7 +110,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             children.Add(label);
             return this;
         }
-
+        /// <summary>
+        /// Add a single line of text with a label to the property panel. 
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         public PropertyPanelBuilder AddText(PropertyPanelItemLabel label, string Id = "")
         {
             var l = label.LabelConfigure();
@@ -118,6 +123,52 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             children.Add(l);
             return this;
         }
+        /// <summary>
+        /// Add a <see cref="PropertyPanelItemLabel"/> with a header <see cref="PropertyPanelItemLabel"/>
+        /// </summary>
+        public PropertyPanelBuilder AddText(PropertyPanelItemLabel header, PropertyPanelItemLabel label, string Id = "")
+        {
+            var left = header.LabelConfigure();
+            var right = label.LabelConfigure();
+            var grid = new Grid
+            {
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                },
+                Padding = DefaultPadding
+            };
+            grid.Children.Add(left);
+            grid.Children.Add(right);
+            Grid.SetColumn(right, 1);
+            children.Add(grid);
+            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
+            return this;
+        }
+        /// <summary>
+        /// Add a <see cref="Label"/> with a header <see cref="PropertyPanelItemLabel"/>.
+        /// </summary>
+        public PropertyPanelBuilder AddText(PropertyPanelItemLabel header, Label right, string Id = "")
+        {
+            var left = header.LabelConfigure();
+            var grid = new Grid
+            {
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                },
+                Padding = DefaultPadding
+            };
+            grid.Children.Add(left);
+            grid.Children.Add(right);
+            Grid.SetColumn(right, 1);
+            children.Add(grid);
+            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
+            return this;
+        }
+
         public PropertyPanelBuilder AddText(Label label, string Id = "", Action<Label>? LabelSetter = null)
         {
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
@@ -691,7 +742,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             {
                 AddCustomChild(item);
             }
-            another.vaild = false;
+            another.valid = false;
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
 
@@ -713,7 +764,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             {
                 AddCustomChild(item);
             }
-            another.vaild = false;
+            another.valid = false;
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(anotherSender, e);
             return this;
 
@@ -815,7 +866,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// </summary>
         public Layout Build()
         {
-            if(!vaild) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
+            if(!valid) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             var layout = new VerticalStackLayout
             {
                 Spacing = 10,
@@ -834,7 +885,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// <param name="layout">The source layout you'd like to use.</param>
         public Layout Build(Layout layout)
         {
-            if (!vaild) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
+            if (!valid) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             foreach (var item in children)
             {
                 layout.Children.Add(item);

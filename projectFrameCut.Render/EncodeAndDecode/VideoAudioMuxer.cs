@@ -413,7 +413,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 throw new ArgumentNullException(nameof(outputPath));
             if (!File.Exists(videoInputPath))
                 throw new FileNotFoundException($"Video input file not found: {videoInputPath}");
-            if (!File.Exists(audioInputPath))
+            if (!File.Exists(audioInputPath) || new FileInfo(audioInputPath).Length < 256)
             {
                 File.Copy(videoInputPath, outputPath, overwrite: true);
                 return;
@@ -435,10 +435,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     "avformat_open_input (video)");
                 FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(videoFmtCtx, null), "avformat_find_stream_info (video)");
 
-                // Open audio input
-                FFmpegHelper.Throw(
-                    ffmpeg.avformat_open_input(&audioFmtCtx, audioInputPath, null, null),
-                    "avformat_open_input (audio)");
+                var audOpenRet = ffmpeg.avformat_open_input(&audioFmtCtx, audioInputPath, null, null);
+                if (audOpenRet != 0)
+                {
+                    Log($"Cannot open input audio file '{audioInputPath}' because '{FFmpegHelper.GetErrorString(audOpenRet)}' (ffmpeg error code: 0x{audOpenRet:x8}). Audio will be skipped.","warn");
+                    File.Copy(videoInputPath, outputPath, overwrite: true);
+                    return;
+                }
+
                 FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(audioFmtCtx, null), "avformat_find_stream_info (audio)");
 
                 // Find video stream

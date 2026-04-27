@@ -42,7 +42,6 @@ namespace projectFrameCut.Render.Rendering
 
         public int MaxRenderScheduleTimeout { get; set; } = 10;
         public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
-        public int RenderWorkerBootstrapDelayMs { get => field >= 0 ? field : 0; set; } = 50;
         public int RenderWatchdogNoProgressTimeoutMs { get => field > 0 ? field : 60_000; set; } = 60_000;
         public bool EnableRenderWatchdogForceStart { get; set; } = true;
         public double RenderWorkerLaunchUtilizationThreshold { get => field > 0 ? field : 1.0; set; } = 1.0;
@@ -57,8 +56,8 @@ namespace projectFrameCut.Render.Rendering
         public int TargetHeight { get; set; }
         public bool Use16Bit { get; set; } = true;
         public bool UseHDR { get; set; } = false;
-        public int SDRClipsBrightnessInHDRMode { get; set; } = 5000;
-        public int MaximumHDRBrightness { get; set; } = -1;
+        public int SDRClipsBrightnessInHDRMode { get; set; } = 203;
+        public int MaximumHDRBrightness { get; set; } = 1000;
 
         Dictionary<Guid, IClip> IndexedClipList = new();
         Dictionary<Guid, int> PerClipHDRBrightness = new();
@@ -357,12 +356,7 @@ namespace projectFrameCut.Render.Rendering
             };
             preparer.Start();
 
-
-
-            if (RenderWorkerBootstrapDelayMs > 0)
-            {
-                await Task.Delay(RenderWorkerBootstrapDelayMs, token);
-            }
+            await Task.Delay(5000, token);
 
             int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
             double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
@@ -377,6 +371,7 @@ namespace projectFrameCut.Render.Rendering
                 : Math.Max(0, MaxThreads / 2 - 2);
 
             Stopwatch lastActivity = Stopwatch.StartNew();
+            int lastManuallyStarted = 0;
             int lastFinished = Volatile.Read(ref Finished);
 
             while (true)
@@ -427,7 +422,11 @@ namespace projectFrameCut.Render.Rendering
                             await Task.Delay(preparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
-                                Log($"[Render] Wait timeout reached (platform: {RuntimeInformation.RuntimeIdentifier}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
+                                lastManuallyStarted += PreparedFrames.Count;
+                                if (lastManuallyStarted % 50 == 0)
+                                {
+                                    Log($"[Render] Wait timeout reached for {lastManuallyStarted} times. (platform: {RuntimeInformation.RuntimeIdentifier})", "warn");
+                                }
                                 break;
                             }
                         }
@@ -911,14 +910,15 @@ namespace projectFrameCut.Render.Rendering
                     {
                         if (result is IHDRPicture<ushort> u)
                         {
-                            if (u.MaximumBrightness > MaximumHDRBrightness)
+                            // Preserve real HDR peak metadata. Only repair invalid values.
+                            if (!float.IsFinite(u.MaximumBrightness) || u.MaximumBrightness <= 0)
                             {
                                 u.MaximumBrightness = MaximumHDRBrightness;
                             }
                         }
                         else
                         {
-                            result = result.ToHDRPicture(1, PerClipHDRBrightness[clip.IdAsGUID]);
+                            result = result.ToHDRPictureBySignal(PerClipHDRBrightness[clip.IdAsGUID]);
                         }
 
 

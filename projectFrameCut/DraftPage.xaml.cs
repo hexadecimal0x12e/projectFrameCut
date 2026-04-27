@@ -97,13 +97,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         "saveSlots",
         "thumbs",
         "assets",
-        "proxy"
+        "proxy",
+#if WINDOWS
+        "thumbs\\perClip",
+#else
+        "thumbs/perClip",
+#endif
     ];
 
     static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
     public static JsonSerializerOptions DraftJSONOption => savingOpts;
-    #endregion
+#endregion
 
     #region members
     ConcurrentDictionary<string, double> HandleStartWidth = new();
@@ -163,6 +168,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     bool AlreadyDisappeared = false;
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
+
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _perClipThumbCts = new();
+    private const int ThumbIntervalFrames = 30;
+    private const int ThumbMaxCount = 60;
+    private const int ThumbTargetWidth = 320;
 
     private bool _historyNavigatedByUndoRedo = false;
     private bool _hasResolvedInitialPreviewFrame = false;
@@ -762,6 +772,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
+
+        foreach (var clip in Clips.Values)
+        {
+            StartPerClipThumbGeneration(clip);
+        }
     }
 
     private string? GetMainMultiWindowItemKey(MultiWindowItem window)
@@ -1009,6 +1024,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         element.ApplySpeedRatio();
         RegisterClip(element, resolveOverlap);
         AddAClip(element);
+        StartPerClipThumbGeneration(element);
 
         return element;
     }
@@ -1035,6 +1051,32 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             elem.ExtraData["IsAI"] = true;
         }
+
+        if (elem.ClipType == ClipMode.VideoClip)
+        {
+            var resolvedPath = path ?? asset.Path;
+            if (!string.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
+            {
+                try
+                {
+                    if (HDRDecoderContext.IsHdrVideo(resolvedPath))
+                    {
+                        elem.ExtraData["TargetDecoder"] = "HDRDecoderContext";
+                    }
+                    else
+                    {
+                        if (FFmpegHelper.DetectVideoBitDepth(path) > 8)
+                        {
+                            elem.ExtraData["TargetDecoder"] = "DecoderContext16Bit";
+                        }
+                    }
+                }catch(Exception ex)
+                {
+                    Log(ex, $"Detect bpp for video clip {path}", this);
+                }
+            }
+        }
+
         return elem;
     }
 
@@ -1185,9 +1227,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         element.RightHandle.GestureRecognizers.Add(rightHandleClickGesture);
         clipInteractionTarget.GestureRecognizers.Add(doubleTapGesture);
 
-    #if WINDOWS
+#if WINDOWS
         RegisterClipPanAuthorization(clipInteractionTarget, element);
-    #endif
+#endif
 
 
 
@@ -1213,6 +1255,81 @@ public partial class DraftPage : ContentPage, IDraftPage
         Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
         _ = UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
+    }
+
+    private void StartPerClipThumbGeneration(ClipElementUI clip)
+    {
+        if (clip.ClipType != ClipMode.VideoClip) return;
+        if (string.IsNullOrWhiteSpace(clip.SourcePath)) return;
+        if (clip.SourcePath.StartsWith("$")) return;
+        if (clip.isInfiniteLength) return;
+        if (string.IsNullOrWhiteSpace(WorkingPath)) return;
+        Log($"Start generating the per-clip preview for clip {clip.Id} - {clip.DisplayName}");
+
+        var clipId = clip.Id;
+        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId);
+
+        if (Directory.Exists(outDir) && Directory.GetFiles(outDir, "*.png").Length > 0)
+            return;
+
+        if (_perClipThumbCts.TryRemove(clipId, out var existingCts))
+        {
+            try { existingCts.Cancel(); } catch { }
+        }
+
+        var cts = new CancellationTokenSource();
+        _perClipThumbCts[clipId] = cts;
+
+        var sourcePath = clip.SourcePath;
+        var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                Directory.CreateDirectory(outDir);
+
+                using var vidSrc = PluginManager.CreateVideoSource(sourcePath);
+                vidSrc.Initialize();
+
+                var interval = Math.Max(1, ThumbIntervalFrames);
+                var frameCount = 0;
+
+                for (int f = 0; f < totalFrames && frameCount < ThumbMaxCount; f += interval, frameCount++)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    var outPath = Path.Combine(outDir, $"{f}.png");
+                    if (File.Exists(outPath)) continue;
+
+                    try
+                    {
+                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var aspect = (double)frame.Height / frame.Width;
+                        var targetHeight = (int)(ThumbTargetWidth * aspect);
+                        var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
+                        resized.SaveAsPng16bpp(outPath, null);
+                        resized.Dispose();
+                        frame.Dispose();
+                        LogDiagnostic($"Read the thumb for clip {clipId} in frame {f}.");
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        Log(ex, $"thumb gen clip={clipId} frame={f}", this);
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Log(ex, $"per-clip thumb gen failed for {clipId}", this);
+            }
+            finally
+            {
+                _perClipThumbCts.TryRemove(clipId, out _);
+                cts.Dispose();
+            }
+        }, cts.Token);
     }
 
     private void Split_Clicked(object sender, EventArgs e)
@@ -1265,7 +1382,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 sourceElement: clip);
 
             UpdateAdjacencyForTrack();
-            SetStatusText("Split done");
+            SetStatusText(Localized._Done);
         }
         catch (Exception ex)
         {
@@ -7468,12 +7585,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                     switch (type)
                     {
                         case "Native(null pointer)":
-            #if ANDROID
+#if ANDROID
                             throw new Java.Lang.NullPointerException("test crash from native code");
-            #elif WINDOWS
+#elif WINDOWS
                             IntPtr ptr = IntPtr.Zero;
                             Marshal.WriteInt32(ptr, 42);
-            #endif
+#endif
                             break;
                         case "Managed(NullReferenceException)":
                             throw new NullReferenceException("test crash");
@@ -7695,6 +7812,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         AlreadyDisappeared = true;
         CancelPendingClipPlacement();
+        foreach (var (_, cts) in _perClipThumbCts)
+        {
+            try { cts.Cancel(); } catch { }
+        }
+        _perClipThumbCts.Clear();
         await HidePopup();
 
         try

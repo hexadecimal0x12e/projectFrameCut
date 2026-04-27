@@ -6,6 +6,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using static projectFrameCut.Render.EncodeAndDecode.FFmpegHelper;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -588,9 +590,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 throw new InvalidDataException($"Decoder RGB buffer is invalid for '{_path}' when trying to read frame {targetFrame}.");
         }
 
+        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, hasAlpha).DegradeToSDR();
 
-        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
-        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
+        public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false)
         {
             bool lockTaken = false;
             try
@@ -671,7 +673,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetFrame(targetFrame - 1, hasAlpha);
+                        return GetHDRFrame(targetFrame - 1, hasAlpha);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -919,6 +921,55 @@ namespace projectFrameCut.Render.EncodeAndDecode
         ~HDRDecoderContext()
         {
             Dispose();
+        }
+
+        public static bool IsHdrVideo(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return false;
+
+            AVFormatContext* fmt = null;
+            try
+            {
+                fmt = ffmpeg.avformat_alloc_context();
+                if (fmt == null) return false;
+
+                if (ffmpeg.avformat_open_input(&fmt, path, null, null) != 0)
+                    return false;
+
+                if (ffmpeg.avformat_find_stream_info(fmt, null) < 0)
+                    return false;
+
+                for (int i = 0; i < fmt->nb_streams; i++)
+                {
+                    if (fmt->streams[i]->codecpar->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+                    {
+                        AVCodecParameters* par = fmt->streams[i]->codecpar;
+                        if (IsHdrTransfer(par->color_trc))
+                            return true;
+
+                        if (par->color_primaries == AVColorPrimaries.AVCOL_PRI_BT2020
+                            && par->color_space == AVColorSpace.AVCOL_SPC_BT2020_NCL)
+                            return true;
+
+                        break;
+                    }
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                if (fmt != null)
+                {
+                    AVFormatContext* tmp = fmt;
+                    ffmpeg.avformat_close_input(&tmp);
+                }
+            }
         }
     }
 

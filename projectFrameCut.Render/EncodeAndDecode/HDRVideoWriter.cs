@@ -12,6 +12,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private const float DefaultSdrMaximumBrightness = 100f;
         private const float DefaultHdrMaximumBrightness = 1000f;
         private const float PqReferencePeakNits = 10000f;
+        private const float SdrHdrCrossoverBrightness = 300f;
 
         private int _width;
         public int Width
@@ -93,9 +94,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _inited;
 
         private bool _enableHdrSignaling;
-        private float _streamMaximumBrightness = DefaultHdrMaximumBrightness;
-        private uint _streamMaxCll = 1000;
-        private uint _streamMaxFall = 400;
+        private float _sdrHdrReferenceWhite = 203f;
+        private float _streamMaximumBrightness = 203f;
+        private uint _streamMaxCll = 203;
+        private uint _streamMaxFall = 100;
         private bool _preferAppleHevcTag;
 
         public bool IsOpened => _fmtCtx != null;
@@ -183,6 +185,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(CodecName);
             if (codec == null) throw new EntryPointNotFoundException($"Could not found the encoder '{CodecName}'. Try install codec extension-pack, or reinstall projectFrameCut.");
+
+            if (_enableHdrSignaling && _preferAppleHevcTag && codec->id == AVCodecID.AV_CODEC_ID_HEVC)
+            {
+                AVPixelFormat requestedPixelFormat = _pixelFormat;
+                AVPixelFormat adjustedPixelFormat = SelectAppleCompatibleHevcHdrPixelFormat(requestedPixelFormat);
+                if (adjustedPixelFormat != requestedPixelFormat)
+                {
+                    _pixelFormat = adjustedPixelFormat;
+                    Log($"[HDRVideoWriter] Adjusted HDR HEVC pixel format for Apple compatibility: {requestedPixelFormat} -> {_pixelFormat}.");
+                }
+            }
 
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
             if (_videoStream == null) throw new InvalidOperationException("Failed to create a stream to write video.");
@@ -280,7 +293,28 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 4, null, null, null);
 
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
-            Console.WriteLine($"[HDRVideoWriter] Successfully initialized encoder for {OutputPath}");
+
+            // Keep BT.2020 matrix on both sides to match HDR signaling and avoid device-side hue shifts.
+            const int SWS_CS_BT2020 = 9;
+            int* srcCoeffs = ffmpeg.sws_getCoefficients(SWS_CS_BT2020);
+            int* dstCoeffs = ffmpeg.sws_getCoefficients(SWS_CS_BT2020);
+            if (srcCoeffs != null && dstCoeffs != null)
+            {
+                var srcColorSpace = new int_array4();
+                srcColorSpace.UpdateFrom(new[] { srcCoeffs[0], srcCoeffs[1], srcCoeffs[2], srcCoeffs[3] });
+
+                var dstColorSpace = new int_array4();
+                dstColorSpace.UpdateFrom(new[] { dstCoeffs[0], dstCoeffs[1], dstCoeffs[2], dstCoeffs[3] });
+
+                ffmpeg.sws_setColorspaceDetails(_sws, srcColorSpace, 1, dstColorSpace, 0, 0, 1 << 16, 1 << 16);
+                Log("[HDRVideoWriter] Applied sws colorspace details: BT.2020 source <-> BT.2020 destination.");
+            }
+            else
+            {
+                Log("[HDRVideoWriter] WARNING: sws_getCoefficients returned null, using default sws colorspace conversion.");
+            }
+
+            Log($"[HDRVideoWriter] Successfully initialized encoder for {OutputPath}");
 
             _inited = true;
         }
@@ -305,6 +339,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_enableHdrSignaling && picture is IHDRPicture<ushort> hdrPicture)
             {
                 FillHdrSourceFrame(hdrPicture);
+            }
+            else if (_enableHdrSignaling)
+            {
+                FillSdrUshortSourceFrameAsHdr(picture);
             }
             else
             {
@@ -345,7 +383,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
 
-            FillByteSourceFrame(picture);
+            if (_enableHdrSignaling)
+            {
+                FillSdrByteSourceFrameAsHdr(picture);
+            }
+            else
+            {
+                FillByteSourceFrame(picture);
+            }
 
             ffmpeg.sws_scale(
                 _sws,
@@ -544,6 +589,122 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        private void FillSdrUshortSourceFrameAsHdr(IPicture<ushort> picture)
+        {
+            byte* srcData0 = _frameSrc->data[0];
+            int srcLinesize = _frameSrc->linesize[0];
+
+            int rLen = picture.r?.Length ?? 0;
+            int gLen = picture.g?.Length ?? 0;
+            int bLen = picture.b?.Length ?? 0;
+            int aLen = picture.a?.Length ?? 0;
+            bool hasAlpha = picture.hasAlphaChannel;
+
+            float maxLumaSignal = 0f;
+
+            fixed (ushort* pr = picture.r)
+            fixed (ushort* pg = picture.g)
+            fixed (ushort* pb = picture.b)
+            fixed (float* pa = picture.a)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                    int baseIndex = y * _width;
+                    for (int x = 0; x < _width; x++)
+                    {
+                        int k = baseIndex + x;
+
+                        float rSignal = ((pr != null && k < rLen) ? pr[k] : (ushort)0) / 65535f;
+                        float gSignal = ((pg != null && k < gLen) ? pg[k] : (ushort)0) / 65535f;
+                        float bSignal = ((pb != null && k < bLen) ? pb[k] : (ushort)0) / 65535f;
+
+                        float rPq = ConvertSdrSignalToPq(rSignal, _sdrHdrReferenceWhite);
+                        float gPq = ConvertSdrSignalToPq(gSignal, _sdrHdrReferenceWhite);
+                        float bPq = ConvertSdrSignalToPq(bSignal, _sdrHdrReferenceWhite);
+
+                        float lumaSignal = Math.Clamp(0.2627f * rSignal + 0.6780f * gSignal + 0.0593f * bSignal, 0f, 1f);
+                        if (lumaSignal > maxLumaSignal) maxLumaSignal = lumaSignal;
+
+                        ushort a16 = 65535;
+                        if (hasAlpha && pa != null && k < aLen)
+                        {
+                            float af = pa[k];
+                            if (!float.IsFinite(af)) af = 1f;
+                            af = Math.Clamp(af, 0f, 1f);
+                            a16 = (ushort)(af * 65535f + 0.5f);
+                        }
+
+                        int off = x * 4;
+                        row16[off + 0] = (ushort)(rPq * 65535f + 0.5f);
+                        row16[off + 1] = (ushort)(gPq * 65535f + 0.5f);
+                        row16[off + 2] = (ushort)(bPq * 65535f + 0.5f);
+                        row16[off + 3] = a16;
+                    }
+                }
+            }
+
+            UpdateStreamLightLevelFromSignal(maxLumaSignal, _sdrHdrReferenceWhite);
+        }
+
+        private void FillSdrByteSourceFrameAsHdr(IPicture<byte> picture)
+        {
+            byte* srcData0 = _frameSrc->data[0];
+            int srcLinesize = _frameSrc->linesize[0];
+
+            int rLen = picture.r?.Length ?? 0;
+            int gLen = picture.g?.Length ?? 0;
+            int bLen = picture.b?.Length ?? 0;
+            int aLen = picture.a?.Length ?? 0;
+            bool hasAlpha = picture.hasAlphaChannel;
+
+            float maxLumaSignal = 0f;
+
+            fixed (byte* pr = picture.r)
+            fixed (byte* pg = picture.g)
+            fixed (byte* pb = picture.b)
+            fixed (float* pa = picture.a)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                    int baseIndex = y * _width;
+                    for (int x = 0; x < _width; x++)
+                    {
+                        int k = baseIndex + x;
+
+                        float rSignal = ((pr != null && k < rLen) ? pr[k] : (byte)0) / 255f;
+                        float gSignal = ((pg != null && k < gLen) ? pg[k] : (byte)0) / 255f;
+                        float bSignal = ((pb != null && k < bLen) ? pb[k] : (byte)0) / 255f;
+
+                        float rPq = ConvertSdrSignalToPq(rSignal, _sdrHdrReferenceWhite);
+                        float gPq = ConvertSdrSignalToPq(gSignal, _sdrHdrReferenceWhite);
+                        float bPq = ConvertSdrSignalToPq(bSignal, _sdrHdrReferenceWhite);
+
+                        float lumaSignal = Math.Clamp(0.2627f * rSignal + 0.6780f * gSignal + 0.0593f * bSignal, 0f, 1f);
+                        if (lumaSignal > maxLumaSignal) maxLumaSignal = lumaSignal;
+
+                        ushort a16 = 65535;
+                        if (hasAlpha && pa != null && k < aLen)
+                        {
+                            float af = pa[k];
+                            if (!float.IsFinite(af)) af = 1f;
+                            af = Math.Clamp(af, 0f, 1f);
+                            a16 = (ushort)(af * 65535f + 0.5f);
+                        }
+
+                        int off = x * 4;
+                        row16[off + 0] = (ushort)(rPq * 65535f + 0.5f);
+                        row16[off + 1] = (ushort)(gPq * 65535f + 0.5f);
+                        row16[off + 2] = (ushort)(bPq * 65535f + 0.5f);
+                        row16[off + 3] = a16;
+                    }
+                }
+            }
+
+            UpdateStreamLightLevelFromSignal(maxLumaSignal, _sdrHdrReferenceWhite);
+        }
+
         private void FillHdrSourceFrame(IHDRPicture<ushort> picture)
         {
             byte* srcData0 = _frameSrc->data[0];
@@ -566,6 +727,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _streamMaxCll = Math.Max(_streamMaxCll, lightLevel.MaxCLL);
             _streamMaxFall = Math.Max(_streamMaxFall, lightLevel.MaxFALL);
 
+            bool treatAsSdrSource = frameMaximumBrightness <= SdrHdrCrossoverBrightness;
+
             fixed (ushort* pr = picture.r)
             fixed (ushort* pg = picture.g)
             fixed (ushort* pb = picture.b)
@@ -583,23 +746,24 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         float g = ((pg != null && k < gLen) ? pg[k] : (ushort)0) / 65535f;
                         float b = ((pb != null && k < bLen) ? pb[k] : (ushort)0) / 65535f;
 
-                        float luma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
-                        float relativeBrightness = luma;
-                        if (pBrightness != null)
+                        float mappedR;
+                        float mappedG;
+                        float mappedB;
+
+                        if (treatAsSdrSource)
                         {
-                            relativeBrightness = pBrightness[k];
-                            if (!float.IsFinite(relativeBrightness)) relativeBrightness = 0f;
-                            if (relativeBrightness < 0f) relativeBrightness = 0f;
-                            if (relativeBrightness > 1f) relativeBrightness = 1f;
+                            mappedR = ConvertSdrSignalToPq(r, frameMaximumBrightness);
+                            mappedG = ConvertSdrSignalToPq(g, frameMaximumBrightness);
+                            mappedB = ConvertSdrSignalToPq(b, frameMaximumBrightness);
                         }
-
-                        float luminanceNits = Math.Clamp(relativeBrightness * frameMaximumBrightness, 0f, PqReferencePeakNits);
-                        float pqSignal = EncodePqSignal(luminanceNits / PqReferencePeakNits);
-
-                        float gain = (luma > 1e-6f) ? (pqSignal / luma) : 0f;
-                        float mappedR = Math.Clamp(r * gain, 0f, 1f);
-                        float mappedG = Math.Clamp(g * gain, 0f, 1f);
-                        float mappedB = Math.Clamp(b * gain, 0f, 1f);
+                        else
+                        {
+                            // True HDR path: RGB channels are already signal-domain values from decoder/composition.
+                            // Reconstructing luma from Brightness and re-scaling RGB here can introduce hue shift.
+                            mappedR = Math.Clamp(r, 0f, 1f);
+                            mappedG = Math.Clamp(g, 0f, 1f);
+                            mappedB = Math.Clamp(b, 0f, 1f);
+                        }
 
                         ushort a16 = 65535;
                         if (hasAlpha && pa != null && k < aLen)
@@ -815,6 +979,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 | ((uint)c3 << 24);
         }
 
+        private static AVPixelFormat SelectAppleCompatibleHevcHdrPixelFormat(AVPixelFormat requested)
+        {
+            if (requested == AVPixelFormat.AV_PIX_FMT_YUV420P10LE || requested == AVPixelFormat.AV_PIX_FMT_P010LE)
+            {
+                return requested;
+            }
+
+            if (requested == AVPixelFormat.AV_PIX_FMT_P012LE)
+            {
+                return AVPixelFormat.AV_PIX_FMT_P010LE;
+            }
+
+            return AVPixelFormat.AV_PIX_FMT_YUV420P10LE;
+        }
+
         private static void ConfigureHdrEncoderOptions(AVCodec* codec, AVDictionary** opts, float maximumBrightness, uint maxCll, uint maxFall)
         {
             if (codec == null || codec->name == null)
@@ -911,6 +1090,40 @@ namespace projectFrameCut.Render.EncodeAndDecode
             double den = 1.0 + c3 * p;
             double e = Math.Pow(num / den, m2);
             return (float)Math.Clamp(e, 0.0, 1.0);
+        }
+
+        private static float SrgbToLinear(float value)
+        {
+            float v = Math.Clamp(value, 0f, 1f);
+            if (v <= 0.04045f)
+            {
+                return v / 12.92f;
+            }
+
+            return (float)Math.Pow((v + 0.055f) / 1.055f, 2.4f);
+        }
+
+        private static float ConvertSdrSignalToPq(float signal, float targetMaxNits)
+        {
+            float linear = SrgbToLinear(signal);
+            float nits = Math.Clamp(linear * targetMaxNits, 0f, PqReferencePeakNits);
+            return EncodePqSignal(nits / PqReferencePeakNits);
+        }
+
+        private void UpdateStreamLightLevelFromSignal(float maxSignal, float referenceWhiteNits)
+        {
+            float clampedSignal = Math.Clamp(maxSignal, 0f, 1f);
+            float clampedRef = NormalizeMaximumBrightness(referenceWhiteNits);
+            float maxNits = clampedSignal * clampedRef;
+
+            _streamMaximumBrightness = Math.Max(_streamMaximumBrightness, clampedRef);
+
+            uint derivedMaxCll = (uint)Math.Clamp((int)Math.Round(maxNits), 1, 65535);
+            uint derivedMaxFall = (uint)Math.Clamp((int)Math.Round(maxNits * 0.6f), 1, 65535);
+            if (derivedMaxFall > derivedMaxCll) derivedMaxFall = derivedMaxCll;
+
+            _streamMaxCll = Math.Max(_streamMaxCll, derivedMaxCll);
+            _streamMaxFall = Math.Max(_streamMaxFall, derivedMaxFall);
         }
 
         private static void AttachHdrMetadata(AVFrame* frame, float maximumBrightness, uint maxCll, uint maxFall)
