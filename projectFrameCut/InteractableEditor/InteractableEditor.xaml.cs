@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Setting.SettingManager;
@@ -42,6 +43,8 @@ namespace projectFrameCut.InteractableEditor
         private bool _isTextClip = false;
         private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
+        private long _lastPanUpdateTicks = 0;
+        private const long MinPanUpdateIntervalTicks = 30 * TimeSpan.TicksPerMillisecond; // ~33fps throttle for pan updates
         private int _activeTextEntryIndex = -1;
         private Rect _textEntryStartRect;
         private double _textEntryStartOriginX;
@@ -1365,54 +1368,90 @@ namespace projectFrameCut.InteractableEditor
         private bool TryResolveSourceClipRect(object sourceClip, ref double x, ref double y, ref double w, ref double h, out ClipMode clipType)
         {
             clipType = ClipMode.AudioClip;
+            IEnumerable<IEffect>? effects = null;
+            IClip? iclipSource = null;
 
-            if (sourceClip is not ClipElementUI clip)
+            if (sourceClip is ClipElementUI uiClip)
+            {
+                clipType = uiClip.ClipType;
+
+                if (uiClip.ClipType == ClipMode.TextClip && TryResolveTextClipRect(uiClip, out var textX, out var textY, out var textW, out var textH))
+                {
+                    x = textX;
+                    y = textY;
+                    w = textW;
+                    h = textH;
+                    return true;
+                }
+
+                x = uiClip.TargetX;
+                y = uiClip.TargetY;
+                if (uiClip.TargetWidth > 0)
+                {
+                    w = uiClip.TargetWidth;
+                }
+
+                if (uiClip.TargetHeight > 0)
+                {
+                    h = uiClip.TargetHeight;
+                }
+
+                if (uiClip.ClipType == ClipMode.SolidColorClip)
+                {
+                    if (uiClip.TargetWidth > 0)
+                    {
+                        w = uiClip.TargetWidth;
+                    }
+                    else
+                    {
+                        w = ReadSolidColorSize(uiClip.ExtraData, SolidColorOutputWidthKey, (int)Math.Round(w));
+                    }
+
+                    if (uiClip.TargetHeight > 0)
+                    {
+                        h = uiClip.TargetHeight;
+                    }
+                    else
+                    {
+                        h = ReadSolidColorSize(uiClip.ExtraData, SolidColorOutputHeightKey, (int)Math.Round(h));
+                    }
+                }
+
+                effects = uiClip.Effects?.Count > 0 ? uiClip.Effects.Values : null;
+            }
+            else if (sourceClip is IClip iclip)
+            {
+                clipType = iclip.ClipType;
+
+                x = iclip.TargetX;
+                y = iclip.TargetY;
+                if (iclip.TargetWidth > 0)
+                {
+                    w = iclip.TargetWidth;
+                }
+
+                if (iclip.TargetHeight > 0)
+                {
+                    h = iclip.TargetHeight;
+                }
+
+                effects = iclip.EffectsInstances?.Length > 0 ? iclip.EffectsInstances : null;
+                iclipSource = iclip;
+            }
+            else
             {
                 return false;
             }
 
-            clipType = clip.ClipType;
-
-            if (clip.ClipType == ClipMode.TextClip && TryResolveTextClipRect(clip, out var textX, out var textY, out var textW, out var textH))
+            if (effects is not null)
             {
-                x = textX;
-                y = textY;
-                w = textW;
-                h = textH;
-                return true;
-            }
-
-            x = clip.TargetX;
-            y = clip.TargetY;
-            if (clip.TargetWidth > 0)
-            {
-                w = clip.TargetWidth;
-            }
-
-            if (clip.TargetHeight > 0)
-            {
-                h = clip.TargetHeight;
-            }
-
-            if (clip.ClipType == ClipMode.SolidColorClip)
-            {
-                if (clip.TargetWidth > 0)
-                {
-                    w = clip.TargetWidth;
-                }
-                else if (clip is ClipElementUI solidClip)
-                {
-                    w = ReadSolidColorSize(solidClip.ExtraData, SolidColorOutputWidthKey, (int)Math.Round(w));
-                }
-
-                if (clip.TargetHeight > 0)
-                {
-                    h = clip.TargetHeight;
-                }
-                else if (clip is ClipElementUI solidClip)
-                {
-                    h = ReadSolidColorSize(solidClip.ExtraData, SolidColorOutputHeightKey, (int)Math.Round(h));
-                }
+                ApplyPositionProvidersToRect(
+                    effects,
+                    iclipSource,
+                    _currentFrame,
+                    (int)Math.Round(_videoWidth),
+                    (int)Math.Round(_videoHeight),
+                    ref x, ref y, ref w, ref h);
             }
 
             return true;
@@ -1436,6 +1475,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void UpdateVisualsForMultipleClips(Rect renderRect, double scale)
         {
+            LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
             if (_allClips is null || _allClips.Count == 0)
             {
                 ClearClipStates();
@@ -1477,6 +1517,16 @@ namespace projectFrameCut.InteractableEditor
                     w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
                     h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
 
+                    if (clip.Effects?.Count > 0)
+                    {
+                        ApplyPositionProvidersToRect(
+                            clip.Effects.Values,
+                            clipSource: null,
+                            _currentFrame,
+                            (int)Math.Round(_videoWidth),
+                            (int)Math.Round(_videoHeight),
+                            ref x, ref y, ref w, ref h);
+                    }
                 }
 
                 // Clamp to keep UI stable.
@@ -1600,22 +1650,21 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            foreach (var root in orderedRoots)
+            Dispatcher.Dispatch(() =>
             {
-                try
+                foreach (var root in orderedRoots)
                 {
-                    Dispatcher.Dispatch(() =>
+                    try
                     {
                         ClipStatesHost.Children.Remove(root);
                         ClipStatesHost.Children.Add(root);
-                    });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "reorder the clips overlay state", this);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Log(ex, "reorder the clips overlay state", this);
-
-                }
-            }
+            });
         }
 
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
@@ -1668,11 +1717,21 @@ namespace projectFrameCut.InteractableEditor
             {
                 case GestureStatus.Started:
                     _isClipPanInProgress = true;
+                    _lastPanUpdateTicks = 0; // process first Running event immediately
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
 
                 case GestureStatus.Running:
+                {
+                    // Throttle: skip updates faster than ~33fps to avoid flooding the UI thread.
+                    // Pan delta is cumulative (e.TotalX/Y) so skipping intermediate events is safe —
+                    // the next processed event will have the accumulated position.
+                    long now = Stopwatch.GetTimestamp();
+                    if (now - _lastPanUpdateTicks < MinPanUpdateIntervalTicks)
+                        break;
+                    _lastPanUpdateTicks = now;
+
                     // Get the render rectangle (video viewport on canvas)
                     Rect renderRect = GetRenderRect();
                     if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
@@ -1690,10 +1749,10 @@ namespace projectFrameCut.InteractableEditor
                     double newVisualY = _startY + deltaY;
 
                     UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
-
                     UpdateVisuals();
                     RequestInteractivePreviewRefreshIfMissing(state);
                     break;
+                }
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
@@ -2081,7 +2140,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void RequestInteractivePreviewRefreshIfMissing(ClipOverlayState state)
         {
-            if (state.HasPreviewView)
+            if (state.HasPreviewView || IsInteractiveManipulationInProgress)
             {
                 return;
             }
@@ -2285,6 +2344,53 @@ namespace projectFrameCut.InteractableEditor
             Interlocked.Exchange(ref _hasPendingCommitUpdate, 0);
         }
 
+        private static void ApplyPositionProvidersToRect(IEnumerable<IEffect>? effects, IClip? clipSource, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
+        {
+            if (effects is null)
+            {
+                return;
+            }
+
+            foreach (var effect in effects.OrderBy(e => ((IEffect)e).Index))
+            {
+                ClipPositionTuple pos;
+                if (effect is IContinuousClipPositionProvider cp)
+                {
+                    pos = cp.GetPosition(clipSource!, frameIndex, targetWidth, targetHeight);
+                }
+                else if (effect is IClipPositionProvider p)
+                {
+                    pos = p.GetPosition(clipSource!, targetWidth, targetHeight);
+                }
+                else
+                {
+                    continue;
+                }
+
+                if (pos.IsDelta)
+                {
+                    x += pos.TargetX;
+                    y += pos.TargetY;
+                    w += pos.TargetWidth;
+                    h += pos.TargetHeight;
+                }
+                else
+                {
+                    x = pos.TargetX;
+                    y = pos.TargetY;
+                    if (pos.TargetWidth > 0)
+                    {
+                        w = pos.TargetWidth;
+                    }
+
+                    if (pos.TargetHeight > 0)
+                    {
+                        h = pos.TargetHeight;
+                    }
+                }
+            }
+        }
+
         private void GetCurrentRect(out double x, out double y, out double w, out double h)
         {
             x = 0;
@@ -2346,6 +2452,17 @@ namespace projectFrameCut.InteractableEditor
                 {
                     h = ReadSolidColorSize(_currentClip.ExtraData, SolidColorOutputHeightKey, (int)Math.Round(h));
                 }
+            }
+
+            if (_currentClip.Effects?.Count > 0)
+            {
+                ApplyPositionProvidersToRect(
+                    _currentClip.Effects.Values,
+                    clipSource: null,
+                    _currentFrame,
+                    (int)Math.Round(_videoWidth),
+                    (int)Math.Round(_videoHeight),
+                    ref x, ref y, ref w, ref h);
             }
         }
 

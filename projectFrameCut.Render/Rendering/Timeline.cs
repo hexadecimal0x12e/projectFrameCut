@@ -147,10 +147,13 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
+                    ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
+                    ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
                     IPicture effected = srcFrame.Clip;
                     List<IPictureProcessStep> steps = new();
                     bool lastIsProcessStep = false;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
                     foreach (var effect in effectsList)
                     {
                         if (effect.YieldProcessStep != lastIsProcessStep)
@@ -175,9 +178,33 @@ namespace projectFrameCut.Render.Rendering
                         {
                             EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+                        else if (effect is IClipPositionProvider p)
+                        {
+                            (var x, var y, var w, var h, bool delta) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);
+                            if (delta)
+                            {
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                            }
+                            else
+                            {
+                                clipPos = new(x, y, w, h, false);
+                            }
+                        }
+                        else if (effect is IContinuousClipPositionProvider cp)
+                        {
+                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight);
+                            if (delta)
+                            {
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                            }
+                            else
+                            {
+                                clipPos = new(x, y, w, h, false);
+                            }
+                        }
                         else
                         {
-                            throw new NotSupportedException($"The effect Type {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
+                            throw new NotSupportedException($"The effect ClipType {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
                         }
                         if (AfterEffect is not null)
                         {
@@ -200,13 +227,14 @@ namespace projectFrameCut.Render.Rendering
                         steps.Clear();
                     }
 
-                    int clipX = ResolveClipOutputX(srcFrame.ParentClip, targetWidth, projectRelativeWidth);
-                    int clipY = ResolveClipOutputY(srcFrame.ParentClip, targetHeight, projectRelativeHeight);
+                    int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
+                    int clipY = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
                     {
                         clipY += (targetHeight - effected.Height) / 2;
                     }
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
+                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
 
                     if (result is null)
                     {

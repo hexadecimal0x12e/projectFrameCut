@@ -20,33 +20,6 @@ namespace projectFrameCut.DraftStuff
     [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
     public class ClipElementUI : IClipElementUI
     {
-        static ClipElementUI()
-        {
-            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
-        }
-
-        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
-        {
-            try
-            {
-                if (reason == ClipUpdateReason.PropertyChanged)
-                {
-                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
-                }
-
-                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
-                {
-                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
-        }
-
         public required string Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
@@ -103,6 +76,31 @@ namespace projectFrameCut.DraftStuff
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
+
+        [JsonIgnore]
+        public View? MiddleContent
+        {
+            get
+            {
+                if (Clip.Content is Grid grid && grid.Children.Count >= 2)
+                {
+                    return grid.Children[1] as View;
+                }
+                return null;
+            }
+            set
+            {
+                if (Clip.Content is Grid grid && grid.Children.Count >= 2)
+                {
+                    var existing = grid.Children[1];
+                    grid.Children.Remove(existing);
+                    if (value is not null)
+                    {
+                        grid.Children.Insert(1, value);
+                    }
+                }
+            }
+        }
 
         public float GetAverageSpeedRatio()
         {
@@ -220,6 +218,33 @@ namespace projectFrameCut.DraftStuff
 
         private static double _defaultClipHeight = 62;
 
+        static ClipElementUI()
+        {
+            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
+        }
+
+        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
+        {
+            try
+            {
+                if (reason == ClipUpdateReason.PropertyChanged)
+                {
+                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
+                }
+
+                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
+                {
+                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
         public static ClipElementUI CreateClip(
         double startX,
         double width,
@@ -229,7 +254,8 @@ namespace projectFrameCut.DraftStuff
         Brush? background = null,
         Border? prototype = null,
         uint relativeStart = 0,
-        uint maxFrames = 0)
+        uint maxFrames = 0,
+        View? ContentOverride = null)
         {
 
             string cid = id ?? Guid.NewGuid().ToString();
@@ -311,7 +337,7 @@ namespace projectFrameCut.DraftStuff
                 InputTransparent = true
             };
 
-            var cont = new HorizontalStackLayout
+            var cont = ContentOverride ?? new HorizontalStackLayout
             {
                 Children =
                 {

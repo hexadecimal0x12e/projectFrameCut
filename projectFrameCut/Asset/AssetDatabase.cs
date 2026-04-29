@@ -171,7 +171,7 @@ namespace projectFrameCut.Asset
             };
             asset.Path = sourcePath;
             asset.SecondPerFrame = -1;
-            asset.FrameCount = 0;
+            asset.Duration = 0;
             var thumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", asset.AssetId + ".png");
             asset.ThumbnailPath = thumbnailPath;
             bool fail = false;
@@ -182,14 +182,14 @@ namespace projectFrameCut.Asset
                         try
                         {
                             var vid = PluginManager.CreateVideoSource(sourcePath);
-                            asset.FrameCount = vid.TotalFrames;
+                            asset.Duration = vid.TotalFrames;
                             asset.SecondPerFrame = (float)(1f / vid.Fps);
                             vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
                         }
                         catch (Exception ex)
                         {
                             Log(ex, "Add a asset");
-                            asset.FrameCount = 1024;
+                            asset.Duration = 1024;
                             asset.SecondPerFrame = 1 / 42f;
                             fail = true;
                         }
@@ -201,13 +201,13 @@ namespace projectFrameCut.Asset
                         try
                         {
                             var aud = PluginManager.CreateAudioSource(sourcePath);
-                            asset.FrameCount = aud.Duration;
+                            asset.Duration = aud.Duration;
                             asset.SecondPerFrame = (float)(1f);
                         }
                         catch (Exception ex)
                         {
                             Log(ex, "Add a asset");
-                            asset.FrameCount = 1024;
+                            asset.Duration = 1024;
                             asset.SecondPerFrame = 1 / 42f;
                             fail = true;
                         }
@@ -307,11 +307,39 @@ namespace projectFrameCut.Asset
             if (asset.isInfiniteLength) return 0U;
             return (uint)(asset.AssetType switch
             {
-                AssetType.Video => asset.FrameCount ?? 0,
-                AssetType.Audio => (asset.FrameCount ?? 0) * targetFPS, // Duration is in seconds, multiply by targetFPS to get frames
+                AssetType.Video => ResolveVideoLengthInTimelineFrames(asset, targetFPS),
+                AssetType.Audio => (asset.Duration ?? 0) * targetFPS, // Duration is in seconds, multiply by targetFPS to get frames
                 AssetType.Image => 0,
-                _ => asset.FrameCount ?? 0
+                _ => asset.Duration ?? 0
             });
+        }
+
+        private static long ResolveVideoLengthInTimelineFrames(AssetItem asset, uint targetFPS)
+        {
+            long sourceFrames = asset.Duration ?? 0;
+            if (sourceFrames <= 0)
+            {
+                return 0;
+            }
+
+            if (asset.SecondPerFrame <= 0 || targetFPS == 0)
+            {
+                return sourceFrames;
+            }
+
+            double seconds = sourceFrames * asset.SecondPerFrame;
+            double timelineFrames = seconds * targetFPS;
+            if (timelineFrames < 1d)
+            {
+                return 1;
+            }
+
+            if (timelineFrames >= long.MaxValue)
+            {
+                return long.MaxValue;
+            }
+
+            return (long)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
         }
 
     }

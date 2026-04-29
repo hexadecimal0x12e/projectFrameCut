@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -6,7 +7,7 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class JitterEffect : IContinuousEffect
+    public class JitterEffect : IContinuousClipPositionProvider
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -14,7 +15,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; } = EffectImplementType.NotSpecified;
 
         public int MaxOffsetX { get; init; }
         public int MaxOffsetY { get; init; }
@@ -102,7 +103,8 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+
+        public ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight)
         {
             int offX = 0, offY = 0;
             if (Direction == Direction_Both || Direction == Direction_XOnly)
@@ -119,33 +121,7 @@ namespace projectFrameCut.Render.Effect
                     offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
                 }
             }
-
-            if (ImplementType == EffectImplementType.HwAcceleration)
-            {
-                return PlaceEffect_HwAccel.RenderWithOffset(source, computer, offX, offY, targetWidth, targetHeight);
-            }
-
-            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
-        {
-            int offX = 0, offY = 0;
-            if (Direction == Direction_Both || Direction == Direction_XOnly)
-            {
-                if (MaxOffsetX > 0)
-                {
-                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
-                }
-            }
-            if (Direction == Direction_Both || Direction == Direction_YOnly)
-            {
-                if (MaxOffsetY > 0)
-                {
-                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
-                }
-            }
-            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
+            return new ClipPositionTuple(offX, offY, 0, 0, true);
         }
 
         public string? BindedEffectGroupID { get; set; }
@@ -175,30 +151,19 @@ namespace projectFrameCut.Render.Effect
             {"Direction", "string"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
-                EffectImplementType.HwAcceleration => BuildWithType(implementType, parameters),
-                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
+            return BuildWithDefaultType(parameters);
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
         {
-            return BuildWithType(EffectImplementType.ImageSharp, parameters);
+            return BuildWithType(parameters);
         }
 
-        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
+        private static IEffect BuildWithType(Dictionary<string, object>? parameters)
         {
             parameters ??= new Dictionary<string, object>();
             if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
@@ -212,7 +177,6 @@ namespace projectFrameCut.Render.Effect
                 MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
                 Seed = Convert.ToInt32(parameters["Seed"]),
                 Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
-                ImplementType = implementType,
             };
         }
     }

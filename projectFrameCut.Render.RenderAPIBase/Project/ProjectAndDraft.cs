@@ -70,7 +70,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Get whether the project was normally exited.
         /// </summary>
         public bool NormallyExited { get; set; } = false;
+
+        /// <summary>
+        /// Get or set the last known draft snapshot's ID.
+        /// </summary>
+        public Guid LastSnapshotID { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management. 
+        /// </summary>
+        public Dictionary<Guid, (Guid prevoius, Guid next)> SnapshotIDMapping = new();
     }
+    
 
     /// <summary>
     /// Represents the structure of a draft in JSON format.
@@ -130,6 +141,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// </summary>
     public class ClipDraftDTO
     {
+        public const string ProjectFrameRateMetaKey = "__ProjectFrameRate";
+        public const string FrameSemanticVersionMetaKey = "__ClipFrameSemanticVersion";
+        public const int CurrentFrameSemanticVersion = 2;
+
         public string FromPlugin { get; set; } = string.Empty;
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string TypeName { get; set; } = string.Empty;
@@ -181,15 +196,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// Represents an asset item in the project. 
     /// </summary>
     [DebuggerDisplay("{Name}: {DurationDisplay}")]
-    public class AssetItem
+    public record AssetItem
     {
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
         public AssetType AssetType { get; set; } = AssetType.Other;
-        public ClipMode Type { get; set; }
+        public ClipMode ClipType { get; set; }
 
-        public long? FrameCount { get; set; }
+        public long? Duration { get; set; }
         public float SecondPerFrame { get; set; } = -1;
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
@@ -201,6 +216,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
         public int Width { get; set; }
         public int Height { get; set; }
+        public int BitPerPixel { get; set; }
 
         public ClipMode GetClipMode()
         {
@@ -209,7 +225,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Video => ClipMode.VideoClip,
                 AssetType.Image => ClipMode.PhotoClip,
                 AssetType.Audio => ClipMode.AudioClip,
-                _ => Type
+                _ => ClipType
             };
         }
 
@@ -217,7 +233,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public object? Background { get; set; }
 
         [JsonIgnore]
-        public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || SecondPerFrame <= 0;
+        public bool isInfiniteLength => Duration == null || Duration <= 0 || SecondPerFrame <= 0;
 
         [JsonIgnore]
         public string? Icon
@@ -228,7 +244,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 projectFrameCut.Shared.AssetType.Image => "\ud83d\uddbc\ufe0f",//🖼️
                 projectFrameCut.Shared.AssetType.Audio => "\ud83c\udfb5",//🎵
                 projectFrameCut.Shared.AssetType.Font => "\ud83d\udd24",//🔤
-                _ => Type switch
+                _ => ClipType switch
                 {
                     projectFrameCut.Shared.ClipMode.VideoClip => "\ud83d\udcfd\ufe0f",//📽️
                     projectFrameCut.Shared.ClipMode.PhotoClip => "\ud83d\uddbc\ufe0f",//🖼️
@@ -242,14 +258,25 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         }
 
         [JsonIgnore]
+        public string DurationTimeDisplay
+        {
+            get => AssetType switch
+            {
+                AssetType.Video => ToTimeSpanDisplay((Duration ?? 0) * (double)SecondPerFrame),
+                AssetType.Audio => ToTimeSpanDisplay(Duration ?? 0),
+                _ => string.Empty
+            };
+        }
+
+        [JsonIgnore]
         public string DurationDisplay
         {
-            get => Icon + " " + AssetType switch
-            {
-                AssetType.Video => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString(),
-                AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0d)).ToString(),
-                _ => ""
-            };
+            get => Icon + " " + DurationTimeDisplay;
+        }
+
+        private static string ToTimeSpanDisplay(double seconds)
+        {
+            return TimeSpan.FromTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond)).ToString("hh\\:mm\\:ss");
         }
 
         public static AssetType GetAssetType(string path)
@@ -278,8 +305,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         }
 
         public override int GetHashCode() => Guid.TryParse(AssetId, out var guid) ? guid.GetHashCode() : AssetId?.GetHashCode() ?? base.GetHashCode();
-        public override bool Equals(object? obj) => obj is AssetItem other && AssetId != null && other.AssetId != null && AssetId == other.AssetId;
-        public override string ToString() => $"{Name}: {DurationDisplay}";
+        public override string ToString() => $"{Name}: {DurationDisplay} ({AssetId})";
     }
 
     public class AssetItemComparer : IEqualityComparer<AssetItem>

@@ -3360,7 +3360,7 @@ All connections to "{a}" have been disconnected.
     /// Text Language Type
     /// ')
     /// </summary>
-    public static string TextOption_LangType => $"Text Language Type";
+    public static string TextOption_LangType => $"Text Language ClipType";
     
     string ISimpleLocalizerBase_PropertyPanel.TextOption_UseVerticalLayout => TextOption_UseVerticalLayout;
     /// <summary>

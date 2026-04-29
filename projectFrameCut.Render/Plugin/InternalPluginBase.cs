@@ -77,6 +77,8 @@ public class InternalPluginBase : IPluginBase
         {"Rotation", new RotationEffectFactory()},
         {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
+        {"Jitter", new JitterContinuousEffectFactory()},
+
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
@@ -93,7 +95,6 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         {"ZoomIn", new ZoomInContinuousEffectFactory()},
-        {"Jitter", new JitterContinuousEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>

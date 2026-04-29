@@ -200,21 +200,7 @@ namespace projectFrameCut.DraftStuff
 
             if (elem.ClipType == ClipMode.AudioClip && wrapSoundtrackAsClip)
             {
-                // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
-                Dictionary<string, object>? normalizedMeta = null;
-                if (elem.ExtraData != null)
-                {
-                    normalizedMeta = new Dictionary<string, object>(elem.ExtraData.Count);
-                    foreach (var kv in elem.ExtraData)
-                    {
-                        if (kv.Key == "TextEntries")
-                        {
-                            try { normalizedMeta[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
-                            catch { normalizedMeta[kv.Key] = kv.Value; }
-                        }
-                        else normalizedMeta[kv.Key] = kv.Value;
-                    }
-                }
+                var normalizedMeta = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
                 return new ClipDraftDTO
                 {
@@ -243,21 +229,7 @@ namespace projectFrameCut.DraftStuff
                 };
             }
 
-            // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
-            Dictionary<string, object>? normalizedMeta2 = null;
-            if (elem.ExtraData != null)
-            {
-                normalizedMeta2 = new Dictionary<string, object>(elem.ExtraData.Count);
-                foreach (var kv in elem.ExtraData)
-                {
-                    if (kv.Key == "TextEntries")
-                    {
-                        try { normalizedMeta2[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
-                        catch { normalizedMeta2[kv.Key] = kv.Value; }
-                    }
-                    else normalizedMeta2[kv.Key] = kv.Value;
-                }
-            }
+            var normalizedMeta2 = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
             return new ClipDraftDTO
             {
@@ -331,6 +303,31 @@ namespace projectFrameCut.DraftStuff
                         BindedInputIds = b.BindedInputIds?.ToArray(),
                     }).ToArray()
             };
+        }
+
+        private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
+        {
+            int capacity = Math.Max(4, source?.Count ?? 0);
+            var normalized = new Dictionary<string, object>(capacity);
+            if (source != null)
+            {
+                foreach (var kv in source)
+                {
+                    if (kv.Key == "TextEntries")
+                    {
+                        try { normalized[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
+                        catch { normalized[kv.Key] = kv.Value; }
+                    }
+                    else
+                    {
+                        normalized[kv.Key] = kv.Value;
+                    }
+                }
+            }
+
+            normalized[ClipDraftDTO.ProjectFrameRateMetaKey] = targetFrameRate;
+            normalized[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+            return normalized;
         }
 
         public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)

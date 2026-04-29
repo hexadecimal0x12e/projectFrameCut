@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -64,9 +65,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public uint StartFrame { get; init; }
         /// <summary>
-        /// The start frame within the source clip, in frames.
+        /// The in-point offset on the draft timeline, in frames.
+        /// The render system maps this timeline offset to source-frame index by FrameTime and project FPS.
         /// </summary>
-        public uint RelativeStartFrame { get; init; } // in-point within the source
+        public uint RelativeStartFrame { get; init; } // in-point within timeline
         /// <summary>
         /// The original (in 1x speed ratio) duration of this clip in the draft.
         /// </summary>
@@ -181,7 +183,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         public bool ContainsFrame(uint targetFrame)
         {
-            if(ExtendToWholeDraft)
+            if (ExtendToWholeDraft)
             {
                 return true;
             }
@@ -227,7 +229,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             }
 
             ulong mappedOffset = profile.MapTimelineOffsetToSourceOffset((uint)offsetFromClipStart);
-            ulong sourceIndexLong = (ulong)RelativeStartFrame + mappedOffset;
+            ulong timelineIndexLong = (ulong)RelativeStartFrame + mappedOffset;
+            ulong sourceIndexLong = ConvertTimelineFrameToSourceFrame(this, timelineIndexLong);
             if (sourceIndexLong > uint.MaxValue)
             {
                 throw new IndexOutOfRangeException($"Frame mapping overflow for frame #{targetFrame}.");
@@ -235,6 +238,114 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             return (uint)sourceIndexLong;
         }
+
+        private static ulong ConvertTimelineFrameToSourceFrame(IClip clip, ulong timelineFrame)
+        {
+            if (timelineFrame == 0)
+            {
+                return 0;
+            }
+
+            if (clip.ClipType != ClipMode.VideoClip)
+            {
+                return timelineFrame;
+            }
+
+            if (!TryResolveProjectFrameRate(clip, out var projectFrameRate) || projectFrameRate <= 0d)
+            {
+                return timelineFrame;
+            }
+
+            if (clip.FrameTime <= 0f || float.IsNaN(clip.FrameTime) || float.IsInfinity(clip.FrameTime))
+            {
+                return timelineFrame;
+            }
+
+            double seconds = timelineFrame / projectFrameRate;
+            double sourceFrame = seconds / clip.FrameTime;
+            if (double.IsNaN(sourceFrame) || double.IsInfinity(sourceFrame) || sourceFrame <= 0d)
+            {
+                return 0;
+            }
+
+            if (sourceFrame >= ulong.MaxValue)
+            {
+                return ulong.MaxValue;
+            }
+
+            return (ulong)Math.Floor(sourceFrame + 1e-9d);
+        }
+
+        private static bool TryResolveProjectFrameRate(IClip clip, out double frameRate)
+        {
+            frameRate = 0d;
+            if (clip.ExtraData is null
+                || !clip.ExtraData.TryGetValue(ClipDraftDTO.ProjectFrameRateMetaKey, out var raw)
+                || raw is null)
+            {
+                return false;
+            }
+
+            switch (raw)
+            {
+                case int i:
+                    frameRate = i;
+                    return i > 0;
+                case uint ui:
+                    frameRate = ui;
+                    return ui > 0;
+                case long l:
+                    frameRate = l;
+                    return l > 0;
+                case ulong ul:
+                    frameRate = ul;
+                    return ul > 0;
+                case float f when !float.IsNaN(f) && !float.IsInfinity(f):
+                    frameRate = f;
+                    return f > 0f;
+                case double d when !double.IsNaN(d) && !double.IsInfinity(d):
+                    frameRate = d;
+                    return d > 0d;
+                case JsonElement je:
+                    return TryResolveProjectFrameRateFromJsonElement(je, out frameRate);
+                default:
+                    if (double.TryParse(raw.ToString(), out var parsed) && parsed > 0d)
+                    {
+                        frameRate = parsed;
+                        return true;
+                    }
+                    return false;
+            }
+        }
+
+        private static bool TryResolveProjectFrameRateFromJsonElement(JsonElement value, out double frameRate)
+        {
+            frameRate = 0d;
+            if (value.ValueKind == JsonValueKind.Number)
+            {
+                if (value.TryGetDouble(out var number) && number > 0d)
+                {
+                    frameRate = number;
+                    return true;
+                }
+                return false;
+            }
+
+            if (value.ValueKind == JsonValueKind.String
+                && double.TryParse(value.GetString(), out var parsed)
+                && parsed > 0d)
+            {
+                frameRate = parsed;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Get a <see cref="ClipPositionTuple"/> of this clip.
+        /// </summary>
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
 
         /// <summary>
         /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.

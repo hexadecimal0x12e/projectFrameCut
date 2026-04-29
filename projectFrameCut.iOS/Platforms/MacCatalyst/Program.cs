@@ -65,7 +65,7 @@ namespace projectFrameCut.Platforms.MacCatalyst
                 {
                     innerExceptionInfo =
 $"""
-Type: {ex.InnerException.GetType().Name}                        
+ClipType: {ex.InnerException.GetType().Name}                        
 Message: {ex.InnerException.Message}
 StackTrace:
 {ex.InnerException.StackTrace}

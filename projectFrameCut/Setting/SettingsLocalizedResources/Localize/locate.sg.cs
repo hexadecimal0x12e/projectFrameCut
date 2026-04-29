@@ -5065,7 +5065,7 @@ Are you sure you want to add the plugin "{name}"?{Environment.NewLine}{Environme
     /// <remarks>
     /// Do not translate &quot;yes&quot; as it is a user input.
     /// </remarks>
-    public static string Misc_ClearSafeStor_Warn => $""""Please note that once you clear the safe storage, you will not be able to log into central material servers configured in whitelist mode; and all plugin certificates will be deleted and need to be reinstalled. Do you confirm you want to proceed? Type "yes" to confirm."""";
+    public static string Misc_ClearSafeStor_Warn => $""""Please note that once you clear the safe storage, you will not be able to log into central material servers configured in whitelist mode; and all plugin certificates will be deleted and need to be reinstalled. Do you confirm you want to proceed? ClipType "yes" to confirm."""";
     
     string ISimpleLocalizerBase_Settings.Misc_ForgetPluginSign_Hint => Misc_ForgetPluginSign_Hint;
     /// <summary>
@@ -6083,7 +6083,7 @@ Open the "Files" app on your device, navigate to 'My {idiom} -> {Localized.AppBr
     /// <remarks>
     /// Do not translate &apos;yes&apos; as it is a user input keyword.
     /// </remarks>
-    public static string Edit_AddView_Text_Template_Reset_Warn => $"Are you sure you want to do this?{Environment.NewLine}This action cannot be undone, and all templates you added will be permanently deleted!{Environment.NewLine}Type 'yes' below to confirm this action.";
+    public static string Edit_AddView_Text_Template_Reset_Warn => $"Are you sure you want to do this?{Environment.NewLine}This action cannot be undone, and all templates you added will be permanently deleted!{Environment.NewLine}ClipType 'yes' below to confirm this action.";
     
     string ISimpleLocalizerBase_Settings.Edit_AddView_Text_Template_Import => Edit_AddView_Text_Template_Import;
     /// <summary>

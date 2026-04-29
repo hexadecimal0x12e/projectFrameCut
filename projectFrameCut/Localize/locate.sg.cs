@@ -11277,7 +11277,7 @@ Are you sure you want to cancel the task "{name}"?{Environment.NewLine}This may 
     /// Asset Type
     /// ')
     /// </summary>
-    public static string AssetPage_Info_Type => $"Asset Type";
+    public static string AssetPage_Info_Type => $"Asset ClipType";
     
     string ISimpleLocalizerBase.AssetPage_Info_Duration => AssetPage_Info_Duration;
     /// <summary>
@@ -11579,7 +11579,7 @@ Are you sure you want to cancel the task "{name}"?{Environment.NewLine}This may 
     /// <remarks>
     /// 不要翻译&apos;yes&apos;，这是用户要输入的内容。
     /// </remarks>
-    public static string HomePage_SourceNotFound_RemoveThem_Conf => $"Are you sure you want to remove these items from the project?{Environment.NewLine}This operation cannot be undone!{Environment.NewLine}Type 'yes' below to confirm.";
+    public static string HomePage_SourceNotFound_RemoveThem_Conf => $"Are you sure you want to remove these items from the project?{Environment.NewLine}This operation cannot be undone!{Environment.NewLine}ClipType 'yes' below to confirm.";
     
     string ISimpleLocalizerBase.AssetPage_DeleteAAsset_Confirm1(string name) => AssetPage_DeleteAAsset_Confirm1(name);
     /// <summary>
@@ -12615,7 +12615,7 @@ Click ➕ to add a transition between "{left}" and "{right}".
     /// </remarks>
     public static string HomePage_ProjectContextMenu_Delete_Confirm2Input(string name) => 
 $""""
-Are you sure you want to permanently delete "{name}"?{Environment.NewLine}This action cannot be undone. "{name}" will be permanently removed from this device!{Environment.NewLine}{Environment.NewLine}Type "yes" below to confirm your action.
+Are you sure you want to permanently delete "{name}"?{Environment.NewLine}This action cannot be undone. "{name}" will be permanently removed from this device!{Environment.NewLine}{Environment.NewLine}ClipType "yes" below to confirm your action.
 """";
     
     string ISimpleLocalizerBase.HomePage_CreateAProject_InvalidName => HomePage_CreateAProject_InvalidName;
@@ -13184,7 +13184,7 @@ Sorry, failed to delete "{name}". You can try restarting the program and then tr
     /// Type
     /// ')
     /// </summary>
-    public static string TemplateExtractPage_VariableType => $"Type";
+    public static string TemplateExtractPage_VariableType => $"ClipType";
     
     string ISimpleLocalizerBase.TemplateViewPage_ImportTemplate => TemplateViewPage_ImportTemplate;
     /// <summary>
@@ -14243,7 +14243,7 @@ Project "{path}" | {n} clips
     /// <remarks>
     /// This is a warning message. Do NOT translate &quot;yes&quot; as it is what the user needs to type.
     /// </remarks>
-    public static string DraftSettingPage_Advanced_Warn => $""""This operation will make irreversible changes to your project. Do you want to continue?{Environment.NewLine}Type "yes" below to continue."""";
+    public static string DraftSettingPage_Advanced_Warn => $""""This operation will make irreversible changes to your project. Do you want to continue?{Environment.NewLine}ClipType "yes" below to continue."""";
     
     string ISimpleLocalizerBase.DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced(string name, int n) => DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced(name,n);
     /// <summary>
@@ -14270,7 +14270,7 @@ The asset "{name}" is referenced by {n} clips. Do you want to delete the referen
     /// </remarks>
     public static string DraftSettingPage_Tab_ClipMgnt_DeleteAssetReferenced_Warn2(string asset, string clips) => 
 $""""
-This operation will permanently delete the material "{asset}" and these clips:{Environment.NewLine}{clips}{Environment.NewLine}{Environment.NewLine}This operation cannot be undone. Type "yes" below to proceed.
+This operation will permanently delete the material "{asset}" and these clips:{Environment.NewLine}{clips}{Environment.NewLine}{Environment.NewLine}This operation cannot be undone. ClipType "yes" below to proceed.
 """";
     
     string ISimpleLocalizerBase.DraftSettingPage_Tab_ClipMgnt_ReferenceBy(int n) => DraftSettingPage_Tab_ClipMgnt_ReferenceBy(n);
@@ -29975,7 +29975,7 @@ Désolé, nous n'avons pas pu lire votre projet.{(OperatingSystem.IsWindows() ? 
     /// Type de ressource
     /// ')
     /// </summary>
-    public static string AssetPage_Info_Type => $"Type de ressource";
+    public static string AssetPage_Info_Type => $"ClipType de ressource";
     
     string ISimpleLocalizerBase.AssetPage_Info_Duration => AssetPage_Info_Duration;
     /// <summary>
@@ -31840,7 +31840,7 @@ Désolé, nous n'avons pas pu lire votre projet.{(OperatingSystem.IsWindows() ? 
     /// Type
     /// ')
     /// </summary>
-    public static string TemplateExtractPage_VariableType => $"Type";
+    public static string TemplateExtractPage_VariableType => $"ClipType";
     
     string ISimpleLocalizerBase.TemplateViewPage_ImportTemplate => TemplateViewPage_ImportTemplate;
     /// <summary>

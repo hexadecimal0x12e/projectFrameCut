@@ -77,10 +77,12 @@ namespace projectFrameCut
             "My Templates",
 #if WINDOWS
             "My Assets\\.database",
-            "My Assets\\.thumbnails"
+            "My Assets\\.thumbnails",
+            "My Assets\\.perAssetThumb",
 #else
             "My Assets/.database",
-            "My Assets/.thumbnails"
+            "My Assets/.thumbnails",
+            "My Assets/.perAssetThumb"
 #endif
         ];
 

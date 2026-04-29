@@ -20,9 +20,9 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// </summary>
         double CurrentFrame { get; }
         /// <summary>
-        /// Gets or sets active save slot index.
+        /// Gets or sets the current snapshot ID in the save slot linked list.
         /// </summary>
-        int CurrentSaveSlotIndex { get; set; }
+        Guid CurrentSnapshotID { get; set; }
         /// <summary>
         /// Gets or sets current project metadata.
         /// </summary>
@@ -52,7 +52,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Creates and inserts a transform clip between the selected clip and a neighbor.
         /// </summary>
         bool AddTransformBetweenSelected(Func<Guid, Guid, Render.RenderAPIBase.ClipAndTrack.ITransform> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter = null);
-        void ApplySlot(int slotIndex);
+        void ApplySlot(Guid snapshotId);
         /// <summary>
         /// Starts interactive clip placement mode.
         /// </summary>

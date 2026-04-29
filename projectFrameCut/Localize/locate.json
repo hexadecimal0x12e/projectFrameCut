@@ -6,7 +6,7 @@
   "NameOfLocalizerInstance": "Localized",
   "NameOfBaseInterface": "ISimpleLocalizerBase",
   "EnableBaseGenerate": true,
-  "EnablePseudoLocalization": false,
+  "EnablePseudoLocalization": true,
   "PseudoLocalizationCondition": "DEBUG",
   "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {

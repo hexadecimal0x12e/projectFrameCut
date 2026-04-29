@@ -59,12 +59,12 @@ public partial class AssetPlaybackPage : ContentPage
         {
             infoItems.Add($"{asset.Width}×{asset.Height}");
         }
-        if (asset.FrameCount.HasValue && asset.FrameCount > 0 && asset.SecondPerFrame > 0)
+        if (asset.Duration.HasValue && asset.Duration > 0 && asset.SecondPerFrame > 0)
         {
-            var duration = TimeSpan.FromSeconds(asset.FrameCount.Value * asset.SecondPerFrame);
+            var duration = TimeSpan.FromSeconds(asset.Duration.Value * asset.SecondPerFrame);
             infoItems.Add($"Duration: {duration:hh\\:mm\\:ss\\.ff}");
         }
-        infoItems.Add($"Type: {asset.AssetType}");
+        infoItems.Add($"ClipType: {asset.AssetType}");
 
         var infoLabel = new Label
         {

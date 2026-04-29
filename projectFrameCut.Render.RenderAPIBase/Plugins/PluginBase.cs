@@ -125,7 +125,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// Key is effect type name (e.g. "Resize").
         /// </summary>
-        /// 
+        /// <remarks>
+        /// This is also for the factory of <see cref="IColorAdjustEffect"/>, <see cref="IClipPositionProvider"/>, <see cref="IContinuousClipPositionProvider"/> and <see cref="ISpeedVarianceProvider"/>.
+        /// </remarks>
         public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
         /// <summary>
         /// Create an blank IEffect instance from the given id.

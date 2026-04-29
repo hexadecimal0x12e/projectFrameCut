@@ -704,18 +704,28 @@ public partial class HomePage : ContentPage
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
-                    if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && (Path.IsPathRooted(item.Value.SourcePath) ? !File.Exists(item.Value.SourcePath) : !File.Exists(Path.Combine(draftSourcePath, item.Value.SourcePath))))
+                    if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && !item.Value.SourcePath.StartsWith('#'))
                     {
-                        if (item.Value.SourcePath.StartsWith('#')) break;
-                        if (item.Value.SourcePath.StartsWith('$') && AssetDatabase.Assets.ContainsKey(item.Value.SourcePath.Substring(1))) break;
-                        notfounds.Add(item.Value.Id, new AssetItem { AssetId = item.Value.Id, Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
+                        if (item.Value.SourcePath.StartsWith('$') && AssetDatabase.Assets.TryGetValue(item.Value.SourcePath.Substring(1), out var a))
+                        {
+                            AssetsLibraryPage.StartPerAssetThumbGeneration(a);
+                            continue;
+                        }
+                        else if (Path.IsPathRooted(item.Value.SourcePath) ? File.Exists(item.Value.SourcePath) : File.Exists(Path.Combine(draftSourcePath, item.Value.SourcePath)))
+                        {
+                            continue; // draft will handle thumb generation
+                        }
+                        else
+                        {
+                            notfounds.Add(item.Value.Id, new AssetItem { AssetId = item.Value.Id, Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
+                        }
                     }
                 }
                 foreach (var item in assetDict)
                 {
                     if (!string.IsNullOrWhiteSpace(item.Value.Path) && !item.Value.Path.StartsWith('#') && !File.Exists(item.Value.Path))
                     {
-                        notfounds.Add(item.Value.AssetId, item.Value);
+                        notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
                     }
                 }
                 if (notfounds.Any())

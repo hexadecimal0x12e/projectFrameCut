@@ -252,7 +252,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         _ => "Unknown"
                     };
 
-                    result.AppendLine($"Codec: {name,-20}  Type: {typeName,-12}  {codecType}");
+                    result.AppendLine($"Codec: {name,-20}  ClipType: {typeName,-12}  {codecType}");
                 }
 
                 return result.ToString();

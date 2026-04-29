@@ -72,11 +72,29 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 throw new NullReferenceException("Decoder is null. Please init it.");
             }
+            targetFrame = ClampFrameToDecoderRange(targetFrame);
             if(Decoder is HDRDecoderContext h)
             {
                 return h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
             }
             return (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+        }
+
+        private uint ClampFrameToDecoderRange(uint targetFrame)
+        {
+            if (Decoder is null)
+            {
+                return targetFrame;
+            }
+
+            long totalFrames = Decoder.TotalFrames;
+            if (totalFrames <= 0)
+            {
+                return targetFrame;
+            }
+
+            uint maxFrame = (uint)Math.Max(0, totalFrames - 1);
+            return targetFrame > maxFrame ? maxFrame : targetFrame;
         }
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
@@ -161,7 +179,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     ProcessingFuncStackTrace = null,
                     Properties = new Dictionary<string, object>
                     {
-                        { "SourcePath", FilePath }
+                        { "Path", FilePath }
                     }
                 }
             };
@@ -342,7 +360,18 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class TextClip : IClip
     {
         public required string Id { get; init; }
-        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
+        public Guid IdAsGUID
+        {
+            get;
+            init
+            {
+                if(!Guid.TryParse(Id, out field))
+                {
+                    Log($"A clip's ID field should be a valid guid. The input field has an invalid data '{Id}'", "warn");
+                    field = Guid.Empty;
+                }
+            }
+        }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }

@@ -45,6 +45,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.InteractableEditor;
 
 
 
@@ -273,7 +274,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool LogUIMessageToLogger { get; set; } = false;
     public bool Denoise { get; set; } = false;
     public int MaximumSaveSlot { get; set; } = 8;
-    public int CurrentSaveSlotIndex { get; set; } = 0;
+    public Guid CurrentSnapshotID { get; set; } = Guid.Empty;
     public bool IsReadonly { get; set; } = false;
     public string PreferredPopupMode { get; set; } = "bottom";
     public TimeSpan SyncCooldown { get; set; } = TimeSpan.FromMilliseconds(500);
@@ -337,6 +338,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         BindingContext = this;
         ProjectInfo = info;
         ProjectInfo.UserDefinedProperties ??= new();
+        ProjectInfo.SnapshotIDMapping ??= new();
+        SecondsPerFrame = ProjectInfo.TargetFrameRate > 0 ? 1d / ProjectInfo.TargetFrameRate : 1d / 30d;
+        if (ProjectInfo.LastSnapshotID != Guid.Empty)
+        {
+            CurrentSnapshotID = ProjectInfo.LastSnapshotID;
+            PreviousSnapshotID = ProjectInfo.LastSnapshotID;
+        }
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
@@ -369,6 +377,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Clips = clips;
         Assets = assets ?? new();
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+        NormalizeLoadedClipFrameSemantics();
 
         trackCount = initialTrackCount;
         var maxMainTrack = Clips.Values.Where(c => c.origTrack < SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(0).Max();
@@ -396,8 +405,133 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         ProjectInfo.ProjectName ??= title;
-        SecondsPerFrame = 1d / ProjectInfo.TargetFrameRate;
         IsReadonly = isReadonly;
+    }
+
+    private void NormalizeLoadedClipFrameSemantics()
+    {
+        var projectFps = ProjectInfo.TargetFrameRate > 0 ? ProjectInfo.TargetFrameRate : 30u;
+        foreach (var clip in Clips.Values)
+        {
+            clip.ExtraData ??= new Dictionary<string, object>();
+            clip.ExtraData[ClipDraftDTO.ProjectFrameRateMetaKey] = projectFps;
+
+            bool hasVersion = TryGetFrameSemanticVersion(clip.ExtraData, out var version);
+            if (!hasVersion || version < ClipDraftDTO.CurrentFrameSemanticVersion)
+            {
+                TryMigrateLegacyFrameSemantic(clip);
+            }
+
+            clip.ExtraData[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+        }
+    }
+
+    private void TryMigrateLegacyFrameSemantic(ClipElementUI clip)
+    {
+        if (clip.ClipType != ClipMode.VideoClip)
+        {
+            return;
+        }
+
+        if (clip.maxFrameCount == 0 || clip.sourceSecondPerFrame <= 0 || SecondsPerFrame <= 0)
+        {
+            return;
+        }
+
+        double timelinePerLegacyFrame = clip.sourceSecondPerFrame / SecondsPerFrame;
+        if (double.IsNaN(timelinePerLegacyFrame) || double.IsInfinity(timelinePerLegacyFrame) || timelinePerLegacyFrame <= 0d)
+        {
+            return;
+        }
+
+        if (Math.Abs(timelinePerLegacyFrame - 1d) < 0.0001d)
+        {
+            return;
+        }
+
+        uint migratedMax = ConvertLegacyFrameCount(clip.maxFrameCount, timelinePerLegacyFrame);
+        uint legacyLength = clip.lengthInFrame > 0
+            ? clip.lengthInFrame
+            : Math.Max(1u, PixelToFrame(clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
+        uint migratedLength = ConvertLegacyFrameCount(legacyLength, timelinePerLegacyFrame);
+
+        clip.maxFrameCount = migratedMax;
+        if (clip.relativeStartFrame >= clip.maxFrameCount)
+        {
+            clip.relativeStartFrame = clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0;
+        }
+
+        uint remaining = clip.maxFrameCount > clip.relativeStartFrame
+            ? clip.maxFrameCount - clip.relativeStartFrame
+            : 1u;
+        clip.lengthInFrame = Math.Min(migratedLength, Math.Max(1u, remaining));
+        clip.origLength = FrameToPixel(clip.lengthInFrame);
+        clip.Clip.WidthRequest = clip.origLength * clip.SecondPerFrameRatio;
+    }
+
+    private static uint ConvertLegacyFrameCount(uint legacyFrameCount, double timelinePerLegacyFrame)
+    {
+        if (legacyFrameCount == 0)
+        {
+            return 0;
+        }
+
+        double timelineFrames = legacyFrameCount * timelinePerLegacyFrame;
+        if (timelineFrames < 1d)
+        {
+            return 1;
+        }
+
+        if (timelineFrames >= uint.MaxValue)
+        {
+            return uint.MaxValue;
+        }
+
+        return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
+    }
+
+    private static bool TryGetFrameSemanticVersion(Dictionary<string, object> extraData, out int version)
+    {
+        version = 0;
+        if (!extraData.TryGetValue(ClipDraftDTO.FrameSemanticVersionMetaKey, out var raw) || raw is null)
+        {
+            return false;
+        }
+
+        if (raw is int i)
+        {
+            version = i;
+            return true;
+        }
+
+        if (raw is long l)
+        {
+            version = (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+            return true;
+        }
+
+        if (raw is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn))
+            {
+                version = jn;
+                return true;
+            }
+
+            if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js))
+            {
+                version = js;
+                return true;
+            }
+        }
+
+        if (int.TryParse(raw.ToString(), out var parsed))
+        {
+            version = parsed;
+            return true;
+        }
+
+        return false;
     }
 
     private void HookPreviewSurfaceSizeSync()
@@ -1255,6 +1389,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
         _ = UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
+        ApplyClipPreview(c);
     }
 
     private void StartPerClipThumbGeneration(ClipElementUI clip)
@@ -1330,6 +1465,35 @@ public partial class DraftPage : ContentPage, IDraftPage
                 cts.Dispose();
             }
         }, cts.Token);
+    }
+
+    private void ApplyClipPreview(ClipElementUI element)
+    {
+        try
+        {
+            var previewGen = new OnClipUIPreview(this, element);
+            var previewView = previewGen.Update();
+            if (previewView is null)
+                return;
+
+            var oldMiddle = element.MiddleContent;
+            if (oldMiddle is not null)
+                oldMiddle.VerticalOptions = LayoutOptions.End;
+
+            var container = new Grid
+            {
+                InputTransparent = true,
+            };
+            container.Children.Add(previewView);
+            if (oldMiddle is not null)
+                container.Children.Add(oldMiddle);
+
+            element.MiddleContent = container;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Apply clip preview for {element.Id}", this);
+        }
     }
 
     private void Split_Clicked(object sender, EventArgs e)
@@ -4279,7 +4443,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             item.Path = path;
             var cid = item.AssetId;
-            Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
+            Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             Dispatcher.Dispatch(async () =>
             {
@@ -6979,6 +7143,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
         var assets = Assets.Values.ToList();
+        var snapshotId = Guid.NewGuid();
         string slot = ".";
         if (noSlot)
         {
@@ -7014,18 +7179,21 @@ public partial class DraftPage : ContentPage, IDraftPage
                 PruneNewerSaveSlotsFromCurrent();
             }
 
-            if (CurrentSaveSlotIndex + 1 < MaximumSaveSlot)
+            slot = $"slot_{snapshotId}";
+            ProjectInfo.SnapshotIDMapping[snapshotId] = (PreviousSnapshotID, Guid.Empty);
+            if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
             {
-                slot = $"slot_{CurrentSaveSlotIndex + 1}";
-                CurrentSaveSlotIndex++;
+                ProjectInfo.SnapshotIDMapping[PreviousSnapshotID] = (prevEntry.prevoius, snapshotId);
             }
-            else
+            ProjectInfo.LastSnapshotID = snapshotId;
+            CurrentSnapshotID = snapshotId;
+            LogDiagnostic($"Switching slot to {snapshotId}...");
+
+            if (MaximumSaveSlot >= 0)
             {
-                slot = "slot_0";
-                CurrentSaveSlotIndex = 0;
+                PruneOldestSaveSlots();
             }
-            ProjectInfo.SaveSlotIndicator = CurrentSaveSlotIndex;
-            LogDiagnostic($"Switching slot to {CurrentSaveSlotIndex}...");
+
             saveLocker.Enter();
             try
             {
@@ -7036,7 +7204,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
                 draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
                 draft.PreviousSnapshot = PreviousSnapshotID;
-                draft.SnapshotID = Guid.NewGuid();
+                draft.SnapshotID = snapshotId;
                 Directory.CreateDirectory(Path.Combine(WorkingPath, "saveSlots", slot));
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
@@ -7110,17 +7278,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 continue;
             }
 
-            var indexText = folderName.Substring("slot_".Length);
-            if (!int.TryParse(indexText, out var slotIndex))
-            {
-                continue;
-            }
-
-            if (slotIndex < 0 || slotIndex >= MaximumSaveSlot)
-            {
-                continue;
-            }
-
             var timelinePath = Path.Combine(dir, "timeline.json");
             if (!File.Exists(timelinePath))
             {
@@ -7129,10 +7286,21 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             try
             {
-                DateTime savedAtUtc;
                 var tml = File.ReadAllText(timelinePath);
                 var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
-                if (draft is null || draft.SavedAt == default)
+                if (draft is null)
+                {
+                    continue;
+                }
+
+                var snapshotId = draft.SnapshotID;
+                if (snapshotId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                DateTime savedAtUtc;
+                if (draft.SavedAt == default)
                 {
                     savedAtUtc = File.GetLastWriteTimeUtc(timelinePath);
                 }
@@ -7148,7 +7316,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                 slots.Add(new SaveSlotMeta
                 {
-                    SlotIndex = slotIndex,
+                    SnapshotID = snapshotId,
                     SavedAtUtc = savedAtUtc
                 });
             }
@@ -7160,71 +7328,114 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         return slots
             .OrderBy(x => x.SavedAtUtc)
-            .ThenBy(x => x.SlotIndex)
+            .ThenBy(x => x.SnapshotID)
             .ToList();
     }
 
-    private SaveSlotMeta? GetPreviousSlotByTime()
+    private SaveSlotMeta? GetPreviousSlot()
     {
-        var slots = GetSaveSlotsSortedByTime();
-        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
-        if (current is null)
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
+            || entry.prevoius == Guid.Empty)
         {
             return null;
         }
 
-        return slots.LastOrDefault(x =>
-            x.SavedAtUtc < current.SavedAtUtc
-            || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex < current.SlotIndex));
+        return new SaveSlotMeta { SnapshotID = entry.prevoius, SavedAtUtc = DateTime.MinValue };
     }
 
-    private SaveSlotMeta? GetNextSlotByTime()
+    private SaveSlotMeta? GetNextSlot()
     {
-        var slots = GetSaveSlotsSortedByTime();
-        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
-        if (current is null)
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
+            || entry.next == Guid.Empty)
         {
             return null;
         }
 
-        return slots.FirstOrDefault(x =>
-            x.SavedAtUtc > current.SavedAtUtc
-            || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex > current.SlotIndex));
+        return new SaveSlotMeta { SnapshotID = entry.next, SavedAtUtc = DateTime.MinValue };
     }
 
     private void PruneNewerSaveSlotsFromCurrent()
     {
-        var slots = GetSaveSlotsSortedByTime();
-        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
-        if (current is null)
+        var nextId = CurrentSnapshotID;
+        while (nextId != Guid.Empty
+               && ProjectInfo.SnapshotIDMapping.TryGetValue(nextId, out var entry)
+               && entry.next != Guid.Empty)
         {
-            return;
+            nextId = entry.next;
+            DeleteSlotDirectory(nextId);
+            ProjectInfo.SnapshotIDMapping.Remove(nextId);
         }
 
-        foreach (var slot in slots.Where(x =>
-                     x.SlotIndex != current.SlotIndex
-                     && (x.SavedAtUtc > current.SavedAtUtc
-                         || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex > current.SlotIndex))))
+        if (CurrentSnapshotID != Guid.Empty
+            && ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var curEntry))
         {
-            try
+            ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = (curEntry.prevoius, Guid.Empty);
+        }
+    }
+
+    private void PruneOldestSaveSlots()
+    {
+        // Count total slots by walking the previous chain
+        var count = 0;
+        var id = CurrentSnapshotID;
+        while (id != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(id, out var entry))
+        {
+            count++;
+            id = entry.prevoius;
+        }
+
+        // Delete oldest slots until we're within the limit
+        while (count > MaximumSaveSlot)
+        {
+            // Find the oldest (head) by walking previous chain
+            var oldest = CurrentSnapshotID;
+            while (oldest != Guid.Empty
+                   && ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oe)
+                   && oe.prevoius != Guid.Empty)
             {
-                var slotPath = Path.Combine(WorkingPath, "saveSlots", $"slot_{slot.SlotIndex}");
-                if (Directory.Exists(slotPath))
-                {
-                    Directory.Delete(slotPath, true);
-                    LogDiagnostic($"Pruned newer save slot: slot_{slot.SlotIndex}");
-                }
+                oldest = oe.prevoius;
             }
-            catch (Exception ex)
+
+            if (oldest == Guid.Empty || !ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oldestEntry))
             {
-                Log(ex, $"prune save slot slot_{slot.SlotIndex}", this);
+                break;
             }
+
+            // Unlink the oldest node
+            var nextAfterOldest = oldestEntry.next;
+            if (nextAfterOldest != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(nextAfterOldest, out var nextEntry))
+            {
+                ProjectInfo.SnapshotIDMapping[nextAfterOldest] = (Guid.Empty, nextEntry.next);
+            }
+
+            DeleteSlotDirectory(oldest);
+            ProjectInfo.SnapshotIDMapping.Remove(oldest);
+            count--;
+        }
+    }
+
+    private void DeleteSlotDirectory(Guid snapshotId)
+    {
+        try
+        {
+            var slotPath = Path.Combine(WorkingPath, "saveSlots", $"slot_{snapshotId}");
+            if (Directory.Exists(slotPath))
+            {
+                Directory.Delete(slotPath, true);
+                LogDiagnostic($"Pruned save slot: slot_{snapshotId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"prune save slot slot_{snapshotId}", this);
         }
     }
 
     private void RedoChanges()
     {
-        var nextSlot = GetNextSlotByTime();
+        var nextSlot = GetNextSlot();
         if (nextSlot is null)
         {
             SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
@@ -7232,9 +7443,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
-        var oldSlot = CurrentSaveSlotIndex;
-        ApplySlot(nextSlot.SlotIndex);
-        if (CurrentSaveSlotIndex != oldSlot)
+        var oldSlot = CurrentSnapshotID;
+        ApplySlot(nextSlot.SnapshotID);
+        if (CurrentSnapshotID != oldSlot)
         {
             _historyNavigatedByUndoRedo = true;
         }
@@ -7242,7 +7453,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void UndoChanges()
     {
-        var nextSlot = GetPreviousSlotByTime();
+        var nextSlot = GetPreviousSlot();
         if (nextSlot is null)
         {
             SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
@@ -7250,22 +7461,28 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
-        var oldSlot = CurrentSaveSlotIndex;
-        ApplySlot(nextSlot.SlotIndex);
-        if (CurrentSaveSlotIndex != oldSlot)
+        var oldSlot = CurrentSnapshotID;
+        ApplySlot(nextSlot.SnapshotID);
+        if (CurrentSnapshotID != oldSlot)
         {
             _historyNavigatedByUndoRedo = true;
         }
     }
 
-    public void ApplySlot(int slotIndex)
+    public void ApplySlot(Guid snapshotId)
     {
         try
         {
-            LogDiagnostic($"Switching slot from {CurrentSaveSlotIndex} to {slotIndex}...");
-            var slot = $"slot_{slotIndex}";
-            var tml = File.ReadAllText(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"));
-            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json")), savingOpts) ?? new();
+            LogDiagnostic($"Switching slot from {CurrentSnapshotID} to {snapshotId}...");
+            var slotPath = FindSlotDirectory(snapshotId);
+            if (slotPath is null)
+            {
+                SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
+                return;
+            }
+
+            var tml = File.ReadAllText(Path.Combine(slotPath, "timeline.json"));
+            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(slotPath, "assets.json")), savingOpts) ?? new();
             var draftJson = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
             if (draftJson is null)
             {
@@ -7295,7 +7512,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             EnsureContinuousTrackIndices();
-            CurrentSaveSlotIndex = slotIndex;
+            CurrentSnapshotID = snapshotId;
+            PreviousSnapshotID = draftJson.PreviousSnapshot;
             HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
             DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
@@ -7309,6 +7527,48 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
         }
+    }
+
+    private string? FindSlotDirectory(Guid snapshotId)
+    {
+        var saveRoot = Path.Combine(WorkingPath, "saveSlots");
+        if (!Directory.Exists(saveRoot))
+        {
+            return null;
+        }
+
+        // Try new format first: slot_<guid>
+        var directPath = Path.Combine(saveRoot, $"slot_{snapshotId}");
+        if (Directory.Exists(directPath) && File.Exists(Path.Combine(directPath, "timeline.json")))
+        {
+            return directPath;
+        }
+
+        // Fallback: scan directories for matching SnapshotID in timeline.json
+        foreach (var dir in Directory.GetDirectories(saveRoot, "slot_*"))
+        {
+            var timelinePath = Path.Combine(dir, "timeline.json");
+            if (!File.Exists(timelinePath))
+            {
+                continue;
+            }
+
+            try
+            {
+                var tml = File.ReadAllText(timelinePath);
+                var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+                if (draft?.SnapshotID == snapshotId)
+                {
+                    return dir;
+                }
+            }
+            catch
+            {
+                // Skip unreadable slots
+            }
+        }
+
+        return null;
     }
 
     private bool IsSyncCooldown() => DateTime.Now - lastSyncTime < SyncCooldown;
@@ -8151,7 +8411,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private sealed class SaveSlotMeta
     {
-        public int SlotIndex { get; init; }
+        public Guid SnapshotID { get; init; }
         public DateTime SavedAtUtc { get; init; }
     }
 

@@ -502,6 +502,11 @@ public sealed class DynamicPreview : ContentView, IDisposable
                     continue;
                 }
 
+                if (effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
+                {
+                    continue;
+                }
+
                 var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
                 if (isLegacyLayoutEffect)
                 {
@@ -555,26 +560,86 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return generatedView;
         }
 
-        return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight);
+        return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight, frameIndex);
     }
 
-    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, int canvasWidth, int canvasHeight)
+    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, int canvasWidth, int canvasHeight, uint frameIndex)
     {
+        var baseW = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
+        var baseH = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
+        double x = clip.TargetX;
+        double y = clip.TargetY;
+        double w = baseW;
+        double h = baseH;
+
+        ApplyPositionProvidersToClip(clip, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
+
         if (!HasExplicitTargetRect(clip))
         {
+            input.WidthRequest = Math.Max(1, w);
+            input.HeightRequest = Math.Max(1, h);
+            input.HorizontalOptions = LayoutOptions.Start;
+            input.VerticalOptions = LayoutOptions.Start;
+            input.TranslationX = x;
+            input.TranslationY = y;
             return ApplyImplicitClipAutoCenterPreview(input, clip, canvasHeight);
         }
 
-        var width = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
-        var height = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
-
-        input.WidthRequest = Math.Max(1, width);
-        input.HeightRequest = Math.Max(1, height);
+        input.WidthRequest = Math.Max(1, w);
+        input.HeightRequest = Math.Max(1, h);
         input.HorizontalOptions = LayoutOptions.Start;
         input.VerticalOptions = LayoutOptions.Start;
-        input.TranslationX = clip.TargetX;
-        input.TranslationY = clip.TargetY;
+        input.TranslationX = x;
+        input.TranslationY = y;
         return input;
+    }
+
+    private static void ApplyPositionProvidersToClip(IClip clip, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
+    {
+        var effects = clip.EffectsInstances;
+        if (effects is null || effects.Length == 0)
+        {
+            return;
+        }
+
+        foreach (var effect in effects.Where(e => e.Enabled).OrderBy(e => ((IEffect)e).Index))
+        {
+            ClipPositionTuple pos;
+            if (effect is IContinuousClipPositionProvider cp)
+            {
+                pos = cp.GetPosition(clip, frameIndex, targetWidth, targetHeight);
+            }
+            else if (effect is IClipPositionProvider p)
+            {
+                pos = p.GetPosition(clip, targetWidth, targetHeight);
+            }
+            else
+            {
+                continue;
+            }
+
+            if (pos.IsDelta)
+            {
+                x += pos.TargetX;
+                y += pos.TargetY;
+                w += pos.TargetWidth;
+                h += pos.TargetHeight;
+            }
+            else
+            {
+                x = pos.TargetX;
+                y = pos.TargetY;
+                if (pos.TargetWidth > 0)
+                {
+                    w = pos.TargetWidth;
+                }
+
+                if (pos.TargetHeight > 0)
+                {
+                    h = pos.TargetHeight;
+                }
+            }
+        }
     }
 
     private static View ApplyImplicitClipAutoCenterPreview(View input, IClip clip, int canvasHeight)

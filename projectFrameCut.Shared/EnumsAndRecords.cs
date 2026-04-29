@@ -51,7 +51,9 @@ namespace projectFrameCut.Shared
         AudioContinuousEffect,
         AudioBindableEffect,
         SpeedVarianceProvider,
-        NotSpecified = -1,
+        ClipPositionProvider,
+        ContinuousClipPositionProvider,
+        NotSpecified = -1,   
     }
 
     public enum EffectTarget
@@ -219,6 +221,16 @@ namespace projectFrameCut.Shared
     }
 
     public record struct AcceleratorInfo(uint index, string name, string Type);
+
+    /// <summary>
+    /// A tuple representing the position of a clip on the target canvas. The position is represented by a tuple of (X, Y, Width, Height).
+    /// </summary>
+    /// <param name="TargetX">The X coordinate of the clip's position.</param>
+    /// <param name="TargetY">The Y coordinate of the clip's position.</param>
+    /// <param name="TargetWidth">The width of the clip.</param>
+    /// <param name="TargetHeight">The height of the clip.</param>
+    /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
+    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
 
     /// <summary>
     /// Determines the method to degrade HDR image to SDR when the renderer or display does not support HDR.

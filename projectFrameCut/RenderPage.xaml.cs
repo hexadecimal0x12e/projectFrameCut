@@ -885,7 +885,14 @@ public partial class RenderPage : ContentPage
             }
             else
             {
-                await renderer.GoRender(_cts.Token);
+                if (UseRenderByLayerCheckbox.IsChecked)
+                {
+                    await renderer.GoRenderByLayer(_cts.Token);
+                }
+                else
+                {
+                    await renderer.GoRender(_cts.Token);
+                }
                 Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
                 SetSubProg("WriteVideo");

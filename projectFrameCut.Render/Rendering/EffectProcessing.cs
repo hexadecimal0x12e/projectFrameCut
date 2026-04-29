@@ -61,7 +61,7 @@ namespace projectFrameCut.Render.Rendering
             if (c.EndPoint == 0 && c.EndPoint == 0)
             {
                 c.StartPoint = (int)(clip.StartFrame);
-                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
+                c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
             }
             if (c.YieldProcessStep)
             {

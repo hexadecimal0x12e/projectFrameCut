@@ -27,7 +27,7 @@ public class DraftSettingPage
 
     private sealed class SaveSlotHistoryItem
     {
-        public int SlotIndex { get; init; }
+        public Guid SnapshotID { get; init; }
         public DateTime SavedAt { get; init; }
         public string ChangeReason { get; init; } = string.Empty;
         public string ChangedBy { get; internal set; } = string.Empty;
@@ -138,7 +138,7 @@ public class DraftSettingPage
 
         foreach (var item in history.OrderByDescending(c => c.SavedAt))
         {
-            bool isCurrent = item.SlotIndex == parent.CurrentSaveSlotIndex;
+            bool isCurrent = item.SnapshotID == parent.CurrentSnapshotID;
             string reason = string.IsNullOrWhiteSpace(item.ChangeReason) ? Localized.DraftSettingPage_Tab_History_UnknownOperation : item.ChangeReason.Trim();
 
             var slotLabel = new Label
@@ -149,6 +149,14 @@ public class DraftSettingPage
                 VerticalOptions = LayoutOptions.Center
             };
 
+            if(parent.ProjectInfo.SnapshotIDMapping.TryGetValue(parent.CurrentSnapshotID, out var curPtr))
+            {
+                ToolTipProperties.SetText(slotLabel, $"forked from {curPtr.prevoius}, next fork {curPtr.next}");
+            }
+            else
+            {
+                ToolTipProperties.SetText(slotLabel, $"unknown fork info");
+            }
 
             var lastChangeLabel = new Label
             {
@@ -179,7 +187,7 @@ public class DraftSettingPage
                 VerticalOptions = LayoutOptions.Center
             };
 
-            int targetSlot = item.SlotIndex;
+            Guid targetSlot = item.SnapshotID;
             applyButton.Clicked += (_, _) => ApplyHistorySlot(targetSlot);
 
             var titleRow = new Grid
@@ -203,12 +211,12 @@ public class DraftSettingPage
         return new ScrollView { Content = root };
     }
 
-    private void ApplyHistorySlot(int slotIndex)
+    private void ApplyHistorySlot(Guid snapshotId)
     {
         try
         {
             parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
-            parent.ApplySlot(slotIndex);
+            parent.ApplySlot(snapshotId);
             tabView.SelectedItem.Content = BuildHistoryTab();
         }
         catch (Exception ex)
@@ -232,14 +240,8 @@ public class DraftSettingPage
         }
 
         var result = new List<SaveSlotHistoryItem>();
-        foreach (var slotPath in System.IO.Directory.GetDirectories(saveSlotsPath))
+        foreach (var slotPath in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
         {
-            string slotName = System.IO.Path.GetFileName(slotPath);
-            if (!TryParseSlotIndex(slotName, out int slotIndex))
-            {
-                continue;
-            }
-
             string timelinePath = System.IO.Path.Combine(slotPath, "timeline.json");
             if (!System.IO.File.Exists(timelinePath))
             {
@@ -250,14 +252,14 @@ public class DraftSettingPage
             {
                 string json = System.IO.File.ReadAllText(timelinePath);
                 var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
-                if (draft is null)
+                if (draft is null || draft.SnapshotID == Guid.Empty)
                 {
                     continue;
                 }
 
                 result.Add(new SaveSlotHistoryItem
                 {
-                    SlotIndex = slotIndex,
+                    SnapshotID = draft.SnapshotID,
                     SavedAt = draft.SavedAt,
                     ChangeReason = draft.ChangeReason,
                     ChangedBy = string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
@@ -272,22 +274,8 @@ public class DraftSettingPage
 
         return result
             .OrderByDescending(i => i.SavedAt)
-            //.ThenBy(i => i.ChangeReason, StringComparer.OrdinalIgnoreCase)
-            .ThenByDescending(i => i.SlotIndex)
+            .ThenByDescending(i => i.SnapshotID)
             .ToList();
-    }
-
-    private static bool TryParseSlotIndex(string slotName, out int slotIndex)
-    {
-        slotIndex = -1;
-        const string prefix = "slot_";
-
-        if (string.IsNullOrWhiteSpace(slotName) || !slotName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return int.TryParse(slotName[prefix.Length..], out slotIndex);
     }
 
     private View BuildCompatibilityTab()
@@ -747,7 +735,7 @@ public class DraftSettingPage
     {
         int parameterCount = bundle.Parameters?.Count ?? 0;
         int multiInputCount = bundle.BindedInputIds?.Length ?? 0;
-        return $"Name: {bundle.Name} | Type: {bundle.BundleTypeName} | Id: {bundle.Id}\n"
+        return $"Name: {bundle.Name} | ClipType: {bundle.BundleTypeName} | Id: {bundle.Id}\n"
              + $"Input: {bundle.BindedInputId} | Output: {bundle.BindedOutputId} | MultiInput: {multiInputCount} | Params: {parameterCount}";
     }
 
@@ -755,7 +743,7 @@ public class DraftSettingPage
     {
         int parameterCount = effect.Parameters?.Count ?? 0;
         string bindingId = string.IsNullOrWhiteSpace(effect.BindedEffectGroupID) ? "(none)" : effect.BindedEffectGroupID;
-        return $"Name: {effect.Name} | Type: {effect.TypeName} | Index: {effect.Index} | Enabled: {effect.Enabled}\n"
+        return $"Name: {effect.Name} | ClipType: {effect.TypeName} | Index: {effect.Index} | Enabled: {effect.Enabled}\n"
              + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectGroupID: {bindingId}";
     }
 
