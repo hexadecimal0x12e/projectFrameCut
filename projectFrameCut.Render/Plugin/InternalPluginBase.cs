@@ -64,7 +64,8 @@ public class InternalPluginBase : IPluginBase
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
         {"Rotation",  new(() => new RotationEffect_ImageSharp())},
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
-        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) }
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
+        {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -78,6 +79,7 @@ public class InternalPluginBase : IPluginBase
         {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
         {"Jitter", new JitterContinuousEffectFactory()},
+        {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
 
     };
 

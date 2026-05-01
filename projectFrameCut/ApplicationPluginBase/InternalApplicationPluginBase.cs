@@ -23,6 +23,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Blur", () => new Effect.BlurEffectBundle() },
             { "Crop", () => new Effect.CropEffectBundle() },
             { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() },
+            { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
         };
 

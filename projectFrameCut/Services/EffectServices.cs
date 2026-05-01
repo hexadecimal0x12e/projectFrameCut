@@ -43,12 +43,13 @@ namespace projectFrameCut.Services
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffect>> e)
             {
                 var instance = e.Value();
-                var type = instance switch
-                {
-                    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    var t when t is IBindableArgumentEffect => PPLocalizedResources.Effect_BindableArgsEffect,
-                    _ => PPLocalizedResources.Effect_GeneralEffect,
-                };
+                var type = instance.TypeOfEffect.ToString();
+                //instance switch
+                //{
+                //    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                //    var t when t is IBindableArgumentEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                //    _ => PPLocalizedResources.Effect_GeneralEffect,
+                //};
                 if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);

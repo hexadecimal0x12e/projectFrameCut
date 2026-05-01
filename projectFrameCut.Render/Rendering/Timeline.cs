@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
                     var actualFrame = clip.GetRelativeFrameIndex(targetFrame) ?? endPoint;
-                    LogDiagnostic($"Clip {clip.Name}, ID {clip.Id}, Start {clip.StartFrame}, End {endPoint}, Duration {clip.Duration}, EffectiveDuration {clip.GetEffectiveDuration()}, GetRelativeFrameIndex for target frame {targetFrame} is {actualFrame}");
+                    //LogDiagnostic($"Clip {clip.Name}, ID {clip.Id}, Start {clip.StartFrame}, End {endPoint}, Duration {clip.Duration}, EffectiveDuration {clip.GetEffectiveDuration()}, GetRelativeFrameIndex for target frame {targetFrame} is {actualFrame}");
                     IPicture frame = null!;
                     int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
@@ -236,6 +236,8 @@ namespace projectFrameCut.Render.Rendering
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
                     LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
 
+                    var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
+                    var computerId = mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId;
                     if (result is null)
                     {
                         if (!needsPlacement)
@@ -244,10 +246,10 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else
                         {
-                            result = OverlayMixture.Mix(
+                            result = mixer.Mix(
                                 FallBackImageGetter(targetWidth, targetHeight),
                                 effected,
-                                PluginManager.CreateComputer("OverlayComputer"),
+                                PluginManager.CreateComputer(computerId),
                                 targetPPB,
                                 clipX,
                                 clipY,
@@ -257,10 +259,10 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        result = OverlayMixture.Mix(
+                        result = mixer.Mix(
                             result,
                             effected,
-                            PluginManager.CreateComputer("OverlayComputer"),
+                            PluginManager.CreateComputer(computerId),
                             targetPPB,
                             clipX,
                             clipY,
@@ -282,8 +284,8 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = OverlayMixture
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
+                result = ClassicOverlayMixture.Default
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 if (PictureProcesser.SaveDiagResult)
                 {

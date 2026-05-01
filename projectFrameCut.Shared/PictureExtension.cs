@@ -705,6 +705,9 @@ namespace projectFrameCut.Shared
         }
 
 
+        public static (int Width, int Height) GetDimensions(this IPicture picture) => (picture.Width, picture.Height);
+        public static (int Width, int Height) GetDimensions(string picPath) => new Picture8bpp(picPath).GetDimensions();
+
         public static bool TryFromXYToArrayIndex(this IPicture reference, int x, int y, out int index)
             => TryFromXYToArrayIndex(x, y, reference.Width, reference.Height, out index);
 

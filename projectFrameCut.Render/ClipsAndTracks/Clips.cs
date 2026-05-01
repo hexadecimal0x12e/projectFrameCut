@@ -53,6 +53,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public string TargetDecoder { get; set; } = string.Empty;
         public double HDRBrightnessOffset { get; set; } = 0;
@@ -63,7 +64,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public VideoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
@@ -107,7 +108,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 return;
             }
             Decoder = PluginManager.CreateVideoSource(FilePath);
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -158,10 +159,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public PhotoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
@@ -183,7 +185,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -252,6 +254,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
         {
@@ -272,13 +275,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
         public void ReInit()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -547,7 +550,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public TextClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -559,7 +562,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 fontsCache.Add(FontPath);
             }
-            (EffectsInstances, SpeedVarianceProviderInstance) = EffectHelper.GetEffectsInstancesAndSpeedVariance(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -581,6 +584,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public static FontCollection GetFont(bool force = false)
         {
@@ -820,6 +824,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public string? MarkData;
         public Guid MarkID;

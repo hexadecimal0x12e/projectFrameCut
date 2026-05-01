@@ -134,11 +134,7 @@ namespace projectFrameCut.DraftStuff
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
                     Content = BuildSizeAndPositionTab(clip, handler)
                 });
-                t.TabItems.Add(new TabbedViewItem
-                {
-                    Header = PPLocalizedResources.Tabs_ColorAdjust,
-                    Content = BuildColorAdjustmentTab(clip, handler)
-                });
+
             }
             if (clip.ClipType != ClipMode.MarkingClip)
             {
@@ -147,12 +143,17 @@ namespace projectFrameCut.DraftStuff
                     Header = PPLocalizedResources.Tabs_Effect,
                     Content = await BuildEffectTab(clip, handler)
                 });
-                if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_Mixture,
+                    Content = BuildMixtureTab(clip, handler)
+                });
+                if(clip.ClipType != ClipMode.AudioClip)
                 {
                     t.TabItems.Add(new TabbedViewItem
                     {
-                        Header = PPLocalizedResources.Tabs_Effect_Classic,
-                        Content = BuildClassicEffectTab(clip, handler)
+                        Header = PPLocalizedResources.Tabs_ColorAdjust,
+                        Content = BuildColorAdjustmentTab(clip, handler)
                     });
                 }
                 if (!clip.isInfiniteLength)
@@ -163,6 +164,16 @@ namespace projectFrameCut.DraftStuff
                         Content = BuildSpeedAndRatioTab(clip, handler)
                     });
                 }
+                if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
+                {
+                    t.TabItems.Add(new TabbedViewItem
+                    {
+                        Header = PPLocalizedResources.Tabs_Effect_Classic,
+                        Content = BuildClassicEffectTab(clip, handler)
+                    });
+                }
+
+
             }
 
             return t;
@@ -2491,8 +2502,10 @@ namespace projectFrameCut.DraftStuff
                         }
                     }
                     ppb.AddSeparator();
-                    ppb.AddCustomChild("Implement type", new Label { Text = effect.ImplementType.ToString() });
-                    ppb.AppendWhen(!string.IsNullOrWhiteSpace(effect.Id), c => c.AddCustomChild("ID", new Label { Text = effect.Id }));
+                    ppb.AddCustomChild("IEffect.TypeName", new Label { Text = effect.TypeName });
+                    ppb.AddCustomChild("IEffect.TypeOfEffect", new Label { Text = effect.TypeOfEffect.ToString() });
+                    ppb.AddCustomChild("IEffect.ImplementType", new Label { Text = effect.ImplementType.ToString() });
+                    ppb.AppendWhen(!string.IsNullOrWhiteSpace(effect.Id), c => c.AddCustomChild("IEffect.ID", new Label { Text = effect.Id }));
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
@@ -3030,6 +3043,136 @@ namespace projectFrameCut.DraftStuff
                         page.Dispatcher.Dispatch(async () =>
                         {
                             await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one SpeedVarianceProvider.", Localized._OK);
+                        });
+                        return;
+                    }
+                    if (ppb.Properties.TryGetValue("NewBundleType", out var typeObj) && typeObj is string bundleTypeName)
+                    {
+                        if (allBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
+        }
+
+        #endregion
+
+        #region mixture
+
+        private View BuildMixtureTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            static bool IsMixtureBundle(IEffectBundle bundle) => bundle.TypeOfEffect == EffectType.MixtureProvider && bundle.Target == EffectTarget.Mixture;
+
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
+
+            var mixtureBundleFactoryItems = allBundleFactories
+                .Where(kvp => kvp.Value().Target == EffectTarget.Mixture)
+                .Select(kvp => new
+                {
+                    TypeName = kvp.Key,
+                    Factory = kvp.Value,
+                    DisplayName = localizedBundleNames.GetValueOrDefault(kvp.Key, kvp.Key)
+                })
+                .OrderBy(x => x.DisplayName, StringComparer.Ordinal)
+                .ToList();
+
+            var mixtureBundles = clip.EffectBundles
+                ?.Where(kvp => kvp.Value.Target == EffectTarget.Mixture)
+                ?.Select(c => c.Value)
+                ?.ToList() ?? [];
+
+            var ppb = new PropertyPanelBuilder();
+
+            if (mixtureBundles.Count > 1)
+            {
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.Mixture_ErrMultiplePvd,
+                    TextColor = Colors.Orange
+                });
+            }
+
+            if (mixtureBundles.Count == 0)
+            {
+                ppb.AddText(new SingleLineLabel(PPLocalizedResources.Mixture_None));
+            }
+
+            var bundle = mixtureBundles.FirstOrDefault();
+            if (bundle is not null)
+            {
+                var bundleId = bundle.Id;
+                string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
+
+                ppb.AddText(new SingleLineLabel(localizedName ?? bundle.Name, 20));
+
+                try
+                {
+                    var bundlePpb = bundle.CreateUI();
+                    ppb.AddFromAnother(bundlePpb, bundle);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"loading mixture bundle {bundle.TypeName}", this);
+                    ppb.AddText(new Label
+                    {
+                        Text = $"Error loading bundle UI: {ex.Message}",
+                        TextColor = Colors.Yellow
+                    });
+                }
+
+                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                {
+                    clip.EffectBundles?.Remove(bundleId);
+                    RebuildAllEffects(clip);
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return;
+                });
+                ppb.AddSeparator();
+            }
+            else
+            {
+                ppb.AppendWhen(mixtureBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.Mixture, page, allBundleFactories, ppb, handler)));
+            }
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    int currentCount = clip.EffectBundles.Values.Count(IsMixtureBundle);
+                    if (currentCount >= 1)
+                    {
+                        page.Dispatcher.Dispatch(async () =>
+                        {
+                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one Mixture.", Localized._OK);
                         });
                         return;
                     }

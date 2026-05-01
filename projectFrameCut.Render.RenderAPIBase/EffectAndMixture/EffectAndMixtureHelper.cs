@@ -33,7 +33,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     {
         public int Parse(string value);
         public string FromEnum(int value);
-        public Dictionary<int,string> Mapping { get; }
+        public Dictionary<int, string> Mapping { get; }
     }
 
     public class EffectAndMixtureJSONStructure
@@ -96,7 +96,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType, IEffectArgsEnumHandler? EnumHandler = null)
         {
             var result = new Dictionary<string, object>();
-            
+
             foreach (var kvp in elements)
             {
                 if (kvp.Value is not JsonElement)
@@ -143,7 +143,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                             value = source.GetInt64();
                             break;
                         case "enum":
-                            if(EnumHandler is not null)
+                            if (EnumHandler is not null)
                             {
                                 value = EnumHandler.Parse(source.GetString());
                                 break;

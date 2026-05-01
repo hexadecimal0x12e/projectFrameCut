@@ -82,7 +82,7 @@ namespace projectFrameCut;
 public partial class DraftPage : ContentPage, IDraftPage
 {
     #region const
-    const int ClipHeight = 62;
+    public const int ClipHeight = 62;
     const double MinClipWidth = 30.0;
     const double NarrowTrackHeaderWindowThreshold = 720.0;
     const double NarrowTrackHeaderColumnWidth = 88.0;
@@ -109,7 +109,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
     public static JsonSerializerOptions DraftJSONOption => savingOpts;
-#endregion
+    #endregion
 
     #region members
     ConcurrentDictionary<string, double> HandleStartWidth = new();
@@ -1173,6 +1173,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                            background: ClipElementUI.DetermineAssetColor(asset.AssetType, asset.GetClipMode()),
                            maxFrames: AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.TargetFrameRate),
                            relativeStart: 0
+
                           );
 
         elem.SourcePath = path ?? $"${asset.AssetId}";
@@ -1204,7 +1205,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                             elem.ExtraData["TargetDecoder"] = "DecoderContext16Bit";
                         }
                     }
-                }catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     Log(ex, $"Detect bpp for video clip {path}", this);
                 }
@@ -1473,22 +1475,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var previewGen = new OnClipUIPreview(this, element);
             var previewView = previewGen.Update();
-            if (previewView is null)
-                return;
+            element.UpdateContent(previewView);
 
-            var oldMiddle = element.MiddleContent;
-            if (oldMiddle is not null)
-                oldMiddle.VerticalOptions = LayoutOptions.End;
-
-            var container = new Grid
-            {
-                InputTransparent = true,
-            };
-            container.Children.Add(previewView);
-            if (oldMiddle is not null)
-                container.Children.Add(oldMiddle);
-
-            element.MiddleContent = container;
         }
         catch (Exception ex)
         {
@@ -4961,6 +4949,56 @@ public partial class DraftPage : ContentPage, IDraftPage
                         {
                             UpdateLayoutChildren(layout);
                         }
+                        else if (border.Content == null)
+                        {
+                            // Content was lost/cleared - reconstruct it
+                            Log($"Warning: Clip {clip.Id} Content is null in ReRenderUI, reconstructing...");
+                            
+                            var titleLabel = new Microsoft.Maui.Controls.Label
+                            {
+                                Text = clip.DisplayName,
+                                LineBreakMode = LineBreakMode.TailTruncation,
+                                MaxLines = 1,
+                                HorizontalOptions = LayoutOptions.Center,
+                                VerticalOptions = LayoutOptions.Center,
+                                HorizontalTextAlignment = TextAlignment.Center,
+                                VerticalTextAlignment = TextAlignment.Center,
+                                InputTransparent = true
+                            };
+
+                            var newContent = new HorizontalStackLayout
+                            {
+                                Children = { titleLabel },
+                                HorizontalOptions = LayoutOptions.Center,
+                                VerticalOptions = LayoutOptions.Center,
+                                InputTransparent = true,
+                                Padding = 0,
+                                Spacing = 0
+                            };
+
+                            Grid.SetColumn(clip.LeftHandle, 0);
+                            Grid.SetColumn(clip.RightHandle, 2);
+                            Grid.SetColumn(newContent, 1);
+
+                            var newGrid = new Grid
+                            {
+                                Children =
+                                {
+                                    clip.LeftHandle,
+                                    newContent,
+                                    clip.RightHandle
+                                },
+                                ColumnDefinitions =
+                                {
+                                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
+                                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
+                                }
+                            };
+
+                            border.Content = newGrid;
+                            UpdateLayoutChildren(newGrid);
+                        }
 
                         // Re-apply speed/width calculation and update length-in-frames
                         try
@@ -5049,6 +5087,15 @@ public partial class DraftPage : ContentPage, IDraftPage
                             clip.lengthInFrame = PixelToFrame(w);
                         }
                         catch { /* non-critical */ }
+
+                        try
+                        {
+                            ApplyClipPreview(clip);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Update on-clip preview for {clip.Id}", this);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -5977,7 +6024,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 break;
             case "history":
                 SettingsClick(this, new());
-                if(Popup.Content is TabbedView tv)
+                if (Popup.Content is TabbedView tv)
                 {
                     tv.SelectByTag("history");
                 }

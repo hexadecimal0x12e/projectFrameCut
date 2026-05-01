@@ -833,7 +833,14 @@ namespace projectFrameCut.Render.WindowsRender
         {
             Device? pick = null;
             if (acceleratorId >= 0)
+            {
+                if (acceleratorId > devices.Count)
+                {
+                    Log($"ERROR: Accelerator {acceleratorId} is not exist.", "error");
+                    return null;
+                }
                 pick = devices[acceleratorId];
+            }
             else if (accelType == "cuda")
                 pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda);
             else if (accelType == "opencl")
@@ -857,5 +864,4 @@ namespace projectFrameCut.Render.WindowsRender
 
 
     }
-
 }

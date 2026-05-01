@@ -318,7 +318,7 @@ public partial class EditSettingPage : ContentPage
                         IPicture img = null;
                         if (LoadTextPreview)
                         {
-                            img = OverlayMixture.Mix(bkgPic, textPic, Render.Plugin.PluginManager.CreateComputer(OverlayMixture.ComputerId, false), 8);
+                            img = ClassicOverlayMixture.Default.Mix(bkgPic, textPic, Render.Plugin.PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), 8);
                             textPic.Dispose();
                             bkgPic.Dispose();
                         }
@@ -500,7 +500,7 @@ public partial class EditSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            // 处理异常并通知用户
+            // 锟斤拷锟斤拷锟届常锟斤拷通知锟矫伙拷
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

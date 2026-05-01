@@ -44,7 +44,7 @@ namespace projectFrameCut.InteractableEditor
         private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
         private long _lastPanUpdateTicks = 0;
-        private const long MinPanUpdateIntervalTicks = 30 * TimeSpan.TicksPerMillisecond; // ~33fps throttle for pan updates
+        private const long MinPanUpdateIntervalTicks = 60 * TimeSpan.TicksPerMillisecond; // ~33fps throttle for pan updates
         private int _activeTextEntryIndex = -1;
         private Rect _textEntryStartRect;
         private double _textEntryStartOriginX;
@@ -949,8 +949,13 @@ namespace projectFrameCut.InteractableEditor
             SetActiveState(GetOrCreateClipState(clip));
             UpdateVisuals();
 
-            // 确保手势识别器在新的容器环境中正确工作
-            RefreshGestureRecognizers();
+            // 确保手势识别器在新的容器环境中正确工作。
+            // 但如果正在交互中（拖拽/缩放），跳过刷新以避免销毁正在活跃的 GestureRecognizer，
+            // 否则会导致拖拽/缩放被中断，选区卡住无法响应。
+            if (!IsInteractiveManipulationInProgress)
+            {
+                RefreshGestureRecognizers();
+            }
         }
 
         /// <summary>
@@ -1077,7 +1082,7 @@ namespace projectFrameCut.InteractableEditor
             return new Rect(offX, offY, drawW, drawH);
         }
 
-        private void UpdateVisuals()
+        private void UpdateVisuals(bool ignorePositionProvider = false)
         {
             if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
                 return;
@@ -1100,7 +1105,7 @@ namespace projectFrameCut.InteractableEditor
             // 当使用DraftPage中的所有clips时，先处理多clips模式
             if (_allClips is not null)
             {
-                UpdateVisualsForMultipleClips(renderRect, scale);
+                UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider);
                 return;
             }
 
@@ -1111,7 +1116,7 @@ namespace projectFrameCut.InteractableEditor
 
                 UpdateClipStateZIndex(state, clipId);
 
-                if (!TryResolveClipRect(clipId, out var x, out var y, out var w, out var h, out var clipType, out var isCurrentClip))
+                if (!TryResolveClipRect(clipId, ignorePositionProvider, out var x, out var y, out var w, out var h, out var clipType, out var isCurrentClip))
                 {
                     state.Hide();
                     continue;
@@ -1341,7 +1346,7 @@ namespace projectFrameCut.InteractableEditor
             return hasVisiblePreview;
         }
 
-        private bool TryResolveClipRect(string clipId, out double x, out double y, out double w, out double h, out ClipMode clipType, out bool isCurrentClip)
+        private bool TryResolveClipRect(string clipId, bool ignorePosotionProvider, out double x, out double y, out double w, out double h, out ClipMode clipType, out bool isCurrentClip)
         {
             x = 0;
             y = 0;
@@ -1353,7 +1358,7 @@ namespace projectFrameCut.InteractableEditor
             if (isCurrentClip)
             {
                 clipType = _currentClip!.ClipType;
-                GetCurrentRect(out x, out y, out w, out h);
+                GetCurrentRect(ignorePosotionProvider, out x, out y, out w, out h);
                 return true;
             }
 
@@ -1362,10 +1367,10 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            return TryResolveSourceClipRect(sourceClip, ref x, ref y, ref w, ref h, out clipType);
+            return TryResolveSourceClipRect(sourceClip, ignorePosotionProvider, ref x, ref y, ref w, ref h, out clipType);
         }
 
-        private bool TryResolveSourceClipRect(object sourceClip, ref double x, ref double y, ref double w, ref double h, out ClipMode clipType)
+        private bool TryResolveSourceClipRect(object sourceClip, bool ignorePositionProvider, ref double x, ref double y, ref double w, ref double h, out ClipMode clipType)
         {
             clipType = ClipMode.AudioClip;
             IEnumerable<IEffect>? effects = null;
@@ -1443,7 +1448,7 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            if (effects is not null)
+            if (effects is not null && !ignorePositionProvider)
             {
                 ApplyPositionProvidersToRect(
                     effects,
@@ -1473,9 +1478,9 @@ namespace projectFrameCut.InteractableEditor
             RenderRectVisual.IsVisible = true;
         }
 
-        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale)
+        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider)
         {
-            LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
+            //LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
             if (_allClips is null || _allClips.Count == 0)
             {
                 ClearClipStates();
@@ -1517,7 +1522,7 @@ namespace projectFrameCut.InteractableEditor
                     w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
                     h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
 
-                    if (clip.Effects?.Count > 0)
+                    if (clip.Effects?.Count > 0 && !ignorePositionProvider)
                     {
                         ApplyPositionProvidersToRect(
                             clip.Effects.Values,
@@ -1718,46 +1723,38 @@ namespace projectFrameCut.InteractableEditor
                 case GestureStatus.Started:
                     _isClipPanInProgress = true;
                     _lastPanUpdateTicks = 0; // process first Running event immediately
-                    GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
+                    GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
 
                 case GestureStatus.Running:
-                {
-                    // Throttle: skip updates faster than ~33fps to avoid flooding the UI thread.
-                    // Pan delta is cumulative (e.TotalX/Y) so skipping intermediate events is safe —
-                    // the next processed event will have the accumulated position.
-                    long now = Stopwatch.GetTimestamp();
-                    if (now - _lastPanUpdateTicks < MinPanUpdateIntervalTicks)
+                    {
+                        // Get the render rectangle (video viewport on canvas)
+                        Rect renderRect = GetRenderRect();
+                        if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
+
+                        // Scale factor from screen to video coordinates
+                        double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                        if (scale <= 0.001) break;
+
+                        // Convert gesture pan amount to video coordinates
+                        double deltaX = e.TotalX / scale;
+                        double deltaY = e.TotalY / scale;
+
+                        // Calculate new position in video space
+                        double newVisualX = _startX + deltaX;
+                        double newVisualY = _startY + deltaY;
+
+                        UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
+                        UpdateVisuals(true);
+                        RequestInteractivePreviewRefreshIfMissing(state);
                         break;
-                    _lastPanUpdateTicks = now;
-
-                    // Get the render rectangle (video viewport on canvas)
-                    Rect renderRect = GetRenderRect();
-                    if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
-
-                    // Scale factor from screen to video coordinates
-                    double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
-                    if (scale <= 0.001) break;
-
-                    // Convert gesture pan amount to video coordinates
-                    double deltaX = e.TotalX / scale;
-                    double deltaY = e.TotalY / scale;
-
-                    // Calculate new position in video space
-                    double newVisualX = _startX + deltaX;
-                    double newVisualY = _startY + deltaY;
-
-                    UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
-                    UpdateVisuals();
-                    RequestInteractivePreviewRefreshIfMissing(state);
-                    break;
-                }
+                    }
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isClipPanInProgress = false;
-                    GetCurrentRect(out var finalX, out var finalY, out _, out _);
+                    GetCurrentRect(true, out var finalX, out var finalY, out _, out _);
                     LogDiagnostic($"[Pan] Completed: FinalPos=({finalX:F1}, {finalY:F1})");
                     RequestCommitUpdate();
                     break;
@@ -1806,7 +1803,7 @@ namespace projectFrameCut.InteractableEditor
                         break;
                     }
 
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     RequestInteractivePreviewRefreshIfMissing(state);
                     break;
 
@@ -1834,7 +1831,7 @@ namespace projectFrameCut.InteractableEditor
                     _isHandleResizeInProgress = true;
                     LogDiagnostic($"[TextEntryResize] Started: entry={entryIndex}, Rect=({_textEntryStartRect.X:F1}, {_textEntryStartRect.Y:F1}, {_textEntryStartRect.Width:F1}, {_textEntryStartRect.Height:F1})");
                     state.SetPreviewView(null);
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     break;
 
                 case GestureStatus.Running:
@@ -1863,14 +1860,14 @@ namespace projectFrameCut.InteractableEditor
                         break;
                     }
 
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     break;
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isHandleResizeInProgress = false;
                     state.SetPreviewView(null);
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     RequestInteractivePreviewRefresh();
                     RequestCommitUpdate();
                     break;
@@ -2050,10 +2047,10 @@ namespace projectFrameCut.InteractableEditor
             {
                 case GestureStatus.Started:
                     _isHandleResizeInProgress = true;
-                    GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
+                    GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Resize] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}x{_startH:F1})");
                     state.SetPreviewView(null);
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     break;
 
                 case GestureStatus.Running:
@@ -2108,16 +2105,16 @@ namespace projectFrameCut.InteractableEditor
                     }
 
                     UpdateClipEffects(newX, newY, newW, newH);
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     break;
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isHandleResizeInProgress = false;
-                    GetCurrentRect(out var finalX, out var finalY, out var finalW, out var finalH);
+                    GetCurrentRect(true, out var finalX, out var finalY, out var finalW, out var finalH);
                     LogDiagnostic($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1})");
                     state.SetPreviewView(null);
-                    UpdateVisuals();
+                    UpdateVisuals(true);
                     RequestInteractivePreviewRefresh();
                     RequestCommitUpdate();
                     break;
@@ -2391,7 +2388,7 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
-        private void GetCurrentRect(out double x, out double y, out double w, out double h)
+        private void GetCurrentRect(bool ignorePositionProvider, out double x, out double y, out double w, out double h)
         {
             x = 0;
             y = 0;
@@ -2454,7 +2451,7 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            if (_currentClip.Effects?.Count > 0)
+            if (_currentClip.Effects?.Count > 0 && !ignorePositionProvider)
             {
                 ApplyPositionProvidersToRect(
                     _currentClip.Effects.Values,

@@ -32,7 +32,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The unique identifier of this clip. <b>SHOULD BE A GUID.</b>
         /// </summary>
         /// <remarks>
-        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that time.
+        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that API V6.
         /// </remarks>
         public string Id { get; init; }
 
@@ -95,14 +95,15 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The source's frame time (1 / frame rate) of this clip, in seconds.
         /// </summary>
         public float FrameTime { get; init; }
+
         /// <summary>
-        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V5.</b>
+        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V6.</b>
         /// The actual frame time's ratio.
         /// </summary>
         /// <remarks>
         /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
         /// </remarks>
-        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V5.", false)]
+        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V6.", false)]
         public float SecondPerFrameRatio { get; init; }
 
         /// <summary>
@@ -110,6 +111,13 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         [JsonIgnore]
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+
+        /// <summary>
+        /// The IMixture for this clip. If not null, used for compositing this clip's frames onto the accumulated result.
+        /// If null, the renderer falls back to <see cref="ClassicOverlayMixture"/>.
+        /// </summary>
+        [JsonIgnore]
+        public IMixture? MixtureInstance { get; set; }
 
         /// <summary>
         /// Set which this clip should be extended to the whole draft. 
@@ -125,6 +133,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The effects applied to this clip's Data.
         /// Used in serialization and deserialization.
         /// </summary>
+        /// <remarks>
+        /// You may noticed the <see cref="EffectAndMixtureJSONStructure.IsMixture"/> param, which means this array can contain both effects and mixtures. For one where is marked as a mixture <see cref="EffectAndMixtureJSONStructure"/>, <see cref="EffectAndMixtureJSONStructure.FromPlugin"/> and <see cref="EffectAndMixtureJSONStructure.TypeName"/> will be determine the mixture's type and <see cref="EffectAndMixtureJSONStructure.Parameters"/> will be the mixture's parameters parsed to mixture, and the rest is ignored.
+        /// </remarks>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         /// <summary>
@@ -143,6 +154,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public bool NeedFilePath { get; }
 
+        /// <summary>
+        /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>
+        /// </summary>
+        public Dictionary<string, object> ExtraData { get; set; }
+
 
         /// <summary>
         /// Get the frame at the specified index relative to the start of the clip's source with the specific size.
@@ -155,6 +171,14 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <param name="frameIndex">frame index related to the source.</param>
         /// <returns>the frame (<paramref name="frameIndex"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="requiredWidth"/> * <paramref name="requiredHeight"/>.</b></returns>
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, bool forceResize, IPicture.PicturePixelMode targetPPB);
+
+        /// <summary>
+        /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
+        /// </summary>
+        /// <param name="targetPPB">
+        /// The PicturePixelMode used when rendering.
+        /// </param>
+        public void ReInit(IPicture.PicturePixelMode targetPPB);
 
         /// <summary>
         /// Gets a frame relative to source start point. Kept for compatibility.
@@ -176,6 +200,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         [DebuggerNonUserCode()]
         public uint GetEffectiveDuration() => SpeedVarianceMapCache.GetOrBuild(this).EffectiveDurationFrames;
+
+        /// <summary>
+        /// Get a <see cref="ClipPositionTuple"/> of this clip.
+        /// </summary>
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
 
         /// <summary>
         /// Returns true if the given draft-global frame is inside this clip's visible range.
@@ -342,21 +371,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             return false;
         }
 
-        /// <summary>
-        /// Get a <see cref="ClipPositionTuple"/> of this clip.
-        /// </summary>
-        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
-
-        /// <summary>
-        /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
-        /// </summary>
-        public void ReInit(IPicture.PicturePixelMode targetPPB);
-
-
-        /// <summary>
-        /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>
-        /// </summary>
-        public Dictionary<string, object> ExtraData { get; set; }
 
 
     }

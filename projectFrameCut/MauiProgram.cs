@@ -70,6 +70,8 @@ namespace projectFrameCut
 
         public static string FFmpegRoot { get; private set; }
 
+        public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
+
         private static readonly string[] FoldersNeedInUserdata =
         [
             "My Drafts",
@@ -159,15 +161,15 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
-            string config = "?", commit = "?";
             try
             {
-                config = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                commit = new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray());
+                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                ProgramCommit = new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray());
+                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
             }
             catch { }
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
-                $"                  {config}@{commit},\r\n" +
+                $"                  {ProgramConfig}@{ProgramCommit},\r\n" +
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
                 $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
@@ -216,7 +218,7 @@ namespace projectFrameCut
                         Preferences.Clear();
                     }
 
-                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics") || config == "Debug")
+                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics") || ProgramConfig == "Debug")
                         MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
                 else
@@ -758,6 +760,11 @@ namespace projectFrameCut
                         }
 
                     }
+                    else
+                    {
+                        FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
+                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                    }
                 }
                 catch
                 {
@@ -765,6 +772,12 @@ namespace projectFrameCut
                     {
                         DynamicallyLoadedBindings.FunctionResolver = FunctionResolverFactory.Create();
                         DynamicallyLoadedBindings.InitializeInternal();
+                        try
+                        {
+                            FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
+                            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                        }
+                        catch { }
                     }
                     catch (Exception ex)
                     {
@@ -775,8 +788,7 @@ namespace projectFrameCut
                 {
                     try
                     {
-                        FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                       
                     }
                     catch { }
                 }

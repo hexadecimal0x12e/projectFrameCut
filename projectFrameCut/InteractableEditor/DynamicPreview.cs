@@ -497,12 +497,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
                 .Where(e => e.Enabled)
                 .OrderBy(e => e.Index))
             {
-                if (effect is IColorAdjustEffect)
-                {
-                    continue;
-                }
-
-                if (effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
+                if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
                 {
                     continue;
                 }

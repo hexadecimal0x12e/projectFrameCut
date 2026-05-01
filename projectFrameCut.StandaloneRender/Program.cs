@@ -35,7 +35,33 @@ namespace projectFrameCut.StandaloneRender
         {
             if (!args.Contains("--nolog"))
             {
-                MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
+                MyLoggerExtensions.OnLog += (m, l) =>
+                {
+                    if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine(m);
+                        return;
+                    }
+
+                    var oldColor = Console.ForegroundColor;
+                    try
+                    {
+                        Console.ForegroundColor = l.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
+                                              l.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
+                                              (l.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || l.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
+                                              (l.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || l.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
+                                              l.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta :
+                                              ConsoleColor.Gray;
+
+                        Console.Write($"[{l}]");
+                    }
+                    finally
+                    {
+                        Console.ForegroundColor = oldColor;
+                    }
+
+                    Console.WriteLine($" {m}");
+                };
                 Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
                 Console.Write(GetInfo());
                 Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
@@ -426,7 +452,7 @@ namespace projectFrameCut.StandaloneRender
             }
 
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
-            bool blockWrite = false;
+            bool blockWrite = false, renderByLayer = false;
             if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
             {
                 maxParallelThreads = 1;
@@ -436,6 +462,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 blockWrite = false;
             }
+            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
@@ -549,6 +576,10 @@ namespace projectFrameCut.StandaloneRender
                     if (blockWrite)
                     {
                         await renderer.GoRenderSync(cts.Token);
+                    }
+                    else if (renderByLayer)
+                    {
+                        await renderer.GoRenderByLayer(cts.Token);
                     }
                     else
                     {

@@ -41,7 +41,6 @@ namespace projectFrameCut.Shared
         SpecialTrack
     }
 
-    [Flags]
     public enum EffectType
     {
         NormalEffect,
@@ -53,7 +52,8 @@ namespace projectFrameCut.Shared
         SpeedVarianceProvider,
         ClipPositionProvider,
         ContinuousClipPositionProvider,
-        NotSpecified = -1,   
+        MixtureProvider,
+        NotSpecified = -1,
     }
 
     public enum EffectTarget
@@ -62,6 +62,7 @@ namespace projectFrameCut.Shared
         Audio,
         SpeedVariance,
         ColorAdjustment,
+        Mixture,
         NotSpecified = -1,
     }
 

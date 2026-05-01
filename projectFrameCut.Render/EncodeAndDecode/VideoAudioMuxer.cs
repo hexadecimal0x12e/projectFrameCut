@@ -1,6 +1,7 @@
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -31,6 +32,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private bool _isInitialized = false;
         private bool _isDisposed = false;
+
+        /// <summary>
+        /// Metadata key-value pairs to write into the output container.
+        /// Set before calling <see cref="Mux"/>; changes after muxing has started may be ignored.
+        /// </summary>
+        public Dictionary<string, string>? Metadata { get; set; }
 
         /// <summary>
         /// Creates a new VideoAudioMuxer instance.
@@ -221,6 +228,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void WriteOutput(AudioBuffer audioBuffer)
         {
+            // Write metadata
+            if (Metadata != null && Metadata.Count > 0)
+            {
+                foreach (var kv in Metadata)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var value = kv.Value ?? string.Empty;
+                    ffmpeg.av_dict_set(&_outputFmtCtx->metadata, kv.Key, value, 0);
+                    if (_outputVideoStream != null)
+                        ffmpeg.av_dict_set(&_outputVideoStream->metadata, kv.Key, value, 0);
+                    if (_outputAudioStream != null)
+                        ffmpeg.av_dict_set(&_outputAudioStream->metadata, kv.Key, value, 0);
+                }
+            }
+
             // Write header
             FFmpegHelper.Throw(ffmpeg.avformat_write_header(_outputFmtCtx, null), "avformat_write_header");
 
@@ -403,7 +425,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// <param name="audioInputPath">Path to the input audio file.</param>
         /// <param name="outputPath">Path to the output file.</param>
         /// <param name="reencodeAudio">If true, re-encodes audio to match the output container format. If false, tries to copy the audio stream directly.</param>
-        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false)
+        /// <param name="metadata">Optional metadata key-value pairs to write into the output container.</param>
+        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false, Dictionary<string, string>? metadata = null)
         {
             if (string.IsNullOrEmpty(videoInputPath))
                 throw new ArgumentNullException(nameof(videoInputPath));
@@ -669,6 +692,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     FFmpegHelper.Throw(
                         ffmpeg.avio_open(&outputFmtCtx->pb, outputPath, ffmpeg.AVIO_FLAG_WRITE),
                         "avio_open");
+                }
+
+                // Write metadata
+                if (metadata != null && metadata.Count > 0)
+                {
+                    foreach (var kv in metadata)
+                    {
+                        if (string.IsNullOrEmpty(kv.Key)) continue;
+                        var value = kv.Value ?? string.Empty;
+                        ffmpeg.av_dict_set(&outputFmtCtx->metadata, kv.Key, value, 0);
+                        if (outputVideoStream != null)
+                            ffmpeg.av_dict_set(&outputVideoStream->metadata, kv.Key, value, 0);
+                        if (outputAudioStream != null)
+                            ffmpeg.av_dict_set(&outputAudioStream->metadata, kv.Key, value, 0);
+                    }
                 }
 
                 // Write header

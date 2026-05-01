@@ -1,3 +1,4 @@
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -7,12 +8,20 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Compose
 {
-    public static class OverlayMixture
+    public class ClassicOverlayMixture : IMixture
     {
         public const string ComputerId = "OverlayComputer";
         private const float DefaultHdrMaximumBrightness = 1000f;
+        public static ClassicOverlayMixture Default { get; } = new();
+        public string TypeName => "ClassicOverlayMixture";
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string? NeedComputer => ComputerId;
+        public string Name { get; set; }
+        public string Id { get; set; }
+        public Dictionary<string, object> Parameters { get; set; }
+        public string? BindedEffectGroupID { get; set; }
 
-        public static IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
             => MixInternal(
                 basePicture,
                 topPicture,
@@ -24,7 +33,7 @@ namespace projectFrameCut.Render.Compose
                 targetWidth: basePicture.Width,
                 targetHeight: basePicture.Height);
 
-        public static IPicture Mix(
+        public IPicture Mix(
             IPicture basePicture,
             IPicture topPicture,
             IComputer? computer,
@@ -254,7 +263,7 @@ namespace projectFrameCut.Render.Compose
                     BaseSteps = basePicture.ProcessStack,
                     TopSteps = topPicture.ProcessStack,
                     OperationDisplayName = "Overlay effect",
-                    Operator = typeof(OverlayMixture),
+                    Operator = typeof(ClassicOverlayMixture),
                     ProcessingFuncStackTrace = new(true),
                 };
 
@@ -572,6 +581,28 @@ namespace projectFrameCut.Render.Compose
             {
                 try { resizedTop?.Dispose(); } catch { }
             }
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class ClassicOverlayMixtureFactory : IEffectFactory
+    {
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string TypeName => "ClassicOverlayMixture";
+        public EffectTarget Target => EffectTarget.Mixture;
+        public List<string> ParametersNeeded { get; } = [];
+        public Dictionary<string, string> ParametersType { get; } = new();
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+
+        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        {
+            if (implementType != EffectImplementType.NotSpecified)
+                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
+            return new ClassicOverlayMixture { Parameters = parameters ?? new() };
         }
     }
 }

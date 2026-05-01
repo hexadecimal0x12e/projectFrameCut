@@ -52,14 +52,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
                 return field;
             }
-            set 
-            { 
-                field = value; 
-                TransformElement = value is null ? null : JsonSerializer.SerializeToElement(value, value.GetType()); 
+            set
+            {
+                field = value;
+                TransformElement = value is null ? null : JsonSerializer.SerializeToElement(value, value.GetType());
             }
         }
 
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public void Dispose()
         {

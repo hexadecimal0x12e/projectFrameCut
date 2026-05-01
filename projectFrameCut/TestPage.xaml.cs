@@ -184,7 +184,7 @@ public partial class TestPage : ContentPage
                     sw.Dispose();
                     await Share.RequestAsync(new ShareFileRequest
                     {
-                        Title = "±£´æÍÏ¶¯²âÊÔÊý¾Ý",
+                        Title = "ï¿½ï¿½ï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                         File = new ShareFile(p)
                     });
                     break;
@@ -205,7 +205,7 @@ public partial class TestPage : ContentPage
         {
             OpenGLESStartButton.IsEnabled = false;
             DeviceDisplay.Current.KeepScreenOn = true;
-            await Task.Delay(500); // È·±£UI¸üÐÂ
+            await Task.Delay(500); // È·ï¿½ï¿½UIï¿½ï¿½ï¿½ï¿½
 
             Task.WaitAll([
                 Task.Run(() =>
@@ -234,12 +234,12 @@ public partial class TestPage : ContentPage
                     srcA.a,
                     srcB.a
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 alphaGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -251,7 +251,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (alphaGlView.Width <= 0 || alphaGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -290,7 +290,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(alphaGlView);
 
-                outA = await tcsA.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outA = await tcsA.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 Debug.WriteLine($"Alpha computation completed, avg :{outA.Average()} first 5 distincted result:{string.Join(',', outA.Distinct().Take(5))}");
 
             } //A
@@ -310,12 +310,12 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.r.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 RGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -327,7 +327,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (RGlView.Width <= 0 || RGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -366,7 +366,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(RGlView);
 
-                outR = await tcsR.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outR = await tcsR.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 RConvertor = new(() =>
                 {
                     uOutR = outR.Select(Convert.ToUInt16).ToArray();
@@ -392,12 +392,12 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.g.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 GGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -409,7 +409,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (GGlView.Width <= 0 || GGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -448,7 +448,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(GGlView);
 
-                outG = await tcsG.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outG = await tcsG.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 GConvertor = new(() =>
                 {
                     uOutG = outG.Select(Convert.ToUInt16).ToArray();
@@ -473,13 +473,13 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.b.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start,
                     JobID = "Blue"
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 BGLView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -491,7 +491,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (BGLView.Width <= 0 || BGLView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -530,7 +530,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(BGLView);
 
-                outB = await tcsB.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outB = await tcsB.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 BConvertor = new(() =>
                 {
                     uOutB = outB.Select(Convert.ToUInt16).ToArray();
@@ -581,7 +581,7 @@ public partial class TestPage : ContentPage
             DeviceDisplay.Current.KeepScreenOn = false;
         }
 #else
-        await DisplayAlert("ÌáÊ¾", "´Ë¹¦ÄÜÄ¿Ç°½öÔÚ Android ÉÏ¿ÉÓÃ¡£", "È·¶¨");
+        await DisplayAlert("ï¿½ï¿½Ê¾", "ï¿½Ë¹ï¿½ï¿½ï¿½Ä¿Ç°ï¿½ï¿½ï¿½ï¿½ Android ï¿½Ï¿ï¿½ï¿½Ã¡ï¿½", "È·ï¿½ï¿½");
 #endif
     }
 
@@ -590,7 +590,7 @@ public partial class TestPage : ContentPage
         {{"#"}}version 310 es            
         layout(local_size_x = 256) in;
 
-        // ÊäÈë£ºa, aAlpha, b, bAlpha
+        // ï¿½ï¿½ï¿½ë£ºa, aAlpha, b, bAlpha
         layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
         layout(std430, binding = 1) buffer BAlphaBuffer { float bAlpha[]; };
 
@@ -721,7 +721,7 @@ public partial class TestPage : ContentPage
                 var t = textFrame.ToHDRPicture(1, 5000);
                 Log(t.GetDiagnosticsInfo());
                 t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
-                var r = OverlayMixture.Mix(f, t, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
+                var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
                 r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
@@ -760,13 +760,13 @@ public partial class TestPage : ContentPage
             a = f.Brightness
         };
         fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fReplaceAlphaAndComposeMask = OverlayMixture.Mix(fThrowBrightness, new Picture16bpp(f)
+        var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             g = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
-        }, PluginManager.CreateComputer(OverlayMixture.ComputerId), 16);
+        }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
         fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
@@ -820,7 +820,7 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -902,7 +902,7 @@ public partial class TestPage : ContentPage
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = OverlayMixture.Mix(canvas, result, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -1239,13 +1239,13 @@ public partial class TestPage : ContentPage
 
         if (AuthService.IsLoggedIn)
         {
-            // ÒÑµÇÂ¼£¬ÏÔÊ¾ÓÃ»§ÐÅÏ¢»òµÇ³ö
+            // ï¿½Ñµï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½Ã»ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½Ç³ï¿½
             var user = await AuthService.GetCurrentUserAsync();
-            await DisplayAlertAsync("ÒÑµÇÂ¼", $"µ±Ç°ÓÃ»§: {user.UserName}", "È·¶¨");
+            await DisplayAlertAsync("ï¿½Ñµï¿½Â¼", $"ï¿½ï¿½Ç°ï¿½Ã»ï¿½: {user.UserName}", "È·ï¿½ï¿½");
         }
         else
         {
-            // Î´µÇÂ¼£¬´ò¿ªµÇÂ¼Ò³Ãæ
+            // Î´ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ò¿ªµï¿½Â¼Ò³ï¿½ï¿½
             await Navigation.PushAsync(new LoginPage());
         }
     }

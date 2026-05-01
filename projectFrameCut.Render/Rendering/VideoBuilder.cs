@@ -31,7 +31,7 @@ namespace projectFrameCut.Render.Rendering
         /// <summary>
         /// Call GC to collect unreferenced objects after each frame is written.
         /// </summary>
-        public bool DoGCAfterEachWrite { get; set; } = true;
+        public bool DoGCAfterEachWrite { get; set; } = false;
         /// <summary>
         /// Dispose the source <see cref="IPicture"/> when it's written to video.
         /// </summary>
@@ -215,6 +215,10 @@ namespace projectFrameCut.Render.Rendering
                         {
                             WriteFrame(index, frame, LogStat ? $"[VideoBuilder] Frame #{index} wrote." : null);
                         }
+                        else
+                        {
+                            Thread.Sleep(1);
+                        }
                     }
                 }
                 finally
@@ -225,7 +229,7 @@ namespace projectFrameCut.Render.Rendering
             })
             {
                 Name = $"VideoWriter for {outputPath}",
-                Priority = ThreadPriority.Highest
+                Priority = ThreadPriority.AboveNormal
             };
 
 

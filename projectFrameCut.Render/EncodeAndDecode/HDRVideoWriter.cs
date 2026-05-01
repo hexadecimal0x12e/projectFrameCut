@@ -3,6 +3,7 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -77,6 +78,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 if (_inited) throw new InvalidOperationException("Cannot modify property after initialization");
                 _pixelFormatString = value;
+            }
+        }
+
+        private Dictionary<string, string>? _metadata;
+        public Dictionary<string, string>? Metadata
+        {
+            get => _metadata;
+            set
+            {
+                if (_isHeaderWritten) throw new InvalidOperationException("Cannot modify metadata after header has been written");
+                _metadata = value;
             }
         }
 
@@ -788,6 +800,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private void EnsureHeader()
         {
             if (_isHeaderWritten) return;
+
+            if (_metadata != null && _metadata.Count > 0)
+            {
+                foreach (var kv in _metadata)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var value = kv.Value ?? string.Empty;
+                    ffmpeg.av_dict_set(&_fmtCtx->metadata, kv.Key, value, 0);
+                    if (_videoStream != null)
+                        ffmpeg.av_dict_set(&_videoStream->metadata, kv.Key, value, 0);
+                }
+            }
 
             AVDictionary* muxerOpts = null;
             if (_preferAppleHevcTag)

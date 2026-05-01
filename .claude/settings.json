@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(splc-edit list-*)",
+      "Bash(splc-edit get-*)"
+    ]
+  }
+}

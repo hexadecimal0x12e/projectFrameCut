@@ -723,6 +723,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR \u4EAE\u5EA6\u504F\u79FB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "General_VideoCodec_Source",
         "Value": "\u6E90\u6587\u4EF6\u8DEF\u5F84",
         "Mode": "ConstString",
@@ -1342,8 +1350,24 @@
         "DontTranslate": false
       },
       {
-        "Id": "General_VideoCodec_HDRBrightnessOffset",
-        "Value": "HDR \u4EAE\u5EA6\u504F\u79FB",
+        "Id": "Tabs_Mixture",
+        "Value": "\u6DF7\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u6CA1\u6709\u914D\u7F6E\u6DF7\u5408\u5668\uFF0C\u5C06\u4F7F\u7528\u9ED8\u8BA4\u6DF7\u5408\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u9519\u8BEF\uFF1A\u68C0\u6D4B\u5230\u591A\u4E2A\u6DF7\u5408\u5668\u3002\u8BF7\u5728\u201C\u6548\u679C\u201D\u6807\u7B7E\u9875\u91CC\u5220\u9664\u591A\u4F59\u7684\u6DF7\u5408\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

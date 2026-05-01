@@ -78,6 +78,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
+
+        private Dictionary<string, string>? _metadata;
+        public Dictionary<string, string>? Metadata
+        {
+            get => _metadata;
+            set
+            {
+                if (_isHeaderWritten) throw new InvalidOperationException("Cannot modify metadata after header has been written");
+                _metadata = value;
+            }
+        }
+
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
         private AVStream* _videoStream;
@@ -467,6 +479,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private void EnsureHeader()
         {
             if (_isHeaderWritten) return;
+
+            if (_metadata != null && _metadata.Count > 0)
+            {
+                foreach (var kv in _metadata)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var value = kv.Value ?? string.Empty;
+                    // Write to container-level metadata
+                    ffmpeg.av_dict_set(&_fmtCtx->metadata, kv.Key, value, 0);
+                    // Also write to stream-level metadata — some readers only look there
+                    if (_videoStream != null)
+                        ffmpeg.av_dict_set(&_videoStream->metadata, kv.Key, value, 0);
+                }
+            }
+
             FFmpegHelper.Throw(ffmpeg.avformat_write_header(_fmtCtx, null), "avformat_write_header");
             _isHeaderWritten = true;
         }

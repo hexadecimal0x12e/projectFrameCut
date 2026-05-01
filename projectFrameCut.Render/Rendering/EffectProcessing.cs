@@ -202,7 +202,7 @@ namespace projectFrameCut.Render.Rendering
                                 if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
                                 {
                                     crg.StartPoint = (int)(clip.StartFrame);
-                                    crg.EndPoint = (int)(crg.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
+                                    crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
                                 }
                                 var step = crg.GenerateResultStep(cachedValue, targetFrame, width, height);
                                 steps.Add(step);
@@ -266,7 +266,7 @@ namespace projectFrameCut.Render.Rendering
                 },
             };
             var frame = wtmkClip.GetFrameRelativeToStartPointOfSource(0, src.Width, src.Height, true, 8);
-            var result = OverlayMixture.Mix(src, frame, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), frame.bitPerPixel);
+            var result = ClassicOverlayMixture.Default.Mix(src, frame, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), frame.bitPerPixel);
             result.ProcessStack = src.ProcessStack.Append(new PictureProcessStack { OperationDisplayName = "Add AI Watermark", Operator = typeof(EffectProcessing), ProcessingFuncStackTrace = new StackTrace(true), Elapsed = sw.Elapsed }).ToList();
             return result;
         }

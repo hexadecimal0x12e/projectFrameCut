@@ -100,6 +100,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISoundTrack SoundTrack { get; set; }
         public TrackMode TrackType => TrackMode.NormalTrack;
 
+        public IMixture? MixtureInstance { get; set; }
+
         public void Dispose()
         {
         }

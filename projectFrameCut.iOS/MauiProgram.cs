@@ -51,6 +51,9 @@ namespace projectFrameCut
         public static string FFmpegRoot { get; private set; }
         public static string? ffmpegFailMessage = null;
 
+        public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
+
+
 
         private static readonly string[] FoldersNeedInUserdata =
             [

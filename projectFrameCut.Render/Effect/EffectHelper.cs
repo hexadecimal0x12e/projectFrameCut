@@ -33,13 +33,21 @@ namespace projectFrameCut.Render.Effect
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
         {
+            var (effects, provider, _) = GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            return (effects, provider);
+        }
+
+        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider, IMixture? Mixture) GetEffectsInstancesSpeedVarianceAndMixture(EffectAndMixtureJSONStructure[]? Effects)
+        {
             if (Effects is null || Effects.Length == 0)
             {
-                return (Array.Empty<IEffect>(), null);
+                return (Array.Empty<IEffect>(), null, null);
             }
             List<IEffect> effects = new();
             bool haveSpeedVarProvider = false;
+            bool haveMixture = false;
             ISpeedVarianceProvider? provider = null;
+            IMixture? mixture = null;
             foreach (var item in Effects)
             {
                 var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
@@ -50,10 +58,15 @@ namespace projectFrameCut.Render.Effect
                     haveSpeedVarProvider = true;
                     provider = p;
                 }
-
+                if (e is IMixture m)
+                {
+                    if (haveMixture) throw new InvalidOperationException("Multiple IMixture effects found.");
+                    haveMixture = true;
+                    mixture = m;
+                }
             }
 
-            return (effects.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).OrderBy(c => c.Index).ToArray(), provider);
+            return (effects.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider && c.TypeOfEffect != EffectType.MixtureProvider).OrderBy(c => c.Index).ToArray(), provider, mixture);
         }
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {

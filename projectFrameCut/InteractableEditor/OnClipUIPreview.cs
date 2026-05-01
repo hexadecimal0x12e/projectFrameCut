@@ -6,6 +6,9 @@ using System.IO;
 using Microsoft.Maui.Controls;
 using Path = System.IO.Path;
 using Image = Microsoft.Maui.Controls.Image;
+using projectFrameCut.Asset;
+using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
+using System.Linq;
 
 namespace projectFrameCut.InteractableEditor
 {
@@ -21,16 +24,18 @@ namespace projectFrameCut.InteractableEditor
             };
         }
 
+        private const int PreviewWidthFactor = 10; // Adjust this factor to control how many frames are shown in the preview
+
         private View? BuildVideoPreview()
         {
             var clipId = clip.Id;
             var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId);
-            if (clipId.StartsWith('$'))
+            if (clip.SourcePath?.StartsWith('$') ?? false)
             {
                 var assetId = clip.SourcePath[1..];
-                if (page.Assets.TryGetValue(assetId, out var asset))
+                if (AssetDatabase.Assets.TryGetValue(assetId, out var asset))
                 {
-                    thumbDir = Path.Combine(MauiProgram.DataPath, "My Assets", ".perAssetThumb", clipId);
+                    thumbDir = Path.Combine(MauiProgram.DataPath, "My Assets", ".perAssetThumb", assetId);
                 }
             }
 
@@ -41,57 +46,95 @@ namespace projectFrameCut.InteractableEditor
             if (pngs.Length == 0)
                 return null;
 
-            var frameFiles = new List<(int frame, string path)>();
+            var availableFrames = new List<int>();
             foreach (var png in pngs)
             {
                 var name = Path.GetFileNameWithoutExtension(png);
                 if (int.TryParse(name, out var frame))
-                    frameFiles.Add((frame, png));
+                    availableFrames.Add(frame);
+            }
+            if (availableFrames.Count == 0)
+                return null;
+            availableFrames = availableFrames.Order().ToList();
+
+            (var origWidth, var origHeight) = PictureExtensions.GetDimensions(pngs[0]);
+
+            var rawClipHeight = clip.Clip.HeightRequest > 0
+                ? clip.Clip.HeightRequest
+                : (clip.Clip.Height > 0 ? clip.Clip.Height : DraftPage.ClipHeight);
+            var previewHeight = rawClipHeight;
+
+            var scaleFactor = previewHeight / (double)origHeight;
+            var frameWidth = Math.Max(1, (int)Math.Round(origWidth * scaleFactor));
+
+            var clipWidth = clip.Clip.WidthRequest > 0
+                ? clip.Clip.WidthRequest
+                : (clip.origLength > 0 ? clip.origLength : clip.Clip.Width);
+            // Subtract handle widths (30px each) to match the actual content column width
+            var availableWidth = Math.Max(1, clipWidth - 60);
+            var countOfFrame = Math.Max(1, (int)(availableWidth / frameWidth)) - 1;
+            if (Math.Abs((countOfFrame + 1f) * frameWidth - availableWidth) < frameWidth * 0.75f) countOfFrame++;
+            var totalFramesWidth = countOfFrame * frameWidth;
+            var spacing = countOfFrame > 1 ? (availableWidth - totalFramesWidth) / (countOfFrame - 1) : 0;
+
+            List<int> frameToShow = new(countOfFrame);
+            for (int i = 0; i < countOfFrame; i++)
+            {
+                var idx = countOfFrame > 1
+                    ? (int)Math.Floor(i * (availableFrames.Count - 1) / (double)(countOfFrame - 1))
+                    : 0;
+                frameToShow.Add(availableFrames[idx]);
             }
 
-            if (frameFiles.Count == 0)
-                return null;
-
-            frameFiles.Sort((a, b) => a.frame.CompareTo(b.frame));
-
-            var clipWidth = clip.origLength > 0 ? clip.origLength : clip.Clip.WidthRequest;
-            if (clipWidth <= 0)
-                return null;
-
-            var maxFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : 1;
-            var relativeStart = (int)clip.relativeStartFrame;
-            var thumbHeight = Math.Max(28, clip.Clip.HeightRequest - 14);
-
-            var layout = new AbsoluteLayout
+            var layout = new HorizontalStackLayout
             {
-                HeightRequest = thumbHeight,
+                HeightRequest = previewHeight,
                 InputTransparent = true,
                 IsClippedToBounds = true,
-                VerticalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Fill,
+                Spacing = spacing / 2,
+                Padding = 0,
             };
-
-            foreach (var (frame, path) in frameFiles)
+            foreach (var item in frameToShow)
             {
-                var ratio = (double)(frame - relativeStart) / maxFrames;
-                var xPos = ratio * clipWidth;
-
-                if (xPos < -thumbHeight || xPos > clipWidth + thumbHeight)
-                    continue;
-
-                var img = new Image
+                layout.Children.Add(new Border
                 {
-                    Source = ImageSource.FromFile(path),
-                    Aspect = Aspect.AspectFit,
-                    HeightRequest = thumbHeight,
-                    InputTransparent = true,
-                };
-
-                AbsoluteLayout.SetLayoutBounds(img, new Rect(xPos, 0, AbsoluteLayout.AutoSize, thumbHeight));
-                layout.Children.Add(img);
+                    StrokeThickness = 1,
+                    Padding = 0,
+                    Content = new Image
+                    {
+                        Source = ImageSource.FromFile(Path.Combine(thumbDir, $"{item}.png")),
+                        InputTransparent = true,
+                        VerticalOptions = LayoutOptions.Fill,
+                        WidthRequest = frameWidth,
+                        Aspect = Aspect.AspectFit,
+                    },
+                    Margin = new(0),
+                });
             }
 
-            return layout.Children.Count > 0 ? layout : null;
+            return new Grid
+            {
+                HeightRequest = previewHeight,
+                VerticalOptions = LayoutOptions.Fill,
+                Padding = 0,
+                Children =
+                {
+                    layout,
+                    new Label
+                    {
+                        Text = clip.DisplayName ?? clip.Id,
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        BackgroundColor = Color.FromRgba("#80808080"),
+                        MaxLines = 1
+                    }
+                }
+            };
         }
+
+
 
         private View? BuildPhotoPreview()
         {
@@ -112,12 +155,18 @@ namespace projectFrameCut.InteractableEditor
                 return null;
 
             var thumbHeight = Math.Max(28, clip.Clip.HeightRequest - 14);
+            var clipWidth = clip.Clip.WidthRequest > 0
+                ? clip.Clip.WidthRequest
+                : (clip.origLength > 0 ? clip.origLength : clip.Clip.Width);
 
             var container = new Grid
             {
                 HeightRequest = thumbHeight,
+                WidthRequest = clipWidth,
                 InputTransparent = true,
                 VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Fill,
+                IsClippedToBounds = true,
             };
 
             container.Children.Add(new Image
@@ -125,7 +174,10 @@ namespace projectFrameCut.InteractableEditor
                 Source = ImageSource.FromFile(sourcePath),
                 Aspect = Aspect.AspectFill,
                 HeightRequest = thumbHeight,
+                WidthRequest = clipWidth,
                 InputTransparent = true,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
             });
 
             return container;

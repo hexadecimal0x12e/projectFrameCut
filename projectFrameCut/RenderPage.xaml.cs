@@ -29,6 +29,8 @@ using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using IPicture = projectFrameCut.Shared.IPicture;
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
+using System.Reflection;
+
 
 
 
@@ -497,9 +499,20 @@ public partial class RenderPage : ContentPage
                 }
                 if (_cts.IsCancellationRequested) return;
 
+                var mtdDict = new Dictionary<string, string>
+                {
+                    { "title", _project.ProjectName ?? "Project" },
+                    { "author", $"{SettingsManager.GetSetting("UserName", "User")}" },
+                    { "artist", $"{SettingsManager.GetSetting("UserName", "User")}" },
+                    { "language", new CultureInfo(Localized._LocaleId_).ThreeLetterISOLanguageName },
+                    { "year", DateTime.Now.Year.ToString() },
+                    { "encoder", $"{MauiProgram.AssemblyName} v{Assembly.GetExecutingAssembly().GetName().Version} ({MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit})" },
+                    { "copyright", $"Made by {Localized.AppBrand}" }
+                };
+
                 try
                 {
-                    await DoCompute(vm, vidOutputPath);
+                    await DoCompute(vm, vidOutputPath, mtdDict);
                 }
                 catch (Exception ex)
                 {
@@ -540,7 +553,7 @@ public partial class RenderPage : ContentPage
                 {
                     try
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true);
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true, mtdDict);
                     }
                     catch (Exception ex)
                     {
@@ -626,7 +639,7 @@ public partial class RenderPage : ContentPage
         });
     }
 
-    async Task DoCompute(RenderPageViewModel vm, string outputPath)
+    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null)
     {
         try
         {
@@ -760,6 +773,8 @@ public partial class RenderPage : ContentPage
                 LogStat = false,
                 BlockWrite = blockwrite
             };
+
+            builder.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
             {

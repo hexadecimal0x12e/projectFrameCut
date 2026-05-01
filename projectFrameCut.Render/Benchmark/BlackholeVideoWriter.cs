@@ -23,6 +23,7 @@ namespace projectFrameCut.Render.Benchmark
         public uint DurationWritten => _index;
 
         public IPicture.PicturePixelMode? TargetPPB => null;
+        public Dictionary<string, string>? Metadata { get; set; }
 
         public event EventHandler<IPicture>? OnFrameWrite;
 
