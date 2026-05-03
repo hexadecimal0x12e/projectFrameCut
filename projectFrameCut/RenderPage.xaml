@@ -121,10 +121,6 @@
                     <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
                     <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                     <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
-                    <HorizontalStackLayout>
-                        <CheckBox x:Name="UseRenderByLayerCheckbox" />
-                        <Label Text="Render by layer, instead of frame (experimental)" VerticalOptions="Center"  />
-                    </HorizontalStackLayout>
                     <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
                     <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
                     <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" IsVisible="False"/>

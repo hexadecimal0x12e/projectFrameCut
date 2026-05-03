@@ -830,6 +830,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u9519\u8BEF\uFF1A\u68C0\u6D4B\u5230\u591A\u4E2A\u6DF7\u5408\u5668\u3002\u8BF7\u5728\u201C\u6548\u679C\u201D\u6807\u7B7E\u9875\u91CC\u5220\u9664\u591A\u4F59\u7684\u6DF7\u5408\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u6CA1\u6709\u914D\u7F6E\u6DF7\u5408\u5668\uFF0C\u5C06\u4F7F\u7528\u9ED8\u8BA4\u6DF7\u5408\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "PropertyPanel",
         "Value": "\u5C5E\u6027\u9762\u677F",
         "Mode": "ConstString",
@@ -906,6 +922,14 @@
       {
         "Id": "Tabs_Effect_Classic",
         "Value": "\u6548\u679C\uFF08\u7ECF\u5178\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u6DF7\u5408",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1347,30 +1371,6 @@
             "Value": ""
           }
         ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Tabs_Mixture",
-        "Value": "\u6DF7\u5408",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Mixture_None",
-        "Value": "\u6CA1\u6709\u914D\u7F6E\u6DF7\u5408\u5668\uFF0C\u5C06\u4F7F\u7528\u9ED8\u8BA4\u6DF7\u5408\u5668\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Mixture_ErrMultiplePvd",
-        "Value": "\u9519\u8BEF\uFF1A\u68C0\u6D4B\u5230\u591A\u4E2A\u6DF7\u5408\u5668\u3002\u8BF7\u5728\u201C\u6548\u679C\u201D\u6807\u7B7E\u9875\u91CC\u5220\u9664\u591A\u4F59\u7684\u6DF7\u5408\u5668\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -2836,6 +2836,42 @@
       {
         "Id": "DisplayName_Effect_ColorAdjustment",
         "Value": "Color Adjustment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR Brightness Offset",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Error: Multiple mixers detected. Please delete the extra mixers in the Effects tab.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "No mixer configured, the default mixer will be used.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mixture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4310,6 +4346,42 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR \u4EAE\u5EA6\u504F\u79FB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u932F\u8AA4\uFF1A\u6AA2\u6E2C\u5230\u591A\u500B\u6DF7\u5408\u5668\u3002\u8ACB\u5728\u300C\u6548\u679C\u300D\u6A19\u7C64\u9801\u88E1\u522A\u9664\u591A\u9918\u7684\u6DF7\u5408\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u6C92\u6709\u914D\u7F6E\u6DF7\u5408\u5668\uFF0C\u5C07\u4F7F\u7528\u9810\u8A2D\u6DF7\u5408\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u6DF7\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -5779,6 +5851,42 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u30DF\u30AD\u30B5\u30FC\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\u30C7\u30D5\u30A9\u30EB\u30C8\u30DF\u30AD\u30B5\u30FC\u3092\u4F7F\u7528\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR \u8F1D\u5EA6\u30AA\u30D5\u30BB\u30C3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u30A8\u30E9\u30FC\uFF1A\u8907\u6570\u306E\u30DF\u30AD\u30B5\u30FC\u304C\u691C\u51FA\u3055\u308C\u307E\u3057\u305F\u3002\u300C\u52B9\u679C\u300D\u30BF\u30D6\u30DA\u30FC\u30B8\u3067\u4F59\u5206\u306A\u30DF\u30AD\u30B5\u30FC\u3092\u524A\u9664\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u6DF7\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -7244,6 +7352,42 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR \uBC1D\uAE30 \uC624\uD504\uC14B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\uC624\uB958: \uC5EC\uB7EC \uAC1C\uC758 \uBBF9\uC11C\uAC00 \uAC10\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \u0027\uD6A8\uACFC\u0027 \uD0ED\uC5D0\uC11C \uBD88\uD544\uC694\uD55C \uBBF9\uC11C\uB97C \uC0AD\uC81C\uD558\uC2ED\uC2DC\uC624.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\uD63C\uD569",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\uBBF9\uC11C\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC544 \uAE30\uBCF8 \uBBF9\uC11C\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -8696,6 +8840,42 @@
       {
         "Id": "DisplayName_Effect_ColorAdjustment",
         "Value": "R\u00E9glage des couleurs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "D\u00E9calage de luminosit\u00E9 HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Erreur : plusieurs m\u00E9langeurs d\u00E9tect\u00E9s. Veuillez supprimer les m\u00E9langeurs suppl\u00E9mentaires dans l\u0027onglet \u0022Effets\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "M\u00E9lange",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Aucun mixeur configur\u00E9, le mixeur par d\u00E9faut sera utilis\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10169,6 +10349,42 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR\u4EAE\u5EA6\u504F\u79FB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u8C2C\uFF1A\u5BDF\u6709\u6570\u6DF7\u5668\u3002\u8BF7\u4E8E\u201C\u6548\u679C\u201D\u7B7E\u9875\u4E2D\u5220\u5176\u591A\u4F59\u8005\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u672A\u8BBE\u6DF7\u97F3\u5668\uFF0C\u5373\u7528\u9ED8\u8BA4\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u6DF7\u540C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6807\u7B7E\u9875\u540D\u79F0\uFF0C\u8868\u793A\u6DF7\u5408\u5185\u5BB9",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -11439,11 +11655,11 @@
       },
       {
         "Id": "DisplayName_Effect_ClassicSpeedVarianceProvider",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "Value": "\u062A\u0633\u0627\u0631\u0639 \u062B\u0627\u0628\u062A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6052\u5B9A\u53D8\u901F",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -11632,6 +11848,42 @@
       {
         "Id": "DisplayName_Effect_ColorAdjustment",
         "Value": "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0623\u0644\u0648\u0627\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "\u0625\u0632\u0627\u062D\u0629 \u0633\u0637\u0648\u0639 HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u0644\u0645 \u064A\u062A\u0645 \u062A\u0643\u0648\u064A\u0646 \u062E\u0644\u0627\u0637\u060C \u0648\u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062E\u0644\u0627\u0637 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u0645\u0632\u064A\u062C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u062E\u0637\u0623: \u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641 \u0639\u062F\u0629 \u062E\u0644\u0627\u0637\u0627\u062A. \u064A\u0631\u062C\u0649 \u062D\u0630\u0641 \u0627\u0644\u062E\u0644\u0627\u0637\u0627\u062A \u0627\u0644\u0632\u0627\u0626\u062F\u0629 \u0641\u064A \u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u0022\u062A\u0623\u062B\u064A\u0631\u0627\u062A\u0022.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13085,6 +13337,42 @@
       {
         "Id": "DisplayName_Effect_ColorAdjustment",
         "Value": "Farbanpassung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR Helligkeitsversatz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Kein Mischer konfiguriert, der Standardmischer wird verwendet.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Fehler: Mehrere Mixer erkannt. Bitte l\u00F6schen Sie die \u00FCberfl\u00FCssigen Mixer im Register \u0027Effekte\u0027.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mischung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14547,6 +14835,42 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "Desplazamiento de brillo HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Error: se detectaron varios mezcladores. Por favor, elimine los mezcladores sobrantes en la pesta\u00F1a \u0027Efectos\u0027.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mezcla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "No hay mezclador configurado, se utilizar\u00E1 el mezclador por defecto.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -16015,6 +16339,42 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Errore: rilevati pi\u00F9 mixer. Elimina i mixer extra nella scheda \u0022Effetti\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "Offset di luminosit\u00E0 HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mescolanza",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Nessun mixer configurato, verr\u00E0 usato il mixer predefinito.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -17474,6 +17834,42 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "Przesuni\u0119cie jasno\u015Bci HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Brak skonfigurowanego miksera, zostanie u\u017Cyty domy\u015Blny mikser.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "B\u0142\u0105d: Wykryto wiele mikser\u00F3w. Usu\u0144 nadmiarowe miksery w zak\u0142adce \u0027Efekty\u0027.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mieszanka",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -18929,6 +19325,42 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Erro: m\u00FAltiplos mixers detectados. Por favor, remova os mixers extras na aba \u0022Efeitos\u0022.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Mistura",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "Deslocamento de brilho HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Nenhum mixer configurado, o mixer padr\u00E3o ser\u00E1 usado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -20397,6 +20829,42 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "\u0421\u043C\u0435\u0449\u0435\u043D\u0438\u0435 \u044F\u0440\u043A\u043E\u0441\u0442\u0438 HDR",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "\u0421\u043C\u0435\u0441\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "\u041C\u0438\u043A\u0441\u0435\u0440 \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D, \u0431\u0443\u0434\u0435\u0442 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u044B\u0439 \u043C\u0438\u043A\u0448\u0435\u0440.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "\u041E\u0448\u0438\u0431\u043A\u0430: \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u043E \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u0438\u043A\u0448\u0435\u0440\u043E\u0432. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0443\u0434\u0430\u043B\u0438\u0442\u0435 \u043B\u0438\u0448\u043D\u0438\u0435 \u043C\u0438\u043A\u0448\u0435\u0440\u044B \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u00AB\u042D\u0444\u0444\u0435\u043A\u0442\u044B\u00BB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -21853,6 +22321,42 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_HDRBrightnessOffset",
+        "Value": "HDR Parlakl\u0131k Ofseti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_Mixture",
+        "Value": "Kar\u0131\u015F\u0131m",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_ErrMultiplePvd",
+        "Value": "Hata: Birden fazla mikser tespit edildi. L\u00FCtfen \u0022Efektler\u0022 sekmesindeki fazla mikserleri silin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Mixture_None",
+        "Value": "Kar\u0131\u015Ft\u0131r\u0131c\u0131 yap\u0131land\u0131r\u0131lmam\u0131\u015F, varsay\u0131lan kar\u0131\u015Ft\u0131r\u0131c\u0131 kullan\u0131lacak.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ]

@@ -896,11 +896,11 @@ public partial class RenderPage : ContentPage
             {
                 await Task.Run(async () => await renderer.GoRenderSync(_cts.Token), _cts.Token);
                 Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-                builder?.Writer.Finish();
+                builder?.Writer?.Finish();
             }
             else
             {
-                if (UseRenderByLayerCheckbox.IsChecked)
+                if (SettingsManager.IsBoolSettingTrue("render_RenderByLayer"))
                 {
                     await renderer.GoRenderByLayer(_cts.Token);
                 }

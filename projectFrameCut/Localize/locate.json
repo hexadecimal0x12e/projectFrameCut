@@ -2154,6 +2154,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u53D6\u6D88\u64CD\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_Goto",
         "Value": "\u8F6C\u5230",
         "Mode": "ConstString",
@@ -2396,6 +2404,38 @@
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
         "Value": "\u5173\u95ED\u6240\u6709\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u70B9\u51FB\u9884\u89C8\u89C6\u56FE\u6765\u6DFB\u52A0\u53C2\u8003\u7EBF\uFF0C\u6216\u8005\u6309Esc\u53D6\u6D88\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u6E05\u9664\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u6DFB\u52A0\u6C34\u5E73\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u6DFB\u52A0\u7AD6\u76F4\u53C2\u8003\u7EBF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5636,18 +5676,101 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
-      }
-    ],
-    "en-US": [
+      },
       {
-        "Id": "_Confirm",
-        "Value": "Confirm",
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u5237\u65B0\u5386\u53F2\u8BB0\u5F55",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u9501\u5B9A\u7247\u6BB5\u7684\u4F4D\u7F6E\r(\u4E0D\u4F1A\u963B\u6B62\u6765\u81EA\u5173\u952E\u5E27\u548C\u6548\u679C\u9020\u6210\u7684\u79FB\u52A8)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u542F\u7528\u5438\u9644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u4E0D\u5141\u8BB8\u7247\u6BB5\u6EA2\u51FA\u753B\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u663E\u793A\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u7ACB\u5373\u91CD\u65B0\u6E32\u67D3\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u7531\u300C{name}\u300D\u4EA7\u751F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD8\u539F\u5230\u5728 {date} \u4FDD\u5B58\u7684\u69FD\u4F4D\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      }
+    ],
+    "en-US": [
       {
         "Id": "_ExceptionTemplate",
         "Value": "An unhandled {ex.GetType().Name} exception occurred ({ex.Message})",
@@ -11765,25 +11888,6 @@
     ],
     "zh-TW": [
       {
-        "Id": "_ExceptionTemplate",
-        "Value": "\u4E00\u500B\u672A\u8655\u7406\u7684 {ex.GetType().Name} \u7570\u5E38\u767C\u751F ({ex.Message})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "Exception",
-            "Value": "ex"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "Exception",
-            "Value": "\u5F02\u5E38"
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Info",
         "Value": "\u63D0\u793A",
         "Mode": "ConstString",
@@ -17892,15 +17996,6 @@
       }
     ],
     "ja-JP": [
-      {
-        "Id": "_Confirm",
-        "Value": "\u78BA\u8A8D",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
       {
         "Id": "_ExceptionTemplate",
         "Value": "\u672A\u51E6\u7406\u306E {ex.GetType().Name} \u4F8B\u5916\u304C\u767A\u751F\u3057\u307E\u3057\u305F ({ex.Message})",
@@ -24025,15 +24120,6 @@
     ],
     "ko-KR": [
       {
-        "Id": "_Confirm",
-        "Value": "\uD655\uC778",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_ExceptionTemplate",
         "Value": "\uCC98\uB9AC\uB418\uC9C0 \uC54A\uC740 {ex.GetType().Name} \uC608\uC678\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4 ({ex.Message})",
         "Mode": "InterpolationString",
@@ -30143,15 +30229,6 @@
     ],
     "fr-FR": [
       {
-        "Id": "_Confirm",
-        "Value": "Confirmer",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_ExceptionTemplate",
         "Value": "Une exception {ex.GetType().Name} non g\u00E9r\u00E9e s\u0027est produite ({ex.Message})",
         "Mode": "InterpolationString",
@@ -36258,15 +36335,6 @@
       }
     ],
     "\u6587\u8A00\u6587": [
-      {
-        "Id": "_Cancel",
-        "Value": "\u6B62\u4E4B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Cancel operation in classical Chinese",
-        "DontTranslate": false
-      },
       {
         "Id": "_Confirm",
         "Value": "\u786E",
@@ -42389,15 +42457,6 @@
     ],
     "ar-SA": [
       {
-        "Id": "_Cancel",
-        "Value": "\u0625\u0644\u063A\u0627\u0621",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Confirm",
         "Value": "\u062A\u0623\u0643\u064A\u062F",
         "Mode": "ConstString",
@@ -48510,15 +48569,6 @@
       }
     ],
     "de-DE": [
-      {
-        "Id": "_Cancel",
-        "Value": "Abbrechen",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
       {
         "Id": "_Confirm",
         "Value": "Best\u00E4tigen",
@@ -54633,15 +54683,6 @@
     ],
     "es-ES": [
       {
-        "Id": "_Cancel",
-        "Value": "Cancelar",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Confirm",
         "Value": "Confirmar",
         "Mode": "ConstString",
@@ -60750,15 +60791,6 @@
       }
     ],
     "it-IT": [
-      {
-        "Id": "_Cancel",
-        "Value": "Annulla",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
       {
         "Id": "_Confirm",
         "Value": "Conferma",
@@ -66874,15 +66906,6 @@
     ],
     "pl-PL": [
       {
-        "Id": "_Cancel",
-        "Value": "Anuluj",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Confirm",
         "Value": "Potwierd\u017A",
         "Mode": "ConstString",
@@ -72994,15 +73017,6 @@
     ],
     "pt-BR": [
       {
-        "Id": "_Cancel",
-        "Value": "Cancelar",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Confirm",
         "Value": "Confirmar",
         "Mode": "ConstString",
@@ -79110,15 +79124,6 @@
       }
     ],
     "ru-RU": [
-      {
-        "Id": "_Cancel",
-        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
       {
         "Id": "_Confirm",
         "Value": "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C",
@@ -85232,15 +85237,6 @@
       }
     ],
     "tr-TR": [
-      {
-        "Id": "_Cancel",
-        "Value": "\u0130ptal",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
       {
         "Id": "_Confirm",
         "Value": "Onayla",

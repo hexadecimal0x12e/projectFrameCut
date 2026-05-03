@@ -1760,12 +1760,13 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
-            var newEffects = clip.Effects ?? new();
+            var newEffects = new Dictionary<string, IEffect>();
             int globalIndex = 0;
             var factories = EffectServices.GetAvailableEffectBundles();
             if (clip.EffectBundles != null)
             {
                 var sortedBundles = SortEffectBundles(clip.EffectBundles);
+                if (!sortedBundles.ListAny()) return;
                 for (int i = 0; i < sortedBundles.Count; i++)
                 {
                     var bundleData = sortedBundles[i];
@@ -1821,13 +1822,13 @@ namespace projectFrameCut.DraftStuff
             }
             clip.Effects = newEffects
                 .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectGroupID)
-                            || (clip.EffectBundles?.ContainsKey(new(e.Value.BindedEffectGroupID)) ?? false))
+                            || (clip.EffectBundles?.ContainsKey(Guid.TryParse(e.Value.BindedEffectGroupID, out var g) ? g : Guid.Empty) ?? false))
                 .ToDictionary();
         }
 
         private static List<IEffectBundle> SortEffectBundles(IReadOnlyDictionary<Guid, IEffectBundle> bundles)
         {
-            var ordered = bundles.ToList();
+            var ordered = bundles.Where(c => c.Value.Enabled).ToList();
             var adjacency = new Dictionary<Guid, List<Guid>>();
             var incoming = new Dictionary<Guid, int>();
 
@@ -1983,8 +1984,8 @@ namespace projectFrameCut.DraftStuff
                         var bundlePpb = bundleInstance.CreateUI();
 
                         ppb.AddText(new TitleAndDescriptionLineLabel(bundleInstance.Name ?? bundleInstance.TypeName, bundleInstance.TypeName));
-                        ppb.AddCheckbox($"Effect|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
-                        ppb.AddEntry($"Effect|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
+                        ppb.AddCheckbox($"Bundle|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
+                        ppb.AddEntry($"Bundle|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
 
                         ppb.AddSeparator();
 
@@ -2078,6 +2079,7 @@ namespace projectFrameCut.DraftStuff
             ppb.PropertyChanged += (s, e) =>
             {
                 ArgumentNullException.ThrowIfNull(clip);
+                clip.EffectBundles ??= new();
 
                 if (!ppb.Equals(s)) //from another
                 {
@@ -2127,7 +2129,7 @@ namespace projectFrameCut.DraftStuff
                                     {
                                         if (bool.TryParse(e.Value?.ToString(), out var enabled))
                                         {
-                                            enabledBundle.Enabled = enabled;
+                                            clip.EffectBundles[bundleId].Enabled = enabled;
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }

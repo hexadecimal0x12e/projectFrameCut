@@ -24,6 +24,21 @@ namespace projectFrameCut.InteractableEditor
             BottomRight
         }
 
+        public enum ReferenceLineOrientation
+        {
+            Horizontal,
+            Vertical
+        }
+
+        public struct ReferenceLine
+        {
+            public string Id;
+            public double Position;
+            public ReferenceLineOrientation Orientation;
+            public Color Color;
+            public double Thickness;
+        }
+
         private projectFrameCut.DraftStuff.ClipElementUI? _currentClip;
         private AssetItem? _currentAsset;
         private Func<Task>? _updateCallback;
@@ -43,8 +58,11 @@ namespace projectFrameCut.InteractableEditor
         private bool _isTextClip = false;
         private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
+        private bool _isPlacingReferenceLine;
+        private ReferenceLineOrientation _pendingReferenceLineOrientation;
+        private int _referenceLineCounter;
+        private Stopwatch _panTimer = new();
         private long _lastPanUpdateTicks = 0;
-        private const long MinPanUpdateIntervalTicks = 60 * TimeSpan.TicksPerMillisecond; // ~33fps throttle for pan updates
         private int _activeTextEntryIndex = -1;
         private Rect _textEntryStartRect;
         private double _textEntryStartOriginX;
@@ -55,8 +73,12 @@ namespace projectFrameCut.InteractableEditor
         private float? _textEntryStartWrappingWidth;
         private float? _textEntryStartStrokeWidth;
 
+        private Rect? _panPreviewRect;
+        private List<TextClipEntry>? _panPreviewTextEntries;
+
         private const double HandleSize = 15;
         private const double MinSize = 10;
+        private const double SnapThresholdDisplayPx = 10.0;
         private const float MinTextFontSize = 1f;
 
         private readonly Dictionary<string, ClipOverlayState> _clipStates = new(StringComparer.Ordinal);
@@ -65,6 +87,10 @@ namespace projectFrameCut.InteractableEditor
         private Func<Task>? _previewRefreshCallback;
         private Func<string, Task>? _overlayClipTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
+        private Func<Task>? _referenceLinesChangedCallback;
+        private bool _suppressReferenceLinesChangedNotify;
+        private readonly Dictionary<string, ReferenceLine> _referenceLines = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, BoxView> _referenceLineVisuals = new(StringComparer.Ordinal);
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
         private int _hasPendingPreviewRefresh;
@@ -74,6 +100,8 @@ namespace projectFrameCut.InteractableEditor
 
         private CancellationTokenSource? _commitUpdateDebounceCts;
         private readonly object _commitUpdateDebounceLock = new();
+        private bool _autoHideBottomControls;
+        private CancellationTokenSource? _hideBottomControlsCts;
 
         private const int PreviewRefreshThrottleMs = 180;
         private const int CommitUpdateDebounceMs = 220;
@@ -89,6 +117,14 @@ namespace projectFrameCut.InteractableEditor
         private float _secondPerFrameRatio = 1f;
 
         public bool ShowRenderRectOverlay { get; set; } = true;
+        public bool EnableSnapping { get; set; } = true;
+        public bool LockLayout { get; set; } = false;
+        public bool AllowClipOutOfBounds { get; set { field = value; LogDiagnostic($"AllowClipOutOfBounds now is {field}"); } } = false;
+        public bool DisallowClipOutOfBounds
+        {
+            get => !AllowClipOutOfBounds;
+            set => AllowClipOutOfBounds = !value;
+        }
         public bool ShowClipPreviewOverlays
         {
             get;
@@ -122,8 +158,24 @@ namespace projectFrameCut.InteractableEditor
             }
         } = false;
 
+        public bool ShowReferenceLines
+        {
+            get;
+            set
+            {
+                if (field == value)
+                {
+                    return;
+                }
+
+                field = value;
+                UpdateVisuals();
+            }
+        } = true;
+
         public ContentView RealtimePreviewHost => LivePreviewerHost;
         public Image StaticPreviewOverlayImage => PreviewOverlayImage;
+        public bool IsPlacingReferenceLine => _isPlacingReferenceLine && _pendingReferenceLineOrientation != null;
 
         public void SetRealtimePreviewContent(View? content)
         {
@@ -140,11 +192,17 @@ namespace projectFrameCut.InteractableEditor
 
         public InteractableEditor()
         {
+            BindingContext = this;
             InitializeComponent();
 
             var canvasTap = new TapGestureRecognizer();
             canvasTap.Tapped += OnEditorCanvasTapped;
             EditorCanvas.GestureRecognizers.Add(canvasTap);
+
+            var hoverPointer = new PointerGestureRecognizer();
+            hoverPointer.PointerEntered += OnBottomControlsHostEntered;
+            hoverPointer.PointerExited += OnBottomControlsHostExited;
+            BottomControlsHost.GestureRecognizers.Add(hoverPointer);
         }
 
         private sealed class ClipOverlayState
@@ -190,11 +248,10 @@ namespace projectFrameCut.InteractableEditor
                         InputTransparent = true,
                         TextColor = Colors.White,
                         BackgroundColor = Color.FromArgb("#88000000"),
-                        Padding = new Thickness(4, 2),
                         FontSize = 10,
                         LineBreakMode = LineBreakMode.NoWrap,
-                        HorizontalOptions = LayoutOptions.Start,
-                        VerticalOptions = LayoutOptions.Start,
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
                         ZIndex = 5
                     };
 
@@ -305,7 +362,7 @@ namespace projectFrameCut.InteractableEditor
             private readonly List<TextEntryOverlayState> _textEntryStates = new();
             public string ClipId { get; init; }
 
-            public ClipOverlayState(InteractableEditor owner, string clipId)
+            public ClipOverlayState(InteractableEditor owner, string clipId, string? displayName = null)
             {
                 _owner = owner;
                 ClipId = clipId;
@@ -350,11 +407,10 @@ namespace projectFrameCut.InteractableEditor
                     InputTransparent = true,
                     TextColor = Colors.White,
                     BackgroundColor = Color.FromArgb("#88000000"),
-                    Padding = new Thickness(6, 2),
                     FontSize = 10,
                     LineBreakMode = LineBreakMode.NoWrap,
-                    HorizontalOptions = LayoutOptions.Start,
-                    VerticalOptions = LayoutOptions.Start,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center,
                     ZIndex = 3
                 };
 
@@ -407,6 +463,13 @@ namespace projectFrameCut.InteractableEditor
                 Root.Children.Add(HandleBR);
                 Root.Children.Add(SizeLabel);
                 Root.Children.Add(DebugLabel);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    ToolTipProperties.SetText(Root, displayName);
+                    ToolTipProperties.SetText(ClipVisual, displayName);
+                    ToolTipProperties.SetText(PreviewHost, displayName);
+                }
 
             }
 
@@ -657,6 +720,11 @@ namespace projectFrameCut.InteractableEditor
             _blankAreaTappedCallback = tapCallback;
         }
 
+        public void ConfigureReferenceLinesChanged(Func<Task>? callback)
+        {
+            _referenceLinesChangedCallback = callback;
+        }
+
         protected override void OnSizeAllocated(double width, double height)
         {
             base.OnSizeAllocated(width, height);
@@ -670,31 +738,31 @@ namespace projectFrameCut.InteractableEditor
             _videoHeight = videoHeight;
         }
 
-        public void UpdateCanvasSize(double width, double height)
+        public void UpdateCanvasSize(double width, double height, bool ignorePositionProvider = false)
         {
             _canvasWidth = width;
             _canvasHeight = height;
-            UpdateVisuals();
+            UpdateVisuals(ignorePositionProvider);
         }
 
-        public void UpdateVideoResolution(double width, double height)
+        public void UpdateVideoResolution(double width, double height, bool ignorePositionProvider = false)
         {
             _videoWidth = width;
             _videoHeight = height;
-            UpdateVisuals();
+            UpdateVisuals(ignorePositionProvider);
         }
 
         private ClipOverlayState GetOrCreateClipState(ClipElementUI clip)
-            => GetOrCreateClipState(clip.Id);
+            => GetOrCreateClipState(clip.Id, clip.DisplayName);
 
-        private ClipOverlayState GetOrCreateClipState(string clipId)
+        private ClipOverlayState GetOrCreateClipState(string clipId, string? displayName = null)
         {
             if (_clipStates.TryGetValue(clipId, out var state))
             {
                 return state;
             }
 
-            state = new ClipOverlayState(this, clipId);
+            state = new ClipOverlayState(this, clipId, displayName);
             try
             {
                 Dispatcher.Dispatch(() =>
@@ -776,6 +844,37 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnEditorCanvasTapped(object? sender, TappedEventArgs e)
         {
+            if (_isPlacingReferenceLine)
+            {
+                var placementTap = e.GetPosition(EditorCanvas);
+                if (placementTap is null)
+                {
+                    return;
+                }
+
+                var renderRect = GetRenderRect();
+                var scale = renderRect.Width / _videoWidth;
+                if (scale <= 0)
+                {
+                    return;
+                }
+
+                var id = $"ref-{Interlocked.Increment(ref _referenceLineCounter)}";
+                if (_pendingReferenceLineOrientation == ReferenceLineOrientation.Horizontal)
+                {
+                    var videoY = Math.Clamp((placementTap.Value.Y - renderRect.Y) / scale, 0, _videoHeight);
+                    AddReferenceLine(id, videoY, ReferenceLineOrientation.Horizontal);
+                }
+                else
+                {
+                    var videoX = Math.Clamp((placementTap.Value.X - renderRect.X) / scale, 0, _videoWidth);
+                    AddReferenceLine(id, videoX, ReferenceLineOrientation.Vertical);
+                }
+
+                _isPlacingReferenceLine = false;
+                return;
+            }
+
             var callback = _blankAreaTappedCallback;
             if (callback is null)
             {
@@ -908,6 +1007,216 @@ namespace projectFrameCut.InteractableEditor
             _activeState = null;
         }
 
+        public void AddReferenceLine(string id, double position, ReferenceLineOrientation orientation, Color? color = null, double thickness = 1.0)
+        {
+            _referenceLines[id] = new ReferenceLine
+            {
+                Id = id,
+                Position = position,
+                Orientation = orientation,
+                Color = color ?? Color.FromRgba(0, 255, 255, 128),
+                Thickness = Math.Max(0.5, thickness)
+            };
+            UpdateVisuals();
+            NotifyReferenceLinesChanged();
+        }
+
+        public void RemoveReferenceLine(string id)
+        {
+            if (_referenceLines.Remove(id))
+            {
+                if (_referenceLineVisuals.TryGetValue(id, out var visual))
+                {
+                    ReferenceLinesHost.Children.Remove(visual);
+                    _referenceLineVisuals.Remove(id);
+                }
+
+                UpdateVisuals();
+                NotifyReferenceLinesChanged();
+            }
+        }
+
+        public void ClearReferenceLines()
+        {
+            if (_referenceLines.Count == 0)
+            {
+                return;
+            }
+
+            _referenceLines.Clear();
+            foreach (var kvp in _referenceLineVisuals)
+            {
+                ReferenceLinesHost.Children.Remove(kvp.Value);
+            }
+
+            _referenceLineVisuals.Clear();
+            UpdateVisuals();
+            NotifyReferenceLinesChanged();
+        }
+
+        public string GetReferenceLinesJson()
+        {
+            var data = _referenceLines.Values.Select(rl => new ReferenceLineData
+            {
+                Id = rl.Id,
+                Position = rl.Position,
+                Orientation = rl.Orientation,
+                ColorHex = rl.Color.ToArgbHex(),
+                Thickness = rl.Thickness
+            }).ToList();
+            return JsonSerializer.Serialize(data);
+        }
+
+        public void RestoreReferenceLinesFromJson(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            List<ReferenceLineData>? data;
+            try
+            {
+                data = JsonSerializer.Deserialize<List<ReferenceLineData>>(json);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (data is null || data.Count == 0)
+                return;
+
+            _referenceLines.Clear();
+            foreach (var kvp in _referenceLineVisuals)
+            {
+                ReferenceLinesHost.Children.Remove(kvp.Value);
+            }
+            _referenceLineVisuals.Clear();
+
+            _suppressReferenceLinesChangedNotify = true;
+            try
+            {
+                foreach (var item in data)
+                {
+                    AddReferenceLine(item.Id, item.Position, item.Orientation,
+                        Color.FromArgb(item.ColorHex), item.Thickness);
+                }
+            }
+            finally
+            {
+                _suppressReferenceLinesChangedNotify = false;
+            }
+        }
+
+        private sealed class ReferenceLineData
+        {
+            public string Id { get; set; } = string.Empty;
+            public double Position { get; set; }
+            public ReferenceLineOrientation Orientation { get; set; }
+            public string ColorHex { get; set; } = "#00FFFFFF";
+            public double Thickness { get; set; } = 1.0;
+        }
+
+        private void NotifyReferenceLinesChanged()
+        {
+            if (_suppressReferenceLinesChangedNotify)
+                return;
+
+            var callback = _referenceLinesChangedCallback;
+            if (callback is null)
+                return;
+
+            _ = InvokeReferenceLinesChangedAsync(callback);
+        }
+
+        private static async Task InvokeReferenceLinesChangedAsync(Func<Task> callback)
+        {
+            try
+            {
+                await callback();
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Reference lines changed callback failed: {ex.Message}");
+            }
+        }
+
+        public void AddThirdsGuides()
+        {
+            for (var i = 1; i < 3; i++)
+            {
+                AddReferenceLine($"third-h-{i}", _videoHeight * i / 3.0, ReferenceLineOrientation.Horizontal);
+                AddReferenceLine($"third-v-{i}", _videoWidth * i / 3.0, ReferenceLineOrientation.Vertical);
+            }
+        }
+
+        public void AddCenterGuides()
+        {
+            AddReferenceLine("center-h", _videoHeight / 2.0, ReferenceLineOrientation.Horizontal);
+            AddReferenceLine("center-v", _videoWidth / 2.0, ReferenceLineOrientation.Vertical);
+        }
+
+        public void AddGoldenRatioGuides()
+        {
+            var phi = 1.6180339887498948482;
+            var hThird = _videoHeight / phi;
+            var wThird = _videoWidth / phi;
+            AddReferenceLine("golden-h-1", hThird, ReferenceLineOrientation.Horizontal, Color.FromRgba(255, 215, 0, 160));
+            AddReferenceLine("golden-h-2", _videoHeight - hThird, ReferenceLineOrientation.Horizontal, Color.FromRgba(255, 215, 0, 160));
+            AddReferenceLine("golden-v-1", wThird, ReferenceLineOrientation.Vertical, Color.FromRgba(255, 215, 0, 160));
+            AddReferenceLine("golden-v-2", _videoWidth - wThird, ReferenceLineOrientation.Vertical, Color.FromRgba(255, 215, 0, 160));
+        }
+
+        private void UpdateReferenceLines(Rect renderRect, double scale)
+        {
+            var shouldShow = ShowReferenceLines && _referenceLines.Count > 0;
+            ReferenceLinesHost.IsVisible = shouldShow;
+
+            if (!shouldShow)
+            {
+                return;
+            }
+
+            // Remove visuals for lines that no longer exist
+            var staleIds = _referenceLineVisuals.Keys.Except(_referenceLines.Keys).ToList();
+            foreach (var id in staleIds)
+            {
+                if (_referenceLineVisuals.Remove(id, out var staleVisual))
+                {
+                    ReferenceLinesHost.Children.Remove(staleVisual);
+                }
+            }
+
+            foreach (var refLine in _referenceLines.Values)
+            {
+                if (!_referenceLineVisuals.TryGetValue(refLine.Id, out var lineVisual))
+                {
+                    lineVisual = new BoxView
+                    {
+                        InputTransparent = true,
+                        Opacity = 0.55
+                    };
+                    _referenceLineVisuals[refLine.Id] = lineVisual;
+                    ReferenceLinesHost.Children.Add(lineVisual);
+                }
+
+                lineVisual.Color = refLine.Color;
+                lineVisual.IsVisible = true;
+
+                if (refLine.Orientation == ReferenceLineOrientation.Horizontal)
+                {
+                    var y = renderRect.Y + refLine.Position * scale;
+                    AbsoluteLayout.SetLayoutBounds(lineVisual, new Rect(
+                        renderRect.X, y, renderRect.Width, Math.Max(1, refLine.Thickness)));
+                }
+                else
+                {
+                    var x = renderRect.X + refLine.Position * scale;
+                    AbsoluteLayout.SetLayoutBounds(lineVisual, new Rect(
+                        x, renderRect.Y, Math.Max(1, refLine.Thickness), renderRect.Height));
+                }
+            }
+        }
+
         public void SetClip(projectFrameCut.DraftStuff.ClipElementUI? clip, AssetItem? asset)
         {
             CancelPendingCommitUpdate();
@@ -916,6 +1225,8 @@ namespace projectFrameCut.InteractableEditor
             _currentAsset = asset;
             _isClipPanInProgress = false;
             _isHandleResizeInProgress = false;
+            _panPreviewRect = null;
+            _panPreviewTextEntries = null;
             _activeTextEntryIndex = -1;
             if (clip == null)
             {
@@ -1091,6 +1402,8 @@ namespace projectFrameCut.InteractableEditor
             double scale = renderRect.Width / _videoWidth;
 
             UpdateRenderRectOverlay(renderRect);
+            UpdateReferenceLines(renderRect, scale);
+            UpdateBottomControlsVisibility(renderRect);
 
             if (_currentClip is not null)
             {
@@ -1125,8 +1438,11 @@ namespace projectFrameCut.InteractableEditor
                 // Clamp to keep UI stable.
                 w = Math.Clamp(w, MinSize, _videoWidth);
                 h = Math.Clamp(h, MinSize, _videoHeight);
-                x = Math.Clamp(x, 0, _videoWidth - w);
-                y = Math.Clamp(y, 0, _videoHeight - h);
+                if (!AllowClipOutOfBounds)
+                {
+                    x = Math.Clamp(x, 0, _videoWidth - w);
+                    y = Math.Clamp(y, 0, _videoHeight - h);
+                }
 
                 double displayX = renderRect.X + x * scale;
                 double displayY = renderRect.Y + y * scale;
@@ -1537,8 +1853,11 @@ namespace projectFrameCut.InteractableEditor
                 // Clamp to keep UI stable.
                 w = Math.Clamp(w, MinSize, _videoWidth);
                 h = Math.Clamp(h, MinSize, _videoHeight);
-                x = Math.Clamp(x, 0, _videoWidth - w);
-                y = Math.Clamp(y, 0, _videoHeight - h);
+                if (!AllowClipOutOfBounds)
+                {
+                    x = Math.Clamp(x, 0, _videoWidth - w);
+                    y = Math.Clamp(y, 0, _videoHeight - h);
+                }
 
                 double displayX = renderRect.X + x * scale;
                 double displayY = renderRect.Y + y * scale;
@@ -1714,66 +2033,106 @@ namespace projectFrameCut.InteractableEditor
             return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
         }
 
+        long _panEventTriggerCounter = 0;
+        double _stateOrigX = 0, _stateOrigY = 0;
+        double _stateOrigScaleX = 1, _stateOrigScaleY = 1, _stateOrigThickness = 1;
+
         private void OnClipPanUpdated(ClipOverlayState state, PanUpdatedEventArgs e)
         {
+            if (LockLayout) return;
+            LogDiagnostic($"[Pan] OnClipPanUpdated fired, id:{e.GestureId}, StatusType:{e.StatusType}, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
             if (_currentClip == null || !ReferenceEquals(state, _activeState) || _isTextClip) return;
-
+            _panEventTriggerCounter++;
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    if (_isClipPanInProgress)
+                    {
+                        // Platform fired a redundant Started during an ongoing gesture
+                        // (typically caused by layout changes in UpdateVisuals).
+                        // Ignore it to avoid resetting the pan origin.
+                        return;
+                    }
+
+                    _panEventTriggerCounter = 0;
+                    _panTimer.Restart();
                     _isClipPanInProgress = true;
                     _lastPanUpdateTicks = 0; // process first Running event immediately
+                    _stateOrigX = _activeState.Root.TranslationX;
+                    _stateOrigY = _activeState.Root.TranslationY;
                     GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
 
                 case GestureStatus.Running:
                     {
-                        // Get the render rectangle (video viewport on canvas)
+                        _activeState.Root.TranslationX = _stateOrigX + e.TotalX;
+                        _activeState.Root.TranslationY = _stateOrigY + e.TotalY;
+                        if (_panTimer.ElapsedTicks - _lastPanUpdateTicks < 200) return;
+
                         Rect renderRect = GetRenderRect();
-                        if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
-
-                        // Scale factor from screen to video coordinates
                         double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
-                        if (scale <= 0.001) break;
-
-                        // Convert gesture pan amount to video coordinates
+                        if (renderRect.Width <= 0 || renderRect.Height <= 0 || scale <= 0.001) break;
                         double deltaX = e.TotalX / scale;
                         double deltaY = e.TotalY / scale;
 
-                        // Calculate new position in video space
                         double newVisualX = _startX + deltaX;
                         double newVisualY = _startY + deltaY;
+                        double snapThresholdVideo = ComputeSnapThresholdVideo(scale);
+                        var unsnapped = new Rect(newVisualX, newVisualY, _startW, _startH);
+                        _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
 
-                        UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
-                        UpdateVisuals(true);
-                        RequestInteractivePreviewRefreshIfMissing(state);
+
+                        LogDiagnostic($"[Pan] Updated: triggered {_panEventTriggerCounter} times, Pos=({_panPreviewRect.Value.X:F1}, {_panPreviewRect.Value.Y:F1}), Delta=({deltaX:F1}, {deltaY:F1}) , elapsed:{_panTimer.Elapsed}, last update: {_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
+                        _lastPanUpdateTicks = _panTimer.ElapsedTicks;
                         break;
                     }
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isClipPanInProgress = false;
+                    if (_panPreviewRect.HasValue)
+                    {
+                        var r = _panPreviewRect.Value;
+                        UpdateClipEffects(r.X, r.Y, r.Width, r.Height);
+                        UpdateVisuals(true);
+                    }
+                    // Reset translation after committing the drag position to TargetX/Y
+                    _activeState.Root.TranslationX = 0;
+                    _activeState.Root.TranslationY = 0;
+                    UpdateVisuals(true);
                     GetCurrentRect(true, out var finalX, out var finalY, out _, out _);
-                    LogDiagnostic($"[Pan] Completed: FinalPos=({finalX:F1}, {finalY:F1})");
+                    LogDiagnostic($"[Pan] Completed: triggered {_panEventTriggerCounter} times, FinalPos=({finalX:F1}, {finalY:F1}), elapsed:{_panTimer.Elapsed}");
                     RequestCommitUpdate();
+                    RequestInteractivePreviewRefreshIfMissing(state);
                     break;
             }
         }
 
         private void OnTextEntryPanUpdated(ClipOverlayState state, int entryIndex, PanUpdatedEventArgs e)
         {
+            if (LockLayout) return;
             if (_currentClip == null || !_isTextClip || !ReferenceEquals(state, _activeState)) return;
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    if (_isClipPanInProgress)
+                    {
+                        // Redundant Started during an ongoing gesture; ignore.
+                        return;
+                    }
+
                     if (!TryPrepareTextEntryManipulation(entryIndex))
                     {
                         return;
                     }
 
+                    _panTimer.Restart();
                     _isClipPanInProgress = true;
+                    _lastPanUpdateTicks = 0; // process first Running event immediately
+                    _stateOrigX = _activeState.Root.TranslationX;
+                    _stateOrigY = _activeState.Root.TranslationY;
                     _isHandleResizeInProgress = false;
                     LogDiagnostic($"[TextEntryPan] Started: entry={entryIndex}, Rect=({_textEntryStartRect.X:F1}, {_textEntryStartRect.Y:F1}, {_textEntryStartRect.Width:F1}, {_textEntryStartRect.Height:F1})");
                     break;
@@ -1783,6 +2142,10 @@ namespace projectFrameCut.InteractableEditor
                     {
                         break;
                     }
+
+                    _activeState.Root.TranslationX = _stateOrigX + e.TotalX;
+                    _activeState.Root.TranslationY = _stateOrigY + e.TotalY;
+                    if (_panTimer.ElapsedTicks - _lastPanUpdateTicks < 200) return;
 
                     var renderRect = GetRenderRect();
                     if (renderRect.Width <= 0 || renderRect.Height <= 0)
@@ -1798,30 +2161,46 @@ namespace projectFrameCut.InteractableEditor
 
                     var deltaX = e.TotalX / scale;
                     var deltaY = e.TotalY / scale;
-                    if (!TryUpdateTextEntryPositionFromPan(entryIndex, deltaX, deltaY))
+                    var snapThresholdVideo = ComputeSnapThresholdVideo(scale);
+                    if (!TryUpdateTextEntryPositionFromPan(entryIndex, deltaX, deltaY, snapThresholdVideo))
                     {
                         break;
                     }
 
-                    UpdateVisuals(true);
-                    RequestInteractivePreviewRefreshIfMissing(state);
+
                     break;
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isClipPanInProgress = false;
+                    _activeState.Root.TranslationX = 0;
+                    _activeState.Root.TranslationY = 0;
+                    if (_panPreviewTextEntries is not null && _currentClip is not null)
+                    {
+                        UpdateVisuals(true);
+                        _currentClip.ExtraData!["TextEntries"] = _panPreviewTextEntries;
+                        _panPreviewTextEntries = null;
+                    }
                     RequestCommitUpdate();
+                    RequestInteractivePreviewRefreshIfMissing(state);
                     break;
             }
         }
 
         private void OnTextEntryResizePanUpdated(ClipOverlayState state, int entryIndex, ResizeHandle handle, PanUpdatedEventArgs e)
         {
+            if (LockLayout) return;
             if (_currentClip == null || !_isTextClip || !ReferenceEquals(state, _activeState)) return;
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    if (_isHandleResizeInProgress)
+                    {
+                        // Redundant Started during an ongoing gesture; ignore.
+                        return;
+                    }
+
                     if (!TryPrepareTextEntryManipulation(entryIndex))
                     {
                         return;
@@ -1854,8 +2233,9 @@ namespace projectFrameCut.InteractableEditor
 
                     var deltaX = e.TotalX / scale;
                     var deltaY = e.TotalY / scale;
+                    var snapThresholdVideo = ComputeSnapThresholdVideo(scale);
 
-                    if (!TryScaleTextEntryFromResize(entryIndex, handle, deltaX, deltaY))
+                    if (!TryScaleTextEntryFromResize(entryIndex, handle, deltaX, deltaY, snapThresholdVideo))
                     {
                         break;
                     }
@@ -1866,6 +2246,11 @@ namespace projectFrameCut.InteractableEditor
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isHandleResizeInProgress = false;
+                    if (_panPreviewTextEntries is not null && _currentClip is not null)
+                    {
+                        _currentClip.ExtraData!["TextEntries"] = _panPreviewTextEntries;
+                        _panPreviewTextEntries = null;
+                    }
                     state.SetPreviewView(null);
                     UpdateVisuals(true);
                     RequestInteractivePreviewRefresh();
@@ -1876,10 +2261,12 @@ namespace projectFrameCut.InteractableEditor
 
         private bool TryPrepareTextEntryManipulation(int entryIndex)
         {
-            if (!TryGetCurrentTextEntry(entryIndex, out _, out var entry))
+            if (!TryGetCurrentTextEntry(entryIndex, out var entries, out var entry))
             {
                 return false;
             }
+
+            _panPreviewTextEntries = entries.Select(e => e).ToList();
 
             if (!TryMeasureTextEntryRect(entry, out var x, out var y, out var w, out var h))
             {
@@ -1905,12 +2292,14 @@ namespace projectFrameCut.InteractableEditor
             return true;
         }
 
-        private bool TryUpdateTextEntryPositionFromPan(int entryIndex, double deltaX, double deltaY)
+        private bool TryUpdateTextEntryPositionFromPan(int entryIndex, double deltaX, double deltaY, double snapThresholdVideo)
         {
-            if (_currentClip == null || !TryGetCurrentTextEntry(entryIndex, out var entries, out var entry))
+            if (_currentClip == null || _panPreviewTextEntries is null || entryIndex < 0 || entryIndex >= _panPreviewTextEntries.Count)
             {
                 return false;
             }
+
+            var entry = _panPreviewTextEntries[entryIndex];
 
             var rectW = Math.Clamp(_textEntryStartRect.Width, MinSize, _videoWidth);
             var rectH = Math.Clamp(_textEntryStartRect.Height, MinSize, _videoHeight);
@@ -1922,22 +2311,32 @@ namespace projectFrameCut.InteractableEditor
             var nextOriginX = Math.Clamp(_textEntryStartOriginX + deltaX, minOriginX, maxOriginX);
             var nextOriginY = Math.Clamp(_textEntryStartOriginY + deltaY, minOriginY, maxOriginY);
 
-            entries[entryIndex] = entry with
+            if (snapThresholdVideo > 0)
+            {
+                double rectX = nextOriginX + _textEntryStartOffsetX;
+                double rectY = nextOriginY + _textEntryStartOffsetY;
+                var snapped = ApplyClipSnapping(new Rect(rectX, rectY, rectW, rectH), snapThresholdVideo, handle: null);
+                nextOriginX = snapped.X - _textEntryStartOffsetX;
+                nextOriginY = snapped.Y - _textEntryStartOffsetY;
+            }
+
+            _panPreviewTextEntries[entryIndex] = entry with
             {
                 x = (int)Math.Round(nextOriginX, MidpointRounding.AwayFromZero),
                 y = (int)Math.Round(nextOriginY, MidpointRounding.AwayFromZero)
             };
 
-            _currentClip.ExtraData["TextEntries"] = entries;
             return true;
         }
 
-        private bool TryScaleTextEntryFromResize(int entryIndex, ResizeHandle handle, double deltaX, double deltaY)
+        private bool TryScaleTextEntryFromResize(int entryIndex, ResizeHandle handle, double deltaX, double deltaY, double snapThresholdVideo)
         {
-            if (_currentClip == null || !TryGetCurrentTextEntry(entryIndex, out var entries, out var entry))
+            if (_currentClip == null || _panPreviewTextEntries is null || entryIndex < 0 || entryIndex >= _panPreviewTextEntries.Count)
             {
                 return false;
             }
+
+            var entry = _panPreviewTextEntries[entryIndex];
 
             var startX = _textEntryStartRect.X;
             var startY = _textEntryStartRect.Y;
@@ -1985,6 +2384,15 @@ namespace projectFrameCut.InteractableEditor
             nextX = Math.Clamp(nextX, 0, _videoWidth - nextW);
             nextY = Math.Clamp(nextY, 0, _videoHeight - nextH);
 
+            if (snapThresholdVideo > 0)
+            {
+                var snapped = ApplyClipSnapping(new Rect(nextX, nextY, nextW, nextH), snapThresholdVideo, handle);
+                nextX = snapped.X;
+                nextY = snapped.Y;
+                nextW = snapped.Width;
+                nextH = snapped.Height;
+            }
+
             var scale = nextW / Math.Max(startW, 0.0001);
             var fontSize = Math.Max(MinTextFontSize, _textEntryStartFontSize * (float)scale);
 
@@ -2000,7 +2408,7 @@ namespace projectFrameCut.InteractableEditor
             nextOriginX = Math.Clamp(nextOriginX, -nextOffsetX, _videoWidth - nextW - nextOffsetX);
             nextOriginY = Math.Clamp(nextOriginY, -nextOffsetY, _videoHeight - nextH - nextOffsetY);
 
-            entries[entryIndex] = entry with
+            _panPreviewTextEntries[entryIndex] = entry with
             {
                 x = (int)Math.Round(nextOriginX, MidpointRounding.AwayFromZero),
                 y = (int)Math.Round(nextOriginY, MidpointRounding.AwayFromZero),
@@ -2009,7 +2417,6 @@ namespace projectFrameCut.InteractableEditor
                 strokeWidth = strokeWidth
             };
 
-            _currentClip.ExtraData["TextEntries"] = entries;
             return true;
         }
 
@@ -2039,40 +2446,52 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnResizePanUpdated(ClipOverlayState state, ResizeHandle handle, PanUpdatedEventArgs e)
         {
+            if (LockLayout) return;
+            LogDiagnostic($"[Pan] OnResizePanUpdated fired, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
             if (_currentClip == null || !ReferenceEquals(state, _activeState)) return;
-
             if (_isTextClip) return;  // Can't resize a TextClip
+            bool allowFreeScale = IsAllowFreeScaleResizeEnabled(_currentClip);
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    if (_isHandleResizeInProgress)
+                    {
+                        // Redundant Started during an ongoing gesture; ignore.
+                        return;
+                    }
+
+                    _panTimer.Restart();
+                    _lastPanUpdateTicks = 0;
                     _isHandleResizeInProgress = true;
                     GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
+                    _stateOrigX = _activeState.Root.TranslationX;
+                    _stateOrigY = _activeState.Root.TranslationY;
+                    _stateOrigScaleX = _activeState.Root.ScaleX;
+                    _stateOrigScaleY = _activeState.Root.ScaleY;
+                    _stateOrigThickness = _activeState.ClipVisual.StrokeThickness;
+                    _activeState.SizeLabel.ScaleX = 1;
+                    _activeState.SizeLabel.ScaleY = 1;
                     LogDiagnostic($"[Resize] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}x{_startH:F1})");
                     state.SetPreviewView(null);
-                    UpdateVisuals(true);
                     break;
 
                 case GestureStatus.Running:
                     _isHandleResizeInProgress = true;
-                    // Get the render rectangle (video viewport on canvas)
+
                     Rect renderRect = GetRenderRect();
                     if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
 
-                    // Scale factor from screen to video coordinates
                     double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
                     if (scale <= 0.001) break;
 
-                    // Convert gesture delta to video coordinates
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
 
                     double newX = _startX, newY = _startY, newW = _startW, newH = _startH;
-                    bool allowFreeScale = IsAllowFreeScaleResizeEnabled(_currentClip);
 
                     if (handle == ResizeHandle.TopLeft)
                     {
-                        // Top-Left: resize from top-left corner
                         newW = Math.Max(MinSize, _startW - dx);
                         newH = Math.Max(MinSize, _startH - dy);
                         newX = _startX + (_startW - newW);
@@ -2080,21 +2499,18 @@ namespace projectFrameCut.InteractableEditor
                     }
                     else if (handle == ResizeHandle.TopRight)
                     {
-                        // Top-Right: resize from top-right corner
                         newW = Math.Max(MinSize, _startW + dx);
                         newH = Math.Max(MinSize, _startH - dy);
                         newY = _startY + (_startH - newH);
                     }
                     else if (handle == ResizeHandle.BottomLeft)
                     {
-                        // Bottom-Left: resize from bottom-left corner
                         newW = Math.Max(MinSize, _startW - dx);
                         newH = Math.Max(MinSize, _startH + dy);
                         newX = _startX + (_startW - newW);
                     }
                     else if (handle == ResizeHandle.BottomRight)
                     {
-                        // Bottom-Right: resize from bottom-right corner
                         newW = Math.Max(MinSize, _startW + dx);
                         newH = Math.Max(MinSize, _startH + dy);
                     }
@@ -2104,15 +2520,74 @@ namespace projectFrameCut.InteractableEditor
                         ApplyAspectLockedResize(handle, ref newX, ref newY, ref newW, ref newH);
                     }
 
-                    UpdateClipEffects(newX, newY, newW, newH);
-                    UpdateVisuals(true);
+                    double snapThresholdVideo = ComputeSnapThresholdVideo(scale);
+                    var snapped = ApplyClipSnapping(new Rect(newX, newY, newW, newH), snapThresholdVideo, handle);
+                    newX = snapped.X;
+                    newY = snapped.Y;
+                    newW = snapped.Width;
+                    newH = snapped.Height;
+                    _panPreviewRect = snapped;
+
+
+
+                    // Visual-only transform on Root (Scale + Translation), matching the clip‑pan
+                    // pattern where the UI is updated via lightweight transforms during drag
+                    // and the real effect is applied only on completion.
+                    double sx = newW / Math.Max(_startW, 0.001);
+                    double sy = newH / Math.Max(_startH, 0.001);
+                    _activeState.Root.ScaleX = _stateOrigScaleX * sx;
+                    _activeState.Root.ScaleY = _stateOrigScaleY * sy;
+                    _activeState.Root.TranslationX = _stateOrigX + scale * ((newX - _startX) + (newW - _startW) / 2);
+                    _activeState.Root.TranslationY = _stateOrigY + scale * ((newY - _startY) + (newH - _startH) / 2);
+                    _activeState.HandleBL.ScaleX = 1 / (_stateOrigScaleX * sx);
+                    _activeState.HandleBL.ScaleY = 1 / (_stateOrigScaleY * sy);
+                    _activeState.HandleBR.ScaleX = 1 / (_stateOrigScaleX * sx);
+                    _activeState.HandleBR.ScaleY = 1 / (_stateOrigScaleY * sy);
+                    _activeState.HandleTL.ScaleX = 1 / (_stateOrigScaleX * sx);
+                    _activeState.HandleTL.ScaleY = 1 / (_stateOrigScaleY * sy);
+                    _activeState.HandleTR.ScaleX = 1 / (_stateOrigScaleX * sx);
+                    _activeState.HandleTR.ScaleY = 1 / (_stateOrigScaleY * sy);
+                    _activeState.ClipVisual.StrokeThickness = _stateOrigThickness * (1 / (_stateOrigScaleY * sy));
+                    _activeState.SizeLabel.Text = $"{Math.Round(newW)} x {Math.Round(newH)}";
+                    _activeState.SizeLabel.ScaleX = 1 / (_stateOrigScaleX * sx);
+                    _activeState.SizeLabel.ScaleY = 1 / (_stateOrigScaleY * sy);
+                    _activeState.SizeLabel.IsVisible = true;
+                    _lastPanUpdateTicks = _panTimer.ElapsedTicks;
                     break;
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
                     _isHandleResizeInProgress = false;
+
+                    // Reset transforms applied during drag BEFORE UpdateVisuals so that
+                    // SetLayoutBounds works with identity scale/translation.  If transforms
+                    // are reset after UpdateVisuals, the stale Scale values distort the
+                    // layout and produce a visible "snap back" when Scale is finally reset.
+                    _activeState.Root.ScaleX = _stateOrigScaleX;
+                    _activeState.Root.ScaleY = _stateOrigScaleY;
+                    _activeState.Root.TranslationX = _stateOrigX;
+                    _activeState.Root.TranslationY = _stateOrigY;
+                    _activeState.HandleBL.ScaleX = 1;
+                    _activeState.HandleBL.ScaleY = 1;
+                    _activeState.HandleBR.ScaleX = 1;
+                    _activeState.HandleBR.ScaleY = 1;
+                    _activeState.HandleTL.ScaleX = 1;
+                    _activeState.HandleTL.ScaleY = 1;
+                    _activeState.HandleTR.ScaleX = 1;
+                    _activeState.HandleTR.ScaleY = 1;
+                    _activeState.SizeLabel.ScaleX = 1;
+                    _activeState.SizeLabel.ScaleY = 1;
+                    _activeState.ClipVisual.StrokeThickness = _stateOrigThickness;
+                    _activeState.SizeLabel.IsVisible = false;
+
+                    if (_panPreviewRect.HasValue)
+                    {
+                        var r = _panPreviewRect.Value;
+                        UpdateClipEffects(r.X, r.Y, r.Width, r.Height);
+                        _panPreviewRect = null;
+                    }
                     GetCurrentRect(true, out var finalX, out var finalY, out var finalW, out var finalH);
-                    LogDiagnostic($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1})");
+                    LogDiagnostic($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1}), elapsed:{_panTimer.Elapsed}");
                     state.SetPreviewView(null);
                     UpdateVisuals(true);
                     RequestInteractivePreviewRefresh();
@@ -2224,6 +2699,195 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return _startW / Math.Max(_startH, 0.0001);
+        }
+
+        private List<double> GetHorizontalSnapTargets()
+        {
+            var targets = new List<double>(3 + _referenceLines.Count);
+            targets.Add(0);
+            targets.Add(_videoWidth);
+            targets.Add(_videoWidth / 2.0);
+            foreach (var rl in _referenceLines.Values)
+            {
+                if (rl.Orientation == ReferenceLineOrientation.Vertical)
+                    targets.Add(rl.Position);
+            }
+
+            return targets;
+        }
+
+        private List<double> GetVerticalSnapTargets()
+        {
+            var targets = new List<double>(3 + _referenceLines.Count);
+            targets.Add(0);
+            targets.Add(_videoHeight);
+            targets.Add(_videoHeight / 2.0);
+            foreach (var rl in _referenceLines.Values)
+            {
+                if (rl.Orientation == ReferenceLineOrientation.Horizontal)
+                    targets.Add(rl.Position);
+            }
+
+            return targets;
+        }
+
+        private double ComputeSnapThresholdVideo(double scale)
+        {
+            return EnableSnapping && scale > 0.001
+                ? SnapThresholdDisplayPx / scale
+                : 0;
+        }
+
+        private Rect ApplyClipSnapping(Rect rect, double snapThresholdVideo, ResizeHandle? handle)
+        {
+            if (snapThresholdVideo <= 0)
+                return rect;
+
+            double x = rect.X, y = rect.Y, w = rect.Width, h = rect.Height;
+
+            bool snapLeft, snapRight, snapCenterX;
+            bool snapTop, snapBottom, snapCenterY;
+
+            if (handle == null)
+            {
+                snapLeft = snapRight = snapCenterX = true;
+                snapTop = snapBottom = snapCenterY = true;
+            }
+            else
+            {
+                snapCenterX = false;
+                snapCenterY = false;
+                switch (handle.Value)
+                {
+                    case ResizeHandle.TopLeft:
+                        snapLeft = true; snapRight = false;
+                        snapTop = true; snapBottom = false;
+                        break;
+                    case ResizeHandle.TopRight:
+                        snapLeft = false; snapRight = true;
+                        snapTop = true; snapBottom = false;
+                        break;
+                    case ResizeHandle.BottomLeft:
+                        snapLeft = true; snapRight = false;
+                        snapTop = false; snapBottom = true;
+                        break;
+                    case ResizeHandle.BottomRight:
+                    default:
+                        snapLeft = false; snapRight = true;
+                        snapTop = false; snapBottom = true;
+                        break;
+                }
+            }
+
+            if (snapLeft || snapRight || snapCenterX)
+            {
+                double bestDist = snapThresholdVideo;
+                double bestAdjustX = 0;
+                double? bestW = null;
+
+                var hTargets = GetHorizontalSnapTargets();
+                foreach (var target in hTargets)
+                {
+                    if (snapLeft)
+                    {
+                        double dist = Math.Abs(x - target);
+                        if (dist < bestDist) { bestDist = dist; bestAdjustX = target - x; bestW = null; }
+                    }
+
+                    if (snapRight)
+                    {
+                        double right = x + w;
+                        double dist = Math.Abs(right - target);
+                        if (dist < bestDist)
+                        {
+                            bestDist = dist;
+                            if (handle == null)
+                            {
+                                bestAdjustX = target - w - x;
+                                bestW = null;
+                            }
+                            else
+                            {
+                                bestAdjustX = 0;
+                                bestW = Math.Max(MinSize, target - x);
+                            }
+                        }
+                    }
+
+                    if (snapCenterX)
+                    {
+                        double cx = x + w / 2.0;
+                        double dist = Math.Abs(cx - target);
+                        if (dist < bestDist) { bestDist = dist; bestAdjustX = target - w / 2.0 - x; bestW = null; }
+                    }
+                }
+
+                if (bestDist < snapThresholdVideo)
+                {
+                    x += bestAdjustX;
+                    if (bestW.HasValue)
+                        w = bestW.Value;
+                }
+            }
+
+            if (snapTop || snapBottom || snapCenterY)
+            {
+                double bestDist = snapThresholdVideo;
+                double bestAdjustY = 0;
+                double? bestH = null;
+
+                var vTargets = GetVerticalSnapTargets();
+                foreach (var target in vTargets)
+                {
+                    if (snapTop)
+                    {
+                        double dist = Math.Abs(y - target);
+                        if (dist < bestDist) { bestDist = dist; bestAdjustY = target - y; bestH = null; }
+                    }
+
+                    if (snapBottom)
+                    {
+                        double bottom = y + h;
+                        double dist = Math.Abs(bottom - target);
+                        if (dist < bestDist)
+                        {
+                            bestDist = dist;
+                            if (handle == null)
+                            {
+                                bestAdjustY = target - h - y;
+                                bestH = null;
+                            }
+                            else
+                            {
+                                bestAdjustY = 0;
+                                bestH = Math.Max(MinSize, target - y);
+                            }
+                        }
+                    }
+
+                    if (snapCenterY)
+                    {
+                        double cy = y + h / 2.0;
+                        double dist = Math.Abs(cy - target);
+                        if (dist < bestDist) { bestDist = dist; bestAdjustY = target - h / 2.0 - y; bestH = null; }
+                    }
+                }
+
+                if (bestDist < snapThresholdVideo)
+                {
+                    y += bestAdjustY;
+                    if (bestH.HasValue)
+                        h = bestH.Value;
+                }
+            }
+
+            if (!AllowClipOutOfBounds)
+            {
+                x = Math.Clamp(x, 0, _videoWidth - w);
+                y = Math.Clamp(y, 0, _videoHeight - h);
+            }
+
+            return new Rect(x, y, w, h);
         }
 
         private void RequestCommitUpdate()
@@ -2390,6 +3054,16 @@ namespace projectFrameCut.InteractableEditor
 
         private void GetCurrentRect(bool ignorePositionProvider, out double x, out double y, out double w, out double h)
         {
+            if (_panPreviewRect.HasValue && ignorePositionProvider)
+            {
+                var r = _panPreviewRect.Value;
+                x = r.X;
+                y = r.Y;
+                w = r.Width;
+                h = r.Height;
+                return;
+            }
+
             x = 0;
             y = 0;
             w = _baseRect.Width > 0 ? _baseRect.Width : _videoWidth;
@@ -2475,6 +3149,13 @@ namespace projectFrameCut.InteractableEditor
         private bool TryGetTextEntries(ClipElementUI clip, out List<TextClipEntry> entries)
         {
             entries = null!;
+
+            if (ReferenceEquals(clip, _currentClip) && _panPreviewTextEntries is not null)
+            {
+                entries = _panPreviewTextEntries;
+                return true;
+            }
+
             if (clip.ExtraData == null || !clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
             {
                 return false;
@@ -2734,8 +3415,11 @@ namespace projectFrameCut.InteractableEditor
             // Clamp in video coordinate space.
             w = Math.Clamp(w, MinSize, _videoWidth);
             h = Math.Clamp(h, MinSize, _videoHeight);
-            x = Math.Clamp(x, 0, _videoWidth - w);
-            y = Math.Clamp(y, 0, _videoHeight - h);
+            if (!AllowClipOutOfBounds)
+            {
+                x = Math.Clamp(x, 0, _videoWidth - w);
+                y = Math.Clamp(y, 0, _videoHeight - h);
+            }
 
             _currentClip.TargetX = (int)Math.Round(x, MidpointRounding.AwayFromZero);
             _currentClip.TargetY = (int)Math.Round(y, MidpointRounding.AwayFromZero);
@@ -2768,6 +3452,31 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return false;
+        }
+
+        public void AddAReferenceLine(ReferenceLineOrientation? orientation)
+        {
+            if (orientation is null)
+            {
+                _isPlacingReferenceLine = false;
+                return;
+            }
+            _pendingReferenceLineOrientation = orientation ?? ReferenceLineOrientation.Horizontal;
+            _isPlacingReferenceLine = true;
+        }
+
+        private async void RefreshButton_Clicked(object sender, EventArgs e)
+        {
+            UpdateCanvasSize(Width, Height, true);
+
+            if (StaticPreviewOverlayImage.IsVisible)
+            {
+                await (_updateCallback?.Invoke() ?? Task.CompletedTask);
+            }
+            else
+            {
+                UpdateVisuals(false);
+            }
         }
 
         private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, out bool value)
@@ -2830,6 +3539,70 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return Math.Max(1, fallback);
+        }
+
+        private void UpdateBottomControlsVisibility(Rect renderRect)
+        {
+            var bottomGap = _canvasHeight - (renderRect.Y + renderRect.Height);
+            _autoHideBottomControls = bottomGap < 1d;
+
+            if (!_autoHideBottomControls)
+            {
+                CancelHideBottomControlsDebounce();
+                LayoutOptionsBar.IsVisible = true;
+                RefreshButton.IsVisible = true;
+            }
+            else
+            {
+                // 默认隐藏，鼠标进入 BottomControlsHost 区域时才显示
+                LayoutOptionsBar.IsVisible = false;
+                RefreshButton.IsVisible = false;
+            }
+        }
+
+        private void OnBottomControlsHostEntered(object? sender, PointerEventArgs e)
+        {
+            if (!_autoHideBottomControls)
+            {
+                return;
+            }
+
+            CancelHideBottomControlsDebounce();
+            LayoutOptionsBar.IsVisible = true;
+            RefreshButton.IsVisible = true;
+        }
+
+        private async void OnBottomControlsHostExited(object? sender, PointerEventArgs e)
+        {
+            if (!_autoHideBottomControls)
+            {
+                return;
+            }
+
+            CancelHideBottomControlsDebounce();
+            var cts = new CancellationTokenSource();
+            _hideBottomControlsCts = cts;
+
+            try
+            {
+                await Task.Delay(250, cts.Token);
+                LayoutOptionsBar.IsVisible = false;
+                RefreshButton.IsVisible = false;
+            }
+            catch (OperationCanceledException)
+            {
+                // 鼠标在延迟期间重新进入，取消隐藏
+            }
+        }
+
+        private void CancelHideBottomControlsDebounce()
+        {
+            var cts = Interlocked.Exchange(ref _hideBottomControlsCts, null);
+            if (cts is not null)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
         }
 
         /// <summary>

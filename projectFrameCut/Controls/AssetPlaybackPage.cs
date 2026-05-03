@@ -156,6 +156,16 @@ public partial class AssetPlaybackPage : ContentPage
     {
         if (!string.IsNullOrWhiteSpace(asset.Path) && File.Exists(asset.Path))
         {
+            _currentMediaPlayer = new MediaElement
+            {
+                Source = MediaSource.FromFile(asset.Path),
+                ShouldAutoPlay = true,
+                ShouldShowPlaybackControls = true,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+                MetadataTitle = asset.Name,
+            };
+
             var content = new Grid
             {
                 Padding = 8,
@@ -166,7 +176,7 @@ public partial class AssetPlaybackPage : ContentPage
                 }
             };
             // For audio, show thumbnail or icon alongside the media player
-            if (!string.IsNullOrWhiteSpace(asset.ThumbnailPath) && File.Exists(asset.ThumbnailPath))
+            if (!OperatingSystem.IsAndroid() && !string.IsNullOrWhiteSpace(asset.ThumbnailPath) && File.Exists(asset.ThumbnailPath))
             {
                 var imageViewer = new Image
                 {
@@ -177,18 +187,15 @@ public partial class AssetPlaybackPage : ContentPage
                     VerticalOptions = LayoutOptions.Fill
                 };
                 content.Add(imageViewer, 0, 0);
+                content.Add(_currentMediaPlayer, 0, 1);
+                contentArea.Add(content);
+            }
+            else
+            {
+                contentArea.Add(_currentMediaPlayer);
             }
 
-            _currentMediaPlayer = new MediaElement
-            {
-                Source = MediaSource.FromFile(asset.Path),
-                ShouldAutoPlay = true,
-                ShouldShowPlaybackControls = true,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill
-            };
-            content.Add(_currentMediaPlayer, 0, 1);
-            contentArea.Add(content);
+
         }
         else
         {

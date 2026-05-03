@@ -69,23 +69,8 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, Func<IEffectBundle>> GetAvailableEffectBundles()
         {
-            var bundles = new Dictionary<string, Func<IEffectBundle>>();
-            if (!PluginManager.Inited) return bundles;
-
-            foreach (var plugin in PluginManager.LoadedPlugins.Values)
-            {
-                if (plugin is IApplicationPluginBase appPlugin)
-                {
-                    foreach (var kvp in appPlugin.EffectBundleProvider)
-                    {
-                        if (!bundles.ContainsKey(kvp.Key))
-                        {
-                            bundles.Add(kvp.Key, kvp.Value);
-                        }
-                    }
-                }
-            }
-            return bundles;
+            if (!PluginManager.Inited) return [];
+            return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).ToDictionary(k => k.Key, v => v.Value);
         }
 
         public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ", bool haveSubFix = true)

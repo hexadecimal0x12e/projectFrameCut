@@ -244,7 +244,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand SaveCommand { get; private set; }
     public ICommand GotoCommand { get; private set; }
     public ICommand ManageJobsCommand { get; private set; }
-    public ICommand ClosePopupCommand { get; private set; }
+    public ICommand EscapeCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
     public ICommand ArrowRightCommand { get; private set; }
@@ -257,11 +257,15 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand ManageWindowCommand { get; private set; }
     public ICommand ResetMultiWindowViewCommand { get; private set; }
     public ICommand AddTransformToNeighborsCommand { get; private set; }
+    public ICommand AddHorizontalReferenceLineCommand { get; private set; }
+    public ICommand AddVerticalReferenceLineCommand { get; private set; }
+    public ICommand ClearReferenceLinesCommand { get; private set; }
     public ICommand ZoomCommand { get; private set; }
 
     public ClipElementUI? SelectedClip => _selected;
     public event EventHandler? SelectedClipChanged;
     public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
+    public bool IsPopupShowing => Popup.IsVisible;
     #endregion
 
     #region options
@@ -361,6 +365,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
+        ClipEditor.ConfigureReferenceLinesChanged(() =>
+        {
+            ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
+            return Task.CompletedTask;
+        });
         HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
@@ -606,7 +615,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
         ResetMultiWindowViewCommand = new Command(() => ResetLayout());
         ZoomCommand = new Command<string?>(async (param) => await Task.FromResult(param switch { "+" => PerformZoom(1.2), "0" => PerformZoom(1.0 / tracksZoomOffest), "-" => PerformZoom(1.0 / 1.2), _ => -1 }));
-        ClosePopupCommand = new Command(async () => { if (IsClipMoving) { CancelPendingClipPlacement(); SetStateOK(); SetStatusText(Localized.DraftPage_Tasks_Status_Canceled); } else if (_pendingClipPlacementFactory is not null) { CancelPendingClipPlacement(); } else { await HidePopup(); } });
+        AddHorizontalReferenceLineCommand = new Command(() =>
+        {
+            ClipEditor.AddAReferenceLine(InteractableEditor.InteractableEditor.ReferenceLineOrientation.Horizontal);
+            SetStatusText(Localized.DraftPage_MenuBar_View_ReferenceLines_AddHint);
+        });
+        AddVerticalReferenceLineCommand = new Command(() =>
+        {
+            ClipEditor.AddAReferenceLine(InteractableEditor.InteractableEditor.ReferenceLineOrientation.Vertical);
+            SetStatusText(Localized.DraftPage_MenuBar_View_ReferenceLines_AddHint);
+        });
+        ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
+        EscapeCommand = new Command(async () => { if (IsClipMoving) { CancelPendingClipPlacement(); SetStateOK(); SetStatusText(Localized.DraftPage_Tasks_Status_Canceled); } else if (_pendingClipPlacementFactory is not null) { CancelPendingClipPlacement(); } else if (ClipEditor.IsPlacingReferenceLine) { ClipEditor.AddAReferenceLine(null); } else { await HidePopup(); SetStateOK(); SetStatusText(Localized.DraftPage_EverythingFine); } });
 
     }
 
@@ -665,6 +685,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewer.TempPath = Path.Combine(WorkingPath, "thumbs");
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
+
+        if (ProjectInfo.Properties.TryGetValue("ReferenceLines", out var refLinesJson))
+        {
+            ClipEditor.RestoreReferenceLinesFromJson(refLinesJson);
+        }
 
         ProjectInfo.NormallyExited = false;
 
@@ -889,7 +914,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         AssisstantSubWindow.Content = ChatSessionsView;
         MainMultiWindowView.CloseWindow(AssisstantSubWindow);
-        HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+        HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
         MainMultiWindowView.CloseWindow(HistorySubWindow);
         //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
@@ -2442,13 +2467,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private Task OnClipEditorBlankAreaTappedAsync()
     {
-        if (_selectedClipIds.Count == 0 && _selected is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        ClearSelectionInternal();
-        return RefreshSelectionUiAsync();
+        // 不再在点击空白区域时取消选中，避免用户在预览区或其他地方误触导致
+        // 属性面板被清空，从而无法继续编辑 Clip 属性。取消选中请用 Unselect 按钮。
+        return Task.CompletedTask;
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -4359,7 +4380,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Clips[clip.Id] = clip;
 
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, SourceId = clip.Id, SourceName = clip.DisplayName, DetailInfo = e.Id, NoSave = false });
-        HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+        HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
 
 
         await ReRenderUI();
@@ -4953,7 +4974,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         {
                             // Content was lost/cleared - reconstruct it
                             Log($"Warning: Clip {clip.Id} Content is null in ReRenderUI, reconstructing...");
-                            
+
                             var titleLabel = new Microsoft.Maui.Controls.Label
                             {
                                 Text = clip.DisplayName,
@@ -6941,7 +6962,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             await Save(false, e);
             try
             {
-                HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+                HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
             }
             catch { }
         }
@@ -7230,7 +7251,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.SnapshotIDMapping[snapshotId] = (PreviousSnapshotID, Guid.Empty);
             if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
             {
-                ProjectInfo.SnapshotIDMapping[PreviousSnapshotID] = (prevEntry.prevoius, snapshotId);
+                ProjectInfo.SnapshotIDMapping[PreviousSnapshotID] = (prevEntry.Previous, snapshotId);
             }
             ProjectInfo.LastSnapshotID = snapshotId;
             CurrentSnapshotID = snapshotId;
@@ -7383,24 +7404,24 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (CurrentSnapshotID == Guid.Empty
             || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
-            || entry.prevoius == Guid.Empty)
+            || entry.Previous == Guid.Empty)
         {
             return null;
         }
 
-        return new SaveSlotMeta { SnapshotID = entry.prevoius, SavedAtUtc = DateTime.MinValue };
+        return new SaveSlotMeta { SnapshotID = entry.Previous, SavedAtUtc = DateTime.MinValue };
     }
 
     private SaveSlotMeta? GetNextSlot()
     {
         if (CurrentSnapshotID == Guid.Empty
             || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
-            || entry.next == Guid.Empty)
+            || entry.Next == Guid.Empty)
         {
             return null;
         }
 
-        return new SaveSlotMeta { SnapshotID = entry.next, SavedAtUtc = DateTime.MinValue };
+        return new SaveSlotMeta { SnapshotID = entry.Next, SavedAtUtc = DateTime.MinValue };
     }
 
     private void PruneNewerSaveSlotsFromCurrent()
@@ -7408,9 +7429,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         var nextId = CurrentSnapshotID;
         while (nextId != Guid.Empty
                && ProjectInfo.SnapshotIDMapping.TryGetValue(nextId, out var entry)
-               && entry.next != Guid.Empty)
+               && entry.Next != Guid.Empty)
         {
-            nextId = entry.next;
+            nextId = entry.Next;
             DeleteSlotDirectory(nextId);
             ProjectInfo.SnapshotIDMapping.Remove(nextId);
         }
@@ -7418,7 +7439,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (CurrentSnapshotID != Guid.Empty
             && ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var curEntry))
         {
-            ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = (curEntry.prevoius, Guid.Empty);
+            ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = (curEntry.Previous, Guid.Empty);
         }
     }
 
@@ -7430,7 +7451,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         while (id != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(id, out var entry))
         {
             count++;
-            id = entry.prevoius;
+            id = entry.Previous;
         }
 
         // Delete oldest slots until we're within the limit
@@ -7440,9 +7461,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             var oldest = CurrentSnapshotID;
             while (oldest != Guid.Empty
                    && ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oe)
-                   && oe.prevoius != Guid.Empty)
+                   && oe.Previous != Guid.Empty)
             {
-                oldest = oe.prevoius;
+                oldest = oe.Previous;
             }
 
             if (oldest == Guid.Empty || !ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oldestEntry))
@@ -7451,10 +7472,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             // Unlink the oldest node
-            var nextAfterOldest = oldestEntry.next;
+            var nextAfterOldest = oldestEntry.Next;
             if (nextAfterOldest != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(nextAfterOldest, out var nextEntry))
             {
-                ProjectInfo.SnapshotIDMapping[nextAfterOldest] = (Guid.Empty, nextEntry.next);
+                ProjectInfo.SnapshotIDMapping[nextAfterOldest] = (Guid.Empty, nextEntry.Next);
             }
 
             DeleteSlotDirectory(oldest);
@@ -7561,7 +7582,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             EnsureContinuousTrackIndices();
             CurrentSnapshotID = snapshotId;
             PreviousSnapshotID = draftJson.PreviousSnapshot;
-            HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+            HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
             DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 
@@ -7994,7 +8015,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         // Clip overlay coordinates are always stored in project resolution.
-        ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
+        ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight, true);
 
         await Dispatcher.DispatchAsync(() =>
         {

@@ -61,6 +61,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// The save slot indicator. -1 means unknown.
         /// </summary>
+        [Obsolete("Use LastSnapshotID and SnapshotIDMapping instead.")]
         public int SaveSlotIndicator = -1;
         /// <summary>
         /// Get or set the last changed time of the project.
@@ -79,9 +80,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management. 
         /// </summary>
-        public Dictionary<Guid, (Guid prevoius, Guid next)> SnapshotIDMapping = new();
+        public Dictionary<Guid, SnapshotIDMappingStructure> SnapshotIDMapping { get; set; } = new();
+
+        public sealed record SnapshotIDMappingStructure
+        {
+            public Guid Previous { get; set; }
+            public Guid Next { get; set; }
+
+            public static implicit operator SnapshotIDMappingStructure((Guid previous, Guid next) tuple)
+            {
+                return new SnapshotIDMappingStructure { Previous = tuple.previous, Next = tuple.next };
+            }
+            public static implicit operator (Guid previous, Guid next)(SnapshotIDMappingStructure tuple)
+            {
+                return (tuple.Previous, tuple.Next);
+            }
+        }
     }
-    
+
 
     /// <summary>
     /// Represents the structure of a draft in JSON format.

@@ -1,5 +1,3 @@
-
-
 using LocalizedResources;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
@@ -20,10 +18,25 @@ namespace projectFrameCut.DraftStuff;
 
 public class DraftSettingPage
 {
+    #region init
+
     private const string SaveSlotDirectoryName = "saveSlots";
     private readonly string? standaloneProjectPath;
 
     private bool IsStandaloneJsonMode => !string.IsNullOrWhiteSpace(standaloneProjectPath);
+
+    public View? HistoryTabContent { get; private set; }
+
+    private Guid _selectedSnapshotId = Guid.Empty;
+    private HistoryGraphNode? _selectedSnapshot = null;
+    private List<HistoryGraphNode> _currentGraphNodes = [];
+    private List<HistoryGraphRowDrawable> _currentRowDrawables = [];
+    private List<GraphicsView> _currentRowGraphicsViews = [];
+    private Border? _detailsPanel;
+    private Label? _detailsSavedAtLabel;
+    private Label? _detailsAuthorLabel;
+    private Label? _detailsChangeReasonLabel;
+    private Button? _detailsRestoreButton;
 
     private sealed class SaveSlotHistoryItem
     {
@@ -66,6 +79,12 @@ public class DraftSettingPage
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.DraftSettingPage_Tab_History,
+                Tag = "history",
+                Content = BuildHistoryGraphTab()
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.MainSettingsPage_Tab_Misc,
                 Content = BuildAdvancedTab()
             });
@@ -77,11 +96,13 @@ public class DraftSettingPage
             Header = Localized.MainSettingsPage_Tab_General,
             Content = BuildGeneralTab()
         });
+        var historyTabContent = BuildHistoryGraphTab();
+        HistoryTabContent = historyTabContent;
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.DraftSettingPage_Tab_History,
             Tag = "history",
-            Content = BuildHistoryTab()
+            Content = historyTabContent
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
@@ -96,7 +117,202 @@ public class DraftSettingPage
 
     }
 
-    public View BuildHistoryTab()
+    #endregion
+
+    #region general
+    public ScrollView BuildGeneralTab()
+    {
+        var enableHDR = parent.ProjectInfo.Properties.TryGetValue("EnableHDR", out var eh) && bool.TryParse(eh, out var result) ? result : false;
+        PropertyPanelBuilder ppb = new();
+        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
+        ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
+        ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, enableHDR, null);
+        ppb.AppendWhen(enableHDR, c => c.AddEntry("HdrMaximumBrightness", Localized.DraftSettingPage_General_HDRLimit, parent.ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var hdrMaxiumBrightness) ? hdrMaxiumBrightness : "1000", null, null));
+        ppb.AppendWhen(enableHDR, c => c.AddEntry("sdrClipBrightness", Localized.DraftSettingPage_General_SDRBrightness,
+            parent.ProjectInfo.Properties.TryGetValue("SdrClipBrightness", out var sdrClipBrightness)
+                ? sdrClipBrightness
+                : (parent.ProjectInfo.Properties.TryGetValue("sdrClipBrightness", out var legacySdrClipBrightness)
+                    ? legacySdrClipBrightness
+                    : "203"),
+            null, null));
+        return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
+    }
+
+    public ScrollView BuildAdvancedTab()
+    {
+        if (IsStandaloneJsonMode)
+        {
+            return BuildStandaloneAdvancedTab();
+        }
+
+        PropertyPanelBuilder ppb = new();
+        ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle));
+        foreach (var item in parent.ProjectInfo.UserDefinedProperties)
+        {
+            ppb.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default);
+        }
+        ppb.AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
+        {
+            var key = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, Localized._Confirm, Localized._Cancel);
+            ppb.AddEntry($"CustomOption,{key}", key, "", Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default);
+            if (string.IsNullOrWhiteSpace(key)) return;
+            parent.ProjectInfo.UserDefinedProperties.Add(key, "");
+            tabView.SelectedItem.Content = BuildAdvancedTab();
+        });
+        ppb.AddButton("SaveCustomOption", Localized._Save);
+        return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
+    }
+
+    private ScrollView BuildStandaloneAdvancedTab()
+    {
+        if (!TryLoadStandaloneProjectInfo(out var info, out var error))
+        {
+            var errorLayout = new VerticalStackLayout
+            {
+                Padding = new Thickness(10),
+                Spacing = 10,
+                Children =
+                {
+                    new Label
+                    {
+                        Text = error,
+                        TextColor = Colors.IndianRed,
+                        LineBreakMode = LineBreakMode.CharacterWrap
+                    }
+                }
+            };
+            return new ScrollView { Content = errorLayout };
+        }
+
+        return new PropertyPanelBuilder()
+        .AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, info.TargetFrameRate.ToString(), "60", null, default)
+        .AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{info.RelativeWidth}x{info.RelativeHeight}", null)
+        .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle))
+        .Foreach(info.UserDefinedProperties, (p, item) => p.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default))
+        .AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
+        {
+            var key = await PromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(key)) return;
+
+            if (!info.UserDefinedProperties.ContainsKey(key))
+            {
+                info.UserDefinedProperties[key] = string.Empty;
+                await SaveStandaloneProjectInfo(info);
+            }
+
+            tabView.SelectedItem.Content = BuildAdvancedTab();
+        })
+        .AddButton("SaveCustomOption", Localized._Save)
+
+        .AddSeparator()
+        .AddText(new SingleLineLabel(SettingsManager.SettingLocalizedResources.Misc_DiagOptions, 25))
+        .AddButton(Localized.DraftSettingPage_Advanced_DiscardUnsavedChange, async (s, e) =>
+        {
+            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
+            {
+                info.NormallyExited = true;
+                await SaveStandaloneProjectInfo(info);
+            }
+        })
+        .AddButton(Localized.DraftSettingPage_Advanced_ForceUpgrade, async (s, e) =>
+        {
+            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
+            {
+                info.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+                info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+                await SaveStandaloneProjectInfo(info);
+            }
+        })
+        .AddButton(Localized.DraftSettingPage_Advanced_DiscardSaveSlots, async (s, e) =>
+        {
+            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
+            {
+                Directory.Delete(System.IO.Path.Combine(ResolveJsonProjectRoot(), "saveSlots"), true);
+            }
+        })
+        .AddButton(Localized.DraftSettingPage_Advanced_ReloadHistory, async (s, e) =>
+        {
+            try
+            {
+                string saveSlotsPath = System.IO.Path.Combine(ResolveJsonProjectRoot(), SaveSlotDirectoryName);
+                if (!System.IO.Directory.Exists(saveSlotsPath))
+                {
+                    await ShowInfoAsync("SaveSlots directory does not exist.");
+                    return;
+                }
+
+                var newMapping = new Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure>();
+
+                // Read all save slots and create mapping entries with Previous pointers
+                foreach (var slotPath in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
+                {
+                    string timelinePath = System.IO.Path.Combine(slotPath, "timeline.json");
+                    if (!System.IO.File.Exists(timelinePath))
+                        continue;
+
+                    try
+                    {
+                        string json = System.IO.File.ReadAllText(timelinePath);
+                        var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
+                        if (draft is null || draft.SnapshotID == Guid.Empty)
+                            continue;
+
+                        if (!newMapping.ContainsKey(draft.SnapshotID))
+                        {
+                            newMapping[draft.SnapshotID] = new ProjectJSONStructure.SnapshotIDMappingStructure
+                            {
+                                Previous = draft.PreviousSnapshot,
+                                Next = Guid.Empty
+                            };
+                        }
+                    }
+                    catch { }
+                }
+
+                if (newMapping.Count == 0)
+                {
+                    await ShowInfoAsync("No valid save slots found.");
+                    return;
+                }
+
+                // Link Next pointers: for each entry, point its Previous to this entry
+                foreach (var kv in newMapping)
+                {
+                    if (kv.Value.Previous != Guid.Empty && newMapping.TryGetValue(kv.Value.Previous, out var prevEntry) && prevEntry.Next == Guid.Empty)
+                    {
+                        prevEntry.Next = kv.Key;
+                        newMapping[kv.Value.Previous] = prevEntry;
+                    }
+                }
+
+                info.SnapshotIDMapping = newMapping;
+
+                // Set LastSnapshotID to the head (no Next)
+                var head = newMapping.FirstOrDefault(kv => kv.Value.Next == Guid.Empty);
+                if (head.Key != Guid.Empty)
+                {
+                    info.LastSnapshotID = head.Key;
+                }
+
+                await SaveStandaloneProjectInfo(info);
+                tabView.SelectedItem.Content = BuildAdvancedTab();
+                await ShowInfoAsync($"SnapshotIDMapping rebuilt with {newMapping.Count} entries.");
+            }
+            catch (Exception ex)
+            {
+                await ShowInfoAsync($"Failed to rebuild SnapshotIDMapping: {ex.Message}");
+            }
+        })
+        .ListenToChanges(OnStandaloneAdvancedPropertiesChanged)
+        .BuildWithScrollView(null);
+
+
+    }
+    #endregion
+
+    #region history
+
+    public View BuildClassicHistoryTab()
     {
         var history = ReadSaveSlotHistory();
 
@@ -149,9 +365,9 @@ public class DraftSettingPage
                 VerticalOptions = LayoutOptions.Center
             };
 
-            if(parent.ProjectInfo.SnapshotIDMapping.TryGetValue(parent.CurrentSnapshotID, out var curPtr))
+            if (parent.ProjectInfo.SnapshotIDMapping.TryGetValue(parent.CurrentSnapshotID, out var curPtr))
             {
-                ToolTipProperties.SetText(slotLabel, $"forked from {curPtr.prevoius}, next fork {curPtr.next}");
+                ToolTipProperties.SetText(slotLabel, $"forked from {curPtr.Previous}, next fork {curPtr.Next}");
             }
             else
             {
@@ -217,12 +433,495 @@ public class DraftSettingPage
         {
             parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
             parent.ApplySlot(snapshotId);
-            tabView.SelectedItem.Content = BuildHistoryTab();
+            tabView.SelectedItem.Content = BuildHistoryGraphTab();
         }
         catch (Exception ex)
         {
             parent.SetStateFail();
             parent.SetStatusText(Localized._ExceptionTemplate(ex));
+        }
+    }
+
+    private (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) BuildGraphData()
+    {
+        var nodes = new List<HistoryGraphNode>();
+        var edges = new List<HistoryGraphEdge>();
+
+        if (IsStandaloneJsonMode)
+        {
+            return BuildGraphDataStandalone();
+        }
+
+        if (string.IsNullOrWhiteSpace(parent.WorkingPath))
+        {
+            return (nodes, edges);
+        }
+
+        var mapping = parent.ProjectInfo.SnapshotIDMapping;
+        if (mapping is null || mapping.Count == 0)
+        {
+            return (nodes, edges);
+        }
+
+        var historyItems = ReadSaveSlotHistory();
+        var historyById = historyItems.ToDictionary(h => h.SnapshotID);
+
+        foreach (var kv in mapping)
+        {
+            historyById.TryGetValue(kv.Key, out var item);
+            nodes.Add(new HistoryGraphNode
+            {
+                SnapshotID = kv.Key,
+                PreviousSnapshotID = kv.Value.Previous,
+                NextSnapshotID = kv.Value.Next,
+                SavedAt = item?.SavedAt ?? DateTime.MinValue,
+                ChangeReason = item?.ChangeReason ?? string.Empty,
+                ChangedByUserDisplayName = item?.ChangedBy ?? "Anonymous",
+                ChangedByUser = item?.ChangedByUserID ?? Guid.Empty,
+                IsCurrentSnapshot = kv.Key == parent.CurrentSnapshotID,
+                IsHead = kv.Value.Next == Guid.Empty
+            });
+        }
+
+        foreach (var node in nodes)
+        {
+            if (node.NextSnapshotID != Guid.Empty)
+            {
+                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, parent.CurrentSnapshotID, mapping)
+                                   && IsSnapshotOnCurrentPath(node.NextSnapshotID, parent.CurrentSnapshotID, mapping);
+                edges.Add(new HistoryGraphEdge
+                {
+                    FromSnapshotID = node.SnapshotID,
+                    ToSnapshotID = node.NextSnapshotID,
+                    IsCurrentPath = isCurrentPath
+                });
+            }
+        }
+
+        nodes = nodes.OrderByDescending(n => n.SavedAt == DateTime.MinValue ? DateTime.MaxValue.Ticks : n.SavedAt.Ticks)
+                     .ThenByDescending(n => n.SnapshotID.ToString())
+                     .ToList();
+
+        return (nodes, edges);
+    }
+
+    private (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) BuildGraphDataStandalone()
+    {
+        var nodes = new List<HistoryGraphNode>();
+        var edges = new List<HistoryGraphEdge>();
+
+        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
+        {
+            return (nodes, edges);
+        }
+
+        if (!TryLoadStandaloneProjectInfo(out var projectInfo, out _))
+        {
+            return (nodes, edges);
+        }
+
+        var mapping = projectInfo.SnapshotIDMapping;
+        if (mapping is null || mapping.Count == 0)
+        {
+            return (nodes, edges);
+        }
+
+        string saveSlotsPath = System.IO.Path.Combine(standaloneProjectPath, SaveSlotDirectoryName);
+        var slotMetaById = new Dictionary<Guid, (DateTime SavedAt, string Reason, string UserName, Guid UserId)>();
+        if (System.IO.Directory.Exists(saveSlotsPath))
+        {
+            foreach (var slotDir in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
+            {
+                string timelinePath = System.IO.Path.Combine(slotDir, "timeline.json");
+                if (!System.IO.File.Exists(timelinePath)) continue;
+                try
+                {
+                    string json = System.IO.File.ReadAllText(timelinePath);
+                    var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
+                    if (draft is null || draft.SnapshotID == Guid.Empty) continue;
+                    slotMetaById[draft.SnapshotID] = (draft.SavedAt, draft.ChangeReason,
+                        string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
+                        draft.ChangedByUser);
+                }
+                catch { }
+            }
+        }
+
+        Guid lastId = projectInfo.LastSnapshotID;
+
+        foreach (var kv in mapping)
+        {
+            slotMetaById.TryGetValue(kv.Key, out var meta);
+            nodes.Add(new HistoryGraphNode
+            {
+                SnapshotID = kv.Key,
+                PreviousSnapshotID = kv.Value.Previous,
+                NextSnapshotID = kv.Value.Next,
+                SavedAt = meta.SavedAt,
+                ChangeReason = meta.Reason,
+                ChangedByUserDisplayName = meta.UserName,
+                ChangedByUser = meta.UserId,
+                IsCurrentSnapshot = kv.Key == lastId,
+                IsHead = kv.Value.Next == Guid.Empty
+            });
+        }
+
+        foreach (var node in nodes)
+        {
+            if (node.NextSnapshotID != Guid.Empty)
+            {
+                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, lastId, mapping)
+                                   && IsSnapshotOnCurrentPath(node.NextSnapshotID, lastId, mapping);
+                edges.Add(new HistoryGraphEdge
+                {
+                    FromSnapshotID = node.SnapshotID,
+                    ToSnapshotID = node.NextSnapshotID,
+                    IsCurrentPath = isCurrentPath
+                });
+            }
+        }
+
+        nodes = nodes.OrderByDescending(n => n.SavedAt == DateTime.MinValue ? DateTime.MaxValue.Ticks : n.SavedAt.Ticks)
+                     .ThenByDescending(n => n.SnapshotID.ToString())
+                     .ToList();
+
+        return (nodes, edges);
+    }
+
+    private static bool IsSnapshotOnCurrentPath(Guid snapshotId, Guid currentId,
+        Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure> mapping)
+    {
+        if (snapshotId == currentId) return true;
+        var visited = new HashSet<Guid>();
+        var cursor = currentId;
+        while (cursor != Guid.Empty && visited.Add(cursor))
+        {
+            if (cursor == snapshotId) return true;
+            if (!mapping.TryGetValue(cursor, out var entry)) break;
+            cursor = entry.Previous;
+        }
+        return false;
+    }
+
+    public View BuildHistoryGraphTab()
+    {
+        _selectedSnapshotId = Guid.Empty;
+        _currentGraphNodes.Clear();
+        _currentRowDrawables.Clear();
+        _currentRowGraphicsViews.Clear();
+
+        var (nodes, edges) = BuildGraphData();
+
+        var root = new VerticalStackLayout
+        {
+            Spacing = 10,
+            Padding = new Thickness(10)
+        };
+
+        root.Children.Add(new Label
+        {
+            Text = Localized.DraftSettingPage_Tab_History,
+            FontSize = 24,
+            FontAttributes = FontAttributes.Bold
+        });
+
+        if (nodes.Count == 0)
+        {
+            root.Children.Add(new Label
+            {
+                Text = Localized.DraftSettingPage_Tab_History_NotAvailable,
+                FontSize = 25,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            });
+            root.Children.Add(new Label
+            {
+                Text = Localized.DraftSettingPage_Tab_History_NotAvailable_Sub,
+                FontSize = 13,
+                Opacity = 0.75,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            });
+
+            root.HorizontalOptions = LayoutOptions.Center;
+            root.VerticalOptions = LayoutOptions.Center;
+            HistoryTabContent = root;
+            return new ScrollView { Content = root };
+        }
+
+        var edgeSet = new HashSet<(Guid from, Guid to)>();
+        foreach (var edge in edges)
+        {
+            edgeSet.Add((edge.FromSnapshotID, edge.ToSnapshotID));
+        }
+
+        var graphContainer = new VerticalStackLayout { Spacing = 0 };
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+
+            Guid prevId = node.PreviousSnapshotID;
+            Guid nextId = node.NextSnapshotID;
+
+            bool hasPredecessor = edgeSet.Contains((node.SnapshotID, nextId)) || nextId != Guid.Empty;
+            bool hasSuccessor = edgeSet.Contains((prevId, node.SnapshotID)) || prevId != Guid.Empty;
+
+            bool isFirst = i == 0;
+            bool isLast = i == nodes.Count - 1;
+
+            var row = BuildHistoryGraphRow(node, hasPredecessor || !isFirst, hasSuccessor || !isLast);
+
+            var tapGesture = new TapGestureRecognizer();
+            var capturedNode = node;
+            tapGesture.Tapped += (_, _) => OnGraphRowTapped(capturedNode);
+            row.GestureRecognizers.Add(tapGesture);
+
+            graphContainer.Children.Add(row);
+        }
+
+        _currentGraphNodes = nodes;
+
+        _detailsPanel = new Border
+        {
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 8, 0, 0),
+            Stroke = Colors.Gray,
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            IsVisible = false
+        };
+
+        var detailsLayout = new VerticalStackLayout { Spacing = 6 };
+
+        _detailsSavedAtLabel = new Label { FontSize = 13 };
+        _detailsAuthorLabel = new Label { FontSize = 13 };
+        _detailsChangeReasonLabel = new Label { FontSize = 13, FontAttributes = FontAttributes.Bold };
+        _detailsRestoreButton = new Button
+        {
+            Text = Localized._Apply,
+            BackgroundColor = Color.FromArgb("#4A9EFF"),
+            TextColor = Colors.White,
+            HorizontalOptions = LayoutOptions.Fill,
+        };
+        _detailsRestoreButton.Clicked += OnRestoreClicked;
+
+        detailsLayout.Children.Add(new Label { Text = Localized.DraftSettingPage_Tab_History_Details, FontSize = 16, FontAttributes = FontAttributes.Bold });
+        detailsLayout.Children.Add(_detailsSavedAtLabel);
+        detailsLayout.Children.Add(_detailsAuthorLabel);
+        detailsLayout.Children.Add(_detailsChangeReasonLabel);
+        detailsLayout.Children.Add(_detailsRestoreButton);
+
+        _detailsPanel.Content = detailsLayout;
+
+        var mainLayout = new Grid
+        {
+            RowDefinitions =
+            {
+                new RowDefinition { Height = GridLength.Star },
+                new RowDefinition { Height = GridLength.Auto }
+            }
+        };
+
+        mainLayout.Add(new ScrollView { Content = graphContainer }, 0, 0);
+        mainLayout.Add(_detailsPanel, 0, 1);
+
+        HistoryTabContent = mainLayout;
+        return mainLayout;
+    }
+
+    private View BuildHistoryGraphRow(HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
+    {
+        var drawable = new HistoryGraphRowDrawable
+        {
+            HasPredecessor = hasPredecessor,
+            HasSuccessor = hasSuccessor,
+            IsCurrentSnapshot = node.IsCurrentSnapshot,
+            IsSelected = node.SnapshotID == _selectedSnapshotId
+        };
+
+        var graphView = new GraphicsView
+        {
+            WidthRequest = 50,
+            HeightRequest = 56,
+            Drawable = drawable,
+            BackgroundColor = Colors.Transparent
+        };
+
+        _currentRowDrawables.Add(drawable);
+        _currentRowGraphicsViews.Add(graphView);
+
+        string reasonText = string.IsNullOrWhiteSpace(node.ChangeReason)
+            ? "(no description)"
+            : node.ChangeReason.Trim();
+        if (node.IsCurrentSnapshot) reasonText = "* " + reasonText;
+
+        bool isCurrent = node.IsCurrentSnapshot;
+
+        var reasonLabel = new Label
+        {
+            Text = reasonText,
+            FontSize = 14,
+            FontAttributes = isCurrent ? FontAttributes.Bold : FontAttributes.None,
+            VerticalOptions = LayoutOptions.Center,
+            LineBreakMode = LineBreakMode.TailTruncation
+        };
+
+        var timeLabel = new Label
+        {
+            Text = $"{node.ChangedByUserDisplayName} · {node.RelativeTimeDisplay}",
+            FontSize = 11,
+            Opacity = 0.75,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        if (node.SavedAt != DateTime.MinValue)
+        {
+            ToolTipProperties.SetText(timeLabel, $"{node.SavedAt:yyyy-MM-dd HH:mm:ss} — {node.ChangedByUserDisplayName} ({node.ChangedByUser})");
+        }
+
+        var textStack = new VerticalStackLayout
+        {
+            Spacing = 2,
+            VerticalOptions = LayoutOptions.Center,
+            Children = { reasonLabel, timeLabel }
+        };
+
+        var row = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = 50 },
+                new ColumnDefinition { Width = GridLength.Star }
+            },
+            Padding = new Thickness(0, 0),
+            BackgroundColor = isCurrent ? Color.FromArgb("#1A4A9EFF") : Colors.Transparent
+        };
+
+        row.Add(graphView, 0);
+        row.Add(textStack, 1);
+
+        return row;
+    }
+
+    private void OnGraphRowTapped(HistoryGraphNode node)
+    {
+        _selectedSnapshotId = node.SnapshotID;
+        _selectedSnapshot = node;
+
+        for (int i = 0; i < _currentRowDrawables.Count; i++)
+        {
+            _currentRowDrawables[i].IsSelected = _currentGraphNodes[i].SnapshotID == _selectedSnapshotId;
+            _currentRowGraphicsViews[i].Invalidate();
+        }
+
+        if (_detailsPanel is null) return;
+
+        _detailsPanel.IsVisible = true;
+
+        if (_detailsSavedAtLabel is not null)
+        {
+            _detailsSavedAtLabel.Text =
+                DateTime.Now.Ticks - node.SavedAt.Ticks >= 0 ?
+                TimeSpan.FromTicks(DateTime.Now.Ticks - node.SavedAt.Ticks) switch
+                {
+                    var t when t.TotalMinutes < 1 => Localized.DraftSettingPage_Tab_History_Now,
+                    var t when t.TotalHours < 2 => Localized.DraftSettingPage_Tab_History_MinutesAgo(t.Minutes),
+                    var t when t.TotalHours < 48 => Localized.DraftSettingPage_Tab_History_HoursAgo((int)t.TotalHours),
+                    var t when t.TotalDays < 14 => Localized.DraftSettingPage_Tab_History_DaysAgo((int)t.TotalDays),
+                    _ => Localized.DraftSettingPage_Tab_History_VeryLongAgo
+                }
+                : Localized.HomePage_LastChangedOnFuture;
+            ToolTipProperties.SetText(_detailsSavedAtLabel, node.SavedAt.ToString("F"));
+
+        }
+
+        if (_detailsAuthorLabel is not null)
+        {
+            _detailsAuthorLabel.Text = Localized.DraftSettingPage_Tab_History_Details_EditBy(node.ChangedByUserDisplayName);
+            ToolTipProperties.SetText(_detailsAuthorLabel, $"UserID: {node.ChangedByUser}");
+        }
+
+        if (_detailsChangeReasonLabel is not null)
+        {
+            _detailsChangeReasonLabel.Text = node.ChangeReason;
+            ToolTipProperties.SetText(_detailsChangeReasonLabel, $"This:{node.SnapshotID}{Environment.NewLine}Next:{node.NextSnapshotID}{Environment.NewLine}Previous: {node.PreviousSnapshotID}");
+
+        }
+
+
+        if (_detailsRestoreButton is not null)
+            _detailsRestoreButton.IsEnabled = !node.IsCurrentSnapshot;
+    }
+
+    private async void OnRestoreClicked(object? sender, EventArgs e)
+    {
+        if (_selectedSnapshotId == Guid.Empty) return;
+
+        if (IsStandaloneJsonMode)
+        {
+            await RestoreSlotStandalone(_selectedSnapshotId, _selectedSnapshot is not null ? _selectedSnapshot.SavedAt.ToString("yyyy-MM-dd HH:mm:ss") : "Unknown");
+            return;
+        }
+
+        try
+        {
+            parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
+            parent.ApplySlot(_selectedSnapshotId);
+            tabView.SelectedItem.Content = BuildHistoryGraphTab();
+        }
+        catch (Exception ex)
+        {
+            parent.SetStateFail();
+            parent.SetStatusText(Localized._ExceptionTemplate(ex));
+        }
+    }
+
+    private async Task RestoreSlotStandalone(Guid snapshotId, string date)
+    {
+        if (string.IsNullOrWhiteSpace(standaloneProjectPath)) return;
+
+        string slotDir = System.IO.Path.Combine(standaloneProjectPath, SaveSlotDirectoryName, $"slot_{snapshotId}");
+        string srcTimeline = System.IO.Path.Combine(slotDir, "timeline.json");
+        string srcAssets = System.IO.Path.Combine(slotDir, "assets.json");
+
+        if (!System.IO.File.Exists(srcTimeline))
+        {
+            await ShowInfoAsync("Snapshot data not found on disk.");
+            return;
+        }
+
+        bool confirm = await ConfirmAsync(Localized._Warn, Localized.DraftSettingPage_Tab_History_ApplyWarn(date));
+        if (!confirm) return;
+
+        try
+        {
+            string dstTimeline = System.IO.Path.Combine(standaloneProjectPath, "timeline.json");
+            string dstAssets = System.IO.Path.Combine(standaloneProjectPath, "assets.json");
+
+            if (System.IO.File.Exists(dstTimeline))
+            {
+                string backupTimeline = dstTimeline + ".backup";
+                System.IO.File.Copy(dstTimeline, backupTimeline, overwrite: true);
+            }
+            if (System.IO.File.Exists(dstAssets))
+            {
+                string backupAssets = dstAssets + ".backup";
+                System.IO.File.Copy(dstAssets, backupAssets, overwrite: true);
+            }
+
+            System.IO.File.Copy(srcTimeline, dstTimeline, overwrite: true);
+            if (System.IO.File.Exists(srcAssets))
+            {
+                System.IO.File.Copy(srcAssets, dstAssets, overwrite: true);
+            }
+
+            await ShowInfoAsync(Localized._Done);
+            tabView.SelectedItem.Content = BuildHistoryGraphTab();
+        }
+        catch (Exception ex)
+        {
+            await ShowInfoAsync($"Failed to restore snapshot: {ex.Message}");
         }
     }
 
@@ -278,6 +977,9 @@ public class DraftSettingPage
             .ToList();
     }
 
+    #endregion
+
+    #region mgnt
     private View BuildCompatibilityTab()
     {
         PropertyPanelBuilder ppb = new();
@@ -855,6 +1557,170 @@ public class DraftSettingPage
         return frame;
     }
 
+    #endregion
+
+    #region update
+
+
+    public async void OnPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
+    {
+        switch (e.Id)
+        {
+            case "targetFrameRate":
+                if (e.Value is string s && uint.TryParse(s, out var result))
+                    parent.ProjectInfo.TargetFrameRate = result;
+                break;
+            case "enableHDR":
+                if (e.Value is bool b)
+                    parent.ProjectInfo.Properties["EnableHDR"] = b.ToString();
+                break;
+            case "sdrClipBrightness":
+                try
+                {
+                    var d = Convert.ToUInt32(e.Value);
+                    if (d < int.MaxValue) parent.ProjectInfo.Properties["SdrClipBrightness"] = d.ToString();
+                }
+                catch { }
+                break;
+            case "HdrMaximumBrightness":
+                try
+                {
+                    var c = Convert.ToUInt32(e.Value);
+                    if (c < int.MaxValue) parent.ProjectInfo.Properties["HdrMaximumBrightness"] = c.ToString();
+                }
+                catch { }
+                break;
+            case "relativeResolution":
+                if (e.Value is string res)
+                {
+                    if (res == Localized.DraftPage_PrevResultion_Custom)
+                    {
+                        var widthInput = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
+                        var heightInput = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
+                        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+                        {
+                            parent.ProjectInfo.RelativeWidth = w;
+                            parent.ProjectInfo.RelativeHeight = h;
+                        }
+                    }
+                    else
+                    {
+                        var parts = res.Split('x');
+                        if (parts.Length == 2 &&
+                            int.TryParse(parts[0], out var w) &&
+                            int.TryParse(parts[1], out var h))
+                        {
+                            parent.ProjectInfo.RelativeWidth = w;
+                            parent.ProjectInfo.RelativeHeight = h;
+                        }
+                    }
+
+                }
+                break;
+            case "SaveCustomOption":
+                {
+                    if (sender is PropertyPanelBuilder ppb)
+                    {
+                        foreach (var item in ppb.Properties.Where(c => c.Key.StartsWith("CustomOption")))
+                        {
+                            var key = item.Key.Substring("CustomOption,".Length);
+                            if (item.Value is string val)
+                            {
+                                if (string.IsNullOrWhiteSpace(val))
+                                {
+                                    parent.ProjectInfo.UserDefinedProperties.Remove(key);
+                                }
+                                else
+                                {
+                                    parent.ProjectInfo.UserDefinedProperties[key] = val;
+                                }
+                            }
+                        }
+                    }
+
+                    tabView.SelectedItem.Content = BuildAdvancedTab();
+
+                    break;
+                }
+
+
+        }
+
+        parent.SetStateOK(Localized.DraftPage_ChangesApplied);
+    }
+
+    private async void OnStandaloneAdvancedPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
+    {
+        if (!TryLoadStandaloneProjectInfo(out var info, out _))
+        {
+            await ShowInfoAsync("Failed to read project file.");
+            return;
+        }
+
+        switch (e.Id)
+        {
+            case "targetFrameRate":
+                if (e.Value is string s && uint.TryParse(s, out var fps))
+                {
+                    info.TargetFrameRate = fps;
+                }
+                break;
+            case "relativeResolution":
+                if (e.Value is string res)
+                {
+                    if (res == Localized.DraftPage_PrevResultion_Custom)
+                    {
+                        var widthInput = await GetHostPage().DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
+                        var heightInput = await GetHostPage().DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
+                        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+                        {
+                            info.RelativeWidth = w;
+                            info.RelativeHeight = h;
+                        }
+                    }
+                    else
+                    {
+                        var parts = res.Split('x');
+                        if (parts.Length == 2 &&
+                            int.TryParse(parts[0], out var w) &&
+                            int.TryParse(parts[1], out var h))
+                        {
+                            info.RelativeWidth = w;
+                            info.RelativeHeight = h;
+                        }
+                    }
+
+                }
+                break;
+            case "SaveCustomOption":
+                if (sender is PropertyPanelBuilder ppb)
+                {
+                    foreach (var item in ppb.Properties.Where(c => c.Key.StartsWith("CustomOption", StringComparison.Ordinal)))
+                    {
+                        var key = item.Key.Substring("CustomOption,".Length);
+                        if (item.Value is string val)
+                        {
+                            if (string.IsNullOrWhiteSpace(val))
+                            {
+                                info.UserDefinedProperties.Remove(key);
+                            }
+                            else
+                            {
+                                info.UserDefinedProperties[key] = val;
+                            }
+                        }
+                    }
+
+                    await SaveStandaloneProjectInfo(info);
+                    tabView.SelectedItem.Content = BuildAdvancedTab();
+                    return;
+                }
+                break;
+        }
+
+        await SaveStandaloneProjectInfo(info);
+    }
+
     private bool TryLoadJsonProjectData(out ProjectJSONStructure project, out DraftStructureJSON draft, out List<AssetItem> assets, out string projectRoot, out string error)
     {
         project = new ProjectJSONStructure { ProjectName = "Unknown Project" };
@@ -948,6 +1814,68 @@ public class DraftSettingPage
 
         return result;
     }
+
+    private bool TryLoadStandaloneProjectInfo(out ProjectJSONStructure info, out string error)
+    {
+        info = new ProjectJSONStructure();
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
+        {
+            error = "Project path is empty.";
+            return false;
+        }
+
+        string projectFilePath = ResolveStandaloneProjectFilePath();
+        if (!System.IO.File.Exists(projectFilePath))
+        {
+            error = $"Project file not found: {projectFilePath}";
+            return false;
+        }
+
+        try
+        {
+            info = System.Text.Json.JsonSerializer.Deserialize<ProjectJSONStructure>(System.IO.File.ReadAllText(projectFilePath), DraftPage.DraftJSONOption) ?? new ProjectJSONStructure();
+            info.UserDefinedProperties ??= new Dictionary<string, string>();
+            info.Properties ??= new Dictionary<string, string>();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private async Task SaveStandaloneProjectInfo(ProjectJSONStructure info)
+    {
+        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
+        {
+            return;
+        }
+
+        string projectFilePath = ResolveStandaloneProjectFilePath();
+        await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(info, DraftPage.DraftJSONOption));
+    }
+
+    private string ResolveStandaloneProjectFilePath()
+    {
+        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
+        {
+            return string.Empty;
+        }
+
+        string pjfcPath = System.IO.Path.Combine(standaloneProjectPath, "project.pjfc");
+        if (System.IO.File.Exists(pjfcPath))
+        {
+            return pjfcPath;
+        }
+
+        return System.IO.Path.Combine(standaloneProjectPath, "project.json");
+    }
+    #endregion
+
+    #region misc
 
     private static void SetEditableClipDtos(DraftStructureJSON draft, IEnumerable<ClipDraftDTO> clips)
     {
@@ -1161,131 +2089,6 @@ public class DraftSettingPage
     private static bool TryReadEntryUInt(string? text, out uint value)
         => uint.TryParse((text ?? string.Empty).Trim(), out value);
 
-    private static bool IsRealClip(ClipElementUI clip)
-        => !clip.Id.StartsWith("ghost_", StringComparison.Ordinal) && !clip.Id.StartsWith("shadow_", StringComparison.Ordinal);
-
-    private bool IsClipReferencingAsset(ClipElementUI clip, AssetItem asset)
-    {
-        if (clip is null || asset is null)
-        {
-            return false;
-        }
-
-        string source = clip.SourcePath?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(source))
-        {
-            return false;
-        }
-
-        string assetId = asset.AssetId?.Trim() ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(assetId) && source.StartsWith("$", StringComparison.Ordinal))
-        {
-            return string.Equals(source[1..], assetId, StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (string.IsNullOrWhiteSpace(asset.Path))
-        {
-            return false;
-        }
-
-        try
-        {
-            string clipPath = source;
-            if (!System.IO.Path.IsPathRooted(clipPath) && !string.IsNullOrWhiteSpace(parent.WorkingPath))
-            {
-                clipPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(parent.WorkingPath, clipPath));
-            }
-
-            string assetPath = asset.Path;
-            if (!System.IO.Path.IsPathRooted(assetPath) && !string.IsNullOrWhiteSpace(parent.WorkingPath))
-            {
-                assetPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(parent.WorkingPath, assetPath));
-            }
-
-            return string.Equals(clipPath, assetPath, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private int RemoveClipWithDependents(string clipId)
-    {
-        if (string.IsNullOrWhiteSpace(clipId))
-        {
-            return 0;
-        }
-
-        var idsToDelete = new HashSet<string>(StringComparer.Ordinal)
-        {
-            clipId,
-            "ghost_" + clipId,
-            "shadow_" + clipId
-        };
-
-        foreach (var kv in parent.Clips)
-        {
-            if (kv.Value?.ClipType != ClipMode.TransformClip)
-            {
-                continue;
-            }
-
-            if (kv.Value.ExtraData.TryGetValue("transformPrevId", out var prev) && string.Equals(prev?.ToString(), clipId, StringComparison.Ordinal)
-                || kv.Value.ExtraData.TryGetValue("transformNextId", out var next) && string.Equals(next?.ToString(), clipId, StringComparison.Ordinal))
-            {
-                idsToDelete.Add(kv.Key);
-            }
-        }
-
-        int removedCount = 0;
-        foreach (var id in idsToDelete)
-        {
-            if (!parent.Clips.TryGetValue(id, out var clip))
-            {
-                continue;
-            }
-
-            if (clip.origTrack is int tr && parent.Tracks.TryGetValue(tr, out var trackLayout))
-            {
-                trackLayout.Children.Remove(clip.Clip);
-            }
-
-            if (parent.Clips.TryRemove(id, out _))
-            {
-                removedCount++;
-            }
-        }
-
-        return removedCount;
-    }
-
-    private void TryDeleteProjectLocalAssetFile(AssetItem asset)
-    {
-        try
-        {
-            if (asset is null || string.IsNullOrWhiteSpace(asset.Path) || string.IsNullOrWhiteSpace(parent.WorkingPath))
-            {
-                return;
-            }
-
-            string projectAssetsDir = System.IO.Path.GetFullPath(System.IO.Path.Combine(parent.WorkingPath, "assets"));
-            string fullPath = asset.Path;
-            if (!System.IO.Path.IsPathRooted(fullPath))
-            {
-                fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(parent.WorkingPath, fullPath));
-            }
-
-            if (fullPath.StartsWith(projectAssetsDir, StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(fullPath))
-            {
-                System.IO.File.Delete(fullPath);
-            }
-        }
-        catch
-        {
-            // Ignore file system failure because dictionary removal is still complete.
-        }
-    }
 
     private async Task RefreshDraftAfterManualMutate(string successText)
     {
@@ -1399,339 +2202,7 @@ public class DraftSettingPage
 
     static string[] resolutions = ["640x480", "1280x720", "1920x1080", "2560x1440", "3840x2160", Localized.DraftPage_PrevResultion_Custom];
 
-    public ScrollView BuildGeneralTab()
-    {
-        var enableHDR = parent.ProjectInfo.Properties.TryGetValue("EnableHDR", out var eh) && bool.TryParse(eh, out var result) ? result : false;
-        PropertyPanelBuilder ppb = new();
-        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
-        ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
-        ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, enableHDR, null);
-        ppb.AppendWhen(enableHDR, c => c.AddEntry("HdrMaximumBrightness", Localized.DraftSettingPage_General_HDRLimit, parent.ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var hdrMaxiumBrightness) ? hdrMaxiumBrightness : "1000", null, null));
-        ppb.AppendWhen(enableHDR, c => c.AddEntry("sdrClipBrightness", Localized.DraftSettingPage_General_SDRBrightness,
-            parent.ProjectInfo.Properties.TryGetValue("SdrClipBrightness", out var sdrClipBrightness)
-                ? sdrClipBrightness
-                : (parent.ProjectInfo.Properties.TryGetValue("sdrClipBrightness", out var legacySdrClipBrightness)
-                    ? legacySdrClipBrightness
-                    : "203"),
-            null, null));
-        return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
-    }
 
-    public ScrollView BuildAdvancedTab()
-    {
-        if (IsStandaloneJsonMode)
-        {
-            return BuildStandaloneAdvancedTab();
-        }
-
-        PropertyPanelBuilder ppb = new();
-        ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle));
-        foreach (var item in parent.ProjectInfo.UserDefinedProperties)
-        {
-            ppb.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default);
-        }
-        ppb.AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
-        {
-            var key = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, Localized._Confirm, Localized._Cancel);
-            ppb.AddEntry($"CustomOption,{key}", key, "", Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default);
-            if (string.IsNullOrWhiteSpace(key)) return;
-            parent.ProjectInfo.UserDefinedProperties.Add(key, "");
-            tabView.SelectedItem.Content = BuildAdvancedTab();
-        });
-        ppb.AddButton("SaveCustomOption", Localized._Save);
-        return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
-    }
-
-    private ScrollView BuildStandaloneAdvancedTab()
-    {
-        if (!TryLoadStandaloneProjectInfo(out var info, out var error))
-        {
-            var errorLayout = new VerticalStackLayout
-            {
-                Padding = new Thickness(10),
-                Spacing = 10,
-                Children =
-                {
-                    new Label
-                    {
-                        Text = error,
-                        TextColor = Colors.IndianRed,
-                        LineBreakMode = LineBreakMode.CharacterWrap
-                    }
-                }
-            };
-            return new ScrollView { Content = errorLayout };
-        }
-
-        return new PropertyPanelBuilder()
-        .AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, info.TargetFrameRate.ToString(), "60", null, default)
-        .AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{info.RelativeWidth}x{info.RelativeHeight}", null)
-        .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle))
-        .Foreach(info.UserDefinedProperties, (p, item) => p.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default))
-        .AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
-        {
-            var key = await PromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, string.Empty);
-            if (string.IsNullOrWhiteSpace(key)) return;
-
-            if (!info.UserDefinedProperties.ContainsKey(key))
-            {
-                info.UserDefinedProperties[key] = string.Empty;
-                await SaveStandaloneProjectInfo(info);
-            }
-
-            tabView.SelectedItem.Content = BuildAdvancedTab();
-        })
-        .AddButton("SaveCustomOption", Localized._Save)
-
-        .AddSeparator()
-        .AddText(new SingleLineLabel(SettingsManager.SettingLocalizedResources.Misc_DiagOptions, 25))
-        .AddButton(Localized.DraftSettingPage_Advanced_DiscardUnsavedChange, async (s, e) =>
-        {
-            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == Localized._OK)
-            {
-                info.NormallyExited = true;
-                await SaveStandaloneProjectInfo(info);
-            }
-        })
-        .AddButton(Localized.DraftSettingPage_Advanced_ForceUpgrade, async (s, e) =>
-        {
-            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == Localized._OK)
-            {
-                info.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
-                info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
-                await SaveStandaloneProjectInfo(info);
-            }
-        })
-        .AddButton(Localized.DraftSettingPage_Advanced_DiscardSaveSlots, async (s, e) =>
-        {
-            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == Localized._OK)
-            {
-                Directory.Delete(System.IO.Path.Combine(ResolveJsonProjectRoot(), "saveSlots"), true);
-            }
-        })
-        .ListenToChanges(OnStandaloneAdvancedPropertiesChanged)
-        .BuildWithScrollView(null);
-
-
-    }
-
-    public async void OnPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
-    {
-        switch (e.Id)
-        {
-            case "targetFrameRate":
-                if (e.Value is string s && uint.TryParse(s, out var result))
-                    parent.ProjectInfo.TargetFrameRate = result;
-                break;
-            case "enableHDR":
-                if (e.Value is bool b)
-                    parent.ProjectInfo.Properties["EnableHDR"] = b.ToString();
-                break;
-            case "sdrClipBrightness":
-                try
-                {
-                    var d = Convert.ToUInt32(e.Value);
-                    if (d < int.MaxValue) parent.ProjectInfo.Properties["SdrClipBrightness"] = d.ToString();
-                }
-                catch { }
-                break;
-            case "HdrMaximumBrightness":
-                try
-                {
-                    var c = Convert.ToUInt32(e.Value);
-                    if (c < int.MaxValue) parent.ProjectInfo.Properties["HdrMaximumBrightness"] = c.ToString();
-                }
-                catch { }
-                break;
-            case "relativeResolution":
-                if (e.Value is string res)
-                {
-                    if (res == Localized.DraftPage_PrevResultion_Custom)
-                    {
-                        var widthInput = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
-                        var heightInput = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
-                        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
-                        {
-                            parent.ProjectInfo.RelativeWidth = w;
-                            parent.ProjectInfo.RelativeHeight = h;
-                        }
-                    }
-                    else
-                    {
-                        var parts = res.Split('x');
-                        if (parts.Length == 2 &&
-                            int.TryParse(parts[0], out var w) &&
-                            int.TryParse(parts[1], out var h))
-                        {
-                            parent.ProjectInfo.RelativeWidth = w;
-                            parent.ProjectInfo.RelativeHeight = h;
-                        }
-                    }
-
-                }
-                break;
-            case "SaveCustomOption":
-                {
-                    if (sender is PropertyPanelBuilder ppb)
-                    {
-                        foreach (var item in ppb.Properties.Where(c => c.Key.StartsWith("CustomOption")))
-                        {
-                            var key = item.Key.Substring("CustomOption,".Length);
-                            if (item.Value is string val)
-                            {
-                                if (string.IsNullOrWhiteSpace(val))
-                                {
-                                    parent.ProjectInfo.UserDefinedProperties.Remove(key);
-                                }
-                                else
-                                {
-                                    parent.ProjectInfo.UserDefinedProperties[key] = val;
-                                }
-                            }
-                        }
-                    }
-
-                    tabView.SelectedItem.Content = BuildAdvancedTab();
-
-                    break;
-                }
-
-
-        }
-
-        parent.SetStateOK(Localized.DraftPage_ChangesApplied);
-    }
-
-    private async void OnStandaloneAdvancedPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
-    {
-        if (!TryLoadStandaloneProjectInfo(out var info, out _))
-        {
-            await ShowInfoAsync("Failed to read project file.");
-            return;
-        }
-
-        switch (e.Id)
-        {
-            case "targetFrameRate":
-                if (e.Value is string s && uint.TryParse(s, out var fps))
-                {
-                    info.TargetFrameRate = fps;
-                }
-                break;
-            case "relativeResolution":
-                if (e.Value is string res)
-                {
-                    if (res == Localized.DraftPage_PrevResultion_Custom)
-                    {
-                        var widthInput = await GetHostPage().DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
-                        var heightInput = await GetHostPage().DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
-                        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
-                        {
-                            info.RelativeWidth = w;
-                            info.RelativeHeight = h;
-                        }
-                    }
-                    else
-                    {
-                        var parts = res.Split('x');
-                        if (parts.Length == 2 &&
-                            int.TryParse(parts[0], out var w) &&
-                            int.TryParse(parts[1], out var h))
-                        {
-                            info.RelativeWidth = w;
-                            info.RelativeHeight = h;
-                        }
-                    }
-
-                }
-                break;
-            case "SaveCustomOption":
-                if (sender is PropertyPanelBuilder ppb)
-                {
-                    foreach (var item in ppb.Properties.Where(c => c.Key.StartsWith("CustomOption", StringComparison.Ordinal)))
-                    {
-                        var key = item.Key.Substring("CustomOption,".Length);
-                        if (item.Value is string val)
-                        {
-                            if (string.IsNullOrWhiteSpace(val))
-                            {
-                                info.UserDefinedProperties.Remove(key);
-                            }
-                            else
-                            {
-                                info.UserDefinedProperties[key] = val;
-                            }
-                        }
-                    }
-
-                    await SaveStandaloneProjectInfo(info);
-                    tabView.SelectedItem.Content = BuildAdvancedTab();
-                    return;
-                }
-                break;
-        }
-
-        await SaveStandaloneProjectInfo(info);
-    }
-
-    private bool TryLoadStandaloneProjectInfo(out ProjectJSONStructure info, out string error)
-    {
-        info = new ProjectJSONStructure();
-        error = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
-        {
-            error = "Project path is empty.";
-            return false;
-        }
-
-        string projectFilePath = ResolveStandaloneProjectFilePath();
-        if (!System.IO.File.Exists(projectFilePath))
-        {
-            error = $"Project file not found: {projectFilePath}";
-            return false;
-        }
-
-        try
-        {
-            info = System.Text.Json.JsonSerializer.Deserialize<ProjectJSONStructure>(System.IO.File.ReadAllText(projectFilePath), DraftPage.DraftJSONOption) ?? new ProjectJSONStructure();
-            info.UserDefinedProperties ??= new Dictionary<string, string>();
-            info.Properties ??= new Dictionary<string, string>();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-    }
-
-    private async Task SaveStandaloneProjectInfo(ProjectJSONStructure info)
-    {
-        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
-        {
-            return;
-        }
-
-        string projectFilePath = ResolveStandaloneProjectFilePath();
-        await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(info, DraftPage.DraftJSONOption));
-    }
-
-    private string ResolveStandaloneProjectFilePath()
-    {
-        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
-        {
-            return string.Empty;
-        }
-
-        string pjfcPath = System.IO.Path.Combine(standaloneProjectPath, "project.pjfc");
-        if (System.IO.File.Exists(pjfcPath))
-        {
-            return pjfcPath;
-        }
-
-        return System.IO.Path.Combine(standaloneProjectPath, "project.json");
-    }
 
     private async Task<string?> PromptAsync(string title, string message, string initialValue = "")
     {
@@ -1749,4 +2220,107 @@ public class DraftSettingPage
     }
 
     public View Content => tabView;
+    #endregion
 }
+
+#region history graph
+
+public sealed class HistoryGraphNode
+{
+    public Guid SnapshotID { get; init; }
+    public Guid PreviousSnapshotID { get; set; }
+    public Guid NextSnapshotID { get; set; }
+    public DateTime SavedAt { get; init; }
+    public string ChangeReason { get; init; } = string.Empty;
+    public string ChangedByUserDisplayName { get; init; } = string.Empty;
+    public Guid ChangedByUser { get; init; }
+    public bool IsCurrentSnapshot { get; set; }
+    public bool IsHead { get; set; }
+
+    public string DisplayLabel => IsCurrentSnapshot ? $"* {ChangeReason}" : ChangeReason;
+
+    public string RelativeTimeDisplay
+    {
+        get => DateTime.Now.Ticks - SavedAt.Ticks >= 0 ?
+               TimeSpan.FromTicks(DateTime.Now.Ticks - SavedAt.Ticks) switch
+               {
+                   var t when t.TotalMinutes < 1 => Localized.DraftSettingPage_Tab_History_Now,
+                   var t when t.TotalHours < 2 => Localized.DraftSettingPage_Tab_History_MinutesAgo(t.Minutes),
+                   var t when t.TotalHours < 48 => Localized.DraftSettingPage_Tab_History_HoursAgo((int)t.TotalHours),
+                   var t when t.TotalDays < 14 => Localized.DraftSettingPage_Tab_History_DaysAgo((int)t.TotalDays),
+                   _ => Localized.DraftSettingPage_Tab_History_VeryLongAgo
+               }
+               : Localized.HomePage_LastChangedOnFuture;
+    }
+}
+
+public sealed class HistoryGraphRowDrawable : IDrawable
+{
+    public bool HasPredecessor { get; set; }
+    public bool HasSuccessor { get; set; }
+    public bool IsCurrentSnapshot { get; set; }
+    public bool IsSelected { get; set; }
+
+    const float NodeRadius = 9f;
+    const float SelectedNodeRadius = 12f;
+    const float LineWidth = 2.5f;
+    static readonly Color LineColor = Color.FromArgb("#555555");
+    static readonly Color CurrentLineColor = Color.FromArgb("#4A9EFF");
+    static readonly Color NodeFillColor = Color.FromArgb("#666666");
+    static readonly Color CurrentNodeFillColor = Color.FromArgb("#4A9EFF");
+    static readonly Color SelectedRingColor = Color.FromArgb("#FFB74D");
+    static readonly Color CurrentNodeStrokeColor = Color.FromArgb("#1A6DD4");
+
+    public void Draw(ICanvas canvas, RectF dirtyRect)
+    {
+        canvas.Antialias = true;
+        float centerX = dirtyRect.Width / 2f;
+        float centerY = dirtyRect.Height / 2f;
+        float radius = IsSelected ? SelectedNodeRadius : NodeRadius;
+
+        Color lineClr = IsCurrentSnapshot ? CurrentLineColor : LineColor;
+
+        canvas.StrokeColor = lineClr;
+        canvas.StrokeSize = LineWidth;
+        canvas.StrokeLineCap = LineCap.Round;
+
+        if (HasSuccessor)
+        {
+            canvas.DrawLine(centerX, centerY, centerX, dirtyRect.Bottom);
+        }
+
+        if (HasPredecessor)
+        {
+            canvas.DrawLine(centerX, dirtyRect.Top, centerX, centerY);
+        }
+
+        if (IsSelected)
+        {
+            canvas.StrokeColor = SelectedRingColor;
+            canvas.StrokeSize = 3;
+            canvas.DrawCircle(centerX, centerY, radius + 3);
+        }
+
+        Color fillClr = IsCurrentSnapshot ? CurrentNodeFillColor : NodeFillColor;
+        canvas.FillColor = fillClr;
+        canvas.FillCircle(centerX, centerY, radius);
+
+        if (IsCurrentSnapshot)
+        {
+            canvas.StrokeColor = CurrentNodeStrokeColor;
+            canvas.StrokeSize = 1.5f;
+            canvas.DrawCircle(centerX, centerY, radius);
+        }
+    }
+}
+
+
+public sealed class HistoryGraphEdge
+{
+    public Guid FromSnapshotID { get; init; }
+    public Guid ToSnapshotID { get; init; }
+    public bool IsCurrentPath { get; set; }
+}
+
+
+#endregion
