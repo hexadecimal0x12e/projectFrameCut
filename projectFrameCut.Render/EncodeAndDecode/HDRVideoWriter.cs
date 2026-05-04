@@ -995,7 +995,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 || ext.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static uint MakeFourCC(char c0, char c1, char c2, char c3)
+        private static uint     MakeFourCC(char c0, char c1, char c2, char c3)
         {
             return (uint)c0
                 | ((uint)c1 << 8)

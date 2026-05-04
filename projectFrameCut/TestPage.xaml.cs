@@ -58,6 +58,8 @@ public partial class TestPage : ContentPage
 
         Loaded += TestPage_Loaded;
 
+        TaskbarOptionPicker.ItemsSource = Enum.GetValues<TaskbarVisibilityMode>().Select(c => c.ToString()).ToList();
+
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
 
@@ -1232,6 +1234,10 @@ public partial class TestPage : ContentPage
 
     }
 
+    private void TaskbarOptionPicker_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        myMultiWindowView.TaskbarVisibility = (TaskbarVisibilityMode)TaskbarOptionPicker.SelectedIndex;
+    }
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {

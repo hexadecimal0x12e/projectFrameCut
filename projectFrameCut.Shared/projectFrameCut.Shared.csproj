@@ -4,8 +4,8 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<AssemblyVersion>1.4.0.1</AssemblyVersion>
-		<FileVersion>1.4.0.1</FileVersion>
+		<AssemblyVersion>1.4.1.0</AssemblyVersion>
+		<FileVersion>1.4.1.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<AssemblyDescription>projectFrameCut universal shared library</AssemblyDescription>

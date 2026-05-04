@@ -267,7 +267,6 @@ namespace projectFrameCut.DraftStuff
                         Enabled = effect.Enabled,
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
-                        IsMixture = false,
                         IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
                         IsVariableArgumentEffect = effect is IBindableArgumentEffect,
                         ImplementType = effect.ImplementType,

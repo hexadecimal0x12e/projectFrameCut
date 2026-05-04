@@ -51,22 +51,25 @@ namespace projectFrameCut.Render.Effect
             foreach (var item in Effects)
             {
                 var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
-                effects.Add(e);
                 if (e is ISpeedVarianceProvider p)
                 {
                     if (haveSpeedVarProvider) throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
                     haveSpeedVarProvider = true;
                     provider = p;
                 }
-                if (e is IMixture m)
+                else if (e is IMixture m)
                 {
-                    if (haveMixture) throw new InvalidOperationException("Multiple IMixture effects found.");
+                    if (haveMixture) throw new InvalidOperationException("Multiple MixtureProvider effects found.");
                     haveMixture = true;
                     mixture = m;
                 }
+                else
+                {
+                    effects.Add(e);
+                }
             }
 
-            return (effects.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider && c.TypeOfEffect != EffectType.MixtureProvider).OrderBy(c => c.Index).ToArray(), provider, mixture);
+            return (effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray(), provider, mixture);
         }
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {

@@ -1568,23 +1568,24 @@ namespace projectFrameCut.Render.Rendering
             IPicture? merged = null;
             try
             {
-                foreach (var layerPic in completion.LayerResults!)
+                ClipNeedForFrame.TryGetValue(frame, out var allClips);
+                FrameLayerGroups!.TryGetValue(frame, out var layerGroups);
+
+                for (int layerIdx = 0; layerIdx < completion.LayerResults!.Length; layerIdx++)
                 {
+                    var layerPic = completion.LayerResults[layerIdx];
                     if (layerPic == null) continue;
+
+                    var mixer = GetLayerMixer(allClips, layerGroups, layerIdx);
+                    var computer = GetOrCreateComputer(mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId);
 
                     if (merged == null)
                     {
-                        merged = ClassicOverlayMixture.Default.Mix(
-                            BlankFrame, layerPic,
-                            GetOrCreateComputer(ClassicOverlayMixture.ComputerId),
-                            _ppb);
+                        merged = mixer.Mix(BlankFrame, layerPic, computer, _ppb);
                     }
                     else
                     {
-                        var temp = ClassicOverlayMixture.Default.Mix(
-                            merged, layerPic,
-                            GetOrCreateComputer(ClassicOverlayMixture.ComputerId),
-                            _ppb);
+                        var temp = mixer.Mix(merged, layerPic, computer, _ppb);
                         merged.Dispose();
                         merged = temp;
                     }
@@ -1932,6 +1933,25 @@ namespace projectFrameCut.Render.Rendering
                 Log(ex, $"Write blank frames", this);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Returns the <see cref="IMixture"/> to use when compositing a layer onto the accumulated
+        /// frame result. Uses the first non-null MixtureInstance from any clip in the layer;
+        /// falls back to <see cref="ClassicOverlayMixture.Default"/>.
+        /// </summary>
+        private static IMixture GetLayerMixer(IClip[]? allClips, LayerGroup[]? layerGroups, int layerIdx)
+        {
+            if (allClips != null && layerGroups != null && layerIdx < layerGroups.Length)
+            {
+                var group = layerGroups[layerIdx];
+                for (int i = group.StartIndex; i < group.StartIndex + group.Count && i < allClips.Length; i++)
+                {
+                    if (allClips[i].MixtureInstance != null)
+                        return allClips[i].MixtureInstance;
+                }
+            }
+            return ClassicOverlayMixture.Default;
         }
 
         /// <summary>

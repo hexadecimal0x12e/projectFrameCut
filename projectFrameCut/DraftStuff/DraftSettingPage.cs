@@ -106,6 +106,11 @@ public class DraftSettingPage
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
+            Header = Localized.DraftSettingPage_Tab_Messages,
+            Content = BuildHistoryLogsTab()
+        });
+        tabView.TabItems.Add(new TabbedViewItem
+        {
             Header = Localized.DraftSettingPage_Tab_Compatibility,
             Content = BuildCompatibilityTab()
         });
@@ -114,6 +119,54 @@ public class DraftSettingPage
             Header = Localized.MainSettingsPage_Tab_Misc,
             Content = BuildAdvancedTab()
         });
+
+        tabView.OnTabSwitched += (s, e) =>
+        {
+            if (tabView.SelectedItem.Tag == "history")
+            {
+                var clearHistoryButtonsLayout = new HorizontalStackLayout
+                {
+                    Spacing = 8,
+                    HorizontalOptions = LayoutOptions.Start
+                };
+
+                var popOutButton = new Button
+                {
+                    Text = "↗",
+                    Command = new Command(async () =>
+                    {
+                        var w = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                        {
+                            Title = Localized.DraftSettingPage_Tab_History,
+                            Content = BuildHistoryGraphTab(),
+                            IsNavigationVisible = false,
+                            IsPopOutVisible = true
+                        };
+                        parent.MainMultiWindowView.AddWindow(w);
+                        await Task.Delay(50);
+                        parent.MainMultiWindowView.BringToFront(w);
+                        await parent.HidePopup();
+                    })
+                };
+
+                var clearOldHistoryButton = new Button
+                {
+                    Text = Localized.DraftSettingPage_Tab_History_Cleanup,
+                    BackgroundColor = Color.FromArgb("#D2691E"),
+                    TextColor = Colors.White,
+                    HorizontalOptions = LayoutOptions.Start
+                };
+                clearOldHistoryButton.Clicked += async (_, _) => await ShowCleanupOptionsAsync();
+
+                clearHistoryButtonsLayout.Children.Add(clearOldHistoryButton);
+                clearHistoryButtonsLayout.Add(popOutButton);
+                tabView.HeaderRightContent = clearHistoryButtonsLayout;
+            }
+            else
+            {
+                tabView.HeaderRightContent = new Border { StrokeThickness = 0, WidthRequest = 1, HeightRequest = 1 };
+            }
+        };
 
     }
 
@@ -649,6 +702,7 @@ public class DraftSettingPage
             return new ScrollView { Content = root };
         }
 
+
         var edgeSet = new HashSet<(Guid from, Guid to)>();
         foreach (var edge in edges)
         {
@@ -728,6 +782,93 @@ public class DraftSettingPage
 
         HistoryTabContent = mainLayout;
         return mainLayout;
+    }
+
+    private View BuildHistoryLogsTab()
+    {
+        var root = new VerticalStackLayout
+        {
+            Spacing = 10,
+            Padding = new Thickness(10)
+        };
+
+        var refreshButton = new Button
+        {
+            Text = Localized.DraftSettingPage_Advanced_ReloadHistory,
+            HorizontalOptions = LayoutOptions.Start
+        };
+        refreshButton.Clicked += (_, _) =>
+        {
+            tabView.SelectedItem.Content = BuildHistoryLogsTab();
+        };
+        root.Children.Add(refreshButton);
+
+        if (parent.HistoryLogs.Count == 0)
+        {
+            root.Children.Add(new Label
+            {
+                Text = Localized.DraftSettingPage_Tab_History_NotAvailable,
+                FontSize = 25,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            });
+            root.Children.Add(new Label
+            {
+                Text = Localized.DraftSettingPage_Tab_History_NotAvailable_Sub,
+                FontSize = 13,
+                Opacity = 0.75,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            });
+            return root;
+        }
+
+        var logs = parent.HistoryLogs
+            .OrderByDescending(x => x.Key)
+            .Take(500);
+
+        foreach (var item in logs)
+        {
+            var level = item.Value.Level ?? "Info";
+            var message = string.IsNullOrWhiteSpace(item.Value.Message) ? "(empty)" : item.Value.Message;
+            var levelColor = level switch
+            {
+                "Error" => Colors.IndianRed,
+                "Warning" => Colors.Goldenrod,
+                _ => Colors.LightSkyBlue
+            };
+
+            var entry = new Border
+            {
+                Stroke = Color.FromArgb("#2AFFFFFF"),
+                StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+                Padding = new Thickness(10, 8),
+                Content = new VerticalStackLayout
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        new Label
+                        {
+                            Text = $"{new DateTime(item.Key):yyyy-MM-dd HH:mm:ss.fff} · {level}",
+                            TextColor = levelColor,
+                            FontSize = 12,
+                            FontAttributes = FontAttributes.Bold
+                        },
+                        new Label
+                        {
+                            Text = message,
+                            FontSize = 13,
+                            LineBreakMode = LineBreakMode.WordWrap
+                        }
+                    }
+                }
+            };
+            root.Children.Add(entry);
+        }
+
+        return new ScrollView { Content = root };
     }
 
     private View BuildHistoryGraphRow(HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
@@ -875,6 +1016,331 @@ public class DraftSettingPage
             parent.SetStateFail();
             parent.SetStatusText(Localized._ExceptionTemplate(ex));
         }
+    }
+
+    private async Task ShowCleanupOptionsAsync()
+    {
+        if (GetHostPage() is not Page hostPage)
+        {
+            return;
+        }
+
+        string result = await hostPage.DisplayActionSheetAsync(
+            Localized.DraftSettingPage_Tab_History_CleanupAll_Title,
+            Localized._Cancel,
+            Localized.DraftSettingPage_Tab_History_CleanupAll,
+            Localized.DraftSettingPage_Tab_History_HoursAgo(1),
+            Localized.DraftSettingPage_Tab_History_HoursAgo(24),
+            Localized.DraftSettingPage_Tab_History_HoursAgo(48),
+            Localized.DraftSettingPage_Tab_History_HoursAgo(72),
+            Localized.DraftSettingPage_Tab_History_DaysAgo(7),
+            Localized.DraftSettingPage_Tab_History_DaysAgo(14)
+        );
+
+        if (string.IsNullOrWhiteSpace(result) || result == Localized._Cancel)
+        {
+            return;
+        }
+
+        var cutoffTime = result switch
+        {
+            _ when result == Localized.DraftSettingPage_Tab_History_HoursAgo(1) => DateTime.Now.AddHours(-1),
+            _ when result == Localized.DraftSettingPage_Tab_History_HoursAgo(24) => DateTime.Now.AddHours(-24),
+            _ when result == Localized.DraftSettingPage_Tab_History_HoursAgo(48) => DateTime.Now.AddHours(-48),
+            _ when result == Localized.DraftSettingPage_Tab_History_HoursAgo(72) => DateTime.Now.AddHours(-72),
+            _ when result == Localized.DraftSettingPage_Tab_History_DaysAgo(7) => DateTime.Now.AddDays(-7),
+            _ when result == Localized.DraftSettingPage_Tab_History_DaysAgo(14) => DateTime.Now.AddDays(-14),
+            _ => DateTime.Now.AddDays(1)
+        };
+
+        if (cutoffTime > DateTime.Now)
+        {
+            await ClearPastHistoryAsync();
+        }
+        else
+        {
+            await ClearHistoryBeforeDateAsync(cutoffTime, result);
+        }
+
+    }
+
+    private async Task ClearHistoryBeforeDateAsync(DateTime cutoffDateTime, string cutoffLabel)
+    {
+        Guid currentSnapshotId;
+        Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure> mapping;
+        List<SaveSlotHistoryItem> historyItems;
+        ProjectJSONStructure? standaloneProjectInfo = null;
+        string projectRoot = ResolveJsonProjectRoot();
+
+        if (IsStandaloneJsonMode)
+        {
+            if (!TryLoadStandaloneProjectInfo(out var info, out var loadError))
+            {
+                await ShowInfoAsync(loadError);
+                return;
+            }
+
+            standaloneProjectInfo = info;
+            mapping = info.SnapshotIDMapping ?? [];
+            currentSnapshotId = info.LastSnapshotID;
+        }
+        else
+        {
+            mapping = parent.ProjectInfo.SnapshotIDMapping ?? [];
+            currentSnapshotId = parent.CurrentSnapshotID;
+        }
+
+        if (currentSnapshotId == Guid.Empty)
+        {
+            await ShowInfoAsync("Current snapshot is unavailable.");
+            return;
+        }
+
+        historyItems = ReadSaveSlotHistory();
+        var historyById = historyItems.ToDictionary(h => h.SnapshotID);
+
+        var snapshotIdsToDelete = new List<Guid>();
+        foreach (var kv in mapping)
+        {
+            if (kv.Key == currentSnapshotId)
+            {
+                continue;
+            }
+
+            if (historyById.TryGetValue(kv.Key, out var item) && item.SavedAt < cutoffDateTime)
+            {
+                snapshotIdsToDelete.Add(kv.Key);
+            }
+        }
+
+        if (snapshotIdsToDelete.Count == 0)
+        {
+            if (IsStandaloneJsonMode)
+            {
+                await ShowInfoAsync(Localized.DraftSettingPage_Tab_History_CleanupAll_None);
+            }
+            else
+            {
+                parent.SetStateOK(Localized.DraftSettingPage_Tab_History_CleanupAll_None);
+            }
+            return;
+        }
+
+        bool confirm = await ConfirmAsync(
+            Localized._Warn,
+            Localized.DraftSettingPage_Tab_History_CleanupAll_WarnRange(cutoffLabel,snapshotIdsToDelete.Count)
+        );
+        if (!confirm)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var snapshotId in snapshotIdsToDelete)
+            {
+                DeleteSaveSlotDirectory(projectRoot, snapshotId);
+
+                if (mapping.TryGetValue(snapshotId, out var entry))
+                {
+                    if (entry.Previous != Guid.Empty && mapping.TryGetValue(entry.Previous, out var prevEntry))
+                    {
+                        mapping[entry.Previous] = (prevEntry.Previous, entry.Next);
+                    }
+
+                    if (entry.Next != Guid.Empty && mapping.TryGetValue(entry.Next, out var nextEntry))
+                    {
+                        mapping[entry.Next] = (entry.Previous, nextEntry.Next);
+                    }
+                }
+
+                mapping.Remove(snapshotId);
+            }
+
+            if (IsStandaloneJsonMode && standaloneProjectInfo is not null)
+            {
+                standaloneProjectInfo.SnapshotIDMapping = mapping;
+                await SaveStandaloneProjectInfo(standaloneProjectInfo);
+                await ShowInfoAsync(Localized._Done);
+            }
+            else
+            {
+                parent.ProjectInfo.SnapshotIDMapping = mapping;
+                string projectFilePath = ResolveLiveProjectFilePath();
+                if (string.IsNullOrWhiteSpace(projectFilePath))
+                {
+                    throw new InvalidOperationException("Project file path is invalid.");
+                }
+
+                await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
+                parent.SetStateOK(Localized._Done);
+            }
+
+            tabView.SelectedItem.Content = BuildHistoryGraphTab();
+        }
+        catch (Exception ex)
+        {
+            if (IsStandaloneJsonMode)
+            {
+                await ShowInfoAsync($"Failed to clear history: {ex.Message}");
+            }
+            else
+            {
+                parent.SetStateFail();
+                parent.SetStatusText(Localized._ExceptionTemplate(ex));
+            }
+        }
+    }
+
+    private async Task ClearPastHistoryAsync()
+    {
+        Guid currentSnapshotId;
+        Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure> mapping;
+        ProjectJSONStructure? standaloneProjectInfo = null;
+        string projectRoot = ResolveJsonProjectRoot();
+
+        if (IsStandaloneJsonMode)
+        {
+            if (!TryLoadStandaloneProjectInfo(out var info, out var loadError))
+            {
+                await ShowInfoAsync(loadError);
+                return;
+            }
+
+            standaloneProjectInfo = info;
+            mapping = info.SnapshotIDMapping ?? [];
+            currentSnapshotId = info.LastSnapshotID;
+        }
+        else
+        {
+            mapping = parent.ProjectInfo.SnapshotIDMapping ?? [];
+            currentSnapshotId = parent.CurrentSnapshotID;
+        }
+
+        if (currentSnapshotId == Guid.Empty)
+        {
+            await ShowInfoAsync("Current snapshot is unavailable.");
+            return;
+        }
+
+        if (!mapping.TryGetValue(currentSnapshotId, out var currentEntry) || currentEntry.Previous == Guid.Empty)
+        {
+            if (IsStandaloneJsonMode)
+            {
+                await ShowInfoAsync(Localized.DraftSettingPage_Tab_History_CleanupAll_None);
+            }
+            else
+            {
+                parent.SetStateOK(Localized.DraftSettingPage_Tab_History_CleanupAll_None);
+            }
+            return;
+        }
+
+        bool confirm = await ConfirmAsync(Localized._Warn, Localized.DraftSettingPage_Tab_History_CleanupAll_Warn);
+        if (!confirm)
+        {
+            return;
+        }
+
+        try
+        {
+            var pastSnapshotIds = CollectPastSnapshotIds(currentSnapshotId, mapping);
+            foreach (var snapshotId in pastSnapshotIds)
+            {
+                DeleteSaveSlotDirectory(projectRoot, snapshotId);
+                mapping.Remove(snapshotId);
+            }
+
+            if (mapping.TryGetValue(currentSnapshotId, out var entryAfterCleanup))
+            {
+                mapping[currentSnapshotId] = (Guid.Empty, entryAfterCleanup.Next);
+            }
+
+            if (IsStandaloneJsonMode && standaloneProjectInfo is not null)
+            {
+                standaloneProjectInfo.SnapshotIDMapping = mapping;
+                await SaveStandaloneProjectInfo(standaloneProjectInfo);
+                await ShowInfoAsync(Localized._Done);
+            }
+            else
+            {
+                parent.ProjectInfo.SnapshotIDMapping = mapping;
+                string projectFilePath = ResolveLiveProjectFilePath();
+                if (string.IsNullOrWhiteSpace(projectFilePath))
+                {
+                    throw new InvalidOperationException("Project file path is invalid.");
+                }
+
+                await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
+                parent.SetStateOK(Localized._Done);
+            }
+
+            tabView.SelectedItem.Content = BuildHistoryGraphTab();
+        }
+        catch (Exception ex)
+        {
+            if (IsStandaloneJsonMode)
+            {
+                await ShowInfoAsync($"Failed to clear past history: {ex.Message}");
+            }
+            else
+            {
+                parent.SetStateFail();
+                parent.SetStatusText(Localized._ExceptionTemplate(ex));
+            }
+        }
+    }
+
+    private static List<Guid> CollectPastSnapshotIds(
+        Guid currentSnapshotId,
+        Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure> mapping)
+    {
+        var result = new List<Guid>();
+        var visited = new HashSet<Guid>();
+        var cursor = currentSnapshotId;
+
+        while (cursor != Guid.Empty
+            && visited.Add(cursor)
+            && mapping.TryGetValue(cursor, out var currentEntry)
+            && currentEntry.Previous != Guid.Empty)
+        {
+            Guid previousId = currentEntry.Previous;
+            result.Add(previousId);
+            cursor = previousId;
+        }
+
+        return result;
+    }
+
+    private static void DeleteSaveSlotDirectory(string projectRoot, Guid snapshotId)
+    {
+        if (string.IsNullOrWhiteSpace(projectRoot) || snapshotId == Guid.Empty)
+        {
+            return;
+        }
+
+        string slotPath = System.IO.Path.Combine(projectRoot, SaveSlotDirectoryName, $"slot_{snapshotId}");
+        if (System.IO.Directory.Exists(slotPath))
+        {
+            System.IO.Directory.Delete(slotPath, true);
+        }
+    }
+
+    private string ResolveLiveProjectFilePath()
+    {
+        string projectRoot = ResolveJsonProjectRoot();
+        if (string.IsNullOrWhiteSpace(projectRoot))
+        {
+            return string.Empty;
+        }
+
+        string pjfcPath = System.IO.Path.Combine(projectRoot, "project.pjfc");
+        if (System.IO.File.Exists(pjfcPath))
+        {
+            return pjfcPath;
+        }
+
+        return System.IO.Path.Combine(projectRoot, "project.json");
     }
 
     private async Task RestoreSlotStandalone(Guid snapshotId, string date)

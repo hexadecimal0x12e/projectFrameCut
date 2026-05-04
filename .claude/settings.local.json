@@ -6,7 +6,8 @@
       "Bash(splc-edit list-items *)",
       "Bash(splc-edit get-item *)",
       "Bash(dotnet tool *)",
-      "Bash(xargs -I{} sh -c 'jq -r \"select\\(.message.role == \\\\\"assistant\\\\\"\\) | .message.content[]? | select\\(.type == \\\\\"tool_use\\\\\"\\) | \\\\\"\\\\\\(.name\\)\\\\t\\\\\\(if .name == \\\\\"Bash\\\\\" then .input.command else \\\\\"\\\\\" end\\)\\\\\"\" \"{}\" 2>/dev/null')"
+      "Bash(xargs -I{} sh -c 'jq -r \"select\\(.message.role == \\\\\"assistant\\\\\"\\) | .message.content[]? | select\\(.type == \\\\\"tool_use\\\\\"\\) | \\\\\"\\\\\\(.name\\)\\\\t\\\\\\(if .name == \\\\\"Bash\\\\\" then .input.command else \\\\\"\\\\\" end\\)\\\\\"\" \"{}\" 2>/dev/null')",
+      "Bash(splc-edit generate-code *)"
     ]
   }
 }

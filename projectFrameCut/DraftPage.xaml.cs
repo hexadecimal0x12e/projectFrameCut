@@ -192,36 +192,18 @@ public partial class DraftPage : ContentPage, IDraftPage
     public InteractableEditor.DynamicPreview DynamicPreviewProvider;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
     public ProjectAddClipView AddClipView = null!;
-    public bool IsPopupClosableByTapBackground { get; set; } = true;
 
-    public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
-    public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
-    public bool IsClipMoving
-    {
-        get;
-        set
-        {
-            if (field == value)
-            {
-                return;
-            }
-
-            field = value;
-            OnPropertyChanged(nameof(IsClipMoving));
-        }
-    } = false;
-    public bool SelectedAnyClip => _selected is not null || _selectedClipIds.Count > 0;
     public ProjectJSONStructure ProjectInfo { get; set; }
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
+    public ConcurrentDictionary<long, DraftPageLogItem> HistoryLogs = new();
+
     public double SecondsPerFrame { get; set; } = 1 / 30d;
     public double FramePerPixel { get; set; } = 1d;
     public uint ProjectDuration { get; set; } = 0;
-    public bool MultiSelectEnabled { get; set; }
-    public bool UseDynamicPreview { get; set; } = true;
 
     public ICommand AddCommand { get; private set; }
     public ICommand ExportCommand { get; private set; }
@@ -230,7 +212,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand UndoCommand { get; private set; }
     public ICommand RedoCommand { get; private set; }
     public ICommand SelectCommand { get; private set; }
-    public ICommand UnselectCommand { get; private set; }
     public ICommand ShowClipInfoPanelCommand { get; private set; }
     public ICommand SpiltCommand { get; private set; }
     public ICommand SpiltOrCombineCommand { get; private set; }
@@ -260,8 +241,26 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand AddHorizontalReferenceLineCommand { get; private set; }
     public ICommand AddVerticalReferenceLineCommand { get; private set; }
     public ICommand ClearReferenceLinesCommand { get; private set; }
+    public ICommand ManageReferenceLinesCommand { get; private set; }
     public ICommand ZoomCommand { get; private set; }
 
+    public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
+    public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
+    public bool IsClipMoving
+    {
+        get;
+        set
+        {
+            if (field == value)
+            {
+                return;
+            }
+
+            field = value;
+            OnPropertyChanged(nameof(IsClipMoving));
+        }
+    } = false;
+    public bool SelectedAnyClip => _selected is not null || _selectedClipIds.Count > 0;
     public ClipElementUI? SelectedClip => _selected;
     public event EventHandler? SelectedClipChanged;
     public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
@@ -295,6 +294,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool LockScrollViewAfterSelection { get; set; }
     public bool EnableClipInfoPopup { get; set; }
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
+    public bool MultiSelectEnabled { get; set; }
+    public bool IsPopupClosableByTapBackground { get; set; } = true;
+    public bool UseDynamicPreview { get; set; } = true;
+
 
     #endregion
 
@@ -368,7 +371,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ConfigureReferenceLinesChanged(() =>
         {
             ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
+            SetStateOK(Localized.DraftPage_EverythingFine);
             return Task.CompletedTask;
+        });
+        ClipEditor.ConfigureManageReferenceLinesRequested(() =>
+        {
+            _ = ShowManageReferenceLinesPopup();
+        });
+        ClipEditor.ConfigureDefaultColorPickerRequested((currentColor) =>
+        {
+            _ = ShowReferenceLineColorPicker(currentColor);
         });
         HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
@@ -415,6 +427,36 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ProjectInfo.ProjectName ??= title;
         IsReadonly = isReadonly;
+        RestoreInteractableEditorState();
+    }
+
+    private void RestoreInteractableEditorState()
+    {
+        if (ClipEditor == null || ProjectInfo?.Properties == null) return;
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_LockLayout", out var lockLayoutStr) &&
+            bool.TryParse(lockLayoutStr, out var lockLayout))
+        {
+            ClipEditor.LockLayout = lockLayout;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableSnapping", out var enableSnappingStr) &&
+            bool.TryParse(enableSnappingStr, out var enableSnapping))
+        {
+            ClipEditor.EnableSnapping = enableSnapping;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_DisallowClipOutOfBounds", out var disallowClipOutOfBoundsStr) &&
+            bool.TryParse(disallowClipOutOfBoundsStr, out var disallowClipOutOfBounds))
+        {
+            ClipEditor.DisallowClipOutOfBounds = disallowClipOutOfBounds;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_ShowReferenceLines", out var showReferenceLinesStr) &&
+            bool.TryParse(showReferenceLinesStr, out var showReferenceLines))
+        {
+            ClipEditor.ShowReferenceLines = showReferenceLines;
+        }
     }
 
     private void NormalizeLoadedClipFrameSemantics()
@@ -589,7 +631,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         UndoCommand = new Command(() => UndoChanges());
         RedoCommand = new Command(() => RedoChanges());
         SelectCommand = new Command(async () => await SelectAClip());
-        UnselectCommand = new Command(() => UnSelectTapGesture_Tapped(this, null!));
         ShowClipInfoPanelCommand = new Command(async () => { if (_selectedClipIds.Count == 1) await ShowAPopup(clip: _selected, border: _selected?.Clip); else SetStateFail(Localized.DraftPage_SelectExactlyOneToContinue); });
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         SpiltOrCombineCommand = new Command(async () => { if (MultiSelectEnabled) await CombineSelection(); else Split_Clicked(this, null!); });
@@ -609,7 +650,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         ArrowRightCommand = new Command(async () => await HandleMoveArrowAsync(SnapGridPixels, 0));
         ArrowUpCommand = new Command(async () => await HandleMoveArrowAsync(0, -1));
         ArrowDownCommand = new Command(async () => await HandleMoveArrowAsync(0, 1));
-        ReturnCommand = new Command(async () => await ConfirmKeyboardMoveAsync());
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
         ExitCommand = new Command(async () => await Navigation.PopToRootAsync());
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
@@ -626,7 +666,55 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStatusText(Localized.DraftPage_MenuBar_View_ReferenceLines_AddHint);
         });
         ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
-        EscapeCommand = new Command(async () => { if (IsClipMoving) { CancelPendingClipPlacement(); SetStateOK(); SetStatusText(Localized.DraftPage_Tasks_Status_Canceled); } else if (_pendingClipPlacementFactory is not null) { CancelPendingClipPlacement(); } else if (ClipEditor.IsPlacingReferenceLine) { ClipEditor.AddAReferenceLine(null); } else { await HidePopup(); SetStateOK(); SetStatusText(Localized.DraftPage_EverythingFine); } });
+        ManageReferenceLinesCommand = new Command(() => _ = ShowManageReferenceLinesPopup());
+
+        EscapeCommand =
+            new Command(async () =>
+            {
+                if (IsClipMoving)
+                {
+                    CancelPendingClipPlacement();
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_Tasks_Status_Canceled);
+                }
+                else if (_pendingClipPlacementFactory is not null)
+                {
+                    CancelPendingClipPlacement();
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_Tasks_Status_Canceled);
+                }
+                else if (ClipEditor.IsPlacingReferenceLine)
+                {
+                    ClipEditor.AddAReferenceLine(null);
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_Tasks_Status_Canceled);
+                }
+                else if (Popup.IsVisible)
+                {
+                    await HidePopup();
+                }
+                else if (SelectedAnyClip)
+                {
+                    UnSelectTapGesture_Tapped(this, null!);
+                }
+                else
+                {
+                    SetStateOK(Localized.DraftPage_EverythingFine);
+                }
+            });
+        ReturnCommand =
+            new Command(async () =>
+            {
+                if (IsClipMoving)
+                {
+                    await ConfirmKeyboardMoveAsync();
+                }
+                else
+                {
+                    SetStateOK(Localized.DraftPage_EverythingFine);
+                }
+            });
+
 
     }
 
@@ -6040,6 +6128,38 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
                     break;
                 }
+            case "switch":
+                try
+                {
+                    var currentIndex = Array.IndexOf(MainMultiWindowView.Windows.ToArray(), MainMultiWindowView.ActiveWindow);
+                    if (currentIndex >= 0 && (currentIndex + 1) < MainMultiWindowView.Windows.Count)
+                    {
+                        MainMultiWindowView.BringToFront(MainMultiWindowView.Windows.ToArray()[currentIndex + 1]);
+                    }
+                    else if (MainMultiWindowView.Windows.Any())
+                    {
+                        MainMultiWindowView.BringToFront(MainMultiWindowView.Windows.ToArray()[0]);
+                    }
+                }
+                catch { }
+                break;
+            case "taskbar":
+                try
+                {
+                    if (MainMultiWindowView.TaskbarVisibility == TaskbarVisibilityMode.AlwaysHidden)
+                    {
+                        MainMultiWindowView.TaskbarVisibility = TaskbarVisibilityMode.Auto;
+                    }
+                    else
+                    {
+                        MainMultiWindowView.TaskbarVisibility = TaskbarVisibilityMode.AlwaysHidden;
+                    }
+                }
+                catch
+                {
+                    MainMultiWindowView.TaskbarVisibility = TaskbarVisibilityMode.Auto;
+                }
+                break;
             case "active":
                 if (MainMultiWindowView?.ActiveWindow?.IsClosable ?? false) MainMultiWindowView?.ActiveWindow?.Close(false);
                 break;
@@ -6110,6 +6230,232 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    private async Task ShowReferenceLineColorPicker(Color currentColor)
+    {
+        var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = currentColor };
+        picker.SelectedColorChanged += (_, color) =>
+        {
+            ClipEditor.DefaultReferenceLineColor = color;
+        };
+
+        var popupView = new VerticalStackLayout
+        {
+            Spacing = 10,
+            Padding = new Thickness(10, 0),
+            Children =
+            {
+                new Button
+                {
+                    Text = Localized._Hide,
+                    Command = new Command(async () => await HidePopup(true))
+                },
+                picker,
+            }
+        };
+        await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+    }
+
+    private async Task ShowManageReferenceLinesPopup()
+    {
+        var panel = new VerticalStackLayout { Spacing = 6, Padding = new Thickness(10) };
+
+        var titleSection = new HorizontalStackLayout { Spacing = 8 };
+
+        var defaultsLabel = new Label
+        {
+            Text = Localized.DraftPage_ManageReferenceLines_Defaults,
+            FontAttributes = FontAttributes.Bold,
+            FontSize = 16,
+            TextColor = Colors.White,
+            VerticalOptions = LayoutOptions.Center
+        };
+        titleSection.Children.Add(defaultsLabel);
+
+        var defaultColorSwatch = new Border
+        {
+            WidthRequest = 28,
+            HeightRequest = 28,
+            BackgroundColor = ClipEditor.DefaultReferenceLineColor,
+            StrokeThickness = 2,
+            Stroke = Colors.Gray,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+            VerticalOptions = LayoutOptions.Center
+        };
+        var defaultColorTap = new TapGestureRecognizer();
+        defaultColorTap.Tapped += async (_, _) => await ShowReferenceLineColorPicker(ClipEditor.DefaultReferenceLineColor);
+        defaultColorSwatch.GestureRecognizers.Add(defaultColorTap);
+
+        var defaultThicknessEntry = new Entry
+        {
+            Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1"),
+            WidthRequest = 54,
+            Keyboard = Keyboard.Numeric,
+            VerticalOptions = LayoutOptions.Center,
+            HorizontalTextAlignment = TextAlignment.Center
+        };
+        defaultThicknessEntry.Completed += (_, _) =>
+        {
+            if (double.TryParse(defaultThicknessEntry.Text, out var t))
+                ClipEditor.DefaultReferenceLineThickness = t;
+            else
+                defaultThicknessEntry.Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1");
+        };
+        defaultThicknessEntry.Unfocused += (_, _) =>
+        {
+            if (double.TryParse(defaultThicknessEntry.Text, out var t))
+                ClipEditor.DefaultReferenceLineThickness = t;
+            else
+                defaultThicknessEntry.Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1");
+        };
+
+        var defaultThicknessLabel = new Label
+        {
+            Text = Localized.DraftPage_ManageReferenceLines_ThicknessLabel,
+            VerticalOptions = LayoutOptions.Center,
+            TextColor = Colors.White
+        };
+
+        titleSection.Children.Add(defaultColorSwatch);
+        titleSection.Children.Add(defaultThicknessLabel);
+        titleSection.Children.Add(defaultThicknessEntry);
+        panel.Children.Add(titleSection);
+
+        panel.Children.Add(new BoxView { HeightRequest = 1, Color = Colors.Gray, Margin = new Thickness(0, 8) });
+
+        var lines = ClipEditor.ReferenceLines;
+        if (lines.Count == 0)
+        {
+            panel.Children.Add(new Label
+            {
+                Text = Localized.DraftPage_ManageReferenceLines_NoLines,
+                TextColor = Colors.Gray
+            });
+        }
+        else
+        {
+            panel.Children.Add(new Label
+            {
+                Text = $"{Localized.DraftPage_MenuBar_View_ReferenceLines_Manage} ({lines.Count})",
+                FontAttributes = FontAttributes.Bold,
+                FontSize = 16,
+                TextColor = Colors.White
+            });
+
+            var linesList = new VerticalStackLayout { Spacing = 4 };
+            foreach (var kvp in lines)
+            {
+                var id = kvp.Key;
+                var line = kvp.Value;
+                var row = new HorizontalStackLayout { Spacing = 6 };
+
+                var lineColorSwatch = new Border
+                {
+                    WidthRequest = 24,
+                    HeightRequest = 24,
+                    BackgroundColor = line.Color,
+                    StrokeThickness = 1,
+                    Stroke = Colors.Gray,
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 3 },
+                    VerticalOptions = LayoutOptions.Center
+                };
+                var lineColorTap = new TapGestureRecognizer();
+                var capturedId = id;
+                lineColorTap.Tapped += async (_, _) =>
+                {
+                    if (!ClipEditor.ReferenceLines.TryGetValue(capturedId, out var refLine))
+                        return;
+                    var linePicker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = refLine.Color };
+                    linePicker.SelectedColorChanged += (_, color) =>
+                    {
+                        ClipEditor.UpdateReferenceLineColor(capturedId, color);
+                        lineColorSwatch.BackgroundColor = color;
+                    };
+                    var popupView = new VerticalStackLayout
+                    {
+                        Spacing = 10,
+                        Padding = new Thickness(10, 0),
+                        Children =
+                        {
+                            new Button
+                            {
+                                Text = Localized._Hide,
+                                Command = new Command(async () => await HidePopup(true))
+                            },
+                            linePicker,
+                        }
+                    };
+                    await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+                };
+                lineColorSwatch.GestureRecognizers.Add(lineColorTap);
+
+                var orientationChar = line.Orientation == InteractableEditor.InteractableEditor.ReferenceLineOrientation.Horizontal ? "H" : "V";
+                var infoLabel = new Label
+                {
+                    Text = $"{orientationChar} {line.Position:F1}",
+                    VerticalOptions = LayoutOptions.Center,
+                    WidthRequest = 120,
+                    TextColor = Colors.White
+                };
+
+                var lineThicknessEntry = new Entry
+                {
+                    Text = line.Thickness.ToString("F1"),
+                    WidthRequest = 50,
+                    Keyboard = Keyboard.Numeric,
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalTextAlignment = TextAlignment.Center
+                };
+                lineThicknessEntry.Completed += (_, _) =>
+                {
+                    if (double.TryParse(lineThicknessEntry.Text, out var t))
+                        ClipEditor.UpdateReferenceLineThickness(capturedId, t);
+                    else
+                        lineThicknessEntry.Text = ClipEditor.ReferenceLines.TryGetValue(capturedId, out var rl) ? rl.Thickness.ToString("F1") : "1.0";
+                };
+                lineThicknessEntry.Unfocused += (_, _) =>
+                {
+                    if (double.TryParse(lineThicknessEntry.Text, out var t))
+                        ClipEditor.UpdateReferenceLineThickness(capturedId, t);
+                    else
+                        lineThicknessEntry.Text = ClipEditor.ReferenceLines.TryGetValue(capturedId, out var rl) ? rl.Thickness.ToString("F1") : "1.0";
+                };
+
+                var deleteButton = new Button
+                {
+                    Text = "✕",
+                    WidthRequest = 32,
+                    HeightRequest = 32,
+                    Padding = new Thickness(0),
+                    BackgroundColor = Colors.Transparent,
+                    TextColor = Colors.Red,
+                    FontSize = 14
+                };
+                deleteButton.Clicked += (_, _) =>
+                {
+                    ClipEditor.RemoveReferenceLine(capturedId);
+                    linesList.Children.Remove(row);
+                    _ = ShowManageReferenceLinesPopup();
+                };
+
+                row.Children.Add(lineColorSwatch);
+                row.Children.Add(infoLabel);
+                row.Children.Add(lineThicknessEntry);
+                row.Children.Add(deleteButton);
+                linesList.Children.Add(row);
+            }
+            panel.Children.Add(linesList);
+        }
+
+        var closeButton = new Button
+        {
+            Text = Localized._Hide,
+            Margin = new Thickness(0, 8, 0, 0),
+            Command = new Command(async () => await HidePopup(true))
+        };
+        panel.Children.Add(closeButton);
+
+        await ShowAPopup(new ScrollView { Content = panel }, mode: "dialog");
+    }
 
     #endregion
 
@@ -7307,6 +7653,15 @@ public partial class DraftPage : ContentPage, IDraftPage
                        .Where(c => !c.StartsWith("projectFrameCut.Render."))
                        .Distinct().ToList();
 
+        // Save InteractableEditor checkbox states to ProjectInfo.Properties
+        if (ClipEditor != null)
+        {
+            ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
+            ProjectInfo.Properties["InteractableEditor_EnableSnapping"] = ClipEditor.EnableSnapping.ToString();
+            ProjectInfo.Properties["InteractableEditor_DisallowClipOutOfBounds"] = ClipEditor.DisallowClipOutOfBounds.ToString();
+            ProjectInfo.Properties["InteractableEditor_ShowReferenceLines"] = ClipEditor.ShowReferenceLines.ToString();
+        }
+
         saveLocker.Enter();
         try
         {
@@ -8319,6 +8674,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         SetStateBusy();
         SetStatusText(text);
+
     }
 
     public void SetStateOK()
@@ -8367,6 +8723,48 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
+    public void SetStateWarn()
+    {
+        if (StateIndicator is null) return;
+        Dispatcher.Dispatch(() =>
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Yellow,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+            });
+        });
+
+    }
+
+    private void SetStateWarn(string text)
+    {
+        SetStateFail();
+        Dispatcher.Dispatch(() =>
+        {
+            StatusLabel.TextColor = Colors.Yellow;
+            StatusLabel.Text = text;
+        });
+        if (LogUIMessageToLogger) Log(text, "UI warn");
+        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
+        {
+            if (DateTime.Now - new DateTime(d) > TimeSpan.FromSeconds(1))
+            {
+                return new DraftPageLogItem { Message = text, Level = "Warning" };
+            }
+            else
+            {
+                old.Message += "\n" + text;
+                return old;
+            }
+        });
+    }
+
     private void SetStateFail(string text)
     {
         SetStateFail();
@@ -8376,6 +8774,18 @@ public partial class DraftPage : ContentPage, IDraftPage
             StatusLabel.Text = text;
         });
         if (LogUIMessageToLogger) Log(text, "UI err");
+        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
+        {
+            if (DateTime.Now - new DateTime(d) > TimeSpan.FromSeconds(1))
+            {
+                return new DraftPageLogItem { Message = text, Level = "Error" };
+            }
+            else
+            {
+                old.Message += "\n" + text;
+                return old;
+            }
+        });
     }
 
     public void SetStatusText(string text)
@@ -8387,6 +8797,18 @@ public partial class DraftPage : ContentPage, IDraftPage
             SemanticScreenReader.Default.Announce(text);
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
+        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
+        {
+            if (DateTime.Now - new DateTime(d) > TimeSpan.FromSeconds(1))
+            {
+                return new DraftPageLogItem { Message = text, Level = "Info" };
+            }
+            else
+            {
+                old.Message += "\n" + text;
+                return old;
+            }
+        });
     }
 
 
@@ -8513,6 +8935,13 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         public List<MainMultiWindowWindowState> Windows { get; init; } = [];
         public string? ActiveWindowKey { get; set; }
+    }
+
+    public class DraftPageLogItem
+    {
+        public string Message { get; set; }
+        public string Level { get; set; } = "Info";
+        public bool AlreadyRead { get; set; } = false;
     }
     #endregion
 

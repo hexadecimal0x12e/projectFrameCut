@@ -148,7 +148,7 @@ namespace projectFrameCut.DraftStuff
                     Header = PPLocalizedResources.Tabs_Mixture,
                     Content = BuildMixtureTab(clip, handler)
                 });
-                if(clip.ClipType != ClipMode.AudioClip)
+                if (clip.ClipType != ClipMode.AudioClip)
                 {
                     t.TabItems.Add(new TabbedViewItem
                     {
@@ -564,7 +564,7 @@ namespace projectFrameCut.DraftStuff
                              PPLocalizedResources.General_VideoCodec_TargetMode,
                              videoDecoderOptionLabelToId.Keys.ToArray(),
                              selectedVideoDecoderLabel)
-                             .AppendWhen((TargetVideoClip is not null && TargetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext)), 
+                             .AppendWhen((TargetVideoClip is not null && TargetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext)),
                                 cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, TargetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
                       cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup(TargetVideoClip?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(TargetVideoClip?.DecoderName ?? "Unknown")) }))
                  .AppendWhen(
@@ -1919,6 +1919,32 @@ namespace projectFrameCut.DraftStuff
             return id != IEffectBundle.NoConnectionGUID && id != IEffectBundle.OutputAnchorGUID;
         }
 
+        /// <summary>
+        /// 将新添加的 EffectBundle 自动接入到输出链中：插在距离输出画面最近的同Target Bundle 与输出画面之间。
+        /// </summary>
+        private static void AutoConnectBundleToOutput(ClipElementUI clip, IEffectBundle newBundle)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+            var target = clip.GetEffectTarget();
+
+            var lastBundle = clip.EffectBundles.Values
+                .FirstOrDefault(b => b.BindedOutputId == IEffectBundle.OutputAnchorGUID
+                                  && b.Target == target
+                                  && b.Id != newBundle.Id);
+
+            if (lastBundle != null)
+            {
+                lastBundle.BindedOutputId = newBundle.Id;
+                newBundle.BindedInputId = lastBundle.Id;
+                newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            }
+            else
+            {
+                newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
+                newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            }
+        }
+
         public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             ArgumentNullException.ThrowIfNull(clip);
@@ -2000,7 +2026,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 selectedInAnchor = bundleInstance.BindedInputIds[0];
                             }
-                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", $"Input anchor {bundleInstance.InputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
+                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", string.IsNullOrWhiteSpace(bundleInstance.InputAnchorDisplayName) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(bundleInstance.InputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
                         }
                         else
                         {
@@ -2010,13 +2036,12 @@ namespace projectFrameCut.DraftStuff
                                 var currentId = (bundleInstance.BindedInputIds != null && idx >= 0 && idx < bundleInstance.BindedInputIds.Count)
                                     ? bundleInstance.BindedInputIds[idx]
                                     : IEffectBundle.NoConnectionGUID;
-                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", $"Input anchor {item}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(currentId));
+                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", string.IsNullOrWhiteSpace(item) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(item), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(currentId));
 
                             }
                         }
 
-                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", $"Output anchor {bundleInstance.OutputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.TypeName} ({b.Key})").Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
-
+                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.TypeName} ({b.Key})").Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
 
                         ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                         ppb.AddSeparator();
@@ -2209,6 +2234,7 @@ namespace projectFrameCut.DraftStuff
                                 instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
                                 clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
                                 clip.EffectBundles[instance.Id] = instance;
+                                AutoConnectBundleToOutput(clip, instance);
 
                                 RebuildAllEffects(clip);
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -3058,6 +3084,7 @@ namespace projectFrameCut.DraftStuff
                             instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
                             clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
                             clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
 
                             RebuildAllEffects(clip);
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -3188,6 +3215,7 @@ namespace projectFrameCut.DraftStuff
                             instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
                             clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
                             clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
 
                             RebuildAllEffects(clip);
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));

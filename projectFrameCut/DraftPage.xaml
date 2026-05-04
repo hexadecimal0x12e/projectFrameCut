@@ -36,23 +36,16 @@
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" Command="{Binding ExitNoSaveCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Command="{Binding ExitCommand}"/>
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Escape}" Command="{Binding EscapeCommand}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-
-            </MenuFlyoutItem>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" Command="{Binding CopyCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" Command="{Binding CopyCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" Command="{Binding CutCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" Command="{Binding CutCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="X" />
@@ -64,16 +57,16 @@
                     Key="V" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
-                                Key="Z" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Duplicate}" Command="{Binding DuplicateCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="D" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="Z" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Redo}" Command="{Binding RedoCommand}">
@@ -103,11 +96,6 @@
                     <KeyboardAccelerator  Key="Down" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Conform}" Command="{Binding ReturnCommand}" IsEnabled="{Binding IsClipMoving}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator  Key="{OnPlatform MacCatalyst=Return, Default=Enter}" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Clip}">
@@ -121,11 +109,6 @@
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="C" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" Command="{Binding UnselectCommand}" IsEnabled="{Binding SelectedAnyClip}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" Command="{Binding ShowClipInfoPanelCommand}" IsEnabled="{Binding SelectedAnyClip}">
@@ -200,19 +183,26 @@
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Horizontal}" Command="{Binding AddHorizontalReferenceLineCommand}" >
                 <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Alt,Shift', MacCatalyst='Option,Alt'}" 
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
                                 Key="H" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Vertical}" Command="{Binding AddVerticalReferenceLineCommand}" >
                 <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Alt,Shift', MacCatalyst='Option,Alt'}" 
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
                                 Key="V" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Manage}" Command="{Binding ManageReferenceLinesCommand}" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Clear}" Command="{Binding ClearReferenceLinesCommand}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Switch}" Command="{Binding ManageWindowCommand}" CommandParameter="switch" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Option'}" 
+                                Key="Tab" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ToggleTaskbar}" Command="{Binding ManageWindowCommand}" CommandParameter="taskbar" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseAdditional}" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
@@ -244,6 +234,17 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Command="{Binding ManageJobsCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}" Key="T" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Conform}" Command="{Binding ReturnCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator  Key="{OnPlatform MacCatalyst=Return, Default=Enter}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Escape}" Command="{Binding EscapeCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
         </MenuBarItem>

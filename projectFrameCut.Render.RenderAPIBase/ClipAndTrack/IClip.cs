@@ -133,9 +133,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The effects applied to this clip's Data.
         /// Used in serialization and deserialization.
         /// </summary>
-        /// <remarks>
-        /// You may noticed the <see cref="EffectAndMixtureJSONStructure.IsMixture"/> param, which means this array can contain both effects and mixtures. For one where is marked as a mixture <see cref="EffectAndMixtureJSONStructure"/>, <see cref="EffectAndMixtureJSONStructure.FromPlugin"/> and <see cref="EffectAndMixtureJSONStructure.TypeName"/> will be determine the mixture's type and <see cref="EffectAndMixtureJSONStructure.Parameters"/> will be the mixture's parameters parsed to mixture, and the rest is ignored.
-        /// </remarks>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         /// <summary>
@@ -145,7 +142,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public IEffect[]? EffectsInstances { get; set; }
 
         /// <summary>
-        /// Get the path of the source file for this clip. May be null for some kind of clips.
+        /// Get the path of the source file for this clip. May be null when <see cref="NeedFilePath"/> is false.
         /// </summary>
         public string? FilePath { get; set; }
 

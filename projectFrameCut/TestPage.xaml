@@ -23,7 +23,11 @@
                             <Label Text="工具列表..." TextColor="White"/>
                         </v:MultiWindowItem>
                     </v:MultiWindowView>
+                    <Picker x:Name="TaskbarOptionPicker" SelectedIndexChanged="TaskbarOptionPicker_SelectedIndexChanged">
+
+                    </Picker>
                 </VerticalStackLayout>
+
             </Border>
             <Border StrokeThickness="4">
                 <Button x:Name="LoginTestButton" Text="Login" Clicked="LoginTestButton_Clicked"/>

@@ -52,6 +52,11 @@ public partial class EditSettingPage : ContentPage
             {
                 ILGPU.Context context = ILGPU.Context.CreateDefault();
                 var devices = context.Devices.ToList();
+                if(!devices.Any(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU))
+                {
+                    LoadTextPreview = false;
+                    return;
+                }
                 var accelDevice = devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices[0]);
                 projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
                 LoadTextPreview = true;
@@ -269,7 +274,7 @@ public partial class EditSettingPage : ContentPage
             )
             .AddSwitch("Edit_UpperContentHeight_AutoSave", SettingLocalizedResources.Edit_UpperContentHeight_AutoSave, IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), null)
             .AppendWhen(!IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), p => p.AddEntry("Edit_UpperContentHeight", SettingLocalizedResources.Edit_UpperContentHeight, GetSetting("Edit_UpperContentHeight", "250"), "250"))
-            .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "50"), "50")
+            //.AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "50"), "50")
             .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs<int>("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
 
             .AddSeparator()
@@ -298,39 +303,16 @@ public partial class EditSettingPage : ContentPage
                                 e.Value with { text = sample }
                             }
                         };
-                        SolidColorClip bkg = new SolidColorClip
-                        {
-                            Id = s.StyleId,
-                            Name = s.StyleId,
-                            R = (ushort)(65535 - e.Value.r),
-                            G = (ushort)(65535 - e.Value.g),
-                            B = (ushort)(65535 - e.Value.b),
-                            A = 1f
-                        };
+
 
                         var fs = s.fontSize > 0 ? s.fontSize : 36;
                         var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                         var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
                         var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-                        var bkgPic = bkg.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-
-                        IPicture img = null;
-                        if (LoadTextPreview)
-                        {
-                            img = ClassicOverlayMixture.Default.Mix(bkgPic, textPic, Render.Plugin.PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), 8);
-                            textPic.Dispose();
-                            bkgPic.Dispose();
-                        }
-                        else
-                        {
-                            img = textPic;
-                        }
-
-
 
                         b.AddText(SettingLocalizedResources.Edit_AddView_Text_Template_TemplateItem(e.Key))
-                         .AddCustomChild(new Image { Source = img.ToImageSource(), Aspect = Aspect.AspectFit, HeightRequest = imgHeight, WidthRequest = Math.Min(imgWidth, 600), HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(0) })
+                         .AddCustomChild(new Image { Source = textPic.ToImageSource(), Aspect = Aspect.AspectFit, HeightRequest = imgHeight, WidthRequest = Math.Min(imgWidth, 600), HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(0), Background = Color.FromRgb((255 - e.Value.r / 257), (255 - e.Value.g / 257), (255 - e.Value.b / 257)) })
                          .AddButton(SettingLocalizedResources.Edit_AddView_Text_Template_Configure(s.StyleId), async (_, _) => { await ConfigureTextTemplateAsync(s.StyleId); })
                          .AddButton(Localized._Remove, (_, _) => { TextTemplates.Remove(e.Key); PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(rootPPB, "TextTemplates", null); }, b => b.IsEnabled = s.StyleId != "Default")
                         ;

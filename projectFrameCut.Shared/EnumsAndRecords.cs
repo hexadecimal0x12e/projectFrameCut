@@ -247,7 +247,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         OverlayMaskFromBrightness,
         /// <summary>
-        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away.
+        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away, and cast the remaining channels to an <see cref="Picture16bpp"/>.
         /// </summary>
         DiscardBrightnessChannel,
         /// <summary>

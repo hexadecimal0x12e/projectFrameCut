@@ -502,8 +502,8 @@ public partial class RenderPage : ContentPage
                 var mtdDict = new Dictionary<string, string>
                 {
                     { "title", _project.ProjectName ?? "Project" },
-                    { "author", $"{SettingsManager.GetSetting("UserName", "User")}" },
-                    { "artist", $"{SettingsManager.GetSetting("UserName", "User")}" },
+                    { "author", $"projectFrameCut user - {SettingsManager.GetSetting("UserName", "User")}" },
+                    { "artist", $"projectFrameCut user - {SettingsManager.GetSetting("UserName", "User")}" },
                     { "language", new CultureInfo(Localized._LocaleId_).ThreeLetterISOLanguageName },
                     { "year", DateTime.Now.Year.ToString() },
                     { "encoder", $"{MauiProgram.AssemblyName} v{Assembly.GetExecutingAssembly().GetName().Version} ({MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit})" },

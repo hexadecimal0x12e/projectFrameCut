@@ -3,17 +3,39 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
       x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowView"
       BackgroundColor="#2D2D30">
-    
-    <!-- This Grid acts as the MDI Container.
+
+    <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- MDI Container Area (Row 0).
          Children added here (MultiWindowItems) will float over this background. -->
 
-        <Border x:Name="SnapPreviewOverlay"
-          IsVisible="False"
-          InputTransparent="True"
-          Stroke="#80B6E0FF"
-          StrokeThickness="1"
-          BackgroundColor="#3F7FB5FF"
-          StrokeShape="RoundRectangle 8"
-          Margin="0" />
-         
+    <!-- Snap Preview Overlay (only covers MDI area) -->
+    <Border x:Name="SnapPreviewOverlay"
+            Grid.Row="0"
+            IsVisible="False"
+            InputTransparent="True"
+            Stroke="#80B6E0FF"
+            StrokeThickness="1"
+            BackgroundColor="#3F7FB5FF"
+            StrokeShape="RoundRectangle 8"
+            Margin="0" />
+
+    <!-- Taskbar -->
+    <Border x:Name="Taskbar"
+            Grid.Row="1"
+            BackgroundColor="#252528"
+            HeightRequest="40"
+            StrokeShape="RoundRectangle 0"
+            Stroke="Transparent">
+        <ScrollView Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout x:Name="TaskbarItemsContainer"
+                                  Spacing="2"
+                                  Margin="4,0"/>
+        </ScrollView>
+    </Border>
+
 </Grid>

@@ -59,8 +59,10 @@ namespace projectFrameCut.InteractableEditor
         private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
         private bool _isPlacingReferenceLine;
-        private ReferenceLineOrientation _pendingReferenceLineOrientation;
+        private ReferenceLineOrientation? _pendingReferenceLineOrientation;
         private int _referenceLineCounter;
+        private Color _defaultReferenceLineColor = Color.FromRgba(0, 255, 255, 128);
+        private double _defaultReferenceLineThickness = 1.0;
         private Stopwatch _panTimer = new();
         private long _lastPanUpdateTicks = 0;
         private int _activeTextEntryIndex = -1;
@@ -91,6 +93,8 @@ namespace projectFrameCut.InteractableEditor
         private bool _suppressReferenceLinesChangedNotify;
         private readonly Dictionary<string, ReferenceLine> _referenceLines = new(StringComparer.Ordinal);
         private readonly Dictionary<string, BoxView> _referenceLineVisuals = new(StringComparer.Ordinal);
+        private Action? _manageReferenceLinesRequestedCallback;
+        private Action<Color>? _defaultColorPickerRequestedCallback;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
         private int _hasPendingPreviewRefresh;
@@ -172,6 +176,39 @@ namespace projectFrameCut.InteractableEditor
                 UpdateVisuals();
             }
         } = true;
+
+        public Color DefaultReferenceLineColor
+        {
+            get => _defaultReferenceLineColor;
+            set
+            {
+                if (AreColorsClose(_defaultReferenceLineColor, value))
+                    return;
+                _defaultReferenceLineColor = value;
+                DefaultColorSwatchBorder.BackgroundColor = value;
+            }
+        }
+
+        public double DefaultReferenceLineThickness
+        {
+            get => _defaultReferenceLineThickness;
+            set
+            {
+                var clamped = Math.Clamp(value, 0.5, 10.0);
+                if (Math.Abs(_defaultReferenceLineThickness - clamped) < 0.001)
+                    return;
+                _defaultReferenceLineThickness = clamped;
+                ThicknessEntry.Text = clamped.ToString("F1");
+            }
+        }
+
+        public bool ShowDetailReferenceLineControl { get; set; } = false;
+
+        private static bool AreColorsClose(Color a, Color b) =>
+            Math.Abs(a.Red - b.Red) < 0.004 &&
+            Math.Abs(a.Green - b.Green) < 0.004 &&
+            Math.Abs(a.Blue - b.Blue) < 0.004 &&
+            Math.Abs(a.Alpha - b.Alpha) < 0.004;
 
         public ContentView RealtimePreviewHost => LivePreviewerHost;
         public Image StaticPreviewOverlayImage => PreviewOverlayImage;
@@ -725,10 +762,20 @@ namespace projectFrameCut.InteractableEditor
             _referenceLinesChangedCallback = callback;
         }
 
+        public void ConfigureManageReferenceLinesRequested(Action? callback)
+        {
+            _manageReferenceLinesRequestedCallback = callback;
+        }
+
+        public void ConfigureDefaultColorPickerRequested(Action<Color>? callback)
+        {
+            _defaultColorPickerRequestedCallback = callback;
+        }
+
         protected override void OnSizeAllocated(double width, double height)
         {
             base.OnSizeAllocated(width, height);
-            UpdateCanvasSize(width, height);
+            UpdateCanvasSize(width, height, true);
         }
 
         public void Init(Func<Task> updateCallback, double videoWidth, double videoHeight)
@@ -1007,15 +1054,15 @@ namespace projectFrameCut.InteractableEditor
             _activeState = null;
         }
 
-        public void AddReferenceLine(string id, double position, ReferenceLineOrientation orientation, Color? color = null, double thickness = 1.0)
+        public void AddReferenceLine(string id, double position, ReferenceLineOrientation orientation, Color? color = null, double thickness = -1.0)
         {
             _referenceLines[id] = new ReferenceLine
             {
                 Id = id,
                 Position = position,
                 Orientation = orientation,
-                Color = color ?? Color.FromRgba(0, 255, 255, 128),
-                Thickness = Math.Max(0.5, thickness)
+                Color = color ?? _defaultReferenceLineColor,
+                Thickness = thickness > 0 ? Math.Max(0.5, thickness) : _defaultReferenceLineThickness
             };
             UpdateVisuals();
             NotifyReferenceLinesChanged();
@@ -1053,6 +1100,40 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
             NotifyReferenceLinesChanged();
         }
+
+        public void UpdateReferenceLineColor(string id, Color color)
+        {
+            if (!_referenceLines.TryGetValue(id, out var line))
+                return;
+            _referenceLines[id] = new ReferenceLine
+            {
+                Id = line.Id,
+                Position = line.Position,
+                Orientation = line.Orientation,
+                Color = color,
+                Thickness = line.Thickness
+            };
+            UpdateVisuals();
+            NotifyReferenceLinesChanged();
+        }
+
+        public void UpdateReferenceLineThickness(string id, double thickness)
+        {
+            if (!_referenceLines.TryGetValue(id, out var line))
+                return;
+            _referenceLines[id] = new ReferenceLine
+            {
+                Id = line.Id,
+                Position = line.Position,
+                Orientation = line.Orientation,
+                Color = line.Color,
+                Thickness = Math.Clamp(thickness, 0.5, 10.0)
+            };
+            UpdateVisuals();
+            NotifyReferenceLinesChanged();
+        }
+
+        public IReadOnlyDictionary<string, ReferenceLine> ReferenceLines => _referenceLines;
 
         public string GetReferenceLinesJson()
         {
@@ -1193,7 +1274,7 @@ namespace projectFrameCut.InteractableEditor
                     lineVisual = new BoxView
                     {
                         InputTransparent = true,
-                        Opacity = 0.55
+                        Opacity = 0.9,
                     };
                     _referenceLineVisuals[refLine.Id] = lineVisual;
                     ReferenceLinesHost.Children.Add(lineVisual);
@@ -3479,6 +3560,32 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        private void OnDefaultColorSwatchTapped(object? sender, EventArgs e)
+        {
+            _defaultColorPickerRequestedCallback?.Invoke(_defaultReferenceLineColor);
+        }
+
+        private void OnManageReferenceLinesTapped(object? sender, EventArgs e)
+        {
+            _manageReferenceLinesRequestedCallback?.Invoke();
+        }
+
+        private void OnThicknessEntryCompleted(object? sender, EventArgs e)
+        {
+            if (double.TryParse(ThicknessEntry.Text, out var t))
+                DefaultReferenceLineThickness = t;
+            else
+                ThicknessEntry.Text = DefaultReferenceLineThickness.ToString("F1");
+        }
+
+        private void OnThicknessEntryUnfocused(object? sender, FocusEventArgs e)
+        {
+            if (double.TryParse(ThicknessEntry.Text, out var t))
+                DefaultReferenceLineThickness = t;
+            else
+                ThicknessEntry.Text = DefaultReferenceLineThickness.ToString("F1");
+        }
+
         private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, out bool value)
         {
             value = false;
@@ -3523,6 +3630,11 @@ namespace projectFrameCut.InteractableEditor
             return false;
         }
 
+        private void ManageRefLineButton_Clicked(object sender, EventArgs e)
+        {
+            _manageReferenceLinesRequestedCallback?.Invoke();
+        }
+
         private static int ReadSolidColorSize(Dictionary<string, object>? data, string key, int fallback)
         {
             if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
@@ -3544,19 +3656,22 @@ namespace projectFrameCut.InteractableEditor
         private void UpdateBottomControlsVisibility(Rect renderRect)
         {
             var bottomGap = _canvasHeight - (renderRect.Y + renderRect.Height);
-            _autoHideBottomControls = bottomGap < 1d;
+            _autoHideBottomControls = bottomGap < 35d;
 
             if (!_autoHideBottomControls)
             {
                 CancelHideBottomControlsDebounce();
                 LayoutOptionsBar.IsVisible = true;
                 RefreshButton.IsVisible = true;
+                ManageRefLineButton.IsVisible = true;
             }
             else
             {
                 // 默认隐藏，鼠标进入 BottomControlsHost 区域时才显示
                 LayoutOptionsBar.IsVisible = false;
                 RefreshButton.IsVisible = false;
+                ManageRefLineButton.IsVisible = false;
+
             }
         }
 
@@ -3570,6 +3685,7 @@ namespace projectFrameCut.InteractableEditor
             CancelHideBottomControlsDebounce();
             LayoutOptionsBar.IsVisible = true;
             RefreshButton.IsVisible = true;
+            ManageRefLineButton.IsVisible = true;
         }
 
         private async void OnBottomControlsHostExited(object? sender, PointerEventArgs e)
@@ -3588,6 +3704,7 @@ namespace projectFrameCut.InteractableEditor
                 await Task.Delay(250, cts.Token);
                 LayoutOptionsBar.IsVisible = false;
                 RefreshButton.IsVisible = false;
+                ManageRefLineButton.IsVisible = false;
             }
             catch (OperationCanceledException)
             {

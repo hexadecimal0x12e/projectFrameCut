@@ -99,6 +99,7 @@ namespace projectFrameCut.StandaloneRender
                         [-pluginRoot=<path to plugin root>]
                         [-Use16bpp=<true|false>]
                         [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
+                        [-renderByLayer=<true|false>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]

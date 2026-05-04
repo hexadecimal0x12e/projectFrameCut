@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 4;
+        public const int CurrentPluginAPIVersion = 5;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -87,14 +87,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The first key of <see cref="LocalizationProvider"/> is the default localization.
         /// </remarks>
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
-
-        /// <summary>
-        /// Create an IClip instance from the given file path and JSON data.
-        /// </summary>
-        /// <remarks>
-        /// The argument for value is Id of the clip, and the second argument is the name of the clip.
-        /// </remarks>
-        //public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
 
         /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.

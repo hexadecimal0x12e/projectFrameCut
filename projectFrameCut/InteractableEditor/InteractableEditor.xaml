@@ -78,8 +78,42 @@
                     <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
                     <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
                 </HorizontalStackLayout>
+
+                <Border x:Name="DefaultColorSwatchBorder"
+                        Margin="4,0"
+                        WidthRequest="22"
+                        HeightRequest="22"
+                        StrokeThickness="1.5"
+                        Stroke="#777777"
+                        StrokeShape="RoundRectangle 3"
+                        BackgroundColor="{Binding DefaultReferenceLineColor}"
+                        VerticalOptions="Center"
+                        ToolTipProperties.Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineColor}"
+                        IsVisible="{Binding ShowDetailReferenceLineControl}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnDefaultColorSwatchTapped" />
+                    </Border.GestureRecognizers>
+                </Border>
+
+                <HorizontalStackLayout Margin="4,0" IsVisible="{Binding ShowDetailReferenceLineControl}"
+                    ToolTipProperties.Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineThickness}">
+                    <Label Text="&#xf024;" FontSize="12" FontFamily="Icons" VerticalOptions="Center" />
+                    <Entry x:Name="ThicknessEntry"
+                           WidthRequest="38"
+                           Keyboard="Numeric"
+                           VerticalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           FontSize="11"
+                           Margin="-6,0,0,0"
+                           Completed="OnThicknessEntryCompleted"
+                           Unfocused="OnThicknessEntryUnfocused" />
+                </HorizontalStackLayout>
+
             </HorizontalStackLayout>
-            <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" HorizontalOptions="End" VerticalOptions="End" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" Margin="8,8,8,8"/>
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8">
+                <Button x:Name="ManageRefLineButton" Text="&#xe770;" FontFamily="Icons" Clicked="ManageRefLineButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ManageReferenceLines}" />
+                <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
+            </HorizontalStackLayout>
         </Grid>
     </Grid>
 </ContentView>

@@ -2058,6 +2058,30 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u9ED8\u8BA4\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u6682\u65E0\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u7C97\u7EC6:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Clip",
         "Value": "\u7247\u6BB5",
         "Mode": "ConstString",
@@ -2434,6 +2458,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u7BA1\u7406\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
         "Value": "\u6DFB\u52A0\u7AD6\u76F4\u53C2\u8003\u7EBF",
         "Mode": "ConstString",
@@ -2444,6 +2476,14 @@
       {
         "Id": "DraftPage_MenuBar_View_Reset",
         "Value": "\u91CD\u8BBE\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u5207\u6362\u7A97\u53E3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2953,6 +2993,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u5237\u65B0\u5386\u53F2\u8BB0\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
         "Value": "\u81EA\u5B9A\u4E49\u914D\u7F6E",
         "Mode": "ConstString",
@@ -3231,6 +3279,98 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD8\u539F\u5230\u5728 {date} \u4FDD\u5B58\u7684\u69FD\u4F4D\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u6E05\u7406\u5386\u53F2\u8BB0\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u8FD9\u5C06\u6E05\u9664\u6240\u6709\u7684\u5386\u53F2\u8BB0\u5F55\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u5168\u90E8\u6E05\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u6CA1\u6709\u6570\u636E\u53EF\u4EE5\u88AB\u6E05\u7406\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u6E05\u7406\u8303\u56F4\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u6C38\u4E45\u5220\u9664\u6240\u6709\u7684\u5386\u53F2\u8BB0\u5F55\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5220\u9664{duration}\u7684 {n} \u4E2A\u5386\u53F2\u8BB0\u5F55\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Tab_History_DaysAgo",
         "Value": "{m} \u5929\u524D",
         "Mode": "InterpolationString",
@@ -3243,6 +3383,32 @@
         "ArgsComment": [
           {
             "Key": "m",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u7531\u300C{name}\u300D\u4EA7\u751F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
             "Value": ""
           }
         ],
@@ -3319,6 +3485,14 @@
       {
         "Id": "DraftSettingPage_Tab_History_VeryLongAgo",
         "Value": "\u5F88\u4E45\u4EE5\u524D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u6D88\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4187,6 +4361,70 @@
       {
         "Id": "iDevicesAPI_TooHot",
         "Value": "\u4F60\u7684\u8BBE\u5907\u8FC7\u70ED\u3002\u8BF7\u5C3D\u5FEB\u4FDD\u5B58\u6240\u6709\u7684\u6570\u636E\uFF0C\u5E76\u4E14\u5728\u8BBE\u5907\u51B7\u5374\u4E4B\u540E\u7EE7\u7EED\u4F7F\u7528\uFF0C\u4EE5\u907F\u514D\u5BF9\u786C\u4EF6\u9020\u6210\u635F\u5BB3\u6216\u8005\u6570\u636E\u4E22\u5931\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u4E0D\u5141\u8BB8\u7247\u6BB5\u6EA2\u51FA\u753B\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u9ED8\u8BA4\u53C2\u8003\u7EBF\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u9ED8\u8BA4\u53C2\u8003\u7EBF\u7C97\u7EC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u542F\u7528\u5438\u9644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u9501\u5B9A\u7247\u6BB5\u7684\u4F4D\u7F6E\r(\u4E0D\u4F1A\u963B\u6B62\u6765\u81EA\u5173\u952E\u5E27\u548C\u6548\u679C\u9020\u6210\u7684\u79FB\u52A8)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u7BA1\u7406\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u7ACB\u5373\u91CD\u65B0\u6E32\u67D3\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u663E\u793A\u53C2\u8003\u7EBF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5678,95 +5916,11 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftSettingPage_Advanced_ReloadHistory",
-        "Value": "\u5237\u65B0\u5386\u53F2\u8BB0\u5F55",
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u5207\u6362\u4EFB\u52A1\u680F\u663E\u793A\u72B6\u6001",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_LockLayout",
-        "Value": "\u9501\u5B9A\u7247\u6BB5\u7684\u4F4D\u7F6E\r(\u4E0D\u4F1A\u963B\u6B62\u6765\u81EA\u5173\u952E\u5E27\u548C\u6548\u679C\u9020\u6210\u7684\u79FB\u52A8)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_EnableSnapping",
-        "Value": "\u542F\u7528\u5438\u9644",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_AllowClipOutOfBounds",
-        "Value": "\u4E0D\u5141\u8BB8\u7247\u6BB5\u6EA2\u51FA\u753B\u5E03",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_ShowReferenceLines",
-        "Value": "\u663E\u793A\u53C2\u8003\u7EBF",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_Refersh",
-        "Value": "\u7ACB\u5373\u91CD\u65B0\u6E32\u67D3\u9884\u89C8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftSettingPage_Tab_History_Details",
-        "Value": "\u5C5E\u6027",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
-        "Value": "\u7531\u300C{name}\u300D\u4EA7\u751F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD8\u539F\u5230\u5728 {date} \u4FDD\u5B58\u7684\u69FD\u4F4D\u5417\uFF1F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "date"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "date",
-            "Value": ""
-          }
-        ],
         "DontTranslate": false
       }
     ],

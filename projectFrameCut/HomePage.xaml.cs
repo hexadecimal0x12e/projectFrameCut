@@ -923,8 +923,9 @@ public partial class HomePage : ContentPage
                             {
                                 _previousSession?.Dispose();
                                 var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.ProjectName ?? "Project"}");
-                                activity.ActivationUri = new Uri($"pjfc:{draftSourcePath}");
-                                activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.ProjectName ?? "Project"}'";
+                                activity.ActivationUri = new Uri($"pjfc:{Path.Combine(draftSourcePath, "project.pjfc")}");
+                                activity.VisualElements.DisplayText = project?.ProjectName ?? "Project";
+                                activity.VisualElements.Description = $"Continue work on {project?.ProjectName ?? "Project"}";
                                 await activity.SaveAsync();
                                 _previousSession = activity.CreateSession();
                             }
@@ -941,6 +942,7 @@ public partial class HomePage : ContentPage
                             var jumpList = await Windows.UI.StartScreen.JumpList.LoadCurrentAsync();
                             var task = Windows.UI.StartScreen.JumpListItem.CreateWithArguments($"\"{Path.Combine(draftSourcePath, "project.pjfc")}\"", project?.ProjectName ?? "Project");
                             task.GroupName = Localized.AppShell_ProjectsTab;
+                            task.Logo = new Uri("ms-appx:///Images/Logo.png");
                             task.Description = $"Continue work on {project?.ProjectName ?? "Project"}";
 
                             jumpList.Items.Add(task);

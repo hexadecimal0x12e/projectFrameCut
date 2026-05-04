@@ -243,7 +243,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             // SWS_BICUBIC == 4
 
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
-            Console.WriteLine($"[VideoBuilder] Successfully initialized encoder for {OutputPath}");
+            Log($"[VideoBuilder] Successfully initialized encoder for {OutputPath}");
 
             _inited = true;
 
