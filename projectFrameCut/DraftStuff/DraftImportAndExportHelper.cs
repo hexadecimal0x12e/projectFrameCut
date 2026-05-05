@@ -297,6 +297,7 @@ namespace projectFrameCut.DraftStuff
                         BundleTypeName = b.TypeName,
                         Parameters = b.Parameters,
                         Name = b.Name,
+                        Enabled = b.Enabled,
                         BindedInputId = b.BindedInputId,
                         BindedOutputId = b.BindedOutputId,
                         BindedInputIds = b.BindedInputIds?.ToArray(),
@@ -703,7 +704,6 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
-                //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.TargetWidth = dto.TargetWidth;
                 element.TargetHeight = dto.TargetHeight;
                 element.TargetX = dto.TargetX;
@@ -723,6 +723,7 @@ namespace projectFrameCut.DraftStuff
                         var b = dto.EffectBundles[i];
                         var f = EffectServices.GetAvailableEffectBundles()[b.BundleTypeName]();
                         f.Id = b.Id;
+                        f.Enabled = b.Enabled;
                         f.Name = b.Name;
                         f.Parameters = b.Parameters ?? new Dictionary<string, object>();
                         f.BindedInputId = b.BindedInputId;

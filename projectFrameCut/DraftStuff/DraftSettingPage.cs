@@ -96,6 +96,7 @@ public class DraftSettingPage
             Header = Localized.MainSettingsPage_Tab_General,
             Content = BuildGeneralTab()
         });
+        _showGraphView = false;
         var historyTabContent = BuildHistoryGraphTab();
         HistoryTabContent = historyTabContent;
         tabView.TabItems.Add(new TabbedViewItem
@@ -149,6 +150,8 @@ public class DraftSettingPage
                     })
                 };
 
+                ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
+
                 var clearOldHistoryButton = new Button
                 {
                     Text = Localized.DraftSettingPage_Tab_History_Cleanup,
@@ -158,7 +161,21 @@ public class DraftSettingPage
                 };
                 clearOldHistoryButton.Clicked += async (_, _) => await ShowCleanupOptionsAsync();
 
+                var toggleViewButton = new Button
+                {
+                    Text = _showGraphView ? "☰" : "◎",
+                };
+                ToolTipProperties.SetText(toggleViewButton, _showGraphView ? "Switch to list view" : "Switch to graph view");
+                toggleViewButton.Clicked += (_, _) =>
+                {
+                    _showGraphView = !_showGraphView;
+                    toggleViewButton.Text = _showGraphView ? "☰" : "◎";
+                    ToolTipProperties.SetText(toggleViewButton, _showGraphView ? "Switch to list view" : "Switch to graph view");
+                    tabView.SelectedItem.Content = BuildHistoryGraphTab();
+                };
+
                 clearHistoryButtonsLayout.Children.Add(clearOldHistoryButton);
+                clearHistoryButtonsLayout.Children.Add(toggleViewButton);
                 clearHistoryButtonsLayout.Add(popOutButton);
                 tabView.HeaderRightContent = clearHistoryButtonsLayout;
             }
@@ -314,8 +331,7 @@ public class DraftSettingPage
                         {
                             newMapping[draft.SnapshotID] = new ProjectJSONStructure.SnapshotIDMappingStructure
                             {
-                                Previous = draft.PreviousSnapshot,
-                                Next = Guid.Empty
+                                Previous = draft.PreviousSnapshot
                             };
                         }
                     }
@@ -331,17 +347,16 @@ public class DraftSettingPage
                 // Link Next pointers: for each entry, point its Previous to this entry
                 foreach (var kv in newMapping)
                 {
-                    if (kv.Value.Previous != Guid.Empty && newMapping.TryGetValue(kv.Value.Previous, out var prevEntry) && prevEntry.Next == Guid.Empty)
+                    if (kv.Value.Previous != Guid.Empty && newMapping.TryGetValue(kv.Value.Previous, out var prevEntry) && !prevEntry.Next.Contains(kv.Key))
                     {
-                        prevEntry.Next = kv.Key;
-                        newMapping[kv.Value.Previous] = prevEntry;
+                        prevEntry.Next.Add(kv.Key);
                     }
                 }
 
                 info.SnapshotIDMapping = newMapping;
 
                 // Set LastSnapshotID to the head (no Next)
-                var head = newMapping.FirstOrDefault(kv => kv.Value.Next == Guid.Empty);
+                var head = newMapping.FirstOrDefault(kv => kv.Value.Next.Count == 0);
                 if (head.Key != Guid.Empty)
                 {
                     info.LastSnapshotID = head.Key;
@@ -420,7 +435,7 @@ public class DraftSettingPage
 
             if (parent.ProjectInfo.SnapshotIDMapping.TryGetValue(parent.CurrentSnapshotID, out var curPtr))
             {
-                ToolTipProperties.SetText(slotLabel, $"forked from {curPtr.Previous}, next fork {curPtr.Next}");
+                ToolTipProperties.SetText(slotLabel, $"forked from {curPtr.Previous}, next forks [{string.Join(", ", curPtr.Next)}]");
             }
             else
             {
@@ -526,26 +541,26 @@ public class DraftSettingPage
             {
                 SnapshotID = kv.Key,
                 PreviousSnapshotID = kv.Value.Previous,
-                NextSnapshotID = kv.Value.Next,
+                NextSnapshotIDs = kv.Value.Next,
                 SavedAt = item?.SavedAt ?? DateTime.MinValue,
                 ChangeReason = item?.ChangeReason ?? string.Empty,
                 ChangedByUserDisplayName = item?.ChangedBy ?? "Anonymous",
                 ChangedByUser = item?.ChangedByUserID ?? Guid.Empty,
                 IsCurrentSnapshot = kv.Key == parent.CurrentSnapshotID,
-                IsHead = kv.Value.Next == Guid.Empty
+                IsHead = kv.Value.Next.Count == 0
             });
         }
 
         foreach (var node in nodes)
         {
-            if (node.NextSnapshotID != Guid.Empty)
+            foreach (var nextId in node.NextSnapshotIDs)
             {
                 bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, parent.CurrentSnapshotID, mapping)
-                                   && IsSnapshotOnCurrentPath(node.NextSnapshotID, parent.CurrentSnapshotID, mapping);
+                                   && IsSnapshotOnCurrentPath(nextId, parent.CurrentSnapshotID, mapping);
                 edges.Add(new HistoryGraphEdge
                 {
                     FromSnapshotID = node.SnapshotID,
-                    ToSnapshotID = node.NextSnapshotID,
+                    ToSnapshotID = nextId,
                     IsCurrentPath = isCurrentPath
                 });
             }
@@ -609,26 +624,26 @@ public class DraftSettingPage
             {
                 SnapshotID = kv.Key,
                 PreviousSnapshotID = kv.Value.Previous,
-                NextSnapshotID = kv.Value.Next,
+                NextSnapshotIDs = kv.Value.Next,
                 SavedAt = meta.SavedAt,
                 ChangeReason = meta.Reason,
                 ChangedByUserDisplayName = meta.UserName,
                 ChangedByUser = meta.UserId,
                 IsCurrentSnapshot = kv.Key == lastId,
-                IsHead = kv.Value.Next == Guid.Empty
+                IsHead = kv.Value.Next.Count == 0
             });
         }
 
         foreach (var node in nodes)
         {
-            if (node.NextSnapshotID != Guid.Empty)
+            foreach (var nextId in node.NextSnapshotIDs)
             {
                 bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, lastId, mapping)
-                                   && IsSnapshotOnCurrentPath(node.NextSnapshotID, lastId, mapping);
+                                   && IsSnapshotOnCurrentPath(nextId, lastId, mapping);
                 edges.Add(new HistoryGraphEdge
                 {
                     FromSnapshotID = node.SnapshotID,
-                    ToSnapshotID = node.NextSnapshotID,
+                    ToSnapshotID = nextId,
                     IsCurrentPath = isCurrentPath
                 });
             }
@@ -656,6 +671,8 @@ public class DraftSettingPage
         return false;
     }
 
+    private bool _showGraphView = true;
+
     public View BuildHistoryGraphTab()
     {
         _selectedSnapshotId = Guid.Empty;
@@ -665,29 +682,43 @@ public class DraftSettingPage
 
         var (nodes, edges) = BuildGraphData();
 
-        var root = new VerticalStackLayout
-        {
-            Spacing = 10,
-            Padding = new Thickness(10)
-        };
+        // Graph view
+        var graphView = new HistoryGraphView(parent);
+        graphView.LoadHistory(nodes, edges, parent.CurrentSnapshotID);
 
-        root.Children.Add(new Label
-        {
-            Text = Localized.DraftSettingPage_Tab_History,
-            FontSize = 24,
-            FontAttributes = FontAttributes.Bold
-        });
+        // List view
+        var listView = BuildHistoryGraphListContent(nodes, edges);
 
+        graphView.IsVisible = _showGraphView;
+        listView.IsVisible = !_showGraphView;
+
+        var container = new Grid();
+        container.Add(graphView);
+        container.Add(listView);
+
+        HistoryTabContent = container;
+        return container;
+    }
+
+    private View BuildHistoryGraphListContent(List<HistoryGraphNode> nodes, List<HistoryGraphEdge> edges)
+    {
         if (nodes.Count == 0)
         {
-            root.Children.Add(new Label
+            var emptyRoot = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(10),
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            emptyRoot.Children.Add(new Label
             {
                 Text = Localized.DraftSettingPage_Tab_History_NotAvailable,
                 FontSize = 25,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center
             });
-            root.Children.Add(new Label
+            emptyRoot.Children.Add(new Label
             {
                 Text = Localized.DraftSettingPage_Tab_History_NotAvailable_Sub,
                 FontSize = 13,
@@ -695,13 +726,8 @@ public class DraftSettingPage
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center
             });
-
-            root.HorizontalOptions = LayoutOptions.Center;
-            root.VerticalOptions = LayoutOptions.Center;
-            HistoryTabContent = root;
-            return new ScrollView { Content = root };
+            return new ScrollView { Content = emptyRoot };
         }
-
 
         var edgeSet = new HashSet<(Guid from, Guid to)>();
         foreach (var edge in edges)
@@ -714,13 +740,11 @@ public class DraftSettingPage
         for (int i = 0; i < nodes.Count; i++)
         {
             var node = nodes[i];
-
             Guid prevId = node.PreviousSnapshotID;
             Guid nextId = node.NextSnapshotID;
 
             bool hasPredecessor = edgeSet.Contains((node.SnapshotID, nextId)) || nextId != Guid.Empty;
             bool hasSuccessor = edgeSet.Contains((prevId, node.SnapshotID)) || prevId != Guid.Empty;
-
             bool isFirst = i == 0;
             bool isLast = i == nodes.Count - 1;
 
@@ -780,7 +804,6 @@ public class DraftSettingPage
         mainLayout.Add(new ScrollView { Content = graphContainer }, 0, 0);
         mainLayout.Add(_detailsPanel, 0, 1);
 
-        HistoryTabContent = mainLayout;
         return mainLayout;
     }
 
@@ -1145,12 +1168,17 @@ public class DraftSettingPage
                 {
                     if (entry.Previous != Guid.Empty && mapping.TryGetValue(entry.Previous, out var prevEntry))
                     {
-                        mapping[entry.Previous] = (prevEntry.Previous, entry.Next);
+                        prevEntry.Next.Remove(snapshotId);
+                        foreach (var nextId in entry.Next)
+                        {
+                            if (!prevEntry.Next.Contains(nextId))
+                                prevEntry.Next.Add(nextId);
+                        }
                     }
-
-                    if (entry.Next != Guid.Empty && mapping.TryGetValue(entry.Next, out var nextEntry))
+                    foreach (var nextId in entry.Next)
                     {
-                        mapping[entry.Next] = (entry.Previous, nextEntry.Next);
+                        if (mapping.TryGetValue(nextId, out var nextEntry))
+                            mapping[nextId] = nextEntry with { Previous = entry.Previous };
                     }
                 }
 
@@ -1173,6 +1201,7 @@ public class DraftSettingPage
                 }
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
+                parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -1253,7 +1282,7 @@ public class DraftSettingPage
 
             if (mapping.TryGetValue(currentSnapshotId, out var entryAfterCleanup))
             {
-                mapping[currentSnapshotId] = (Guid.Empty, entryAfterCleanup.Next);
+                mapping[currentSnapshotId] = entryAfterCleanup with { Previous = Guid.Empty };
             }
 
             if (IsStandaloneJsonMode && standaloneProjectInfo is not null)
@@ -1272,6 +1301,7 @@ public class DraftSettingPage
                 }
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
+                parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -2226,6 +2256,11 @@ public class DraftSettingPage
         try
         {
             project = System.Text.Json.JsonSerializer.Deserialize<ProjectJSONStructure>(System.IO.File.ReadAllText(projectPath), DraftPage.DraftJSONOption) ?? new ProjectJSONStructure { ProjectName = "Unknown Project" };
+            project.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(projectRoot, DraftPage.DraftJSONOption);
+            if (project.SnapshotIDMapping.Count == 0)
+            {
+                project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(projectRoot, DraftPage.DraftJSONOption);
+            }
             draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(System.IO.File.ReadAllText(timelinePath), DraftPage.DraftJSONOption) ?? new DraftStructureJSON();
             assets = System.Text.Json.JsonSerializer.Deserialize<List<AssetItem>>(System.IO.File.ReadAllText(assetsPath), DraftPage.DraftJSONOption) ?? [];
             return true;
@@ -2304,6 +2339,11 @@ public class DraftSettingPage
             info = System.Text.Json.JsonSerializer.Deserialize<ProjectJSONStructure>(System.IO.File.ReadAllText(projectFilePath), DraftPage.DraftJSONOption) ?? new ProjectJSONStructure();
             info.UserDefinedProperties ??= new Dictionary<string, string>();
             info.Properties ??= new Dictionary<string, string>();
+            info.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(standaloneProjectPath, DraftPage.DraftJSONOption);
+            if (info.SnapshotIDMapping.Count == 0)
+            {
+                info.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(standaloneProjectPath, DraftPage.DraftJSONOption);
+            }
             return true;
         }
         catch (Exception ex)
@@ -2322,6 +2362,7 @@ public class DraftSettingPage
 
         string projectFilePath = ResolveStandaloneProjectFilePath();
         await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(info, DraftPage.DraftJSONOption));
+        info.SaveSnapshotMapping(standaloneProjectPath, DraftPage.DraftJSONOption);
     }
 
     private string ResolveStandaloneProjectFilePath()
@@ -2695,13 +2736,17 @@ public sealed class HistoryGraphNode
 {
     public Guid SnapshotID { get; init; }
     public Guid PreviousSnapshotID { get; set; }
-    public Guid NextSnapshotID { get; set; }
+    public List<Guid> NextSnapshotIDs { get; set; } = new();
     public DateTime SavedAt { get; init; }
     public string ChangeReason { get; init; } = string.Empty;
     public string ChangedByUserDisplayName { get; init; } = string.Empty;
     public Guid ChangedByUser { get; init; }
     public bool IsCurrentSnapshot { get; set; }
     public bool IsHead { get; set; }
+    public bool IsBranchNode { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid NextSnapshotID => NextSnapshotIDs?.FirstOrDefault() ?? Guid.Empty;
 
     public string DisplayLabel => IsCurrentSnapshot ? $"* {ChangeReason}" : ChangeReason;
 

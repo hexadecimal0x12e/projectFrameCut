@@ -78,23 +78,131 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public Guid LastSnapshotID { get; set; } = Guid.Empty;
 
         /// <summary>
-        /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management. 
+        /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management.
         /// </summary>
+        [JsonIgnore]
         public Dictionary<Guid, SnapshotIDMappingStructure> SnapshotIDMapping { get; set; } = new();
+
+        public const string SnapshotMappingFileName = "snapshot_mapping.json";
+
+        /// <summary>
+        /// Save <see cref="SnapshotIDMapping"/> to a separate JSON file under the project directory.
+        /// This keeps the main project.pjfc file from growing too large.
+        /// </summary>
+        public void SaveSnapshotMapping(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            if (SnapshotIDMapping is null || SnapshotIDMapping.Count == 0)
+            {
+                var path = System.IO.Path.Combine(projectDir, SnapshotMappingFileName);
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                return;
+            }
+            System.IO.File.WriteAllText(
+                System.IO.Path.Combine(projectDir, SnapshotMappingFileName),
+                System.Text.Json.JsonSerializer.Serialize(SnapshotIDMapping, options));
+        }
+
+        /// <summary>
+        /// Load <see cref="SnapshotIDMapping"/> from a separate JSON file under the project directory.
+        /// Auto-migrates old-format files where "Next" was a scalar Guid instead of an array.
+        /// </summary>
+        public static Dictionary<Guid, SnapshotIDMappingStructure> LoadSnapshotMapping(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            var mappingPath = System.IO.Path.Combine(projectDir, SnapshotMappingFileName);
+            if (!System.IO.File.Exists(mappingPath))
+                return new();
+
+            var json = System.IO.File.ReadAllText(mappingPath);
+
+            // Try new format first (Next is array)
+            try
+            {
+                var result = System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, SnapshotIDMappingStructure>>(json, options);
+                if (result is not null) return result;
+            }
+            catch { }
+
+            // Migration: try old format where Next was a scalar Guid
+            try
+            {
+                var oldMapping = System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, OldSnapshotIDMappingStructure>>(json, options);
+                if (oldMapping is not null)
+                {
+                    var newMapping = new Dictionary<Guid, SnapshotIDMappingStructure>();
+                    foreach (var kv in oldMapping)
+                    {
+                        var entry = new SnapshotIDMappingStructure { Previous = kv.Value.Previous };
+                        if (kv.Value.Next != Guid.Empty)
+                            entry.Next.Add(kv.Value.Next);
+                        newMapping[kv.Key] = entry;
+                    }
+                    return newMapping;
+                }
+            }
+            catch { }
+
+            return new();
+        }
+
+        /// <summary>Old-format mapping entry used only for migration.</summary>
+        private sealed class OldSnapshotIDMappingStructure
+        {
+            public Guid Previous { get; set; }
+            public Guid Next { get; set; }
+        }
+
+        /// <summary>
+        /// Rebuild <see cref="SnapshotIDMapping"/> from save slot timeline.json files.
+        /// Used as a fallback when migrating from older project files that stored the mapping inline.
+        /// </summary>
+        public static Dictionary<Guid, SnapshotIDMappingStructure> RebuildSnapshotMappingFromSlots(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            var mapping = new Dictionary<Guid, SnapshotIDMappingStructure>();
+            var slotsDir = System.IO.Path.Combine(projectDir, "saveSlots");
+            if (!System.IO.Directory.Exists(slotsDir))
+                return mapping;
+
+            foreach (var slotDir in System.IO.Directory.GetDirectories(slotsDir, "slot_*"))
+            {
+                var timelinePath = System.IO.Path.Combine(slotDir, "timeline.json");
+                if (!System.IO.File.Exists(timelinePath))
+                    continue;
+
+                try
+                {
+                    var json = System.IO.File.ReadAllText(timelinePath);
+                    var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, options);
+                    if (draft is null || draft.SnapshotID == Guid.Empty)
+                        continue;
+
+                    mapping.TryAdd(draft.SnapshotID, new SnapshotIDMappingStructure
+                    {
+                        Previous = draft.PreviousSnapshot
+                    });
+                }
+                catch { }
+            }
+
+            // Link Next pointers
+            foreach (var kv in mapping)
+            {
+                if (kv.Value.Previous != Guid.Empty && mapping.TryGetValue(kv.Value.Previous, out var prevEntry) && !prevEntry.Next.Contains(kv.Key))
+                {
+                    prevEntry.Next.Add(kv.Key);
+                }
+            }
+
+            return mapping;
+        }
 
         public sealed record SnapshotIDMappingStructure
         {
             public Guid Previous { get; set; }
-            public Guid Next { get; set; }
+            public List<Guid> Next { get; set; } = new();
 
-            public static implicit operator SnapshotIDMappingStructure((Guid previous, Guid next) tuple)
-            {
-                return new SnapshotIDMappingStructure { Previous = tuple.previous, Next = tuple.next };
-            }
-            public static implicit operator (Guid previous, Guid next)(SnapshotIDMappingStructure tuple)
-            {
-                return (tuple.Previous, tuple.Next);
-            }
+            [JsonIgnore]
+            public Guid PrimaryNext => Next?.Count > 0 ? Next[0] : Guid.Empty;
         }
     }
 

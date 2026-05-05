@@ -121,9 +121,9 @@ namespace projectFrameCut.InteractableEditor
         private float _secondPerFrameRatio = 1f;
 
         public bool ShowRenderRectOverlay { get; set; } = true;
-        public bool EnableSnapping { get; set; } = true;
-        public bool LockLayout { get; set; } = false;
-        public bool AllowClipOutOfBounds { get; set { field = value; LogDiagnostic($"AllowClipOutOfBounds now is {field}"); } } = false;
+        public bool EnableSnapping { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = true;
+        public bool LockLayout { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = false;
+        public bool AllowClipOutOfBounds { get; set { if (field == value) return; field = value; LogDiagnostic($"AllowClipOutOfBounds now is {field}"); OnPropertyChanged(); OnPropertyChanged(nameof(DisallowClipOutOfBounds)); } } = false;
         public bool DisallowClipOutOfBounds
         {
             get => !AllowClipOutOfBounds;
@@ -173,6 +173,7 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 field = value;
+                OnPropertyChanged();
                 UpdateVisuals();
             }
         } = true;
@@ -2163,6 +2164,9 @@ namespace projectFrameCut.InteractableEditor
                         var unsnapped = new Rect(newVisualX, newVisualY, _startW, _startH);
                         _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
 
+                        // Snap visual to the snapped preview rect for magnetic feel
+                        _activeState.Root.TranslationX = _stateOrigX + (_panPreviewRect.Value.X - _startX) * scale;
+                        _activeState.Root.TranslationY = _stateOrigY + (_panPreviewRect.Value.Y - _startY) * scale;
 
                         LogDiagnostic($"[Pan] Updated: triggered {_panEventTriggerCounter} times, Pos=({_panPreviewRect.Value.X:F1}, {_panPreviewRect.Value.Y:F1}), Delta=({deltaX:F1}, {deltaY:F1}) , elapsed:{_panTimer.Elapsed}, last update: {_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
                         _lastPanUpdateTicks = _panTimer.ElapsedTicks;
@@ -2248,6 +2252,13 @@ namespace projectFrameCut.InteractableEditor
                         break;
                     }
 
+                    // Snap visual to the snapped text entry position for magnetic feel
+                    if (_panPreviewTextEntries is not null && entryIndex < _panPreviewTextEntries.Count)
+                    {
+                        var sEntry = _panPreviewTextEntries[entryIndex];
+                        _activeState.Root.TranslationX = _stateOrigX + (sEntry.x - _textEntryStartOriginX) * scale;
+                        _activeState.Root.TranslationY = _stateOrigY + (sEntry.y - _textEntryStartOriginY) * scale;
+                    }
 
                     break;
 
@@ -2812,6 +2823,34 @@ namespace projectFrameCut.InteractableEditor
             return targets;
         }
 
+        private void AddOtherClipEdgesToSnapTargets(List<double> hTargets, List<double> vTargets)
+        {
+            if (_currentClip is null || _allClips is null)
+                return;
+
+            var currentId = _currentClip.Id;
+            foreach (var clip in _allClips.Values)
+            {
+                if (string.Equals(clip.Id, currentId, StringComparison.Ordinal))
+                    continue;
+                if (!IsClipVisibleInCurrentFrame(clip))
+                    continue;
+
+                var cx = clip.TargetX;
+                var cy = clip.TargetY;
+                var cw = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
+                var ch = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+
+                hTargets.Add(cx);
+                hTargets.Add(cx + cw);
+                hTargets.Add(cx + cw / 2);
+
+                vTargets.Add(cy);
+                vTargets.Add(cy + ch);
+                vTargets.Add(cy + ch / 2);
+            }
+        }
+
         private double ComputeSnapThresholdVideo(double scale)
         {
             return EnableSnapping && scale > 0.001
@@ -2860,13 +2899,16 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
+            var hTargets = GetHorizontalSnapTargets();
+            var vTargets = GetVerticalSnapTargets();
+            AddOtherClipEdgesToSnapTargets(hTargets, vTargets);
+
             if (snapLeft || snapRight || snapCenterX)
             {
                 double bestDist = snapThresholdVideo;
                 double bestAdjustX = 0;
                 double? bestW = null;
 
-                var hTargets = GetHorizontalSnapTargets();
                 foreach (var target in hTargets)
                 {
                     if (snapLeft)
@@ -2905,6 +2947,7 @@ namespace projectFrameCut.InteractableEditor
 
                 if (bestDist < snapThresholdVideo)
                 {
+                    LogDiagnostic($"Snap x triggered! bestAdjustX:{bestAdjustX}, bestW:{bestW ?? -1}");
                     x += bestAdjustX;
                     if (bestW.HasValue)
                         w = bestW.Value;
@@ -2917,7 +2960,6 @@ namespace projectFrameCut.InteractableEditor
                 double bestAdjustY = 0;
                 double? bestH = null;
 
-                var vTargets = GetVerticalSnapTargets();
                 foreach (var target in vTargets)
                 {
                     if (snapTop)
@@ -2956,6 +2998,7 @@ namespace projectFrameCut.InteractableEditor
 
                 if (bestDist < snapThresholdVideo)
                 {
+                    LogDiagnostic($"Snap y triggered! bestAdjustY:{bestAdjustY}, bestH:{bestH ?? -1}");
                     y += bestAdjustY;
                     if (bestH.HasValue)
                         h = bestH.Value;

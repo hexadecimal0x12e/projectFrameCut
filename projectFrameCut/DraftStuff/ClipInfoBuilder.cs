@@ -1775,6 +1775,7 @@ namespace projectFrameCut.DraftStuff
                 var bundleDict = sortedBundles.ToDictionary(b => b.Id, b => b);
                 var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType));
                 var bundleFacts = sortedBundles
+                    .Where(c => c.Enabled)
                     .SelectMany(bundle => bundle.Create().Select(effectFactory => (bundleId: bundle.Id, effectFactory)))
                     .ToList();
                 var autoImps = EffectFactoryExtensions.DetermineEffectImplementTypes(bundleFacts.Select(c => c.effectFactory).ToArray());
@@ -1828,7 +1829,7 @@ namespace projectFrameCut.DraftStuff
 
         private static List<IEffectBundle> SortEffectBundles(IReadOnlyDictionary<Guid, IEffectBundle> bundles)
         {
-            var ordered = bundles.Where(c => c.Value.Enabled).ToList();
+            var ordered = bundles.ToList();
             var adjacency = new Dictionary<Guid, List<Guid>>();
             var incoming = new Dictionary<Guid, int>();
 

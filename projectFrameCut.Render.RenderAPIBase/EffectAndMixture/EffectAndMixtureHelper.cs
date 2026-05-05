@@ -64,6 +64,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string BundleTypeName { get; set; } = string.Empty;
         public Dictionary<string, object> Parameters { get; set; } = new();
         public string Name { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
         public Guid BindedInputId { get; set; } = NoConnectionGuid;
         public Guid BindedOutputId { get; set; } = NoConnectionGuid;
         public Guid[]? BindedInputIds { get; set; }

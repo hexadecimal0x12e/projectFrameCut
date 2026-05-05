@@ -2490,6 +2490,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u5207\u6362\u4EFB\u52A1\u680F\u663E\u793A\u72B6\u6001",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_View_ZoomIn",
         "Value": "\u653E\u5927\u89C6\u56FE",
         "Mode": "ConstString",
@@ -5910,14 +5918,6 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
-        "Value": "\u5207\u6362\u4EFB\u52A1\u680F\u663E\u793A\u72B6\u6001",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12038,6 +12038,332 @@
         ],
         "Comment": "Indicates the number of clips that reference this item",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Confirm",
+        "Value": "Confirm",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Defaults",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "No reference lines",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Thickness:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Cancel Operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Click the preview view to add a reference line, or press Esc to cancel.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Clear Reference Lines",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Add Horizontal Reference Line",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Manage Reference Lines",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Add Vertical Reference Line",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Switch Window",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Toggle Taskbar Visibility",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Refresh History",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Are you sure you want to restore to the slot saved on {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Clear history",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "This will clear all history records. Continue?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Clear All",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "No data to clean.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Select a cleanup scope:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "This operation will permanently delete all history records. This action cannot be undone. Are you sure you want to continue?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "This operation will delete {n} history records of {duration}. This operation cannot be undone. Are you sure you want to continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Properties",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Generated by {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Indicates that the item was generated by the specified user or entity.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Messages",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Disallow clip out of bounds",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Default Reference Line Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Default Reference Line Thickness",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Enable Snapping",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Lock clip position\r(Does not prevent movement from keyframes and effects)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Manage Reference Lines",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Re-render preview",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Show Reference Lines",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -18145,6 +18471,341 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_ExceptionTemplate",
+        "Value": "\u4E00\u500B\u672A\u88AB\u8655\u7406\u7684 {ex.GetType().Name} \u7570\u5E38\u767C\u751F ({ex.Message})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "Exception",
+            "Value": "\u5F02\u5E38"
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u9810\u8A2D\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u66AB\u7121\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u53D6\u6D88\u64CD\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u9EDE\u64CA\u9810\u89BD\u8996\u5716\u4F86\u6DFB\u52A0\u53C3\u8003\u7DDA\uFF0C\u6216\u8005\u6309Esc\u53D6\u6D88\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u7C97\u7D30:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u7BA1\u7406\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u65B0\u589E\u5782\u76F4\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u6E05\u9664\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u4F60\u78BA\u8A8D\u8981\u9084\u539F\u5230\u5728 {date} \u5132\u5B58\u7684\u69FD\u4F4D\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u5207\u63DB\u5DE5\u4F5C\u5217\u986F\u793A\u72C0\u614B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u6E05\u9664\u6B77\u53F2\u8A18\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u91CD\u65B0\u6574\u7406\u6B77\u53F2\u8A18\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u65B0\u589E\u6C34\u5E73\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u5168\u90E8\u6E05\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u5207\u63DB\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u6C92\u6709\u8CC7\u6599\u53EF\u4EE5\u88AB\u6E05\u7406\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u522A\u9664{duration}\u7684 {n} \u500B\u6B77\u53F2\u8A18\u9304\uFF0C\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u4F60\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u6C38\u4E45\u522A\u9664\u6240\u6709\u7684\u6B77\u53F2\u8A18\u9304\uFF0C\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u60A8\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u9019\u5C07\u6E05\u9664\u6240\u6709\u7684\u6B77\u53F2\u8A18\u9304\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u8A0A\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u4E0D\u5141\u8A31\u7247\u6BB5\u6EA2\u51FA\u756B\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u9810\u8A2D\u53C3\u8003\u7DDA\u984F\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u7531\u300C{name}\u300D\u7522\u751F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u555F\u7528\u5438\u9644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u9396\u5B9A\u7247\u6BB5\u7684\u4F4D\u7F6E\r\uFF08\u4E0D\u6703\u963B\u6B62\u4F86\u81EA\u95DC\u9375\u5E40\u548C\u6548\u679C\u9020\u6210\u7684\u79FB\u52D5\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u5C6C\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u9078\u64C7\u4E00\u500B\u6E05\u7406\u7BC4\u570D\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u7BA1\u7406\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u986F\u793A\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u9810\u8A2D\u53C3\u8003\u7DDA\u7C97\u7D30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u7ACB\u5373\u91CD\u65B0\u6E32\u67D3\u9810\u89BD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -24270,6 +24931,332 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Confirm",
+        "Value": "\u78BA\u8A8D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u65E2\u5B9A\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u53C2\u8003\u7DDA\u304C\u3042\u308A\u307E\u305B\u3093",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u592A\u3055:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u53C2\u8003\u7DDA\u3092\u6D88\u53BB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u8868\u793A\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u53C2\u8003\u7DDA\u3092\u8FFD\u52A0\u3001Esc\u3067\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u53D6\u308A\u6D88\u3057",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u53D6\u6D88\u64CD\u4F5C\uFF0C\u4F5C\u4E3A\u83DC\u5355\u9879\uFF0C\u7B80\u6D01\u660E\u4E86",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u5782\u76F4\u53C2\u7167\u7DDA\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u5C65\u6B74\u3092\u66F4\u65B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u53C2\u8003\u7DDA\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "{date} \u306B\u4FDD\u5B58\u3057\u305F\u30B9\u30ED\u30C3\u30C8\u306B\u5FA9\u5143\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u6C34\u5E73\u53C2\u7167\u7DDA\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u30BF\u30B9\u30AF\u30D0\u30FC\u8868\u793A\u306E\u5207\u66FF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u83DC\u5355\u9879\uFF0C\u7528\u4E8E\u5207\u6362\u4EFB\u52A1\u680F\u7684\u663E\u793A\u72B6\u6001",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u30AF\u30EA\u30A2\u3067\u304D\u308B\u30C7\u30FC\u30BF\u306F\u3042\u308A\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u5C65\u6B74\u524A\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u30A6\u30A3\u30F3\u30C9\u30A6\u5207\u66FF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u5168\u524A\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306B\u3088\u308A\u3001{duration}\u306E{n}\u4EF6\u306E\u5C65\u6B74\u304C\u524A\u9664\u3055\u308C\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u7D9A\u884C\u3057\u3066\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u5168\u3066\u306E\u5C65\u6B74\u3092\u524A\u9664\u3057\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u300C{name}\u300D\u306B\u3088\u308A",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u30E1\u30C3\u30BB\u30FC\u30B8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BBE\u7F6E\u9875\u9762\u4E2D\u7684\u6D88\u606F\u9009\u9879\u5361\u6807\u7B7E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u30AF\u30EA\u30FC\u30F3\u30A2\u30C3\u30D7\u7BC4\u56F2\u3092\u9078\u629E\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u53C2\u8003\u7DDA\u306E\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u65E2\u5B9A\u306E\u53C2\u8003\u7DDA\u306E\u592A\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u3059\u3079\u3066\u306E\u5C65\u6B74\u3092\u5B8C\u5168\u306B\u524A\u9664\u3057\u3001\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u7D9A\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u30BB\u30B0\u30E1\u30F3\u30C8\u306E\u4F4D\u7F6E\u3092\u30ED\u30C3\u30AF\u3059\u308B\r(\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0\u3084\u30A8\u30D5\u30A7\u30AF\u30C8\u306B\u3088\u308B\u79FB\u52D5\u306F\u59A8\u3052\u307E\u305B\u3093)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u53C2\u7167\u7DDA\u3092\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u3059\u3050\u306B\u518D\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u5438\u7740\u3092\u6709\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u542F\u7528\u5438\u9644\u529F\u80FD\u7684\u65E5\u8BED\u7FFB\u8BD1\uFF0C\u4F7F\u7528\u8F83\u5C11\u7247\u5047\u540D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u53C2\u7167\u7DDA\u306E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u30AD\u30E3\u30F3\u30D0\u30B9\u5916\u3078\u306E\u30AF\u30EA\u30C3\u30D7\u306E\u306F\u307F\u51FA\u3057\u3092\u8A31\u53EF\u3057\u306A\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -30379,6 +31366,330 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Confirm",
+        "Value": "\uD655\uC778",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\uAE30\uBCF8 \uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\uAD75\uAE30:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\uCDE8\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\uCC38\uC870\uC120 \uC9C0\uC6B0\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\uCC38\uC870\uC120 \uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\uCC38\uC870\uC120 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\uC218\uC9C1 \uCC38\uC870\uC120 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\uC218\uD3C9 \uCC38\uC870\uC120 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\uCC3D \uC804\uD658",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\uAE30\uB85D \uC0C8\uB85C\uACE0\uCE68",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\uAE30\uB85D \uC815\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\uC791\uC5C5 \uD45C\uC2DC\uC904 \uD45C\uC2DC \uC0C1\uD0DC \uC804\uD658",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\uBAA8\uB4E0 \uAE30\uB85D\uC774 \uC0AD\uC81C\uB429\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\uC804\uCCB4 \uC0AD\uC81C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "{date}\uC5D0 \uC800\uC7A5\uB41C \uC2AC\uB86F\uC73C\uB85C \uBCF5\uC6D0\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\uC815\uB9AC \uBC94\uC704\uB97C \uC120\uD0DD\uD558\uC138\uC694:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\uC0AD\uC81C\uD560 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uBAA8\uB4E0 \uAE30\uB85D\uC744 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AD\uC81C\uD558\uBA70, \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "{name}\uC5D0 \uC758\uD574 \uC0DD\uC131\uB428",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\uC18D\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\uC774 \uC791\uC5C5\uC740 {duration}\uC758 {n}\uAC1C\uC758 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD558\uBA70, \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\uC870\uAC01\uC774 \uCE94\uBC84\uC2A4\uB97C \uBC97\uC5B4\uB098\uB294 \uAC83\uC744 \uD5C8\uC6A9\uD558\uC9C0 \uC54A\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\uAE30\uBCF8 \uCC38\uC870\uC120 \uC0C9\uC0C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uBDF0\uB97C \uD074\uB9AD\uD558\uC5EC \uAE30\uC900\uC120\uC744 \uCD94\uAC00\uD558\uAC70\uB098 Esc\uB97C \uB20C\uB7EC \uCDE8\uC18C\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\uC138\uADF8\uBA3C\uD2B8 \uC704\uCE58 \uC7A0\uAE08\r(\uD0A4\uD504\uB808\uC784 \uBC0F \uD6A8\uACFC\uB85C \uC778\uD55C \uC774\uB3D9\uC744 \uCC28\uB2E8\uD558\uC9C0 \uC54A\uC74C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\uCC38\uC870\uC120 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\uC2A4\uB0C5 \uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\uCC38\uC870\uC120 \uD45C\uC2DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\uAE30\uBCF8 \uCC38\uC870\uC120 \uAD75\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\uBA54\uC2DC\uC9C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\uC989\uC2DC \uBBF8\uB9AC\uBCF4\uAE30 \uB2E4\uC2DC \uB80C\uB354\uB9C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -36486,6 +37797,330 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Confirm",
+        "Value": "Confirmer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Aucune ligne de r\u00E9f\u00E9rence.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Annuler l\u0027op\u00E9ration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Param\u00E8tres par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Effacer les lignes de r\u00E9f\u00E9rence",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Ajouter une ligne de r\u00E9f\u00E9rence horizontale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u00C9paisseur :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Cliquez sur la vue d\u0027aper\u00E7u pour ajouter une ligne de r\u00E9f\u00E9rence, ou appuyez sur Esc pour annuler.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Basculer l\u0027affichage de la barre des t\u00E2ches",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Actualiser l\u0027historique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Changer de fen\u00EAtre",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Effacer l\u0027historique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Cela effacera tout l\u0027historique, voulez-vous continuer ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "Aucune donn\u00E9e \u00E0 nettoyer.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Voulez-vous vraiment restaurer l\u0027emplacement sauvegard\u00E9 le {date} ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "S\u00E9lectionnez une plage de nettoyage :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Cette action supprimera d\u00E9finitivement tout l\u0027historique et est irr\u00E9versible. Voulez-vous vraiment continuer ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Tout nettoyer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Propri\u00E9t\u00E9s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "G\u00E9n\u00E9r\u00E9 par {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Cette action supprimera {n} enregistrements historiques de {duration}, cette action est irr\u00E9versible. Voulez-vous vraiment continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Ne pas autoriser le fragment \u00E0 d\u00E9border du canevas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Ajouter une ligne de r\u00E9f\u00E9rence verticale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Activer l\u0027aimantation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Messages",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Couleur de ligne de r\u00E9f\u00E9rence par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Verrouiller la position du clip\r(n\u0027emp\u00EAche pas les mouvements caus\u00E9s par les images cl\u00E9s et les effets)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "G\u00E9rer les lignes de r\u00E9f\u00E9rence",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Rafra\u00EEchir l\u0027aper\u00E7u",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Afficher les lignes de r\u00E9f\u00E9rence",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u00C9paisseur de ligne de r\u00E9f\u00E9rence par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "G\u00E9rer les lignes de r\u00E9f\u00E9rence",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -42225,11 +43860,11 @@
       },
       {
         "Id": "TemplateExtractPage_ClearAssetSelection",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u6750\u9078",
+        "Value": "\u7A7A\u7D20\u6750\u4E4B\u9009",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6E05\u6750\u9078",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -42606,6 +44241,332 @@
           }
         ],
         "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u88ABn\u4E2A\u7247\u6BB5\u6240\u5F15\u7528",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u9884\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u7F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u201C\u53D6\u6D88\u201D\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u8868\u793A\u4E2D\u6B62\u6216\u5E9F\u5F03\u5F53\u524D\u64CD\u4F5C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u5C1A\u65E0\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u51FB\u9884\u89C8\u89C6\u56FE\u4EE5\u589E\u53C2\u8003\u7EBF\uFF0C\u6216\u6309Esc\u53D6\u6D88\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u7F62\u5176\u4E8B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u9664\u53C3\u8003\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u7406\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u201C\u7BA1\u7406\u53C2\u8003\u7EBF\u201D\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u7528\u201C\u7406\u201D\u8868\u7BA1\u7406\u4E4B\u610F\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u52A0\u6C34\u5E73\u6E96\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u52A0\u7AD6\u51C6\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u7C97\u7D30\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u6613\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u6539\u4EFB\u52A1\u680F\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u6C5D\u786E\u6B32\u590D\u539F\u81F3{date}\u6240\u5B58\u4E4B\u69FD\u4F4D\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u66F4\u7F2E\u65E7\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u2018\u5237\u65B0\u5386\u53F2\u8BB0\u5F55\u2019\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u66F4\u7F2E\u610F\u4E3A\u66F4\u65B0\u4FEE\u7F2E\uFF0C\u65E7\u5F55\u6307\u8FC7\u5F80\u8BB0\u5F55\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u5C3D\u6E05",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u201C\u5168\u90E8\u6E05\u7406\u201D\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u610F\u4E3A\u5168\u90E8\u6E05\u9664\u5E72\u51C0\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u6B64\u5C06\u5C3D\u9664\u8BF8\u53F2\u5F55\uFF0C\u6B32\u7EED\u884C\u4E4E\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u65E0\u53EF\u6E05\u4E4B\u6570\u636E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u6C38\u5220\u6240\u6709\u5386\u53F2\u8BB0\u5F55\uFF0C\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\uFF0C\u6C5D\u786E\u6B32\u7EE7\u7EED\u4E4E\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5411\u7528\u6237\u786E\u8BA4\u662F\u5426\u7EE7\u7EED\u5220\u9664\u5386\u53F2\u8BB0\u5F55",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u6B64\u4E3E\u5C06\u5220\u53BB{duration}\u4E4B{n}\u6761\u5386\u53F2\u8BB0\u5F55\uFF0C\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\uFF0C\u6C5D\u786E\u6B32\u7EE7\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u5C6C\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u81EA\u300C{name}\u300D\u800C\u751F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u97F3\u4FE1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u9078\u5B9A\u6E05\u7406\u7BC4\u570D\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u6E05\u9664\u5F80\u8FF9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u9ED8\u8BA4\u53C2\u8003\u7EBF\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u9501\u5B9A\u7247\u6BB5\u4E4B\u4F4D\uFF0C\u4E0D\u963B\u5173\u952E\u5E27\u4E0E\u6548\u679C\u6240\u81F4\u4E4B\u79FB\u52A8\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u4E0D\u5F97\u7247\u6BB5\u8D8A\u753B\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u5373\u91CD\u6E32\u67D3\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u5E38\u8BBE\u53C2\u8003\u7EBF\u4E4B\u7C97\u7EC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u793A\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u6CBB\u7406\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u555F\u7528\u5438\u9644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -48720,6 +50681,332 @@
         ],
         "Comment": "\u88ABn\u4E2A\u7247\u6BB5\u5F15\u7528",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0625\u0644\u063A\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u062E\u0637\u0648\u0637 \u0645\u0631\u062C\u0639\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0645\u0633\u0628\u0642\u0629 \u0644\u0625\u0636\u0627\u0641\u0629 \u062E\u0637\u0648\u0637 \u0645\u0631\u062C\u0639\u064A\u0629\u060C \u0623\u0648 \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 Esc \u0644\u0644\u0625\u0644\u063A\u0627\u0621.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062E\u0637\u0648\u0637 \u0627\u0644\u0645\u0631\u062C\u0639\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u0643\u0629:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u062A\u0628\u062F\u064A\u0644 \u0627\u0644\u0646\u0627\u0641\u0630\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u0645\u0633\u062D \u0627\u0644\u062E\u0637\u0648\u0637 \u0627\u0644\u0645\u0631\u062C\u0639\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u062A\u0628\u062F\u064A\u0644 \u0639\u0631\u0636 \u0634\u0631\u064A\u0637 \u0627\u0644\u0645\u0647\u0627\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u0625\u0636\u0627\u0641\u0629 \u062E\u0637 \u0645\u0631\u062C\u0639\u064A \u0623\u0641\u0642\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u0647\u0644 \u062A\u0631\u064A\u062F \u0628\u0627\u0644\u062A\u0623\u0643\u064A\u062F \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0641\u062A\u062D\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u0641\u064A {date}\u061F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u062A\u0646\u0638\u064A\u0641 \u0633\u062C\u0644 \u0627\u0644\u062A\u0627\u0631\u064A\u062E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0627\u0644\u062A\u0627\u0631\u064A\u062E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u0625\u0636\u0627\u0641\u0629 \u062E\u0637 \u0645\u0631\u062C\u0639\u064A \u0639\u0645\u0648\u062F\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u062A\u0646\u0638\u064A\u0641 \u0627\u0644\u0643\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u0627\u062E\u062A\u0631 \u0646\u0637\u0627\u0642 \u0627\u0644\u062A\u0646\u0638\u064A\u0641:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u0633\u064A\u062A\u0645 \u0645\u0633\u062D \u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E\u064A\u0629\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0646\u0638\u064A\u0641\u0647\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u062D\u0630\u0641 {n} \u0633\u062C\u0644\u064B\u0627 \u0645\u0646 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0644\u0645\u062F\u0629 {duration}\u060C \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u060C \u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646\u0643 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u0627\u0644\u062E\u0635\u0627\u0626\u0635",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u062A\u0645 \u0625\u0646\u0634\u0627\u0624\u0647 \u0628\u0648\u0627\u0633\u0637\u0629 {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E\u064A\u0629 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645\u060C \u0648\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647\u060C \u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0631\u063A\u0628\u062A\u0643 \u0641\u064A \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u0644\u0648\u0646 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u0631\u062C\u0639\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u0644\u0627 \u064A\u064F\u0633\u0645\u062D \u0628\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0645\u0642\u0637\u0639 \u062D\u062F\u0648\u062F \u0627\u0644\u0644\u0648\u062D\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u0642\u0641\u0644 \u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u0642\u0637\u0639\r(\u0644\u0627 \u064A\u0645\u0646\u0639 \u0627\u0644\u062D\u0631\u0643\u0629 \u0627\u0644\u0646\u0627\u062A\u062C\u0629 \u0639\u0646 \u0627\u0644\u0625\u0637\u0627\u0631\u0627\u062A \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0648\u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0627\u0644\u0627\u0644\u062A\u0642\u0627\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u0639\u0631\u0636 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0641\u0648\u0631\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u0625\u062F\u0627\u0631\u0629 \u062E\u0637\u0648\u0637 \u0627\u0644\u0645\u0631\u062C\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u0625\u0638\u0647\u0627\u0631 \u062E\u0637\u0648\u0637 \u0627\u0644\u0645\u0631\u062C\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u0633\u0645\u0627\u0643\u0629 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u0631\u062C\u0639\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u0631\u0633\u0627\u0644\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -54833,6 +57120,332 @@
         ],
         "Comment": "\u663E\u793A\u88AB\u591A\u5C11\u4E2A\u7247\u6BB5\u5F15\u7528",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Standardeinstellungen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Klicken Sie auf die Vorschauansicht, um Referenzlinien hinzuzuf\u00FCgen, oder dr\u00FCcken Sie Esc zum Abbrechen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Aktion abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Referenzlinien l\u00F6schen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "St\u00E4rke:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Horizontale Hilfslinie hinzuf\u00FCgen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6DFB\u52A0\u6C34\u5E73\u53C2\u8003\u7EBF\uFF0C\u5FB7\u8BED\u7FFB\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Referenzlinien verwalten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Fenster wechseln",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Vertikale Referenzlinie hinzuf\u00FCgen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Taskleiste ein-/ausblenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Keine Referenzlinien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Sind Sie sicher, dass Sie den am {date} gespeicherten Stand wiederherstellen m\u00F6chten?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Verlauf bereinigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Dies wird alle Verlaufseintr\u00E4ge l\u00F6schen. M\u00F6chten Sie fortfahren?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Alles bereinigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Verlauf aktualisieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "Keine Daten zum Bereinigen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Dieser Vorgang l\u00F6scht {n} historische Datens\u00E4tze von {duration}. Dieser Vorgang kann nicht r\u00FCckg\u00E4ngig gemacht werden. M\u00F6chten Sie wirklich fortfahren?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Dieser Vorgang l\u00F6scht alle Verlaufsdaten dauerhaft und kann nicht r\u00FCckg\u00E4ngig gemacht werden. M\u00F6chten Sie wirklich fortfahren?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "W\u00E4hlen Sie einen Bereinigungsbereich:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Erstellt von {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Eigenschaften",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Standard-Referenzlinienfarbe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Nachrichten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Kein \u00DCberlauf des Segments au\u00DFerhalb der Leinwand",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Standard-Referenzliniendicke",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Einrasten aktivieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Referenzlinien verwalten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Position des Segments sperren\r(Bewegungen durch Keyframes und Effekte werden nicht blockiert)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Vorschau sofort neu rendern",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Referenzlinien anzeigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -60940,6 +63553,332 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Configuraci\u00F3n predeterminada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "No hay l\u00EDneas de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Haga clic en la vista previa para agregar l\u00EDneas de referencia, o presione Esc para cancelar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Grosor:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Cancelar operaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Gestionar l\u00EDneas de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Borrar l\u00EDneas de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Alternar la visibilidad de la barra de tareas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Cambiar ventana",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "A\u00F1adir l\u00EDnea de referencia vertical",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u00BFEst\u00E1s seguro de que deseas restaurar el puesto guardado en {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Actualizar historial",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Limpiar historial",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Limpiar todo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Esto borrar\u00E1 todo el historial, \u00BFdesea continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "No hay datos que limpiar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "A\u00F1adir l\u00EDnea de referencia horizontal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Esta acci\u00F3n eliminar\u00E1 permanentemente todo el historial. Esta acci\u00F3n no se puede deshacer. \u00BFEst\u00E1s seguro de que deseas continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Propiedades",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Seleccione un \u00E1mbito de limpieza:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Mensajes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Esta operaci\u00F3n eliminar\u00E1 {n} registros hist\u00F3ricos de {duration}, esta acci\u00F3n no se puede deshacer. \u00BFEst\u00E1s seguro de que deseas continuar?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "No permitir que el clip exceda el lienzo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Generado por {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Grosor de l\u00EDnea de referencia predeterminado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Color predeterminado de l\u00EDnea de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Bloquear la posici\u00F3n de los fragmentos\r(no evita el movimiento causado por fotogramas clave y efectos)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Gestionar l\u00EDneas de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Volver a renderizar la vista previa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Activar ajuste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Mostrar l\u00EDneas de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -67056,6 +69995,331 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Annulla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Nessuna linea di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Spessore:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Annulla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Fai clic sulla vista di anteprima per aggiungere linee di riferimento, oppure premi Esc per annullare.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Aggiungi linea di riferimento orizzontale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Cancella linee di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Aggiungi linea guida verticale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Cambia finestra",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Gestisci linee di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Impostazioni predefinite",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Alterna la visualizzazione della barra delle applicazioni",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Confermi di voler ripristinare il salvataggio del {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Aggiorna cronologia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Cancella cronologia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Questo canceller\u00E0 tutta la cronologia. Continuare?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Pulisci tutto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "Nessun dato da cancellare.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Seleziona un intervallo di pulizia:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Questa operazione eliminer\u00E0 {n} record storici di {duration}, questa operazione non pu\u00F2 essere annullata, sei sicuro di voler continuare?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Questa operazione eliminer\u00E0 permanentemente tutte le cronologie. Questa operazione \u00E8 irreversibile. Sei sicuro di voler continuare?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Generato da {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Propriet\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Non consentire che il frammento esca dalla tela",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Messaggi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Colore predefinito della linea di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Abilita snap",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Blocca la posizione del clip\r(non impedisce il movimento causato da fotogrammi chiave ed effetti)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Gestisci linee di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Rigenera immediatamente l\u0027anteprima",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Mostra linee di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Spessore predefinito linea di riferimento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -73167,6 +76431,332 @@
         ],
         "Comment": "Displayed in Polish; first variant for n=1, second for other numbers. Context: clips management tab.",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Domy\u015Blne ustawienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Brak linii odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Anuluj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Grubo\u015B\u0107:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Usu\u0144 linie pomocnicze",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6E05\u9664\u53C2\u8003\u7EBF",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Dodaj poziom\u0105 lini\u0119 odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Anuluj operacj\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Kliknij widok podgl\u0105du, aby doda\u0107 linie odniesienia, lub naci\u015Bnij Esc, aby anulowa\u0107.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Zarz\u0105dzaj liniami odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Prze\u0142\u0105cz widoczno\u015B\u0107 paska zada\u0144",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Dodaj pionow\u0105 lini\u0119 odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Prze\u0142\u0105cz okno",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Od\u015Bwie\u017C histori\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Wyczy\u015B\u0107 histori\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "To usunie wszystkie zapisy historii. Czy chcesz kontynuowa\u0107?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Czy na pewno chcesz przywr\u00F3ci\u0107 zapis z {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Wyczy\u015B\u0107 wszystko",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "Brak danych do wyczyszczenia.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Wybierz zakres czyszczenia:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Ta operacja trwale usunie wszystkie zapisy historii i jest nieodwracalna. Czy na pewno chcesz kontynuowa\u0107?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Wiadomo\u015Bci",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Ta operacja usunie {n} historycznych rekord\u00F3w z {duration}. Tej operacji nie mo\u017Cna cofn\u0105\u0107. Czy na pewno chcesz kontynuowa\u0107?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Nie zezwalaj na wychodzenie klipu poza obszar roboczy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Domy\u015Blna grubo\u015B\u0107 linii odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "W\u0142a\u015Bciwo\u015Bci",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Domy\u015Blny kolor linii odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Zablokuj pozycj\u0119 segmentu\r(nie zapobiega ruchom wynikaj\u0105cym z klatek kluczowych i efekt\u00F3w)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Zarz\u0105dzaj liniami odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "W\u0142\u0105cz przyci\u0105ganie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Natychmiast przerysuj podgl\u0105d",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Poka\u017C linie odniesienia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Utworzone przez {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Translation of \u0027\u7531\u300C{name}\u300D\u4EA7\u751F\u0027 - indicates the item was created by the specified user",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -79270,6 +82860,332 @@
         "ArgsComment": [
           {
             "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Configura\u00E7\u00F5es padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Nenhuma linha de refer\u00EAncia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Espessura:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "Cancelar opera\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Limpar Linhas de Refer\u00EAncia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Gerenciar linhas de refer\u00EAncia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "Clique na visualiza\u00E7\u00E3o para adicionar linhas de refer\u00EAncia, ou pressione Esc para cancelar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Adicionar linha de refer\u00EAncia horizontal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Adicionar linha de refer\u00EAncia vertical",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "Alternar exibi\u00E7\u00E3o da barra de tarefas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Alternar Janela",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Atualizar hist\u00F3rico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Isso limpar\u00E1 todo o hist\u00F3rico. Deseja continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "Limpar tudo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Selecione um escopo de limpeza:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Limpar hist\u00F3rico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Esta opera\u00E7\u00E3o excluir\u00E1 permanentemente todos os registros hist\u00F3ricos. Esta opera\u00E7\u00E3o \u00E9 irrevers\u00EDvel. Tem certeza de que deseja continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "N\u00E3o h\u00E1 dados para limpar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "Propriedades",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Esta opera\u00E7\u00E3o remover\u00E1 {n} registros do hist\u00F3rico de {duration}. Esta a\u00E7\u00E3o n\u00E3o pode ser desfeita. Tem certeza de que deseja continuar?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "N\u00E3o permitir que o fragmento transborde da tela",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Mensagens",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "Produzido por {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Cor da linha de refer\u00EAncia padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Espessura da linha de refer\u00EAncia padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Travar a posi\u00E7\u00E3o do clipe\r(n\u00E3o impede movimentos causados por quadros-chave e efeitos)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Gerenciar linhas de refer\u00EAncia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "Renderizar pr\u00E9-visualiza\u00E7\u00E3o imediatamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Mostrar linhas de refer\u00EAncia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Ativar encaixe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "Tem certeza de que deseja restaurar para o slot salvo em {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
             "Value": ""
           }
         ],
@@ -85388,6 +89304,332 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "\u041D\u0435\u0442 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u0445",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "\u0422\u043E\u043B\u0449\u0438\u043D\u0430:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043F\u0440\u0435\u0434\u0432\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u0435, \u0438\u043B\u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 Esc \u0434\u043B\u044F \u043E\u0442\u043C\u0435\u043D\u044B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u043C\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u0443\u044E \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0443\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043E\u043A\u043D\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0432\u0438\u0434\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u0430\u043D\u0435\u043B\u0438 \u0437\u0430\u0434\u0430\u0447",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u043B\u043E\u0442, \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043D\u044B\u0439 \u0432 {date}?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0438\u0441\u0442\u043E\u0440\u0438\u044E \u0437\u0430\u043F\u0438\u0441\u0435\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "\u042D\u0442\u043E \u0443\u0434\u0430\u043B\u0438\u0442 \u0432\u0441\u044E \u0438\u0441\u0442\u043E\u0440\u0438\u044E. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "\u041D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445 \u0434\u043B\u044F \u043E\u0447\u0438\u0441\u0442\u043A\u0438.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0432\u0441\u0451",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D \u043E\u0447\u0438\u0441\u0442\u043A\u0438:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442 {n} \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0437\u0430 {duration}, \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u043D\u0435\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E. \u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0443\u044E \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0443\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u043D\u043E {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "\u0421\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u0443\u0434\u0430\u043B\u0438\u0442 \u0432\u0441\u0435 \u0437\u0430\u043F\u0438\u0441\u0438 \u0438\u0441\u0442\u043E\u0440\u0438\u0438. \u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "\u0422\u043E\u043B\u0449\u0438\u043D\u0430 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "\u041D\u0435 \u0434\u043E\u043F\u0443\u0441\u043A\u0430\u0435\u0442\u0441\u044F \u0432\u044B\u0445\u043E\u0434 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430 \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u044B \u0445\u043E\u043B\u0441\u0442\u0430.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043F\u0440\u0438\u0432\u044F\u0437\u043A\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u043F\u043E\u0440\u043D\u044B\u043C\u0438 \u043B\u0438\u043D\u0438\u044F\u043C\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u041F\u0435\u0440\u0435\u0440\u0435\u043D\u0434\u0435\u0440\u0438\u0442\u044C \u043F\u0440\u0435\u0432\u044C\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "\u0417\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0430\r(\u043D\u0435 \u043F\u0440\u0435\u043F\u044F\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u044E, \u0432\u044B\u0437\u0432\u0430\u043D\u043D\u043E\u043C\u0443 \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u043C\u0438 \u043A\u0430\u0434\u0440\u0430\u043C\u0438 \u0438 \u044D\u0444\u0444\u0435\u043A\u0442\u0430\u043C\u0438)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043E\u043F\u043E\u0440\u043D\u044B\u0435 \u043B\u0438\u043D\u0438\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "\u0426\u0432\u0435\u0442 \u044D\u0442\u0430\u043B\u043E\u043D\u043D\u043E\u0439 \u043B\u0438\u043D\u0438\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u0438\u0441\u0442\u043E\u0440\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -91494,6 +95736,332 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_Defaults",
+        "Value": "Varsay\u0131lan ayarlar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0130ptal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_NoLines",
+        "Value": "Referans \u00E7izgisi yok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ManageReferenceLines_ThicknessLabel",
+        "Value": "Kal\u0131nl\u0131k:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Escape",
+        "Value": "\u0130ptal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Horizontal",
+        "Value": "Yatay Referans \u00C7izgisi Ekle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_AddHint",
+        "Value": "\u00D6nizleme g\u00F6r\u00FCn\u00FCm\u00FCne t\u0131klayarak k\u0131lavuz \u00E7izgisi ekleyin veya Esc tu\u015Funa basarak iptal edin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Manage",
+        "Value": "Referans \u00C7izgilerini Y\u00F6net",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Clear",
+        "Value": "Referans \u00E7izgilerini temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ReferenceLines_Vertical",
+        "Value": "Dikey referans \u00E7izgisi ekle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Switch",
+        "Value": "Pencereyi De\u011Fi\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup",
+        "Value": "Ge\u00E7mi\u015Fi Temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_ApplyWarn",
+        "Value": "{date} tarihinde kaydedilen yuvaya geri y\u00FCklemek istedi\u011Finize emin misiniz?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "date"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "date",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
+        "Value": "G\u00F6rev \u00E7ubu\u011Fu g\u00F6r\u00FCn\u00FCrl\u00FC\u011F\u00FCn\u00FC de\u011Fi\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll",
+        "Value": "T\u00FCm\u00FCn\u00FC Temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ReloadHistory",
+        "Value": "Ge\u00E7mi\u015Fi yenile",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Title",
+        "Value": "Bir temizleme aral\u0131\u011F\u0131 se\u00E7in:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_Warn",
+        "Value": "Bu i\u015Flem t\u00FCm ge\u00E7mi\u015F kay\u0131tlar\u0131n\u0131 kal\u0131c\u0131 olarak silecektir, bu i\u015Flem geri al\u0131namaz. Devam etmek istedi\u011Finize emin misiniz?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_None",
+        "Value": "Temizlenecek veri yok.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Cleanup_Warn",
+        "Value": "Bu, t\u00FCm ge\u00E7mi\u015F kay\u0131tlar\u0131n\u0131 temizleyecek. Devam etmek istiyor musunuz?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details",
+        "Value": "\u00D6zellik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_Details_EditBy",
+        "Value": "{name} taraf\u0131ndan olu\u015Fturuldu",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_CleanupAll_WarnRange",
+        "Value": "Bu i\u015Flem, {duration} s\u00FCresindeki {n} ge\u00E7mi\u015F kayd\u0131 silecek. Bu i\u015Flem geri al\u0131namaz. Devam etmek istedi\u011Finize emin misiniz?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Messages",
+        "Value": "Mesajlar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineThickness",
+        "Value": "Varsay\u0131lan referans \u00E7izgisi kal\u0131nl\u0131\u011F\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_EnableSnapping",
+        "Value": "Yap\u0131\u015Fmay\u0131 Etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_DefaultReferenceLineColor",
+        "Value": "Varsay\u0131lan referans \u00E7izgisi rengi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_LockLayout",
+        "Value": "Par\u00E7an\u0131n konumunu kilitle\r(Anahtar karelerden ve efektlerden gelen hareketi engellemez)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ManageReferenceLines",
+        "Value": "Referans \u00C7izgilerini Y\u00F6net",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AllowClipOutOfBounds",
+        "Value": "Par\u00E7an\u0131n tuval d\u0131\u015F\u0131na ta\u015Fmas\u0131na izin verilmez",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_Refersh",
+        "Value": "\u00D6nizlemeyi hemen yeniden olu\u015Ftur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ShowReferenceLines",
+        "Value": "Referans \u00C7izgilerini G\u00F6ster",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }

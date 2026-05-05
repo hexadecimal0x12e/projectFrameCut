@@ -585,6 +585,12 @@ public partial class HomePage : ContentPage
             return;
         }
 
+        project.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(draftSourcePath, DraftPage.DraftJSONOption);
+        if (project.SnapshotIDMapping.Count == 0)
+        {
+            project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption);
+        }
+
         if (!await CheckProjectVersionCompatibility(project))
         {
             await Dispatcher.DispatchAsync(async () => Content = origContent);
@@ -910,6 +916,7 @@ public partial class HomePage : ContentPage
 
                     }
                 }
+
 #if WINDOWS //for recall/timeline
 
                 await Dispatcher.DispatchAsync(async () =>
@@ -1140,7 +1147,7 @@ public partial class HomePage : ContentPage
         {
             try
             {
-                var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("£¬", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("£¬", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
+                var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("ï¿½ï¿½", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("ï¿½ï¿½", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
                 SettingsManager.WriteSetting("UserName", rnd.Generate());
             }
             catch

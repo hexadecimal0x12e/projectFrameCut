@@ -73,7 +73,6 @@ using Microsoft.Maui.Platform;
 using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
 using Google.Android.Material.Chip;
-using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 
 #endif
 
@@ -345,7 +344,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         BindingContext = this;
         ProjectInfo = info;
         ProjectInfo.UserDefinedProperties ??= new();
-        ProjectInfo.SnapshotIDMapping ??= new();
+        ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(workingDir, savingOpts);
+        if (ProjectInfo.SnapshotIDMapping.Count == 0)
+        {
+            ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(workingDir, savingOpts);
+        }
         SecondsPerFrame = ProjectInfo.TargetFrameRate > 0 ? 1d / ProjectInfo.TargetFrameRate : 1d / 30d;
         if (ProjectInfo.LastSnapshotID != Guid.Empty)
         {
@@ -427,7 +430,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ProjectInfo.ProjectName ??= title;
         IsReadonly = isReadonly;
-        RestoreInteractableEditorState();
     }
 
     private void RestoreInteractableEditorState()
@@ -702,6 +704,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetStateOK(Localized.DraftPage_EverythingFine);
                 }
             });
+
         ReturnCommand =
             new Command(async () =>
             {
@@ -1016,6 +1019,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(UnNullUseCompactLayout));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        RestoreInteractableEditorState();
         DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
@@ -7541,6 +7545,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         UpdateAllExtendToWholeDraftClips();
     }
 
+    #endregion
+
+    #region save, undo and redo
+
     public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null)
     {
         if (string.IsNullOrEmpty(WorkingPath))
@@ -7588,16 +7596,15 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         else //avoid worst condition (crashes while saving)
         {
-            if (_historyNavigatedByUndoRedo)
-            {
-                PruneNewerSaveSlotsFromCurrent();
-            }
-
             slot = $"slot_{snapshotId}";
-            ProjectInfo.SnapshotIDMapping[snapshotId] = (PreviousSnapshotID, Guid.Empty);
+            ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
+            {
+                Previous = PreviousSnapshotID
+            };
             if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
             {
-                ProjectInfo.SnapshotIDMapping[PreviousSnapshotID] = (prevEntry.Previous, snapshotId);
+                if (!prevEntry.Next.Contains(snapshotId))
+                    prevEntry.Next.Add(snapshotId);
             }
             ProjectInfo.LastSnapshotID = snapshotId;
             CurrentSnapshotID = snapshotId;
@@ -7653,7 +7660,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                        .Where(c => !c.StartsWith("projectFrameCut.Render."))
                        .Distinct().ToList();
 
-        // Save InteractableEditor checkbox states to ProjectInfo.Properties
         if (ClipEditor != null)
         {
             ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
@@ -7666,6 +7672,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.pjfc"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
+            ProjectInfo.SaveSnapshotMapping(WorkingPath, savingOpts);
         }
         catch (Exception ex)
         {
@@ -7767,75 +7774,83 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new SaveSlotMeta { SnapshotID = entry.Previous, SavedAtUtc = DateTime.MinValue };
     }
 
-    private SaveSlotMeta? GetNextSlot()
+    private List<SaveSlotMeta> GetNextSlots()
     {
         if (CurrentSnapshotID == Guid.Empty
             || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
-            || entry.Next == Guid.Empty)
+            || entry.Next.Count == 0)
         {
-            return null;
+            return new List<SaveSlotMeta>();
         }
 
-        return new SaveSlotMeta { SnapshotID = entry.Next, SavedAtUtc = DateTime.MinValue };
+        return entry.Next.Select(id =>
+        {
+            var savedAt = GetSlotSavedAt(id);
+            return new SaveSlotMeta { SnapshotID = id, SavedAtUtc = savedAt };
+        }).ToList();
+    }
+
+    private DateTime GetSlotSavedAt(Guid snapshotId)
+    {
+        var slotPath = FindSlotDirectory(snapshotId);
+        if (slotPath is null) return DateTime.MinValue;
+        var timelinePath = Path.Combine(slotPath, "timeline.json");
+        if (!File.Exists(timelinePath)) return DateTime.MinValue;
+        try
+        {
+            var tml = File.ReadAllText(timelinePath);
+            var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+            return draft?.SavedAt ?? DateTime.MinValue;
+        }
+        catch { return DateTime.MinValue; }
     }
 
     private void PruneNewerSaveSlotsFromCurrent()
     {
-        var nextId = CurrentSnapshotID;
-        while (nextId != Guid.Empty
-               && ProjectInfo.SnapshotIDMapping.TryGetValue(nextId, out var entry)
-               && entry.Next != Guid.Empty)
-        {
-            nextId = entry.Next;
-            DeleteSlotDirectory(nextId);
-            ProjectInfo.SnapshotIDMapping.Remove(nextId);
-        }
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var curEntry))
+            return;
 
-        if (CurrentSnapshotID != Guid.Empty
-            && ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var curEntry))
+        foreach (var nextId in curEntry.Next.ToList())
         {
-            ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = (curEntry.Previous, Guid.Empty);
+            PruneRecursive(nextId);
         }
+        curEntry.Next.Clear();
+        ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = curEntry;
+    }
+
+    private void PruneRecursive(Guid id)
+    {
+        if (!ProjectInfo.SnapshotIDMapping.TryGetValue(id, out var entry)) return;
+        foreach (var nextId in entry.Next.ToList())
+        {
+            PruneRecursive(nextId);
+        }
+        DeleteSlotDirectory(id);
+        ProjectInfo.SnapshotIDMapping.Remove(id);
     }
 
     private void PruneOldestSaveSlots()
     {
-        // Count total slots by walking the previous chain
-        var count = 0;
-        var id = CurrentSnapshotID;
-        while (id != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(id, out var entry))
+        while (ProjectInfo.SnapshotIDMapping.Count > MaximumSaveSlot && MaximumSaveSlot >= 0)
         {
-            count++;
-            id = entry.Previous;
-        }
+            var leafToRemove = ProjectInfo.SnapshotIDMapping
+                .Where(kv => kv.Value.Next.Count == 0 && kv.Key != CurrentSnapshotID)
+                .Select(kv => new { kv.Key, SavedAt = GetSlotSavedAt(kv.Key) })
+                .OrderBy(x => x.SavedAt)
+                .FirstOrDefault();
 
-        // Delete oldest slots until we're within the limit
-        while (count > MaximumSaveSlot)
-        {
-            // Find the oldest (head) by walking previous chain
-            var oldest = CurrentSnapshotID;
-            while (oldest != Guid.Empty
-                   && ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oe)
-                   && oe.Previous != Guid.Empty)
+            if (leafToRemove is null || leafToRemove.Key == Guid.Empty) break;
+
+            if (ProjectInfo.SnapshotIDMapping.TryGetValue(leafToRemove.Key, out var leafEntry)
+                && leafEntry.Previous != Guid.Empty
+                && ProjectInfo.SnapshotIDMapping.TryGetValue(leafEntry.Previous, out var prevEntry))
             {
-                oldest = oe.Previous;
+                prevEntry.Next.Remove(leafToRemove.Key);
             }
 
-            if (oldest == Guid.Empty || !ProjectInfo.SnapshotIDMapping.TryGetValue(oldest, out var oldestEntry))
-            {
-                break;
-            }
-
-            // Unlink the oldest node
-            var nextAfterOldest = oldestEntry.Next;
-            if (nextAfterOldest != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(nextAfterOldest, out var nextEntry))
-            {
-                ProjectInfo.SnapshotIDMapping[nextAfterOldest] = (Guid.Empty, nextEntry.Next);
-            }
-
-            DeleteSlotDirectory(oldest);
-            ProjectInfo.SnapshotIDMapping.Remove(oldest);
-            count--;
+            DeleteSlotDirectory(leafToRemove.Key);
+            ProjectInfo.SnapshotIDMapping.Remove(leafToRemove.Key);
         }
     }
 
@@ -7858,8 +7873,8 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void RedoChanges()
     {
-        var nextSlot = GetNextSlot();
-        if (nextSlot is null)
+        var nextSlots = GetNextSlots();
+        if (nextSlots is null || nextSlots.Count == 0)
         {
             SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
             return;
@@ -7867,6 +7882,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
         var oldSlot = CurrentSnapshotID;
+        // If multiple next slots exist (branch), pick the most recently saved one
+        var nextSlot = nextSlots.Count == 1
+            ? nextSlots[0]
+            : nextSlots.OrderByDescending(s => s.SavedAtUtc).First();
         ApplySlot(nextSlot.SnapshotID);
         if (CurrentSnapshotID != oldSlot)
         {
@@ -8574,6 +8593,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             if (!ExitNoSave) await Save(true);
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
+            TouchProjectFolder();
             base.OnDisappearing();
 
         }
@@ -8587,6 +8607,16 @@ public partial class DraftPage : ContentPage, IDraftPage
             catch { }
         }
 
+    }
+
+    private void TouchProjectFolder()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(WorkingPath) && Directory.Exists(WorkingPath))
+                Directory.SetLastWriteTimeUtc(WorkingPath, DateTime.UtcNow);
+        }
+        catch { }
     }
 
     public async void Window_SizeChanged(object? sender, EventArgs e)

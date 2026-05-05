@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.DraftStuff.HistoryGraphView">
+    <Grid RowDefinitions="Auto,*,Auto" BackgroundColor="#1e1e1e">
+        <!-- Row 0: Toolbar -->
+        <HorizontalStackLayout Grid.Row="0" Spacing="4" Padding="4"
+                               BackgroundColor="#2d2d2d">
+            <Button x:Name="ZoomInButton" Text="+" WidthRequest="36" HeightRequest="36"
+                    Clicked="OnZoomIn" BackgroundColor="#3d3d3d" TextColor="White"/>
+            <Button x:Name="ZoomOutButton" Text="-" WidthRequest="36" HeightRequest="36"
+                    Clicked="OnZoomOut" BackgroundColor="#3d3d3d" TextColor="White"/>
+            <Button x:Name="ResetViewButton" Text="&#x21BA;" WidthRequest="36" HeightRequest="36"
+                    Clicked="OnResetView" BackgroundColor="#3d3d3d" TextColor="White"/>
+            <Button x:Name="FitAllButton" Text="&#x26F6;" WidthRequest="36" HeightRequest="36"
+                    Clicked="OnFitAll" BackgroundColor="#3d3d3d" TextColor="White"/>
+            <Label x:Name="InfoLabel" TextColor="#999" VerticalOptions="Center" Margin="8,0,0,0"
+                   FontSize="12"/>
+        </HorizontalStackLayout>
+
+        <!-- Row 1: Canvas -->
+        <Grid Grid.Row="1" BackgroundColor="#1e1e1e">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated"/>
+                <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated"/>
+            </Grid.GestureRecognizers>
+
+            <!-- Connections Layer (behind nodes) -->
+            <GraphicsView x:Name="ConnectionsLayer"
+                          InputTransparent="True"
+                          VerticalOptions="Fill"
+                          HorizontalOptions="Fill"/>
+
+            <!-- Nodes Layer (on top of connections) -->
+            <AbsoluteLayout x:Name="NodesContainer"
+                            InputTransparent="False">
+            </AbsoluteLayout>
+
+            <!-- Empty state hint -->
+            <Label x:Name="EmptyHint" Text="No history available"
+                   TextColor="#555" FontSize="18"
+                   HorizontalOptions="Center" VerticalOptions="Center"
+                   IsVisible="False"/>
+        </Grid>
+
+        <!-- Row 2: Details Panel (hidden by default) -->
+        <Border Grid.Row="2" x:Name="DetailsPanel" IsVisible="False"
+                Stroke="#555" StrokeThickness="1" Padding="12" Margin="4"
+                BackgroundColor="#2d2d2d"
+                StrokeShape="RoundRectangle 8">
+            <VerticalStackLayout Spacing="6">
+                <Label x:Name="DetailsSavedAtLabel" FontSize="13" TextColor="#ccc"/>
+                <Label x:Name="DetailsAuthorLabel" FontSize="13" TextColor="#ccc"/>
+                <Label x:Name="DetailsChangeReasonLabel" FontSize="13" FontAttributes="Bold" TextColor="White"/>
+                <Button x:Name="DetailsRestoreButton"
+                        BackgroundColor="#4A9EFF" TextColor="White"
+                        HorizontalOptions="Fill"
+                        Clicked="OnRestoreClicked"/>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentView>
