@@ -447,8 +447,10 @@ namespace projectFrameCut.StandaloneRender
 
             if (switches.TryGetValue("assetDbFile", out var assetDbPath))
             {
-                assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDbPath))
+                var globalAsset = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDbPath))
                     ?? new ConcurrentDictionary<string, AssetItem>();
+                DecoderContextPJFCProject.GlobalAssetGetter = new(() => globalAsset);
+                assets = new(globalAsset);
                 Log($"Read {assets.Count} assets from asset database.");
             }
 
@@ -505,6 +507,7 @@ namespace projectFrameCut.StandaloneRender
                 var projAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json")), savingOpts) ?? new();
                 ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(projAssets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
                 assets = new ConcurrentDictionary<string, AssetItem>(assets.Concat(assetDict));
+
             }
             else
             {

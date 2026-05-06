@@ -60,6 +60,7 @@
               HeightRequest="48"
               BackgroundColor="Transparent"
               InputTransparent="False"
+              Shadow="{Shadow Brush=Gray, Radius=3, Opacity=1}"
               ZIndex="9999">
             <HorizontalStackLayout x:Name="LayoutOptionsBar" Margin="4" VerticalOptions="End">
                 <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_LockLayout}">
@@ -110,7 +111,7 @@
                 </HorizontalStackLayout>
 
             </HorizontalStackLayout>
-            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8">
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8" Shadow="{Shadow Brush=Black, Radius=3, Opacity=1}">
                 <Button x:Name="ManageRefLineButton" Text="&#xe770;" FontFamily="Icons" Clicked="ManageRefLineButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ManageReferenceLines}" />
                 <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
             </HorizontalStackLayout>

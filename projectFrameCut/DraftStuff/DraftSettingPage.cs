@@ -163,14 +163,15 @@ public class DraftSettingPage
 
                 var toggleViewButton = new Button
                 {
-                    Text = _showGraphView ? "☰" : "◎",
+                    Text = _showGraphView ? "\ue896" : "\ueaf5",
+                    FontFamily = "Icons"
                 };
-                ToolTipProperties.SetText(toggleViewButton, _showGraphView ? "Switch to list view" : "Switch to graph view");
+                ToolTipProperties.SetText(toggleViewButton, _showGraphView ? Localized.DraftSettingPage_Tab_History_List : Localized.DraftSettingPage_Tab_History_Graph);
                 toggleViewButton.Clicked += (_, _) =>
                 {
                     _showGraphView = !_showGraphView;
-                    toggleViewButton.Text = _showGraphView ? "☰" : "◎";
-                    ToolTipProperties.SetText(toggleViewButton, _showGraphView ? "Switch to list view" : "Switch to graph view");
+                    toggleViewButton.Text = _showGraphView ? "\ue896" : "\ueaf5";
+                    ToolTipProperties.SetText(toggleViewButton, _showGraphView ? Localized.DraftSettingPage_Tab_History_List : Localized.DraftSettingPage_Tab_History_Graph);
                     tabView.SelectedItem.Content = BuildHistoryGraphTab();
                 };
 
@@ -1151,7 +1152,7 @@ public class DraftSettingPage
 
         bool confirm = await ConfirmAsync(
             Localized._Warn,
-            Localized.DraftSettingPage_Tab_History_CleanupAll_WarnRange(cutoffLabel,snapshotIdsToDelete.Count)
+            Localized.DraftSettingPage_Tab_History_CleanupAll_WarnRange(cutoffLabel, snapshotIdsToDelete.Count)
         );
         if (!confirm)
         {

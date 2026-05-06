@@ -54,7 +54,7 @@ namespace projectFrameCut
                 }
                 catch (System.Exception ex)
                 {
-                    try { Log(ex, "Activate initial ShellItem (Android)", this); } catch { System.Diagnostics.Debug.WriteLine(ex); }
+                    //try { Log(ex, "Activate initial ShellItem (Android)", this); } catch { System.Diagnostics.Debug.WriteLine(ex); }
                 }
             });
 #endif

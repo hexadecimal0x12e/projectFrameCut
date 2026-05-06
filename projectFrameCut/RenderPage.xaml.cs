@@ -418,7 +418,9 @@ public partial class RenderPage : ContentPage
     protected override bool OnBackButtonPressed()
     {
         StopScreenSaverTimer();
-        return running;
+        if (running) return true;
+        Navigation.PopToRootAsync();
+        return true;
     }
 
     private async void ContentPage_Loaded(object sender, EventArgs e)
@@ -1513,6 +1515,8 @@ public partial class RenderPage : ContentPage
 
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
+
+
 
 }
 

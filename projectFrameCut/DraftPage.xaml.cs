@@ -122,7 +122,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public double CurrentFrame => _currentFrame;
 
     TapGestureRecognizer nopGesture = new(), rulerTapGesture = new();
-    DropGestureRecognizer fileDropGesture = new();
 
     int trackCount = 0;
     double _startPreviewHeight = 0;
@@ -432,198 +431,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         IsReadonly = isReadonly;
     }
 
-    private void RestoreInteractableEditorState()
-    {
-        if (ClipEditor == null || ProjectInfo?.Properties == null) return;
-
-        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_LockLayout", out var lockLayoutStr) &&
-            bool.TryParse(lockLayoutStr, out var lockLayout))
-        {
-            ClipEditor.LockLayout = lockLayout;
-        }
-
-        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableSnapping", out var enableSnappingStr) &&
-            bool.TryParse(enableSnappingStr, out var enableSnapping))
-        {
-            ClipEditor.EnableSnapping = enableSnapping;
-        }
-
-        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_DisallowClipOutOfBounds", out var disallowClipOutOfBoundsStr) &&
-            bool.TryParse(disallowClipOutOfBoundsStr, out var disallowClipOutOfBounds))
-        {
-            ClipEditor.DisallowClipOutOfBounds = disallowClipOutOfBounds;
-        }
-
-        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_ShowReferenceLines", out var showReferenceLinesStr) &&
-            bool.TryParse(showReferenceLinesStr, out var showReferenceLines))
-        {
-            ClipEditor.ShowReferenceLines = showReferenceLines;
-        }
-    }
-
-    private void NormalizeLoadedClipFrameSemantics()
-    {
-        var projectFps = ProjectInfo.TargetFrameRate > 0 ? ProjectInfo.TargetFrameRate : 30u;
-        foreach (var clip in Clips.Values)
-        {
-            clip.ExtraData ??= new Dictionary<string, object>();
-            clip.ExtraData[ClipDraftDTO.ProjectFrameRateMetaKey] = projectFps;
-
-            bool hasVersion = TryGetFrameSemanticVersion(clip.ExtraData, out var version);
-            if (!hasVersion || version < ClipDraftDTO.CurrentFrameSemanticVersion)
-            {
-                TryMigrateLegacyFrameSemantic(clip);
-            }
-
-            clip.ExtraData[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
-        }
-    }
-
-    private void TryMigrateLegacyFrameSemantic(ClipElementUI clip)
-    {
-        if (clip.ClipType != ClipMode.VideoClip)
-        {
-            return;
-        }
-
-        if (clip.maxFrameCount == 0 || clip.sourceSecondPerFrame <= 0 || SecondsPerFrame <= 0)
-        {
-            return;
-        }
-
-        double timelinePerLegacyFrame = clip.sourceSecondPerFrame / SecondsPerFrame;
-        if (double.IsNaN(timelinePerLegacyFrame) || double.IsInfinity(timelinePerLegacyFrame) || timelinePerLegacyFrame <= 0d)
-        {
-            return;
-        }
-
-        if (Math.Abs(timelinePerLegacyFrame - 1d) < 0.0001d)
-        {
-            return;
-        }
-
-        uint migratedMax = ConvertLegacyFrameCount(clip.maxFrameCount, timelinePerLegacyFrame);
-        uint legacyLength = clip.lengthInFrame > 0
-            ? clip.lengthInFrame
-            : Math.Max(1u, PixelToFrame(clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
-        uint migratedLength = ConvertLegacyFrameCount(legacyLength, timelinePerLegacyFrame);
-
-        clip.maxFrameCount = migratedMax;
-        if (clip.relativeStartFrame >= clip.maxFrameCount)
-        {
-            clip.relativeStartFrame = clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0;
-        }
-
-        uint remaining = clip.maxFrameCount > clip.relativeStartFrame
-            ? clip.maxFrameCount - clip.relativeStartFrame
-            : 1u;
-        clip.lengthInFrame = Math.Min(migratedLength, Math.Max(1u, remaining));
-        clip.origLength = FrameToPixel(clip.lengthInFrame);
-        clip.Clip.WidthRequest = clip.origLength * clip.SecondPerFrameRatio;
-    }
-
-    private static uint ConvertLegacyFrameCount(uint legacyFrameCount, double timelinePerLegacyFrame)
-    {
-        if (legacyFrameCount == 0)
-        {
-            return 0;
-        }
-
-        double timelineFrames = legacyFrameCount * timelinePerLegacyFrame;
-        if (timelineFrames < 1d)
-        {
-            return 1;
-        }
-
-        if (timelineFrames >= uint.MaxValue)
-        {
-            return uint.MaxValue;
-        }
-
-        return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
-    }
-
-    private static bool TryGetFrameSemanticVersion(Dictionary<string, object> extraData, out int version)
-    {
-        version = 0;
-        if (!extraData.TryGetValue(ClipDraftDTO.FrameSemanticVersionMetaKey, out var raw) || raw is null)
-        {
-            return false;
-        }
-
-        if (raw is int i)
-        {
-            version = i;
-            return true;
-        }
-
-        if (raw is long l)
-        {
-            version = (int)Math.Clamp(l, int.MinValue, int.MaxValue);
-            return true;
-        }
-
-        if (raw is JsonElement je)
-        {
-            if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn))
-            {
-                version = jn;
-                return true;
-            }
-
-            if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js))
-            {
-                version = js;
-                return true;
-            }
-        }
-
-        if (int.TryParse(raw.ToString(), out var parsed))
-        {
-            version = parsed;
-            return true;
-        }
-
-        return false;
-    }
-
-    private void HookPreviewSurfaceSizeSync()
-    {
-        ClipEditorHost.SizeChanged += PreviewSurface_SizeChanged;
-        SyncPreviewSurfaceSize();
-    }
-
-    private void PreviewSurface_SizeChanged(object? sender, EventArgs e)
-    {
-        SyncPreviewSurfaceSize();
-    }
-
-    private void SyncPreviewSurfaceSize()
-    {
-        var width = ClipEditorHost.Width;
-        var height = ClipEditorHost.Height;
-
-        if (width <= 0 || height <= 0)
-        {
-            width = ClipEditor.Width;
-            height = ClipEditor.Height;
-        }
-
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        ClipEditor.UpdateCanvasSize(width, height);
-        DynamicPreviewProvider.UpdateCanvasSize(width, height);
-    }
-
-    private void ApplyClipEditorPreviewOverlayMode()
-    {
-        ClipEditor.ShowRenderRectOverlay = UseDynamicPreview;
-        ClipEditor.ShowClipPreviewOverlays = UseDynamicPreview;
-    }
-
     private void RegisterCommands()
     {
         AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
@@ -691,7 +498,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetStateOK();
                     SetStatusText(Localized.DraftPage_Tasks_Status_Canceled);
                 }
-                else if (Popup.IsVisible)
+                else if (popupShowingDirection != "none")
                 {
                     await HidePopup();
                 }
@@ -699,10 +506,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     UnSelectTapGesture_Tapped(this, null!);
                 }
-                else
-                {
-                    SetStateOK(Localized.DraftPage_EverythingFine);
-                }
+
             });
 
         ReturnCommand =
@@ -712,10 +516,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     await ConfirmKeyboardMoveAsync();
                 }
-                else
-                {
-                    SetStateOK(Localized.DraftPage_EverythingFine);
-                }
+
             });
 
 
@@ -743,24 +544,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     private bool Inited = false;
-
-    private void SetPlayPauseIconToPlay()
-    {
-        PlayPauseButton.FontFamily = MaterialIconFontFamily;
-        PlayPauseButton.Text = MaterialIconPlay;
-    }
-
-    private void SetPlayPauseIconToPause()
-    {
-        PlayPauseButton.FontFamily = MaterialIconFontFamily;
-        PlayPauseButton.Text = MaterialIconPause;
-    }
-
-    private void SetPlayPauseIconToClose()
-    {
-        PlayPauseButton.FontFamily = MaterialIconFontFamily;
-        PlayPauseButton.Text = MaterialIconClose;
-    }
 
     public async Task PostInit()
     {
@@ -997,9 +780,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
         PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
-        fileDropGesture.AllowDrop = true;
-        fileDropGesture.DragOver += File_DragOver;
-        fileDropGesture.Drop += File_Drop;
+
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
 
@@ -1009,6 +790,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         MainMultiWindowView.CloseWindow(HistorySubWindow);
         //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
+        DropGestureRecognizer fileDropGesture = new();
+        fileDropGesture.AllowDrop = true;
+        fileDropGesture.DragOver += File_DragOver;
+        fileDropGesture.Drop += File_Drop;
+        AddClipView.GestureRecognizers.Add(fileDropGesture);
         AddClipView.ClipAdded += async (s, args) =>
         {
             this.Popup.Content = null;
@@ -1028,6 +814,198 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             StartPerClipThumbGeneration(clip);
         }
+    }
+
+    private void RestoreInteractableEditorState()
+    {
+        if (ClipEditor == null || ProjectInfo?.Properties == null) return;
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_LockLayout", out var lockLayoutStr) &&
+            bool.TryParse(lockLayoutStr, out var lockLayout))
+        {
+            ClipEditor.LockLayout = lockLayout;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableSnapping", out var enableSnappingStr) &&
+            bool.TryParse(enableSnappingStr, out var enableSnapping))
+        {
+            ClipEditor.EnableSnapping = enableSnapping;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_DisallowClipOutOfBounds", out var disallowClipOutOfBoundsStr) &&
+            bool.TryParse(disallowClipOutOfBoundsStr, out var disallowClipOutOfBounds))
+        {
+            ClipEditor.DisallowClipOutOfBounds = disallowClipOutOfBounds;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_ShowReferenceLines", out var showReferenceLinesStr) &&
+            bool.TryParse(showReferenceLinesStr, out var showReferenceLines))
+        {
+            ClipEditor.ShowReferenceLines = showReferenceLines;
+        }
+    }
+
+    private void NormalizeLoadedClipFrameSemantics()
+    {
+        var projectFps = ProjectInfo.TargetFrameRate > 0 ? ProjectInfo.TargetFrameRate : 30u;
+        foreach (var clip in Clips.Values)
+        {
+            clip.ExtraData ??= new Dictionary<string, object>();
+            clip.ExtraData[ClipDraftDTO.ProjectFrameRateMetaKey] = projectFps;
+
+            bool hasVersion = TryGetFrameSemanticVersion(clip.ExtraData, out var version);
+            if (!hasVersion || version < ClipDraftDTO.CurrentFrameSemanticVersion)
+            {
+                TryMigrateLegacyFrameSemantic(clip);
+            }
+
+            clip.ExtraData[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+        }
+    }
+
+    private void TryMigrateLegacyFrameSemantic(ClipElementUI clip)
+    {
+        if (clip.ClipType != ClipMode.VideoClip)
+        {
+            return;
+        }
+
+        if (clip.maxFrameCount == 0 || clip.sourceSecondPerFrame <= 0 || SecondsPerFrame <= 0)
+        {
+            return;
+        }
+
+        double timelinePerLegacyFrame = clip.sourceSecondPerFrame / SecondsPerFrame;
+        if (double.IsNaN(timelinePerLegacyFrame) || double.IsInfinity(timelinePerLegacyFrame) || timelinePerLegacyFrame <= 0d)
+        {
+            return;
+        }
+
+        if (Math.Abs(timelinePerLegacyFrame - 1d) < 0.0001d)
+        {
+            return;
+        }
+
+        uint migratedMax = ConvertLegacyFrameCount(clip.maxFrameCount, timelinePerLegacyFrame);
+        uint legacyLength = clip.lengthInFrame > 0
+            ? clip.lengthInFrame
+            : Math.Max(1u, PixelToFrame(clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
+        uint migratedLength = ConvertLegacyFrameCount(legacyLength, timelinePerLegacyFrame);
+
+        clip.maxFrameCount = migratedMax;
+        if (clip.relativeStartFrame >= clip.maxFrameCount)
+        {
+            clip.relativeStartFrame = clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0;
+        }
+
+        uint remaining = clip.maxFrameCount > clip.relativeStartFrame
+            ? clip.maxFrameCount - clip.relativeStartFrame
+            : 1u;
+        clip.lengthInFrame = Math.Min(migratedLength, Math.Max(1u, remaining));
+        clip.origLength = FrameToPixel(clip.lengthInFrame);
+        clip.Clip.WidthRequest = clip.origLength * clip.SecondPerFrameRatio;
+    }
+
+    private static uint ConvertLegacyFrameCount(uint legacyFrameCount, double timelinePerLegacyFrame)
+    {
+        if (legacyFrameCount == 0)
+        {
+            return 0;
+        }
+
+        double timelineFrames = legacyFrameCount * timelinePerLegacyFrame;
+        if (timelineFrames < 1d)
+        {
+            return 1;
+        }
+
+        if (timelineFrames >= uint.MaxValue)
+        {
+            return uint.MaxValue;
+        }
+
+        return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
+    }
+
+    private static bool TryGetFrameSemanticVersion(Dictionary<string, object> extraData, out int version)
+    {
+        version = 0;
+        if (!extraData.TryGetValue(ClipDraftDTO.FrameSemanticVersionMetaKey, out var raw) || raw is null)
+        {
+            return false;
+        }
+
+        if (raw is int i)
+        {
+            version = i;
+            return true;
+        }
+
+        if (raw is long l)
+        {
+            version = (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+            return true;
+        }
+
+        if (raw is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn))
+            {
+                version = jn;
+                return true;
+            }
+
+            if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js))
+            {
+                version = js;
+                return true;
+            }
+        }
+
+        if (int.TryParse(raw.ToString(), out var parsed))
+        {
+            version = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void HookPreviewSurfaceSizeSync()
+    {
+        ClipEditorHost.SizeChanged += PreviewSurface_SizeChanged;
+        SyncPreviewSurfaceSize();
+    }
+
+    private void PreviewSurface_SizeChanged(object? sender, EventArgs e)
+    {
+        SyncPreviewSurfaceSize();
+    }
+
+    private void SyncPreviewSurfaceSize()
+    {
+        var width = ClipEditorHost.Width;
+        var height = ClipEditorHost.Height;
+
+        if (width <= 0 || height <= 0)
+        {
+            width = ClipEditor.Width;
+            height = ClipEditor.Height;
+        }
+
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        ClipEditor.UpdateCanvasSize(width, height);
+        DynamicPreviewProvider.UpdateCanvasSize(width, height);
+    }
+
+    private void ApplyClipEditorPreviewOverlayMode()
+    {
+        ClipEditor.ShowRenderRectOverlay = UseDynamicPreview;
+        ClipEditor.ShowClipPreviewOverlays = UseDynamicPreview;
     }
 
     private string? GetMainMultiWindowItemKey(MultiWindowItem window)
@@ -4577,6 +4555,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var draftPage = this;
             var assetView = new ProjectAssetView(ref draftPage);
+            DropGestureRecognizer fileDropGesture = new();
+            fileDropGesture.AllowDrop = true;
+            fileDropGesture.DragOver += File_DragOver;
+            fileDropGesture.Drop += File_Drop;
+            assetView.GestureRecognizers.Add(fileDropGesture);
             await ShowAPopup(assetView);
         }
         catch (Exception ex)
@@ -5528,7 +5511,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
     {
-
+        popupShowingDirection = "clip";
 
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
@@ -5765,13 +5748,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         else
         {
-            OverlayLayer.GestureRecognizers?.Remove(fileDropGesture);
             OverlayLayer.InputTransparent = true;
             await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
 
             OverlayLayer.IsVisible = false;
             OverlayLayer.InputTransparent = true;
         }
+
+        popupShowingDirection = "none";
     }
 
     private async Task HideClipPopup()
@@ -8020,6 +8004,23 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region misc
+    private void SetPlayPauseIconToPlay()
+    {
+        PlayPauseButton.FontFamily = MaterialIconFontFamily;
+        PlayPauseButton.Text = MaterialIconPlay;
+    }
+
+    private void SetPlayPauseIconToPause()
+    {
+        PlayPauseButton.FontFamily = MaterialIconFontFamily;
+        PlayPauseButton.Text = MaterialIconPause;
+    }
+
+    private void SetPlayPauseIconToClose()
+    {
+        PlayPauseButton.FontFamily = MaterialIconFontFamily;
+        PlayPauseButton.Text = MaterialIconClose;
+    }
     private async Task CleanRenderCache()
     {
         SetStateBusy();
@@ -8650,7 +8651,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             return false;
         }
         if (!ignoreRunningTasks && Window is not null) Window?.SizeChanged -= Window_SizeChanged;
-        return ignoreRunningTasks;
+        if (ignoreRunningTasks) return true;
+        Navigation.PopToRootAsync();
+        return true;
     }
 
     private void MyLoggerExtensions_OnExceptionLog(Exception obj)
@@ -8847,16 +8850,22 @@ public partial class DraftPage : ContentPage, IDraftPage
     #region IDraftPage adapters
     MultiWindowView IDraftPage.MainMultiWindowView => MainMultiWindowView;
     IClipElementUI? IDraftPage.SelectedClip => SelectedClip;
+    IReadOnlyDictionary<string, IClipElementUI> IDraftPage.AllClips => Clips.ToDictionary(C => C.Key, v => (IClipElementUI)v.Value);
     ConcurrentDictionary<string, DraftTasks> IDraftPage.RunningTasks => RunningTasks;
 
-    private static ClipElementUI RequireConcreteClip(IClipElementUI clip, string paramName)
+    private ClipElementUI RequireConcreteClip(IClipElementUI clip, string paramName)
     {
         if (clip is ClipElementUI concrete)
         {
             return concrete;
         }
 
-        throw new ArgumentException("Only ClipElementUI is supported by DraftPage.", paramName);
+        if (Clips.TryGetValue(clip.Id, out ClipElementUI? concreteClip))
+        {
+            return concreteClip;
+        }
+
+        throw new ArgumentException($"Cannot find the provided IClipElementUI {clip.Id} which have a same ID within the page's ClipElementUI.", paramName);
     }
 
     void IDraftPage.AddAClip(IClipElementUI c) => AddAClip(RequireConcreteClip(c, nameof(c)));

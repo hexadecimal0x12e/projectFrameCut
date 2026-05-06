@@ -19,6 +19,8 @@ namespace projectFrameCut.Asset
         public static void Initialize(string json)
         {
             Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftPage.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
+
+            DecoderContextPJFCProject.GlobalAssetGetter = new(() => Assets);
         }
 
         public static ConcurrentDictionary<string, AssetItem> Assets { get; set; } = new();

@@ -379,6 +379,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "AppShell_CreateTab",
+        "Value": "\u521B\u5EFA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "AppShell_DebugTab",
         "Value": "\u8C03\u8BD5",
         "Mode": "ConstString",
@@ -930,6 +938,110 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "\u9AD8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "\u81EA\u5B9A\u4E49\u5206\u8FA8\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "\u5BBD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "\u6682\u65E0\u53EF\u7528\u9879\u76EE\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "\u9879\u76EE\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "\u8BF7\u8F93\u5165\u9879\u76EE\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "\u5FEB\u901F\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "\u91CD\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "\u4ECE\u6A21\u677F\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "\u6A2A\u7AD6\u4E92\u6362",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "\u76EE\u6807\u5E27\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "\u76EE\u6807\u5206\u8FA8\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "\u4F7F\u7528\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -3423,6 +3535,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Tab_History_Graph",
+        "Value": "\u56FE\u6807\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Tab_History_HoursAgo",
         "Value": "{m} \u5C0F\u65F6\u524D",
         "Mode": "InterpolationString",
@@ -3438,6 +3558,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_History_List",
+        "Value": "\u5217\u8868\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -3599,6 +3727,30 @@
       {
         "Id": "HomePage_CreateAProject_InvalidName",
         "Value": "\u9879\u76EE\u540D\u79F0\u4E2D\u542B\u6709\u4E0D\u5408\u6CD5\u7684\u5B57\u7B26\u3002\r\u8BF7\u6362\u4E00\u4E2A\u540D\u79F0\u6CA1\u6709\u6807\u70B9\u7B26\u53F7\u7684\u540D\u79F0\u518D\u8BD5\u4E00\u6B21\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
+        "Value": "\u4E0D\u518D\u663E\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_CreateControlMovedHint_SubTitle",
+        "Value": "\u521B\u5EFA\u9879\u76EE\u529F\u80FD\u5DF2\u88AB\u79FB\u52A8\uFF0C\u4F60\u53EF\u4EE5\u5728\u8FD9\u91CC\u4E00\u7AD9\u5F0F\u7684\u521B\u5EFA\u9879\u76EE\uFF0C\u548C\u4ECE\u6A21\u677F\u751F\u6210\u9879\u76EE\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_CreateControlMovedHint_Title",
+        "Value": "\u627E\u4E0D\u5230\u300C\u521B\u5EFA\u9879\u76EE\u300D\u5165\u53E3\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5918,6 +6070,30 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoDrafts",
+        "Value": "\u8FD9\u91CC\u4EC0\u4E48\u90FD\u6CA1\u6709\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoDrafts_Desc",
+        "Value": "\u5728\u300C\u521B\u5EFA\u9879\u76EE\u300D\u9875\u9762\u91CC\u521B\u5EFA\u4E00\u4E2A\u9879\u76EE\u5427\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoDrafts_GoCreate",
+        "Value": "\u53BB\u521B\u5EFA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12364,6 +12540,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Quick Start",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Project Name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Enter project name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Target Resolution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Width",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Height",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Reset",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Swap Aspect Ratio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Target Frame Rate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Custom Resolution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Start from Template",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "No templates available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Use Template",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -18807,6 +19087,110 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -25257,6 +25641,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -31690,6 +32178,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -38120,6 +38712,110 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -44568,6 +45264,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -51006,6 +51806,110 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -57446,6 +58350,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -63880,6 +64888,110 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -70320,6 +71432,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -76757,6 +77973,110 @@
         ],
         "Comment": "Translation of \u0027\u7531\u300C{name}\u300D\u4EA7\u751F\u0027 - indicates the item was created by the specified user",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -83190,6 +84510,110 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -89630,6 +91054,110 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -96063,6 +97591,110 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_QuickStart",
+        "Value": "Unset localization item:CreatePage_QuickStart()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectName",
+        "Value": "Unset localization item:CreatePage_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ProjectNamePlaceholder",
+        "Value": "Unset localization item:CreatePage_ProjectNamePlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetResolution",
+        "Value": "Unset localization item:CreatePage_TargetResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomWidthPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomWidthPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomHeightPlaceholder",
+        "Value": "Unset localization item:CreatePage_CustomHeightPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_ResetCustomResolution",
+        "Value": "Unset localization item:CreatePage_ResetCustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_SwapAspectRatio",
+        "Value": "Unset localization item:CreatePage_SwapAspectRatio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TargetFrameRate",
+        "Value": "Unset localization item:CreatePage_TargetFrameRate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_CustomResolution",
+        "Value": "Unset localization item:CreatePage_CustomResolution()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_StartFromTemplate",
+        "Value": "Unset localization item:CreatePage_StartFromTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoTemplatesAvailable",
+        "Value": "Unset localization item:CreatePage_NoTemplatesAvailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_UseTemplate",
+        "Value": "Unset localization item:CreatePage_UseTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ]

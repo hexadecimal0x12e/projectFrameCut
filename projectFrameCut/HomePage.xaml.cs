@@ -33,11 +33,14 @@ using projectFrameCut.Setting.SettingPages;
 
 
 
+
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
 using Microsoft.UI.Xaml.Media;
 using ILGPU;
+using winui = Microsoft.UI.Xaml.Controls;
+
 
 #endif
 
@@ -140,6 +143,37 @@ public partial class HomePage : ContentPage
 
 
 #endif
+        };
+
+
+    }
+
+    public HomePage(string path, bool skipAskForRecover = false)
+    {
+        InitializeComponent();
+        WelcomeLabel.Text = Localized.HomePage_Welcome();
+        _viewModel = new ProjectsListViewModel();
+        BindingContext = _viewModel;
+        Loaded += async (s, e) =>
+        {
+            if (new FileInfo(path).OpenRead().ReadByte() == '{')
+            {
+                try
+                {
+                    var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
+                    if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
+                    {
+                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover);
+                        return;
+
+                    }
+                }
+                catch
+                {
+
+                }
+
+            }
         };
 
 
@@ -340,6 +374,12 @@ public partial class HomePage : ContentPage
 
     private async Task CreateDraft()
     {
+        if (!SettingsManager.IsBoolSettingTrue("UseLegacyCreateExperience"))
+        {
+            await Navigation.PushAsync(new CreatePage());
+            return;
+        }
+
         string draftSourcePath = Path.Combine(MauiProgram.DataPath, "My Drafts");
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project", 1024, null, $"Untitled Project {DateTime.Now:yyyy\\-M\\-dd}");
@@ -1043,7 +1083,7 @@ public partial class HomePage : ContentPage
 #endif
 
 #if WINDOWS
-    UserActivitySession _previousSession;
+    UserActivitySession? _previousSession;
 #endif
 
     DraftPage? lastPage = null;
@@ -1059,6 +1099,21 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
+        if(Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
+        {
+            NoContentLayout.IsVisible = true;
+        }
+        else
+        {
+            NoContentLayout.IsVisible = false;
+            await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            if (_viewModel.LoadFailed)
+            {
+                await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
+
+            }
+        }
+
 #if WINDOWS
         await projectFrameCut.WinUI.App.BringToForeground();
         AppShell.instance.ShowNavView();
@@ -1078,12 +1133,60 @@ public partial class HomePage : ContentPage
 #endif
 
 
-        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
-        if (_viewModel.LoadFailed)
-        {
-            await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
 
-        }
+    }
+
+    protected override void OnNavigatedTo(NavigatedToEventArgs args)
+    {
+        base.OnNavigatedTo(args);
+#if WINDOWS
+        Task.Delay(5000).ContinueWith(async (_) =>
+        {
+            if (!SettingsManager.IsSettingExists("CreateControlMovedHint"))
+            {
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    var tip = new winui.TeachingTip
+                    {
+                        Title = Localized.HomePage_CreateControlMovedHint_Title,
+                        FontSize = 20,
+                        Subtitle = Localized.HomePage_CreateControlMovedHint_SubTitle,
+                        CloseButtonContent = Localized._OK,
+                        ActionButtonContent = Localized.HomePage_CreateControlMovedHint_DontShowAnymore,
+                        IconSource = new winui.SymbolIconSource { Symbol = winui.Symbol.Add },
+                        IsOpen = false
+                    };
+                    tip.ActionButtonClick += (s, e) =>
+                    {
+                        SettingsManager.WriteSetting("CreateControlMovedHint", true.ToString());
+                        tip.IsOpen = false;
+                    };
+                    (this.Handler?.PlatformView as winui.Panel)?.Children?.Add(tip);
+                    if (App.createItem is not null)
+                    {
+                        tip.Target = App.createItem;
+                        if (App.createItem.IsLoaded)
+                        {
+                            tip.IsOpen = true;
+                        }
+                        else
+                        {
+                            void OnLoaded(object s, Microsoft.UI.Xaml.RoutedEventArgs e)
+                            {
+                                App.createItem!.Loaded -= OnLoaded;
+                                tip.IsOpen = true;
+                            }
+                            App.createItem.Loaded += OnLoaded;
+                        }
+                    }
+                    else
+                    {
+                        tip.IsOpen = true;
+                    }
+                });
+            }
+        });
+#endif
     }
 
     private async Task ShowManyAlertsAsync()
@@ -1177,6 +1280,7 @@ public partial class HomePage : ContentPage
         PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
+
 #endif
     }
 
@@ -1572,6 +1676,10 @@ public partial class HomePage : ContentPage
         }
     }
 
+    private async void CreateNewProjectButton_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new CreatePage());
+    }
     private async void ImportButton_Clicked(object sender, EventArgs e)
     {
         var path = await FileSystemService.PickFileAsync();
@@ -1764,11 +1872,11 @@ public class ProjectsListViewModel
             if (!Directory.Exists(sourcePath))
                 return;
             Projects.Clear();
-            Projects.Add(new ProjectsViewModel
-            {
-                _name = "!!CreateButton!!",
-                _thumbPath = "!!CreateButton!!"
-            });
+            //Projects.Add(new ProjectsViewModel
+            //{
+            //    _name = "!!CreateButton!!",
+            //    _thumbPath = "!!CreateButton!!"
+            //});
             foreach (var item in Directory.GetDirectories(sourcePath, "*"))
             {
                 ProjectJSONStructure? proj = null;
@@ -1815,12 +1923,12 @@ public class ProjectsListViewModel
             {
                 foreach (var item in projects.OrderByDescending(x => x._lastChanged))
                 {
-                    Projects.Insert(Projects.Count - 1, item);
+                    Projects.Add(item);
                 }
                 // Insert failed (invalid) projects after valid ones, so they appear closer to the bottom
                 foreach (var f in failedProjects)
                 {
-                    Projects.Insert(Projects.Count - 1, f);
+                    Projects.Add(f);
                 }
             }
             catch (Exception ex)

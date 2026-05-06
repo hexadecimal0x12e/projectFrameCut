@@ -11,38 +11,45 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="ImportButton" Text="{l:Localized Key=HomePage_ImportAProject}" Clicked="ImportButton_Clicked" />
     </ContentPage.ToolbarItems>
-    <ScrollView>
+    <Grid>
+        <VerticalStackLayout x:Name="NoContentLayout" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="False" Spacing="8" ZIndex="9999 ">
+            <Label Text="{l:Localized Key=HomePage_NoDrafts}" FontSize="24" HorizontalOptions="Center" FontAttributes="Bold"/>
+            <Label Text="{l:Localized Key=HomePage_NoDrafts_Desc}" FontSize="14" HorizontalOptions="Center" TextColor="Gray"/>
+            <Button Text="{l:Localized Key=HomePage_NoDrafts_GoCreate}" Clicked="CreateNewProjectButton_Clicked" HorizontalOptions="Center"/>
+        </VerticalStackLayout>
+        <ScrollView>
 
-        <VerticalStackLayout>
-            <Label 
-         Text="{l:Localized Key=WelcomeMessage}"
-          x:Name="WelcomeLabel"
-         VerticalOptions="Center" 
-         HorizontalOptions="Center" />
-            <CollectionView 
+            <VerticalStackLayout>
+                <Label 
+                     Text="{l:Localized Key=WelcomeMessage}"
+                     x:Name="WelcomeLabel"
+                     VerticalOptions="Center" 
+                     HorizontalOptions="Center" />
+                <CollectionView 
                         x:Name="ProjectsCollection"
                         ItemsSource="{Binding Projects}"
                         SelectionMode="Single"
                         Margin="12">
-                <CollectionView.GestureRecognizers>
-                    <DropGestureRecognizer AllowDrop="True" Drop="DropGestureRecognizer_Drop"/>
-                </CollectionView.GestureRecognizers>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ProjectsViewModel">
-                        <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
+                    <CollectionView.GestureRecognizers>
+                        <DropGestureRecognizer AllowDrop="True" Drop="DropGestureRecognizer_Drop"/>
+                    </CollectionView.GestureRecognizers>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ProjectsViewModel">
+                            <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
 
-                            <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
-                                <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
-                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
-                                    <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
-                                </VerticalStackLayout>
+                                <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
+                                    <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
+                                        <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
+                                    </VerticalStackLayout>
 
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </VerticalStackLayout>
-    </ScrollView>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

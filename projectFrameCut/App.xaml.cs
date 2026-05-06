@@ -96,7 +96,7 @@ namespace projectFrameCut
 #if WINDOWS
         public static NavigationView MainNavView;
         public static Microsoft.UI.Xaml.Window NativeWindow;
-        public static NavigationViewItem homeItem, assetItem, templateItem, debugItem, settingItem;
+        public static NavigationViewItem homeItem, assetItem, templateItem, debugItem, settingItem, createItem;
 #endif
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
@@ -107,9 +107,12 @@ namespace projectFrameCut
                 if (watchdogService != null && !SettingsManager.IsBoolSettingTrue("ui_DisableUIThreadWatchdog") && !Environment.GetCommandLineArgs().Contains("--noUIWatchdog"))
                 {
 #if WINDOWS
+                    bool frozenFromShown = false;
                     int count = 0;
                     watchdogService.ThreadFrozen += (sender, e) =>
                     {
+                        if (frozenFromShown) return;
+                        frozenFromShown = true;
                         new Thread(Helper.HelperProgram.FrozenMain)
                         {
                             Name = "Frozen UI Thread",
@@ -119,10 +122,11 @@ namespace projectFrameCut
                     watchdogService.ThreadRecovered += (sender, e) =>
                     {
                         Helper.HelperProgram.CloseFrozenDiag();
+                        frozenFromShown = false;
                     };
                     watchdogService.FrozenContinues += (S, e) =>
                     {
-                        if (!watchdogService.IsThreadFrozen) return;
+                        if (!watchdogService.IsThreadFrozen || frozenFromShown) return;
                         count++;
                         if(count % 10 == 0)
                         {
@@ -179,7 +183,8 @@ namespace projectFrameCut
                     var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                     shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
-                    shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
+                    shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_add"), Route = "assets" });
+                    shell.Items.Add(new ShellContent { Content = new CreatePage(), Title = Localized.AppShell_CreateTab, Icon = ImageHelper.LoadFromAsset("icon_create"), Route = "create" });
                     shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
                     shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
                     return mauiWindow;
@@ -265,13 +270,16 @@ namespace projectFrameCut
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
 
-
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
                 nav.MenuItems.Add(templateItem);
 
+                createItem = new NavigationViewItem { Content = Localized.AppShell_CreateTab, Tag = "Create", Height = 36, Padding = new(8) };
+                createItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Add };
                 settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };
+
+                nav.FooterMenuItems.Add(createItem);
                 nav.FooterMenuItems.Add(settingItem);
 
 
@@ -312,6 +320,9 @@ namespace projectFrameCut
                                     break; 
                                 case "Assets":
                                     await Shell.Current.Navigation.PushAsync(new AssetsLibraryPage());
+                                    break;
+                                case "Create":
+                                    await Shell.Current.Navigation.PushAsync(new CreatePage());
                                     break;
                                 case "Setting":
                                     await Shell.Current.Navigation.PushAsync(new MainSettingsPage());

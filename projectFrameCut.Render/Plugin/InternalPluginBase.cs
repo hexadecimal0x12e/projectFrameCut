@@ -136,6 +136,7 @@ public class InternalPluginBase : IPluginBase
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("FFmpegDeviceDecoderContext", new((p) => new FFmpegDeviceDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContextPJFCProject", new((p) => new DecoderContextPJFCProject(p))))
         .ToDictionary();
 
 

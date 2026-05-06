@@ -2,11 +2,201 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.CreatePage"
-             Title="CreatePage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Name="CreateProjectPage"
+             Title="{l:Localized Key=AppShell_CreateTab}">
+    <Grid
+          RowDefinitions="Auto,*"
+          RowSpacing="14"
+          Padding="12">
+        <Grid Grid.Row="0"
+              ColumnDefinitions="2*,*"
+              ColumnSpacing="12">
+            <Border Grid.Column="0"
+                    StrokeThickness="1"
+                    Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="{l:Localized Key=CreatePage_QuickStart}"
+                           FontSize="20"
+                           FontAttributes="Bold" />
+
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          RowSpacing="10">
+                        <Label Grid.Row="0"
+                               Text="{l:Localized Key=CreatePage_ProjectName}"
+                               VerticalOptions="Center" />
+                        <Entry Grid.Row="0"
+                               Grid.Column="1"
+                               Text="{Binding ProjectName}"
+                               Placeholder="{l:Localized Key=CreatePage_ProjectNamePlaceholder}"
+                               ClearButtonVisibility="WhileEditing" />
+
+                        <Label Grid.Row="1"
+                               Text="{l:Localized Key=CreatePage_TargetResolution}"
+                               VerticalOptions="Center" />
+                        <Grid Grid.Row="1"
+                              Grid.Column="1"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8">
+                            <Picker Grid.Column="0"
+                                    ItemsSource="{Binding ResolutionOptions}"
+                                    SelectedItem="{Binding SelectedResolution}" 
+                                    IsVisible="{Binding IsCustomResolutionSelected, Converter={toolkit:InvertedBoolConverter}}"/>
+                            <HorizontalStackLayout 
+                                               Spacing="8"
+                                               IsVisible="{Binding IsCustomResolutionSelected}">
+                                <Entry WidthRequest="120"
+                                   Text="{Binding CustomRelativeWidthText}"
+                                   Keyboard="Numeric"
+                                   Placeholder="{l:Localized Key=CreatePage_CustomWidthPlaceholder}" />
+                                <Label Text="×"
+                                   VerticalTextAlignment="Center"
+                                   FontSize="18" />
+                                <Entry WidthRequest="120"
+                                   Text="{Binding CustomRelativeHeightText}"
+                                   Keyboard="Numeric"
+                                   Placeholder="{l:Localized Key=CreatePage_CustomHeightPlaceholder}" />
+                                <Button Text="{l:Localized Key=CreatePage_ResetCustomResolution}" Command="{Binding ResolutionResetCommand}"/>
+                            </HorizontalStackLayout>
+                            <Button Grid.Column="1"
+                                    Text="{l:Localized Key=CreatePage_SwapAspectRatio}"
+                                    Command="{Binding RotateResolutionCommand}" />
+                        </Grid>
+
+                        <Label Grid.Row="2"
+                               Text="{l:Localized Key=CreatePage_TargetFrameRate}"
+                               VerticalOptions="Center" />
+                        <Picker Grid.Row="2"
+                                Grid.Column="1"
+                                ItemsSource="{Binding FrameRateOptions}"
+                                SelectedItem="{Binding SelectedFrameRate}" />
+
+                        <Label Grid.Row="3"
+                               Text="{l:Localized Key=CreatePage_CustomResolution}"
+                               VerticalOptions="Center"
+                               IsVisible="{Binding IsCustomResolutionSelected}" />
+                    </Grid>
+
+                    <Label Text="{Binding StatusText}"
+                           TextColor="Red"
+                           IsVisible="{Binding HasStatusText}" />
+                    <Button Text="{l:Localized Key=TemplateCreatePage_CreateProject}"
+                            Command="{Binding CreateProjectCommand}"
+                            IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+
+
+            </Border>
+
+            <Border 
+                Grid.Column="1"
+                BackgroundColor="#04070D"
+                Stroke="{AppThemeBinding Light=#D4DCEC, Dark=#2A4268}"
+                StrokeThickness="1"
+                Padding="10">
+                <Grid>
+                    <Border WidthRequest="{Binding PreviewWidth}"
+                        HeightRequest="{Binding PreviewHeight}"
+                        BackgroundColor="#1D3568"
+                        Stroke="#6EA5FF"
+                        StrokeThickness="2"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center">
+                        <Grid>
+                            <VerticalStackLayout  HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label Text="{Binding ResolutionDisplay}" TextColor="White" FontAttributes="Bold" />
+                                <Label Text="{Binding AspectRatioText}" HorizontalOptions="Center" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+
+
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+        </Grid>
+
+
+
+        <Border Grid.Row="1"
+                StrokeThickness="1"
+                 Padding="14">
+            <Grid RowDefinitions="Auto,Auto,*"
+                  RowSpacing="10">
+                <Label Text="{l:Localized Key=CreatePage_StartFromTemplate}"
+                       FontSize="20"
+                       FontAttributes="Bold" />
+                <Label Grid.Row="1"
+                       Text="{Binding TemplateCountText}"
+                       FontSize="13"
+                       Opacity="0.8" />
+
+                <CollectionView Grid.Row="2"
+                                ItemsSource="{Binding Templates}"
+                                SelectionMode="None"
+                                ItemSizingStrategy="MeasureAllItems"
+                                EmptyView="{l:Localized Key=CreatePage_NoTemplatesAvailable}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="{OnIdiom Phone=1, Default=3}"
+                                         VerticalItemSpacing="10"
+                                         HorizontalItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="{AppThemeBinding Light=#F7FAFF, Dark=#13274B}"
+                                    Stroke="{AppThemeBinding Light=#D9E3F7, Dark=#2A4D82}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="12">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{Binding Name}"
+                                           FontSize="20"
+                                           FontAttributes="Bold"
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding Description}"
+                                           FontSize="13"
+                                           MaxLines="2"
+                                           LineBreakMode="TailTruncation" />
+
+                                    <HorizontalStackLayout Spacing="6"
+                                                           BindableLayout.ItemsSource="{Binding Tags}"
+                                                           IsVisible="{Binding HasTags}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Stroke="{AppThemeBinding Light=#C8D8F6, Dark=#44669A}"
+                                                        StrokeThickness="1"
+                                                        StrokeShape="RoundRectangle 14"
+                                                        Padding="8,2">
+                                                    <Label Text="{Binding .}" FontSize="11" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </HorizontalStackLayout>
+
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="8">
+                                        <Label Text="{Binding ResolutionText}"
+                                               FontSize="12"
+                                               Opacity="0.85" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding FrameRateText}"
+                                               FontSize="12"
+                                               Opacity="0.85" />
+                                    </Grid>
+
+                                    <Button Text="{l:Localized Key=CreatePage_UseTemplate}"
+                                            Command="{Binding Source={x:Reference CreateProjectPage}, Path=BindingContext.UseTemplateCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </Border>
+    </Grid>
 </ContentPage>

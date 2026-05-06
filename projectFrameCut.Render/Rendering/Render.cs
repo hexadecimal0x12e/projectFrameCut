@@ -48,7 +48,7 @@ namespace projectFrameCut.Render.Rendering
         public int RenderSchedulerPreparePollDelayMs { get => field > 0 ? field : 5; set; } = 5;
         public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
         public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
-        public int ThrottleThreshold { get => field > 0 ? field : MaxThreads; set; }
+        public int ThrottleThreshold { get => field > 0 ? field : Math.Max(MaxThreads * 4, MaxThreads + 8); set; }
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
@@ -82,6 +82,7 @@ namespace projectFrameCut.Render.Rendering
         public ConcurrentDictionary<uint, TimeSpan> FramePrepareElapsed { get; } = new();
         public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
         public ConcurrentDictionary<uint, TimeSpan> FrameDirtyTime { get; } = new();
+        public ConcurrentDictionary<uint, TimeSpan> FrameQueuedTime { get; } = new();
         public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
 
         public bool running { get; private set; } = false;
@@ -98,6 +99,7 @@ namespace projectFrameCut.Render.Rendering
 
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
         ConcurrentDictionary<string, object> BindableEffectResultCache = new();
+        ConcurrentDictionary<uint, Stopwatch> FramePrepareToRenderTimer = new();
         IComputer mixComputer = null!;
 
         int ThreadWorking = 0, Finished = 0;
@@ -193,12 +195,7 @@ namespace projectFrameCut.Render.Rendering
                 while (!IsProfilerAttached && PreparedFrames.Count > ThrottleThreshold && !token.IsCancellationRequested)
                 {
                     Log($"[Preparer] Waiting for more render slots... prepared source frames pending: {PreparedFrames.Count} (threshold: {ThrottleThreshold})");
-                    int sleepMs = 50;
-                    while (PreparedFrames.Count > ThrottleThreshold && !token.IsCancellationRequested)
-                    {
-                        Thread.Sleep(sleepMs);
-                        sleepMs = Math.Min(sleepMs * 2, 500);
-                    }
+                    Thread.Sleep(50);
                 }
 
                 if (token.IsCancellationRequested) return;
@@ -246,6 +243,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     PreparedFrames.Enqueue(idx);
                     Interlocked.Increment(ref TotalEnqueued);
+                    FramePrepareToRenderTimer.AddOrUpdate(idx, Stopwatch.StartNew(), (_, c) => { c.Restart(); return c; });
                 }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
@@ -302,6 +300,7 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             _renderTotalStopwatch.Restart();
 
+
             if (builder.BlockWrite)
             {
                 await GoRenderSync(token);
@@ -316,28 +315,7 @@ namespace projectFrameCut.Render.Rendering
 
             // Initialize thread limiter
             _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
-
-            if (UseHDR)
-            {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
-            }
-            else if (Use16Bit)
-            {
-                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            else
-            {
-                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            BlankFrame.CanBeDisposed = false;
-            GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
-
-            _ppb = Use16Bit ? 16 : 8;
-            TargetWidth = builder.Width;
-            TargetHeight = builder.Height;
-            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             InitializeRenderCaches();
             if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
@@ -507,7 +485,7 @@ namespace projectFrameCut.Render.Rendering
                         if (!PreparedFrames.TryDequeue(out var targetFrame))
                             break;
 
-                        if (!_threadLimiter.Wait(0))
+                        if (!_threadLimiter.Wait(0, token))
                         {
                             PreparedFrames.Enqueue(targetFrame);
                             break;
@@ -521,6 +499,14 @@ namespace projectFrameCut.Render.Rendering
                             {
                                 Thread.CurrentThread?.Name = $"Render worker #{targetFrame}";
                                 FlushBlankFramesBefore(targetFrame, token);
+                                if(FramePrepareToRenderTimer.TryGetValue(targetFrame, out var timer))
+                                {
+                                    timer.Stop();
+#if DEBUG
+                                    LogDiagnostic($"Frame {targetFrame} took {timer.Elapsed} between prepared and render start.");
+#endif
+                                    FrameQueuedTime[targetFrame] = timer.Elapsed;
+                                }
                                 RenderAFrame(targetFrame, token);
                             }
                             catch (Exception ex)
@@ -594,29 +580,7 @@ namespace projectFrameCut.Render.Rendering
             _renderTotalStopwatch.Restart();
             Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
 
-            _ppb = Use16Bit ? 16 : 8;
-            TargetWidth = builder.Width;
-            TargetHeight = builder.Height;
-            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
-
-            if (UseHDR)
-            {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
-            }
-            else if (Use16Bit)
-            {
-                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            else
-            {
-                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            BlankFrame.CanBeDisposed = false;
-            GC.KeepAlive(BlankFrame);
-
-            running = true;
-            InitializeRenderCaches();
+           
 
             if (LogStaticsData)
             {
@@ -661,7 +625,7 @@ namespace projectFrameCut.Render.Rendering
                     Log("Render cancelled by user.", "info");
                     break;
                 }
-                RenderAFrameSync(idx, token);
+                RenderOneFrameSync(idx, token);
             }
 
             if (token.IsCancellationRequested)
@@ -702,28 +666,7 @@ namespace projectFrameCut.Render.Rendering
             _renderTotalStopwatch.Restart();
 
             _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
-
-            if (UseHDR)
-            {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
-            }
-            else if (Use16Bit)
-            {
-                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            else
-            {
-                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            }
-            BlankFrame.CanBeDisposed = false;
-            GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
-
-            _ppb = Use16Bit ? 16 : 8;
-            TargetWidth = builder.Width;
-            TargetHeight = builder.Height;
-            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             InitializeRenderCaches();
             if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
@@ -921,7 +864,7 @@ namespace projectFrameCut.Render.Rendering
                         }
 
                         if (acquired < layerGroups.Length)
-                            break;
+                            continue;
 
                         // Set up completion tracking for this frame
                         var completion = new FrameLayerCompletion
@@ -945,6 +888,13 @@ namespace projectFrameCut.Render.Rendering
                                 try
                                 {
                                     Thread.CurrentThread?.Name ??= $"Layer worker #{capturedFrame}.{capturedLayerIdx}";
+                                    if (FramePrepareToRenderTimer.TryGetValue(capturedFrame, out var timer))
+                                    {
+#if DEBUG
+                                        LogDiagnostic($"Frame {targetFrame}.{capturedLayerIdx} took {timer.Elapsed} between prepared and render start.");
+#endif
+                                        FrameQueuedTime.AddOrUpdate(capturedFrame, timer.Elapsed, (_, existing) => timer.Elapsed);
+                                    }
                                     RenderALayer(capturedFrame, capturedLayerIdx, capturedGroup, token);
                                 }
                                 catch (Exception ex)
@@ -1070,7 +1020,7 @@ namespace projectFrameCut.Render.Rendering
             return;
         }
 
-        private void RenderAFrameSync(uint targetFrame, CancellationToken token)
+        public void RenderOneFrameSync(uint targetFrame, CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             if (targetFrame >= StartFrame + Duration)
@@ -1744,9 +1694,31 @@ namespace projectFrameCut.Render.Rendering
             return false;
         }
 
-        private void InitializeRenderCaches()
+        public void InitializeRenderCaches()
         {
+            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+
             _ppb = Use16Bit ? 16 : 8;
+            TargetWidth = builder.Width;
+            TargetHeight = builder.Height;
+            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
+
+            if (UseHDR)
+            {
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+            }
+            else if (Use16Bit)
+            {
+                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
+            else
+            {
+                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            }
+            BlankFrame.CanBeDisposed = false;
+            GC.KeepAlive(BlankFrame);
+
             if (MinSchedulePreparedFrames <= 0) MinSchedulePreparedFrames = MaxThreads;
             if (ThrottleThreshold <= 0) ThrottleThreshold = MaxThreads;
             if (MinSchedulePreparedFrames > ThrottleThreshold)

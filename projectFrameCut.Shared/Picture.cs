@@ -62,11 +62,11 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// The frame index this picture comes from. Used for diagnostics only.
         /// </summary>
-        public uint? frameIndex { get; init; } //诊断用
+        public uint? frameIndex { get; set; } //诊断用
         /// <summary>
         /// The file path this picture comes from. Used for diagnostics only.
         /// </summary>
-        public string? filePath { get; init; } //诊断用
+        public string? filePath { get; set; } //诊断用
         /// <summary>
         /// Determine some flag for the picture.
         /// </summary>
@@ -270,8 +270,8 @@ namespace projectFrameCut.Shared
         public int Height { get; set; }
         public int Pixels { get; init; }
 
-        public uint? frameIndex { get; init; } //诊断用
-        public string? filePath { get; init; } //诊断用
+        public uint? frameIndex { get; set; } //诊断用
+        public string? filePath { get; set; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
@@ -854,8 +854,8 @@ namespace projectFrameCut.Shared
         public int Height { get; set; }
         public int Pixels { get; init; }
 
-        public uint? frameIndex { get; init; } //诊断用
-        public string? filePath { get; init; } //诊断用
+        public uint? frameIndex { get; set; } //诊断用
+        public string? filePath { get; set; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
@@ -1442,8 +1442,8 @@ namespace projectFrameCut.Shared
         public int Width { get; set; }
         public int Height { get; set; }
         public int Pixels { get; init; }
-        public uint? frameIndex { get; init; }
-        public string? filePath { get; init; }
+        public uint? frameIndex { get; set; }
+        public string? filePath { get; set; }
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool hasAlphaChannel { get; set; }
