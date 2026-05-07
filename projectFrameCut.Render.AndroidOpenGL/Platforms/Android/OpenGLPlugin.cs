@@ -74,7 +74,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     {"RemoveColorComputer", new(() => new VulkanRemoveColorComputer()) },
                     {"ResizeComputer", new(() => new VulkanResizeComputer()) },
                     {"CropComputer", new(() => new VulkanCropComputer()) },
-                    {"PlaceComputer", new(() => new VulkanPlaceComputer()) }
+                    {"PlaceComputer", new(() => new VulkanPlaceComputer()) },
+                    {"AddComputer", new(() => new VulkanBlendAddComputer()) },
+                    {"SubtractComputer", new(() => new VulkanBlendSubtractComputer()) },
+                    {"MultiplyComputer", new(() => new VulkanBlendMultiplyComputer()) },
+                    {"ScreenComputer", new(() => new VulkanBlendScreenComputer()) },
+                    {"OverlayBlendComputer", new(() => new VulkanBlendOverlayBlendComputer()) },
+                    {"DarkenComputer", new(() => new VulkanBlendDarkenComputer()) },
+                    {"LightenComputer", new(() => new VulkanBlendLightenComputer()) },
+                    {"DifferenceComputer", new(() => new VulkanBlendDifferenceComputer()) }
                 };
             }
             else
@@ -85,7 +93,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     {"RemoveColorComputer", new(() => new RemoveColorComputer()) },
                     {"ResizeComputer", new(() => new ResizeComputer()) },
                     {"CropComputer", new(() => new CropComputer()) },
-                    {"PlaceComputer", new(() => new PlaceComputer()) }
+                    {"PlaceComputer", new(() => new PlaceComputer()) },
+                    {"AddComputer", new(() => new BlendAddComputer()) },
+                    {"SubtractComputer", new(() => new BlendSubtractComputer()) },
+                    {"MultiplyComputer", new(() => new BlendMultiplyComputer()) },
+                    {"ScreenComputer", new(() => new BlendScreenComputer()) },
+                    {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer()) },
+                    {"DarkenComputer", new(() => new BlendDarkenComputer()) },
+                    {"LightenComputer", new(() => new BlendLightenComputer()) },
+                    {"DifferenceComputer", new(() => new BlendDifferenceComputer()) }
                 };
             }
         }

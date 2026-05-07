@@ -10,12 +10,27 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class ClassicOverlayMixtureEffectBundle : IEffectBundle
+    public class BlendModeMixtureEffectBundle : IEffectBundle
     {
+        private static readonly string[] MixtureTypeOptions = ["Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference"];
+
+        private static readonly Dictionary<string, string> MixtureTypeDisplayNames = new()
+        {
+            { "Add", "Add (Linear Dodge)" },
+            { "Subtract", "Subtract" },
+            { "Multiply", "Multiply" },
+            { "Screen", "Screen" },
+            { "OverlayBlend", "Overlay" },
+            { "Darken", "Darken" },
+            { "Lighten", "Lighten" },
+            { "Difference", "Difference" },
+        };
+
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "Classic Overlay";
+        public string Name { get; set; } = "Blend Mode";
+
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "ClassicOverlayMixture";
+        public string TypeName => "BlendModeMixture";
 
         public EffectType TypeOfEffect => EffectType.MixtureProvider;
         public EffectTarget Target => EffectTarget.Mixture;
@@ -38,30 +53,42 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
-        public Dictionary<string, object> Parameters { get; set; } = new();
+        public Dictionary<string, object> Parameters { get; set; } = new()
+        {
+            { "MixtureType", "Add" }
+        };
 
-        bool IEffectBundle.IsUserVisibleEffect => false;
-
-        public List<string> ParametersNeeded => [];
-        public Dictionary<string, string> ParametersType => new();
+        public List<string> ParametersNeeded => ["MixtureType"];
+        public Dictionary<string, string> ParametersType => new() { { "MixtureType", "string" } };
 
         public IEffectFactory[] Create()
         {
-            var factory = new ClassicOverlayMixtureFactory();
+            var mixtureType = EffectBundleUiHelper.GetString(Parameters, "MixtureType", "Add");
+            var factory = new BlendModeMixtureFactory { MixtureType = mixtureType };
             this.ConfigureFactory(factory);
             return [factory];
         }
 
         public PropertyPanelBuilder CreateUI()
         {
+            var mixtureType = EffectBundleUiHelper.GetString(Parameters, "MixtureType", "Add");
             var panel = new PropertyPanelBuilder();
-            panel.AddText(new SingleLineLabel(
-                "Classic Overlay Mixture\nblends each frame onto the layer below using alpha compositing.", 14));
+            panel.AddPicker(
+                "MixtureType",
+                EffectBundleUiHelper.L("BlendMode_MixtureType", "Blend Mode"),
+                MixtureTypeOptions,
+                mixtureType);
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
+            if (args.Id == "MixtureType")
+            {
+                var value = args.Value?.ToString();
+                if (value != null && Array.IndexOf(MixtureTypeOptions, value) >= 0)
+                    Parameters["MixtureType"] = value;
+            }
             return Parameters;
         }
 
@@ -69,9 +96,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Mixture_ClassicOverlay", "Classic Overlay"),
-                Description = EffectBundleUiHelper.L("Description_Mixture_ClassicOverlay",
-                    "Classic alpha-blend overlay. Blends each frame onto the layer below using standard alpha compositing."),
+                Name = EffectBundleUiHelper.L("DisplayName_Mixture_BlendMode", "Blend Mode"),
+                Description = EffectBundleUiHelper.L("Description_Mixture_BlendMode",
+                    "Composites the clip using a blend mode (Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten, Difference)."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

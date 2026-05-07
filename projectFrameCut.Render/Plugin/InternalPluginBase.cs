@@ -62,14 +62,21 @@ public class InternalPluginBase : IPluginBase
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
-        {"Rotation",  new(() => new RotationEffect_ImageSharp())},
         {"Flip", new(() => new FlipEffect_ImageSharp()) },
         {"Sharpen", new(() => new SharpenEffect_ImageSharp()) },
         {"Vignette", new(() => new VignetteEffect_ImageSharp()) },
         {"FadeOpacity", new(() => new FadeOpacityEffect_ImageSharp()) },
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
         {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
-        {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) }
+        {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
+        {"AddMixture", new(() => new Compose.AddMixture()) },
+        {"SubtractMixture", new(() => new Compose.SubtractMixture()) },
+        {"MultiplyMixture", new(() => new Compose.MultiplyMixture()) },
+        {"ScreenMixture", new(() => new Compose.ScreenMixture()) },
+        {"OverlayBlendMixture", new(() => new Compose.OverlayBlendMixture()) },
+        {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
+        {"LightenMixture", new(() => new Compose.LightenMixture()) },
+        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -79,7 +86,6 @@ public class InternalPluginBase : IPluginBase
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
         {"Blur", new BlurEffectFactory()},
-        {"Rotation", new RotationEffectFactory()},
         {"Flip", new FlipEffectFactory()},
         {"Sharpen", new SharpenEffectFactory()},
         {"Vignette", new VignetteEffectFactory()},
@@ -88,12 +94,27 @@ public class InternalPluginBase : IPluginBase
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
         {"Jitter", new JitterContinuousEffectFactory()},
         {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
+        {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
+        {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},
+        {"MultiplyMixture", new BlendModeMixtureFactory { MixtureType = "Multiply" }},
+        {"ScreenMixture", new BlendModeMixtureFactory { MixtureType = "Screen" }},
+        {"OverlayBlendMixture", new BlendModeMixtureFactory { MixtureType = "OverlayBlend" }},
+        {"DarkenMixture", new BlendModeMixtureFactory { MixtureType = "Darken" }},
+        {"LightenMixture", new BlendModeMixtureFactory { MixtureType = "Lighten" }},
+        {"DifferenceMixture", new BlendModeMixtureFactory { MixtureType = "Difference" }},
 
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
-
+        {"AddComputer", () => new Compose.AddComputer() },
+        {"SubtractComputer", () => new Compose.SubtractComputer() },
+        {"MultiplyComputer", () => new Compose.MultiplyComputer() },
+        {"ScreenComputer", () => new Compose.ScreenComputer() },
+        {"OverlayBlendComputer", () => new Compose.OverlayBlendComputer() },
+        {"DarkenComputer", () => new Compose.DarkenComputer() },
+        {"LightenComputer", () => new Compose.LightenComputer() },
+        {"DifferenceComputer", () => new Compose.DifferenceComputer() },
     };
 
     public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>

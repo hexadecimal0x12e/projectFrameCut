@@ -11,9 +11,11 @@
           RowSpacing="14"
           Padding="12">
         <Grid Grid.Row="0"
+              x:Name="QuickStartGrid"
               ColumnDefinitions="2*,*"
               ColumnSpacing="12">
-            <Border Grid.Column="0"
+            <Border x:Name="FormBorder"
+                    Grid.Column="0"
                     StrokeThickness="1"
                     Padding="14">
                 <VerticalStackLayout Spacing="12">
@@ -91,7 +93,7 @@
 
             </Border>
 
-            <Border 
+            <Border x:Name="PreviewBorder"
                 Grid.Column="1"
                 BackgroundColor="#04070D"
                 Stroke="{AppThemeBinding Light=#D4DCEC, Dark=#2A4268}"
@@ -189,7 +191,7 @@
                                     </Grid>
 
                                     <Button Text="{l:Localized Key=CreatePage_UseTemplate}"
-                                            Command="{Binding Source={x:Reference CreateProjectPage}, Path=BindingContext.UseTemplateCommand}"
+                                            Command="{Binding Source={x:Reference CreateProjectPage}, Path=CreateWithTemplateCommand}"
                                             CommandParameter="{Binding .}" />
                                 </VerticalStackLayout>
                             </Border>

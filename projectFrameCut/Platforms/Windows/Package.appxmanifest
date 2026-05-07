@@ -9,7 +9,7 @@
 	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3">
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
-	<Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.5.0.0" />
+	<Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.4.2.0" />
 
 	<mp:PhoneIdentity PhoneProductId="8bc4e03e-2606-4817-8070-e1aa4a22658f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

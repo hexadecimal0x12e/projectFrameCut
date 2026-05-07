@@ -129,6 +129,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     string popupShowingDirection = "none";
     CommunityToolkit.Maui.Views.Popup? _currentCommunityToolkitPopup = null;
+    // Parameters for resizing popup when window size changes
+    private double _popupHeightRatio = 0;
+    private double _popupWidthRatio = 0;
+    private Border? _popupClipBorder = null;
+    private ClipElementUI? _popupClipElement = null;
 
 
     private Size WindowSize = new(500, 500);
@@ -315,6 +320,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
+        ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
@@ -367,6 +373,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
+        ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
@@ -1282,30 +1289,39 @@ public partial class DraftPage : ContentPage, IDraftPage
             elem.ExtraData["IsAI"] = true;
         }
 
-        if (elem.ClipType == ClipMode.VideoClip)
+        try
         {
-            var resolvedPath = path ?? asset.Path;
-            if (!string.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
+            if (elem.ClipType == ClipMode.VideoClip)
             {
-                try
+                var resolvedPath = path ?? asset.Path;
+                if (!string.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
                 {
-                    if (HDRDecoderContext.IsHdrVideo(resolvedPath))
+                    try
                     {
-                        elem.ExtraData["TargetDecoder"] = "HDRDecoderContext";
-                    }
-                    else
-                    {
-                        if (FFmpegHelper.DetectVideoBitDepth(path) > 8)
+                        if (HDRDecoderContext.IsHdrVideo(resolvedPath))
                         {
-                            elem.ExtraData["TargetDecoder"] = "DecoderContext16Bit";
+                            elem.ExtraData["TargetDecoder"] = "HDRDecoderContext";
+                        }
+                        else
+                        {
+                            if (FFmpegHelper.DetectVideoBitDepth(path) > 8)
+                            {
+                                elem.ExtraData["TargetDecoder"] = "DecoderContext16Bit";
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Detect bpp for video clip {path}", this);
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Detect bpp for video clip {path}", this);
+                    }
                 }
             }
+
+            elem.UpdateSourceDuration();
+        }
+        catch(Exception ex)
+        {
+            Log(ex, $"Update VideoClip info for {elem.DisplayName}", this);
         }
 
         return elem;
@@ -5512,6 +5528,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
     {
         popupShowingDirection = "clip";
+        _popupHeightRatio = 0;
+        _popupWidthRatio = 0;
+        _popupClipBorder = clipBorder;
+        _popupClipElement = clip;
 
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
@@ -5732,6 +5752,74 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch { }
     }
 
+    private void ReAdjustPopupForWindowSize()
+    {
+        if (popupShowingDirection == "none") return;
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer) return;
+
+        var size = WindowSize;
+        if (size.Width <= 0 || size.Height <= 0) return;
+
+        try
+        {
+            switch (popupShowingDirection)
+            {
+                case "bottom":
+                    if (_popupHeightRatio > 0)
+                    {
+                        double newHeight = Math.Min(size.Height * _popupHeightRatio, size.Height - 20);
+                        if (newHeight < 120) newHeight = 120;
+                        Popup.WidthRequest = size.Width - 40;
+                        Popup.HeightRequest = newHeight;
+                        Popup.TranslationX = 15;
+                        Popup.TranslationY = size.Height - newHeight;
+                    }
+                    break;
+                case "right":
+                    if (_popupWidthRatio > 0)
+                    {
+                        double newLeftMargin = size.Height * _popupWidthRatio;
+                        double newWidth = size.Width - newLeftMargin;
+                        if (newWidth < 200) newWidth = 200;
+                        Popup.WidthRequest = newWidth;
+                        Popup.HeightRequest = size.Height * 0.85;
+                        Popup.TranslationX = newLeftMargin;
+                        Popup.TranslationY = 20;
+                    }
+                    break;
+                case "dialog":
+                case "center":
+                    if (_popupHeightRatio > 0 && _popupWidthRatio > 0)
+                    {
+                        double desiredHeight = size.Height * _popupHeightRatio;
+                        double desiredWidth = size.Width * _popupWidthRatio;
+                        const double margin = 20;
+                        double popupWidth = Math.Min(desiredWidth, Math.Max(200, size.Width - margin * 2));
+                        double popupHeight = Math.Min(desiredHeight, Math.Max(120, size.Height - margin * 2));
+                        double targetX = (size.Width - popupWidth) / 2.0;
+                        double targetY = (size.Height - popupHeight) / 2.0;
+                        if (targetX < margin) targetX = margin;
+                        if (targetY < margin) targetY = margin;
+                        Popup.WidthRequest = popupWidth;
+                        Popup.HeightRequest = popupHeight;
+                        Popup.TranslationX = targetX;
+                        Popup.TranslationY = targetY;
+                    }
+                    break;
+                case "clip":
+                    if (_popupClipBorder is not null && _popupClipElement is not null)
+                    {
+                        _ = Dispatcher.Dispatch(async () =>
+                        {
+                            await HidePopup(true);
+                        });
+                    }
+                    break;
+            }
+        }
+        catch { }
+    }
+
     public async Task HidePopup(bool force = false)
     {
         if (!force && !IsPopupClosableByTapBackground) return;
@@ -5756,6 +5844,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         popupShowingDirection = "none";
+        _popupHeightRatio = 0;
+        _popupWidthRatio = 0;
+        _popupClipBorder = null;
+        _popupClipElement = null;
     }
 
     private async Task HideClipPopup()
@@ -5794,6 +5886,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         OverlayLayer.InputTransparent = false;
 
         var size = WindowSize;
+        _popupHeightRatio = size.Height > 0 ? height / size.Height : 0;
+        _popupWidthRatio = 0;
 
         Popup = new Border
         {
@@ -5865,6 +5959,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         OverlayLayer.InputTransparent = false;
 
         var size = WindowSize;
+        _popupHeightRatio = 0;
+        _popupWidthRatio = size.Height > 0 ? width / size.Height : 0;
 
         Popup = new Border
         {
@@ -5943,6 +6039,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (double.IsNaN(size.Height) || size.Height <= 0) size.Height = this.Height;
         if (double.IsNaN(size.Width) || size.Width <= 0) size.Width = 1000;
         if (double.IsNaN(size.Height) || size.Height <= 0) size.Height = 800;
+
+        _popupHeightRatio = size.Height > 0 ? desiredHeight / size.Height : 0;
+        _popupWidthRatio = size.Width > 0 ? desiredWidth / size.Width : 0;
 
         // NOTE: call site passes (height, width). Keep signature but treat:
         // x => desired height, y => desired width.
@@ -8626,6 +8725,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         double h = this.Window?.Height ?? 0;
         WindowSize = new(w, h);
         LogDiagnostic($"Window size changed: {w:F0} x {h:F0} (DIP)");
+        ReAdjustPopupForWindowSize();
         SyncPreviewSurfaceSize();
         UpdateTrackHeaderLayoutForViewport();
         UpdateTimelineWidth();

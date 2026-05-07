@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -101,6 +102,26 @@ namespace projectFrameCut.DraftStuff
                 }
             }
             return ratio > 0 ? ratio : 1;
+        }
+
+        public void UpdateSourceDuration()
+        {
+            if (ClipType != ClipMode.VideoClip || ClipType != ClipMode.AudioClip || ClipType != ClipMode.ExtendClip)
+            {
+                isInfiniteLength = true;
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(SourcePath)) return;
+            try
+            {
+                var src = PluginManager.CreateVideoSource(SourcePath, 8);
+                maxFrameCount = (uint)src.TotalFrames;
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Refresh clip {DisplayName}'s duration", this);
+            }
         }
 
         public void ApplySpeedRatio()

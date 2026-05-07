@@ -19,6 +19,8 @@ public partial class TemplateViewPage : ContentPage
 
     private string _lastClickTemplateId = string.Empty;
 
+    public static bool HasNavigatedToTemplate = false;
+
     public TemplateViewPage()
     {
         InitializeComponent();
@@ -28,6 +30,31 @@ public partial class TemplateViewPage : ContentPage
         OrderOptionPicker.SelectedIndex = _viewModel.OrderOption;
         Loaded += (_, _) => ApplyGridSpan();
         SizeChanged += (_, _) => ApplyGridSpan();
+    }
+
+    public TemplateViewPage(string Id)
+    {
+        HasNavigatedToTemplate = false;
+        InitializeComponent();
+        Title = Localized.TemplateViewPage_Title;
+        _viewModel = new TemplatePageViewModel();
+        BindingContext = _viewModel;
+        OrderOptionPicker.SelectedIndex = _viewModel.OrderOption;
+        SizeChanged += (_, _) => ApplyGridSpan();
+        Loaded += async (_, _) =>
+        {
+            ApplyGridSpan();
+            if (HasNavigatedToTemplate) return;
+            if (_viewModel.FilteredTemplates.FirstOrDefault(t => t.TemplateId == Id) is TemplateItem target)
+            {
+                HasNavigatedToTemplate = true;
+                _viewModel.SelectedTemplate = target;
+                TemplatesCollectionView.SelectedItem = target;
+                TemplatesCollectionView.ScrollTo(target, position: ScrollToPosition.Center);
+                await CreateVideoFromTemplate();
+            }
+        };
+        
     }
 
     private void ApplyGridSpan()
@@ -360,10 +387,6 @@ public partial class TemplateViewPage : ContentPage
             return;
         }
 
-        //await DisplayAlertAsync(
-        //    "模板预览（Mock）",
-        //    $"模板：{_viewModel.SelectedTemplate.Name}{Environment.NewLine}类型：{_viewModel.SelectedTemplate.Category}{Environment.NewLine}时长：{_viewModel.SelectedTemplate.DurationText}",
-        //    Localized._OK);
     }
 
     private async Task CreateVideoFromTemplate()

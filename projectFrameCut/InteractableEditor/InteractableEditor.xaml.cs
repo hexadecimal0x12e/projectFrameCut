@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -16,6 +17,8 @@ namespace projectFrameCut.InteractableEditor
 {
     public partial class InteractableEditor : ContentView
     {
+        #region types
+
         private enum ResizeHandle
         {
             TopLeft,
@@ -38,6 +41,10 @@ namespace projectFrameCut.InteractableEditor
             public Color Color;
             public double Thickness;
         }
+
+        #endregion
+
+        #region fields
 
         private projectFrameCut.DraftStuff.ClipElementUI? _currentClip;
         private AssetItem? _currentAsset;
@@ -111,10 +118,15 @@ namespace projectFrameCut.InteractableEditor
         private const int CommitUpdateDebounceMs = 220;
         private const int OverlayTapBlankSuppressMs = 180;
 
+        #endregion
+
+        #region properties
+
         public ConcurrentDictionary<string, ClipElementUI> Clips { get; private set; } = new();
 
         // 用于直接显示DraftPage中的所有clips
         private IReadOnlyDictionary<string, ClipElementUI>? _allClips;
+        private ConcurrentDictionary<string, AssetItem>? _assets;
         private uint _currentFrame;
         private double _framePerPixel = 1d;
         private double _tracksZoomOffset = 1d;
@@ -228,20 +240,9 @@ namespace projectFrameCut.InteractableEditor
             PreviewOverlayImage.IsVisible = isVisible;
         }
 
-        public InteractableEditor()
-        {
-            BindingContext = this;
-            InitializeComponent();
+        #endregion
 
-            var canvasTap = new TapGestureRecognizer();
-            canvasTap.Tapped += OnEditorCanvasTapped;
-            EditorCanvas.GestureRecognizers.Add(canvasTap);
-
-            var hoverPointer = new PointerGestureRecognizer();
-            hoverPointer.PointerEntered += OnBottomControlsHostEntered;
-            hoverPointer.PointerExited += OnBottomControlsHostExited;
-            BottomControlsHost.GestureRecognizers.Add(hoverPointer);
-        }
+        #region ClipOverlayState
 
         private sealed class ClipOverlayState
         {
@@ -738,6 +739,24 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        #endregion
+
+        #region init/config
+        public InteractableEditor()
+        {
+            BindingContext = this;
+            InitializeComponent();
+
+            var canvasTap = new TapGestureRecognizer();
+            canvasTap.Tapped += OnEditorCanvasTapped;
+            EditorCanvas.GestureRecognizers.Add(canvasTap);
+
+            var hoverPointer = new PointerGestureRecognizer();
+            hoverPointer.PointerEntered += OnBottomControlsHostEntered;
+            hoverPointer.PointerExited += OnBottomControlsHostExited;
+            BottomControlsHost.GestureRecognizers.Add(hoverPointer);
+        }
+
         public void ConfigurePreviewRefresh(Func<Task>? refreshCallback)
         {
             _previewRefreshCallback = refreshCallback;
@@ -799,6 +818,10 @@ namespace projectFrameCut.InteractableEditor
             _videoHeight = height;
             UpdateVisuals(ignorePositionProvider);
         }
+
+        #endregion
+
+        #region Clip State Management
 
         private ClipOverlayState GetOrCreateClipState(ClipElementUI clip)
             => GetOrCreateClipState(clip.Id, clip.DisplayName);
@@ -1055,6 +1078,10 @@ namespace projectFrameCut.InteractableEditor
             _activeState = null;
         }
 
+        #endregion
+
+        #region Reference Lines
+
         public void AddReferenceLine(string id, double position, ReferenceLineOrientation orientation, Color? color = null, double thickness = -1.0)
         {
             _referenceLines[id] = new ReferenceLine
@@ -1299,6 +1326,10 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        #endregion
+
+        #region clip & asset binding
+
         public void SetClip(projectFrameCut.DraftStuff.ClipElementUI? clip, AssetItem? asset)
         {
             CancelPendingCommitUpdate();
@@ -1336,7 +1367,10 @@ namespace projectFrameCut.InteractableEditor
             }
             else
             {
-                _baseRect = new Rect(0, 0, _videoWidth, _videoHeight);
+                var baseW = _videoWidth;
+                var baseH = _videoHeight;
+                ComputeFittedRectFromAsset(_currentAsset, clip, _videoWidth, _videoHeight, ref baseW, ref baseH);
+                _baseRect = new Rect(0, 0, baseW, baseH);
             }
 
             SetActiveState(GetOrCreateClipState(clip));
@@ -1389,6 +1423,43 @@ namespace projectFrameCut.InteractableEditor
         public void SetCurrentFrame(uint currentFrame)
         {
             UpdateCurrentFrame(currentFrame);
+        }
+
+        public void SetAssets(ConcurrentDictionary<string, AssetItem>? assets)
+        {
+            _assets = assets;
+        }
+
+        #endregion
+
+        #region update
+
+        private void ComputeFittedRectFromAsset(
+            AssetItem? asset,
+            ClipElementUI? clip,
+            double videoWidth,
+            double videoHeight,
+            ref double w,
+            ref double h)
+        {
+            w = clip.TargetWidth;
+            h = clip.TargetHeight;
+            if (clip is null)
+                return;
+
+            if (!ClipInfoBuilder.TryGetSourceAspectRatio(clip, [AssetDatabase.Assets, _assets ?? []], out var assetAspect)) return;
+            var projectAspect = videoWidth / videoHeight;
+
+            if (assetAspect > projectAspect)
+            {
+                w = videoWidth;
+                h = videoWidth / assetAspect;
+            }
+            else
+            {
+                h = videoHeight;
+                w = videoHeight * assetAspect;
+            }
         }
 
         private void RequestInteractivePreviewRefresh()
@@ -1820,6 +1891,14 @@ namespace projectFrameCut.InteractableEditor
                     }
                 }
 
+                // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
+                if (uiClip.TargetWidth <= 0 && uiClip.TargetHeight <= 0)
+                {
+                    AssetItem? clipAsset = null;
+                    _assets?.TryGetValue(uiClip.Id, out clipAsset);
+                    ComputeFittedRectFromAsset(clipAsset, uiClip, _videoWidth, _videoHeight, ref w, ref h);
+                }
+
                 effects = uiClip.Effects?.Count > 0 ? uiClip.Effects.Values : null;
             }
             else if (sourceClip is IClip iclip)
@@ -1919,6 +1998,14 @@ namespace projectFrameCut.InteractableEditor
                     y = clip.TargetY;
                     w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
                     h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+
+                    // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
+                    if (clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
+                    {
+                        AssetItem? clipAsset = null;
+                        _assets?.TryGetValue(clip.Id, out clipAsset);
+                        ComputeFittedRectFromAsset(clipAsset, clip, _videoWidth, _videoHeight, ref w, ref h);
+                    }
 
                     if (clip.Effects?.Count > 0 && !ignorePositionProvider)
                     {
@@ -2114,6 +2201,10 @@ namespace projectFrameCut.InteractableEditor
             // 检查当前帧是否在clip的范围内
             return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
         }
+
+        #endregion
+
+        #region gesture handlers
 
         long _panEventTriggerCounter = 0;
         double _stateOrigX = 0, _stateOrigY = 0;
@@ -2793,6 +2884,10 @@ namespace projectFrameCut.InteractableEditor
             return _startW / Math.Max(_startH, 0.0001);
         }
 
+        #endregion
+
+        #region snapping
+
         private List<double> GetHorizontalSnapTargets()
         {
             var targets = new List<double>(3 + _referenceLines.Count);
@@ -3007,12 +3102,18 @@ namespace projectFrameCut.InteractableEditor
 
             if (!AllowClipOutOfBounds)
             {
+                w = Math.Min(w, _videoWidth);
+                h = Math.Min(h, _videoHeight);
                 x = Math.Clamp(x, 0, _videoWidth - w);
                 y = Math.Clamp(y, 0, _videoHeight - h);
             }
 
             return new Rect(x, y, w, h);
         }
+
+        #endregion
+
+        #region update
 
         private void RequestCommitUpdate()
         {
@@ -3128,6 +3229,10 @@ namespace projectFrameCut.InteractableEditor
 
             Interlocked.Exchange(ref _hasPendingCommitUpdate, 0);
         }
+
+        #endregion
+
+        #region helpers
 
         private static void ApplyPositionProvidersToRect(IEnumerable<IEffect>? effects, IClip? clipSource, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
         {
@@ -3578,6 +3683,10 @@ namespace projectFrameCut.InteractableEditor
             return false;
         }
 
+        #endregion
+
+        #region ui event handlers
+
         public void AddAReferenceLine(ReferenceLineOrientation? orientation)
         {
             if (orientation is null)
@@ -3772,5 +3881,7 @@ namespace projectFrameCut.InteractableEditor
         {
             _activeState?.RefreshGestureRecognizers();
         }
+
+        #endregion
     }
 }

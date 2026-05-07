@@ -41,9 +41,9 @@
                 case Type t when t == typeof(CreatePage):
                     App.MainNavView?.SelectedItem = App.createItem;
                     break;
-                //case Type t when t == typeof(DebuggingMainPage):
-                //    App.MainNavView?.SelectedItem = App.debugItem;
-                //    break;
+                case Type t when t.Name.Contains("Template",StringComparison.InvariantCultureIgnoreCase):
+                    App.MainNavView?.SelectedItem = App.templateItem;
+                    break;
                 case Type t when t.Name.Contains("Setting",StringComparison.InvariantCultureIgnoreCase):
                     App.MainNavView?.SelectedItem = App.settingItem;
                     break;

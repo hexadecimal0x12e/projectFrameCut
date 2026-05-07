@@ -9,7 +9,9 @@
       "Bash(xargs -I{} sh -c 'jq -r \"select\\(.message.role == \\\\\"assistant\\\\\"\\) | .message.content[]? | select\\(.type == \\\\\"tool_use\\\\\"\\) | \\\\\"\\\\\\(.name\\)\\\\t\\\\\\(if .name == \\\\\"Bash\\\\\" then .input.command else \\\\\"\\\\\" end\\)\\\\\"\" \"{}\" 2>/dev/null')",
       "Bash(splc-edit generate-code *)",
       "Bash(splc-edit add-item *)",
-      "Bash(splc-edit update-item *)"
+      "Bash(splc-edit update-item *)",
+      "Bash(xxd)",
+      "Bash(findstr Value)"
     ]
   }
 }

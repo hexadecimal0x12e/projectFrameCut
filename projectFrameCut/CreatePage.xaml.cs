@@ -22,7 +22,12 @@ namespace projectFrameCut;
 
 public partial class CreatePage : ContentPage
 {
+    private const double NarrowLayoutThreshold = 600d;
+
     private readonly CreatePageViewModel _viewModel;
+    private bool _isNarrowLayout;
+
+    public Command<ProjectTemplateItem> CreateWithTemplateCommand { get; private set; }
 
     public CreatePage()
     {
@@ -30,6 +35,65 @@ public partial class CreatePage : ContentPage
         _viewModel = new CreatePageViewModel();
         BindingContext = _viewModel;
         _viewModel.CreateProjectRequested = CreateAndOpenProjectAsync;
+        CreateWithTemplateCommand = new Command<ProjectTemplateItem>(async item =>
+        {
+            if (item is not null)
+            {
+                var id = item.TemplateId;
+                await Navigation.PushAsync(new TemplateViewPage(id));
+            }
+        });
+        SizeChanged += (_, _) => ApplyAdaptiveLayout();
+        Loaded += (_, _) => ApplyAdaptiveLayout();
+    }
+
+    private void ApplyAdaptiveLayout()
+    {
+        var width = Width;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var shouldBeNarrow = width < NarrowLayoutThreshold;
+        if (_isNarrowLayout == shouldBeNarrow)
+        {
+            return;
+        }
+
+        _isNarrowLayout = shouldBeNarrow;
+
+        if (_isNarrowLayout)
+        {
+            QuickStartGrid.ColumnDefinitions.Clear();
+            QuickStartGrid.RowDefinitions.Clear();
+            QuickStartGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            QuickStartGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            QuickStartGrid.RowSpacing = 12;
+            QuickStartGrid.ColumnSpacing = 0;
+
+            Grid.SetColumn(FormBorder, 0);
+            Grid.SetRow(FormBorder, 0);
+            Grid.SetColumn(PreviewBorder, 0);
+            Grid.SetRow(PreviewBorder, 1);
+            PreviewBorder.HorizontalOptions = LayoutOptions.Center;
+            FormBorder.HorizontalOptions = LayoutOptions.Fill;
+        }
+        else
+        {
+            QuickStartGrid.RowDefinitions.Clear();
+            QuickStartGrid.ColumnDefinitions.Clear();
+            QuickStartGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(2, GridUnitType.Star)));
+            QuickStartGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+            QuickStartGrid.ColumnSpacing = 12;
+
+            Grid.SetColumn(FormBorder, 0);
+            Grid.SetRow(FormBorder, 0);
+            Grid.SetColumn(PreviewBorder, 1);
+            Grid.SetRow(PreviewBorder, 0);
+            PreviewBorder.HorizontalOptions = LayoutOptions.Fill;
+            FormBorder.HorizontalOptions = LayoutOptions.Fill;
+        }
     }
 
     protected override void OnAppearing()
@@ -279,7 +343,7 @@ public partial class CreatePage : ContentPage
         return JsonValue.Create(value);
     }
 
-    private sealed class ProjectTemplateItem
+    public sealed class ProjectTemplateItem
     {
         public JSONBasedTemplateStructure Structure { get; }
 

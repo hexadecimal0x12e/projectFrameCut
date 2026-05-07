@@ -274,7 +274,7 @@ namespace projectFrameCut
                 nav.MenuItems.Add(assetItem);
                 nav.MenuItems.Add(templateItem);
 
-                createItem = new NavigationViewItem { Content = Localized.AppShell_CreateTab, Tag = "Create", Height = 36, Padding = new(8) };
+                createItem = new NavigationViewItem { Content = Localized.AppShell_CreateTab, Tag = "Create", Height = 36, Padding = new(4) };
                 createItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Add };
                 settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };

@@ -182,6 +182,218 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             """;
 
+        public const string BlendColorSrcAdd =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = min(a[i] + b[i], 65535.0);
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcSubtract =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = max(b[i] - a[i], 0.0);
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcMultiply =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = a[i] * b[i] / 65535.0;
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcScreen =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = 65535.0 - (65535.0 - a[i]) * (65535.0 - b[i]) / 65535.0;
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcOverlayBlend =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended;
+                    if (b[i] < 32768.0)
+                        blended = 2.0 * a[i] * b[i] / 65535.0;
+                    else
+                        blended = 65535.0 - 2.0 * (65535.0 - a[i]) * (65535.0 - b[i]) / 65535.0;
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcDarken =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = min(a[i], b[i]);
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcLighten =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = max(a[i], b[i]);
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
+        public const string BlendColorSrcDifference =
+            """
+            #version 310 es
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { float c []; };
+
+            void main() {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outA = aA + bA * (1.0 - aA);
+                if (outA < 1e-6) {
+                    c[i] = 0.0;
+                } else {
+                    float blended = abs(a[i] - b[i]);
+                    float result = (blended * aA + b[i] * bA * (1.0 - aA)) / outA;
+                    c[i] = clamp(result, 0.0, 65535.0);
+                }
+            }
+            """;
+
         public static Lock locker = new();
 
     }
@@ -978,6 +1190,262 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
                 return [result];
             });
+        }
+    }
+
+    internal static class BlendModeGLHelper
+    {
+        public static object[] ComputeBlend(
+            float[] top, float[] bottom, float[]? topAlpha, float[]? bottomAlpha,
+            int outputBpp, int actualPixels,
+            string colorShader)
+        {
+            float[] trimmedTop = new float[actualPixels];
+            float[] trimmedBottom = new float[actualPixels];
+            Array.Copy(top, 0, trimmedTop, 0, actualPixels);
+            Array.Copy(bottom, 0, trimmedBottom, 0, actualPixels);
+
+            if (topAlpha == null) { topAlpha = new float[actualPixels]; Array.Fill(topAlpha, 1f); }
+            if (bottomAlpha == null) { bottomAlpha = new float[actualPixels]; Array.Fill(bottomAlpha, 1f); }
+
+            if (topAlpha.Length != actualPixels || bottomAlpha.Length != actualPixels)
+            {
+                float[] trimmedA = new float[actualPixels];
+                float[] trimmedB = new float[actualPixels];
+                Array.Copy(topAlpha, 0, trimmedA, 0, Math.Min(topAlpha.Length, actualPixels));
+                Array.Copy(bottomAlpha, 0, trimmedB, 0, Math.Min(bottomAlpha.Length, actualPixels));
+                topAlpha = trimmedA;
+                bottomAlpha = trimmedB;
+            }
+
+            return ComputerHelper.EnqueueCompute(() =>
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = ShaderLibrary.Alpha,
+                        Inputs = new float[][] { topAlpha!, bottomAlpha! },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "BlendAlpha",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accelerator);
+
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromMilliseconds(ComputerHelper.Timeout))) != readyTask)
+                        throw new TimeoutException($"GLComputeView.WaitUntilReadyAsync timed out after {ComputerHelper.Timeout}ms.");
+                    await readyTask;
+
+                    var alphaResult = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+
+                    accelerator.ShaderSource = colorShader;
+                    accelerator.OutputElementType = GLComputeView.OutputElementType.Float32;
+                    accelerator.Inputs = new float[][] { topAlpha!, trimmedTop, bottomAlpha!, trimmedBottom };
+                    NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                    var colorResult = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+
+                    if (outputBpp == 8)
+                    {
+                        var outputU8 = new byte[colorResult.Length];
+                        for (int i = 0; i < colorResult.Length; i++)
+                        {
+                            float v = colorResult[i] / 257f;
+                            if (v < 0f) v = 0f; if (v > 255f) v = 255f;
+                            outputU8[i] = (byte)v;
+                        }
+                        return new object[] { outputU8, alphaResult };
+                    }
+                    if (outputBpp == 16)
+                    {
+                        var outputU16 = new ushort[colorResult.Length];
+                        for (int i = 0; i < colorResult.Length; i++)
+                        {
+                            float v = colorResult[i];
+                            if (v < 0f) v = 0f; if (v > 65535f) v = 65535f;
+                            outputU16[i] = (ushort)v;
+                        }
+                        return new object[] { outputU16, alphaResult };
+                    }
+
+                    return new object[] { colorResult, alphaResult };
+                });
+
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                    throw new TimeoutException("BlendModeGLHelper.ComputeBlend timed out after 60 seconds.");
+
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null)
+                    throw new InvalidOperationException("BlendModeGLHelper Compute failed: accelerator returned null result.");
+
+                return result;
+            });
+        }
+    }
+
+    public class BlendAddComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "AddComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcAdd);
+        }
+    }
+
+    public class BlendSubtractComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "SubtractComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcSubtract);
+        }
+    }
+
+    public class BlendMultiplyComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "MultiplyComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcMultiply);
+        }
+    }
+
+    public class BlendScreenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "ScreenComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcScreen);
+        }
+    }
+
+    public class BlendOverlayBlendComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "OverlayBlendComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcOverlayBlend);
+        }
+    }
+
+    public class BlendDarkenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "DarkenComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcDarken);
+        }
+    }
+
+    public class BlendLightenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "LightenComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcLighten);
+        }
+    }
+
+    public class BlendDifferenceComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "DifferenceComputer";
+
+        public object[] Compute(object[] args)
+        {
+            var top = args[0] as float[] ?? throw new ArgumentException("Invalid top channel");
+            var bottom = args[1] as float[] ?? throw new ArgumentException("Invalid base channel");
+            var topAlpha = (float[]?)args[2];
+            var bottomAlpha = (float[]?)args[3];
+            int outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            int actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+            return BlendModeGLHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, ShaderLibrary.BlendColorSrcDifference);
         }
     }
 

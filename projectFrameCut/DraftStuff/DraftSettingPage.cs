@@ -81,7 +81,7 @@ public class DraftSettingPage
             {
                 Header = Localized.DraftSettingPage_Tab_History,
                 Tag = "history",
-                Content = BuildHistoryGraphTab()
+                Content = BuildHistoryGraphTab(true)
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
@@ -674,14 +674,18 @@ public class DraftSettingPage
 
     private bool _showGraphView = true;
 
-    public View BuildHistoryGraphTab()
+    public View BuildHistoryGraphTab(bool listOnly = false)
     {
         _selectedSnapshotId = Guid.Empty;
         _currentGraphNodes.Clear();
         _currentRowDrawables.Clear();
         _currentRowGraphicsViews.Clear();
-
         var (nodes, edges) = BuildGraphData();
+
+        if (listOnly)
+        {
+            return BuildHistoryGraphListContent(nodes, edges);
+        }
 
         // Graph view
         var graphView = new HistoryGraphView(parent);
@@ -693,9 +697,11 @@ public class DraftSettingPage
         graphView.IsVisible = _showGraphView;
         listView.IsVisible = !_showGraphView;
 
-        var container = new Grid();
-        container.Add(graphView);
-        container.Add(listView);
+        var container = new Grid
+        {
+            graphView,
+            listView
+        };
 
         HistoryTabContent = container;
         return container;

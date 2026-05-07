@@ -44,6 +44,8 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Converters;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
+using System.Collections.Concurrent;
+
 
 
 
@@ -77,6 +79,8 @@ namespace projectFrameCut.DraftStuff
         DraftPage page;
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+
+        bool showAllEffect = false;
 
         /// <summary>
         /// Gets the default color hex string based on clip type.
@@ -838,7 +842,7 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                 .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
                 .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
-                .AddCheckbox("allowFreeScaleResize", "任意比例缩放", allowFreeScaleResize)
+                .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                 .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
                 .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
@@ -926,7 +930,7 @@ namespace projectFrameCut.DraftStuff
 
             void SnapSizeBackToSourceAspectIfNeeded()
             {
-                if (!TryGetSourceAspectRatio(clip, out var sourceAspect) || sourceAspect <= 0)
+                if (!TryGetSourceAspectRatio(clip, [page.Assets, AssetDatabase.Assets], out var sourceAspect) || sourceAspect <= 0)
                 {
                     return;
                 }
@@ -1976,7 +1980,7 @@ namespace projectFrameCut.DraftStuff
             var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
+                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2244,23 +2248,27 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             };
+            ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"),
+                  p => p.AddSeparator()
+                        .AddButton("Show all", (s, e) =>
+                        {
+                            showAllEffect = true;
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        })
+                        .AddButton("Rebuild", async (s, e) =>
+                        {
+                            try
+                            {
+                                RebuildAllEffects(clip, true);
+                                await page.DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
 
-#if DEBUG
-            ppb.AddSeparator();
-            ppb.AddButton("Rebuild", async (s, e) =>
-            {
-                try
-                {
-                    RebuildAllEffects(clip, true);
-                    await page.DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
+                            }
+                        }));
 
-                }
-                catch (Exception ex)
-                {
-                    if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
-                }
-            });
-#endif
             var panel = ppb.BuildWithScrollView();
             return panel;
         }
@@ -2280,7 +2288,8 @@ namespace projectFrameCut.DraftStuff
             Page page,
             Dictionary<string, Func<IEffectBundle>> bundlesFactories,
             PropertyPanelBuilder ppb,
-            EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
+            bool showSubfix = true)
         {
             if (bundlesFactories == null || bundlesFactories.Count == 0)
             {
@@ -2327,7 +2336,7 @@ namespace projectFrameCut.DraftStuff
                     cards.Add(new EffectBundleCardItem
                     {
                         BundleTypeName = bundleTypeName,
-                        Title = EffectServices.GetLocalizedEffectBundleNames(Environment.NewLine).GetValueOrDefault(bundleTypeName, bundleTypeName),
+                        Title = EffectServices.GetLocalizedEffectBundleNames(Environment.NewLine, showSubfix).GetValueOrDefault(bundleTypeName, bundleTypeName),
                         Description = display?.Description ?? "",
                         Thumbnail = display?.Thumbnail,
                         VideoThumbnail = display?.VideoThumbnail,
@@ -3042,7 +3051,7 @@ namespace projectFrameCut.DraftStuff
             }
             else
             {
-                ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, allBundleFactories, ppb, handler)));
+                ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, allBundleFactories, ppb, handler, false)));
             }
 
             ppb.PropertyChanged += (s, e) =>
@@ -3152,7 +3161,11 @@ namespace projectFrameCut.DraftStuff
                 string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
 
                 ppb.AddText(new SingleLineLabel(localizedName ?? bundle.Name, 20));
-
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.Mixture_UnsupportWarn,
+                    TextColor = Colors.Yellow
+                });
                 try
                 {
                     var bundlePpb = bundle.CreateUI();
@@ -3179,7 +3192,7 @@ namespace projectFrameCut.DraftStuff
             }
             else
             {
-                ppb.AppendWhen(mixtureBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.Mixture, page, allBundleFactories, ppb, handler)));
+                ppb.AppendWhen(mixtureBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.Mixture, page, allBundleFactories, ppb, handler, false)));
             }
 
             ppb.PropertyChanged += (s, e) =>
@@ -3705,7 +3718,7 @@ namespace projectFrameCut.DraftStuff
             return ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
         }
 
-        private bool TryGetSourceAspectRatio(ClipElementUI clip, out double aspect)
+        public static bool TryGetSourceAspectRatio(ClipElementUI clip, ConcurrentDictionary<string, AssetItem>[] assetDict, out double aspect)
         {
             aspect = 0;
 
@@ -3725,19 +3738,17 @@ namespace projectFrameCut.DraftStuff
             }
 
             AssetItem? asset = null;
-
             if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
             {
                 var assetId = clip.SourcePath.Substring(1);
-                if (page.Assets.TryGetValue(assetId, out var byPathAsset))
+                foreach (var item in assetDict)
                 {
-                    asset = byPathAsset;
+                    if (item.TryGetValue(assetId, out var byPathAsset))
+                    {
+                        asset = byPathAsset;
+                        break;
+                    }
                 }
-            }
-
-            if (asset == null && page.Assets.TryGetValue(clip.Id, out var byClipAsset))
-            {
-                asset = byClipAsset;
             }
 
             if (asset != null && asset.Width > 0 && asset.Height > 0)
@@ -3762,6 +3773,29 @@ namespace projectFrameCut.DraftStuff
                     try
                     {
                         var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
+                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+            }
+            else if (asset?.Path is not null && File.Exists(asset?.Path))
+            {
+                if (clip.ClipType == ClipMode.PhotoClip)
+                {
+                    try
+                    {
+                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(asset.Path);
+                        aspect = (double)img.Width / img.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+                if (clip.ClipType == ClipMode.VideoClip)
+                {
+                    try
+                    {
+                        var vid = PluginManager.CreateVideoSource(asset.Path, 8);
                         if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
                         return aspect > 0;
                     }

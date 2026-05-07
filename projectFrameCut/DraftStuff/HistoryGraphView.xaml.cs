@@ -27,8 +27,8 @@ public partial class HistoryGraphView : ContentView
         public int Depth { get; set; }
         public View? View { get; set; }
 
-        public double NodeWidth => 180;
-        public double NodeHeight => 56;
+        public double NodeWidth => 220;
+        public double NodeHeight => 68;
 
         public string DisplayLabel => IsCurrentSnapshot ? $"* {ChangeReason}" : ChangeReason;
 
@@ -111,8 +111,8 @@ public partial class HistoryGraphView : ContentView
     private double _startScale = 1.0;
     private const double MinScale = 0.1;
     private const double MaxScale = 5.0;
-    private const double CanvasWidth = 5000;
-    private const double CanvasHeight = 3000;
+    private const double CanvasWidth = 2600;
+    private const double CanvasHeight = 1600;
 
     #endregion
 
@@ -246,86 +246,96 @@ public partial class HistoryGraphView : ContentView
     {
         if (nodes.Count == 0) return;
 
-        // Identify main chain (follow PrimaryNext from root to last head)
-        var mainChain = new HashSet<Guid>();
-        var chainNodes = new List<Guid>();
+        const double xPadding = 80;
+        const double yPadding = 40;
+        const double columnSpacing = 280;
+        const double rowSpacing = 100;
 
-        // Find root (node with no parent in the graph)
-        var rootCandidates = nodes.Where(n =>
+        // 1. Find roots (nodes with no parent in this graph)
+        var roots = nodes.Where(n =>
             n.PreviousSnapshotID == Guid.Empty
             || !nodeDict.ContainsKey(n.PreviousSnapshotID)).ToList();
 
-        if (rootCandidates.Count == 0) return;
+        if (roots.Count == 0) return;
 
-        // Build the main chain from root following first next
-        var cursor = rootCandidates[0].SnapshotID;
-        while (cursor != Guid.Empty && nodeDict.TryGetValue(cursor, out var node) && mainChain.Add(cursor))
+        // 2. Identify main chain for styling (follow first child from first root)
+        var mainChain = new HashSet<Guid>();
+        var cursor = roots[0].SnapshotID;
+        while (cursor != Guid.Empty && mainChain.Add(cursor) && nodeDict.TryGetValue(cursor, out var chainNode))
+            cursor = chainNode.NextSnapshotIDs.FirstOrDefault();
+
+        // 3. BFS to assign topological layers (column index for X axis)
+        var layerOf = new Dictionary<Guid, int>();
+        var queue = new Queue<Guid>();
+        foreach (var r in roots)
         {
-            chainNodes.Add(cursor);
-            node.Depth = 0;
-            node.IsHead = node.NextSnapshotIDs.Count == 0;
-            var nextId = node.NextSnapshotIDs.FirstOrDefault();
-            cursor = nextId != Guid.Empty ? nextId : Guid.Empty;
+            layerOf[r.SnapshotID] = 0;
+            queue.Enqueue(r.SnapshotID);
         }
 
-        // Assign time-based X positions
-        var times = nodes.Where(n => n.SavedAt != DateTime.MinValue).Select(n => n.SavedAt.Ticks).ToList();
-        double minTime = times.Count > 0 ? times.Min() : DateTime.MinValue.Ticks;
-        double maxTime = times.Count > 0 ? times.Max() : DateTime.MaxValue.Ticks;
-        double timeRange = Math.Max(maxTime - minTime, 1);
-        const double XPadding = 80;
-        double usableWidth = CanvasWidth - XPadding * 2;
-
-        // Assign positions for main chain
-        for (int i = 0; i < chainNodes.Count; i++)
+        int maxLayer = 0;
+        while (queue.Count > 0)
         {
-            if (nodeDict.TryGetValue(chainNodes[i], out var vm))
+            var id = queue.Dequeue();
+            if (!nodeDict.TryGetValue(id, out var node)) continue;
+            foreach (var nextId in node.NextSnapshotIDs)
             {
-                double t = vm.SavedAt == DateTime.MinValue ? minTime : vm.SavedAt.Ticks;
-                vm.X = XPadding + ((t - minTime) / timeRange) * usableWidth;
-                vm.Y = 40;
-                vm.Depth = 0;
+                if (!layerOf.ContainsKey(nextId))
+                {
+                    layerOf[nextId] = layerOf[id] + 1;
+                    if (layerOf[nextId] > maxLayer) maxLayer = layerOf[nextId];
+                    queue.Enqueue(nextId);
+                }
             }
         }
 
-        // Assign positions for branch nodes
-        var remaining = nodes.Where(n => !mainChain.Contains(n.SnapshotID)).ToList();
-        var branchDepthCounter = new Dictionary<Guid, int>(); // Previous -> next branch index
-
-        foreach (var node in remaining)
-        {
-            double t = node.SavedAt == DateTime.MinValue ? minTime : node.SavedAt.Ticks;
-            node.X = XPadding + ((t - minTime) / timeRange) * usableWidth;
-
-            // Determine depth from parent
-            if (node.PreviousSnapshotID != Guid.Empty && nodeDict.ContainsKey(node.PreviousSnapshotID))
-            {
-                var parent = nodeDict[node.PreviousSnapshotID];
-                int parentDepth = parent.Depth;
-                if (!branchDepthCounter.ContainsKey(node.PreviousSnapshotID))
-                    branchDepthCounter[node.PreviousSnapshotID] = 1;
-                int branchIdx = branchDepthCounter[node.PreviousSnapshotID]++;
-                node.Depth = parentDepth + branchIdx;
-                node.Y = 40 + node.Depth * 130;
-            }
-            else
-            {
-                // Orphan node
-                node.Depth = 1;
-                node.Y = 40 + 130;
-            }
-        }
-
-        // Adjust Y spacing for main chain to avoid branch overlap
-        int maxDepth = nodes.Max(n => n.Depth);
-        double totalHeight = 40 + (maxDepth + 1) * 130 + 80;
-
-        // Ensure canvas dimensions are set
         foreach (var n in nodes)
         {
-            if (n.X < 0) n.X = XPadding;
-            if (n.Y < 0) n.Y = 40;
+            if (!layerOf.ContainsKey(n.SnapshotID))
+                layerOf[n.SnapshotID] = 0;
         }
+
+        // 4. Group nodes by layer
+        var layerGroups = new Dictionary<int, List<HistoryGraphNodeViewModel>>();
+        for (int i = 0; i <= maxLayer; i++)
+            layerGroups[i] = new List<HistoryGraphNodeViewModel>();
+        foreach (var n in nodes)
+            layerGroups[layerOf[n.SnapshotID]].Add(n);
+
+        // 5. Assign Y positions within each layer (barycenter sort to reduce edge crossings)
+        var nodeY = new Dictionary<Guid, double>();
+
+        for (int l = 0; l <= maxLayer; l++)
+        {
+            var layerNodes = layerGroups[l];
+            layerNodes.Sort((a, b) =>
+            {
+                double ay = GetParentAvgY(a, nodeDict, nodeY);
+                double by = GetParentAvgY(b, nodeDict, nodeY);
+                return ay.CompareTo(by);
+            });
+
+            for (int i = 0; i < layerNodes.Count; i++)
+                nodeY[layerNodes[i].SnapshotID] = yPadding + i * rowSpacing;
+        }
+
+        // 6. Apply positions
+        foreach (var n in nodes)
+        {
+            n.X = xPadding + layerOf[n.SnapshotID] * columnSpacing;
+            n.Y = nodeY[n.SnapshotID];
+            n.Depth = mainChain.Contains(n.SnapshotID) ? 0 : 1;
+        }
+    }
+
+    private static double GetParentAvgY(
+        HistoryGraphNodeViewModel node,
+        Dictionary<Guid, HistoryGraphNodeViewModel> nodeDict,
+        Dictionary<Guid, double> nodeY)
+    {
+        if (node.PreviousSnapshotID == Guid.Empty || !nodeDict.ContainsKey(node.PreviousSnapshotID))
+            return 0;
+        return nodeY.TryGetValue(node.PreviousSnapshotID, out double y) ? y : 0;
     }
 
     #endregion
@@ -346,11 +356,11 @@ public partial class HistoryGraphView : ContentView
         {
             Stroke = Colors.Gray,
             StrokeThickness = 2,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             BackgroundColor = Color.FromArgb("#2d2d2d"),
-            Padding = new Thickness(8, 4),
+            Padding = new Thickness(12, 8),
             HeightRequest = vm.NodeHeight,
-            MinimumWidthRequest = vm.NodeWidth,
+            WidthRequest = vm.NodeWidth,
             ZIndex = 2
         };
 
@@ -358,7 +368,7 @@ public partial class HistoryGraphView : ContentView
         {
             Text = vm.DisplayLabel,
             TextColor = Colors.White,
-            FontSize = 12,
+            FontSize = 13,
             LineBreakMode = LineBreakMode.TailTruncation,
             MaxLines = 1,
             VerticalOptions = LayoutOptions.Center
@@ -368,7 +378,7 @@ public partial class HistoryGraphView : ContentView
         {
             Text = vm.TimeDisplay,
             TextColor = Color.FromArgb("#999"),
-            FontSize = 10,
+            FontSize = 11,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Center
         };

@@ -11,8 +11,8 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="ImportButton" Text="{l:Localized Key=HomePage_ImportAProject}" Clicked="ImportButton_Clicked" />
     </ContentPage.ToolbarItems>
-    <Grid>
-        <VerticalStackLayout x:Name="NoContentLayout" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="False" Spacing="8" ZIndex="9999 ">
+    <Grid>  
+        <VerticalStackLayout x:Name="NoContentLayout" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="False" Spacing="8" ZIndex="9999">
             <Label Text="{l:Localized Key=HomePage_NoDrafts}" FontSize="24" HorizontalOptions="Center" FontAttributes="Bold"/>
             <Label Text="{l:Localized Key=HomePage_NoDrafts_Desc}" FontSize="14" HorizontalOptions="Center" TextColor="Gray"/>
             <Button Text="{l:Localized Key=HomePage_NoDrafts_GoCreate}" Clicked="CreateNewProjectButton_Clicked" HorizontalOptions="Center"/>

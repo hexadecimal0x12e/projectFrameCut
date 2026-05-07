@@ -24,13 +24,13 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Crop", () => new Effect.CropEffectBundle() },
             { "Place", () => new Effect.PlaceEffectBundle() },
             { "Resize", () => new Effect.ResizeEffectBundle() },
-            { "Rotation", () => new Effect.RotationEffectBundle() },
             { "Flip", () => new Effect.FlipEffectBundle() },
             { "Sharpen", () => new Effect.SharpenEffectBundle() },
             { "Vignette", () => new Effect.VignetteEffectBundle() },
             { "FadeOpacity", () => new Effect.FadeOpacityEffectBundle() },
             { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() },
             { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
+            { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
         };
 

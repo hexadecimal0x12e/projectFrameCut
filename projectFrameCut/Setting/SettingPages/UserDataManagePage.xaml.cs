@@ -190,7 +190,7 @@ public partial class UserDataManagePage : ContentPage
             }
         }
 
-        var cahceFiles = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories)).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), "*", SearchOption.AllDirectories));
+        var cahceFiles = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
         CacheFileCount = cahceFiles.Count();
         CahceSize = cahceFiles.Sum(c => new FileInfo(c).Length);
 
