@@ -23,25 +23,27 @@ public partial class AssistanceChatView : ContentView
     private readonly List<AIChatMessage> _chatHistory = [];
     private readonly IChatClient? _chatClient;
     private readonly Guid _sessionId;
+    private readonly string? _projectPath;
     private bool _isReplying;
     private CancellationTokenSource? _cts;
     private static readonly ILoggerFactory AILoggerFactory = LoggerFactory.Create(_ => { });
 
     public Func<IEnumerable<AIFunction>>? ToolCallFactories;
 
-    public AssistanceChatView() : this(null)
+    public AssistanceChatView() : this(null, null, null)
     {
     }
 
-    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null)
+    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null)
     {
         InitializeComponent();
+        _projectPath = projectPath;
         ToolCallFactories = aIFunctionsFactory;
         AIChatHistoryView.ItemsSource = _messages;
         _messages.CollectionChanged += Messages_CollectionChanged;
         _chatClient = CreateChatClient();
 
-        AssistanceChatSession session = AssistanceChatSessionStore.GetOrCreate(sessionId);
+        AssistanceChatSession session = AssistanceChatSessionStore.GetOrCreate(_projectPath, sessionId);
         _sessionId = session.SessionId;
         LoadSession(session);
         PersistSession();
@@ -85,7 +87,7 @@ public partial class AssistanceChatView : ContentView
 
         if (GetHostWindow() is MultiWindowItem host)
         {
-            host.NavigateTo(new AssistanceChatSessionsView());
+            host.NavigateTo(new AssistanceChatSessionsView(_projectPath));
         }
     }
 
@@ -243,6 +245,135 @@ public partial class AssistanceChatView : ContentView
         AIInputButton.Focus();
     }
 
+    private async void AIReplyFeedbackGoodButton_Clicked(object? sender, EventArgs e)
+    {
+        ChatMessageItem? message = GetFeedbackTarget(sender);
+        if (message is null)
+        {
+            return;
+        }
+
+        await SubmitFeedbackMockAsync(message, ChatReplyFeedbackType.Good);
+    }
+
+    private async void AIReplyFeedbackBadButton_Clicked(object? sender, EventArgs e)
+    {
+        ChatMessageItem? message = GetFeedbackTarget(sender);
+        if (message is null)
+        {
+            return;
+        }
+
+        await SubmitFeedbackMockAsync(message, ChatReplyFeedbackType.Bad);
+    }
+
+    private async void AIReplyFeedbackReportButton_Clicked(object? sender, EventArgs e)
+    {
+        ChatMessageItem? message = GetFeedbackTarget(sender);
+        if (message is null)
+        {
+            return;
+        }
+
+        string harmful = Localized.AIAssistant_ChatView_Feedback_ReportReason_Harmful;
+        string hate = Localized.AIAssistant_ChatView_Feedback_ReportReason_Hate;
+        string incorrect = Localized.AIAssistant_ChatView_Feedback_ReportReason_Incorrect;
+        string irrelevant = Localized.AIAssistant_ChatView_Feedback_ReportReason_Irrelevant;
+        string other = Localized.AIAssistant_ChatView_Feedback_ReportReason_Other;
+        string selectedReason;
+        if (GetHostWindow() is MultiWindowItem host)
+        {
+            selectedReason = await host.DisplayActionSheetAsync(
+                Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
+                Localized._Cancel,
+                null,
+                harmful,
+                hate,
+                incorrect,
+                irrelevant,
+                other);
+        }
+        else if (Application.Current?.Windows?[0]?.Page is Page page)
+        {
+            selectedReason = await page.DisplayActionSheetAsync(
+                Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
+                Localized._Cancel,
+                null,
+                harmful,
+                hate,
+                incorrect,
+                irrelevant,
+                other);
+        }
+        else
+        {
+            LogDiagnostic("Skip feedback report: no valid dialog host page.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedReason) || selectedReason == Localized._Cancel)
+        {
+            return;
+        }
+
+        string reasonCode = selectedReason switch
+        {
+            var x when x == harmful => "harmful_or_dangerous",
+            var x when x == hate => "hateful_or_harassing",
+            var x when x == incorrect => "factually_incorrect",
+            var x when x == irrelevant => "irrelevant",
+            _ => "other",
+        };
+
+        await SubmitFeedbackMockAsync(message, ChatReplyFeedbackType.Report, reasonCode, selectedReason);
+        if (GetHostWindow() is MultiWindowItem hostWindow)
+        {
+            await hostWindow.DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
+        }
+        else if (Application.Current?.Windows?[0]?.Page is Page rootPage)
+        {
+            await rootPage.DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
+        }
+    }
+
+    private static ChatMessageItem? GetFeedbackTarget(object? sender)
+    {
+        ChatMessageItem? message = (sender as BindableObject)?.BindingContext as ChatMessageItem;
+        if (message is null)
+        {
+            return null;
+        }
+
+        return message.CanSubmitFeedback ? message : null;
+    }
+
+    private async Task SubmitFeedbackMockAsync(ChatMessageItem message, ChatReplyFeedbackType feedbackType, string reasonCode = "", string reasonText = "")
+    {
+        message.IsSubmittingFeedback = true;
+        try
+        {
+            ChatReplyFeedbackPayload payload = new()
+            {
+                SessionId = _sessionId,
+                Sender = message.Sender,
+                Message = message.Message,
+                FeedbackType = feedbackType,
+                ReasonCode = reasonCode,
+                ReasonText = reasonText,
+                CreatedAt = DateTimeOffset.Now,
+            };
+
+            await Task.Delay(5000);
+            LogDiagnostic($"Mock feedback submitted: {JsonSerializer.Serialize(payload)}");
+            message.HasFeedbackSubmitted = true;
+            PersistSession();
+        }
+        finally
+        {
+            message.IsSubmittingFeedback = false;
+        }
+    }
+
     private void LoadSession(AssistanceChatSession session)
     {
         _messages.Clear();
@@ -257,6 +388,7 @@ public partial class AssistanceChatView : ContentView
                 IsUser = message.IsUser,
                 ReasoningText = message.ReasoningText,
                 ToolCallsText = message.ToolCallsText,
+                HasFeedbackSubmitted = message.HasFeedbackSubmitted,
             });
         }
 
@@ -281,6 +413,7 @@ public partial class AssistanceChatView : ContentView
             IsUser = x.IsUser,
             ReasoningText = x.ReasoningText,
             ToolCallsText = x.ToolCallsText,
+            HasFeedbackSubmitted = x.HasFeedbackSubmitted,
         }).ToList();
 
         var history = _chatHistory.Select(x => new AssistanceChatHistorySnapshot
@@ -289,7 +422,7 @@ public partial class AssistanceChatView : ContentView
             Text = x.Text ?? string.Empty,
         }).ToList();
 
-        AssistanceChatSessionStore.UpdateSession(_sessionId, title, messages, history);
+        AssistanceChatSessionStore.UpdateSession(_projectPath, _sessionId, title, messages, history);
     }
 
     private string BuildSessionTitle()
@@ -1354,6 +1487,30 @@ public partial class AssistanceChatView : ContentView
         public string Arguments { get; init; }
     }
 
+    private enum ChatReplyFeedbackType
+    {
+        Good,
+        Bad,
+        Report,
+    }
+
+    private sealed class ChatReplyFeedbackPayload
+    {
+        public Guid SessionId { get; init; }
+
+        public string Sender { get; init; } = string.Empty;
+
+        public string Message { get; init; } = string.Empty;
+
+        public ChatReplyFeedbackType FeedbackType { get; init; }
+
+        public string ReasonCode { get; init; } = string.Empty;
+
+        public string ReasonText { get; init; } = string.Empty;
+
+        public DateTimeOffset CreatedAt { get; init; }
+    }
+
 }
 
 
@@ -1419,6 +1576,46 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     public bool HasToolCalls => !string.IsNullOrWhiteSpace(_toolCallsText);
 
     public bool IsUser { get; init; }
+
+    public bool IsAssistant => !IsUser;
+
+    private bool _hasFeedbackSubmitted;
+
+    public bool HasFeedbackSubmitted
+    {
+        get => _hasFeedbackSubmitted;
+        set
+        {
+            if (_hasFeedbackSubmitted == value)
+            {
+                return;
+            }
+
+            _hasFeedbackSubmitted = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSubmitFeedback));
+        }
+    }
+
+    private bool _isSubmittingFeedback;
+
+    public bool IsSubmittingFeedback
+    {
+        get => _isSubmittingFeedback;
+        set
+        {
+            if (_isSubmittingFeedback == value)
+            {
+                return;
+            }
+
+            _isSubmittingFeedback = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSubmitFeedback));
+        }
+    }
+
+    public bool CanSubmitFeedback => MauiProgram.IsStoreMode && IsAssistant && !IsSubmittingFeedback; // "Products that contain generative AI must provide a means for users to report inappropriate content generated by the AI Please update the product to include this feature" -- Microsoft Store policy
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

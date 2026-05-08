@@ -11,7 +11,7 @@ public partial class CreatePage
 {
     private sealed class CreatePageViewModel : INotifyPropertyChanged
     {
-        private const string CustomResolutionOption = "自定义输入";
+        private static readonly string CustomResolutionOption = Localized.DraftPage_PrevResultion_Custom;
         private const double PreviewMaxWidth = 320d;
         private const double PreviewMaxHeight = 190d;
 
@@ -201,7 +201,7 @@ public partial class CreatePage
             var projectName = ProjectName?.Trim();
             if (string.IsNullOrWhiteSpace(projectName))
             {
-                StatusText = "请输入项目名称";
+                StatusText = Localized.CreatePage_NoProjectName;
                 return;
             }
 

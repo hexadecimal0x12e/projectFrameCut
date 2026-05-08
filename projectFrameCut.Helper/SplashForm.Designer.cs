@@ -35,11 +35,14 @@
             LicenseLabel = new Label();
             pluginStatLabel = new Label();
             VersionLabel = new Label();
+            pictureBox1 = new PictureBox();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // TitleLabel
             // 
             resources.ApplyResources(TitleLabel, "TitleLabel");
+            TitleLabel.BackColor = Color.Transparent;
             TitleLabel.Name = "TitleLabel";
             // 
             // CopyrightLabel
@@ -71,12 +74,20 @@
             resources.ApplyResources(VersionLabel, "VersionLabel");
             VersionLabel.Name = "VersionLabel";
             // 
+            // pictureBox1
+            // 
+            pictureBox1.BackColor = Color.Transparent;
+            resources.ApplyResources(pictureBox1, "pictureBox1");
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.TabStop = false;
+            // 
             // SplashForm
             // 
             resources.ApplyResources(this, "$this");
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(255, 210, 114);
             ControlBox = false;
+            Controls.Add(pictureBox1);
             Controls.Add(VersionLabel);
             Controls.Add(pluginStatLabel);
             Controls.Add(LicenseLabel);
@@ -90,6 +101,7 @@
             ShowIcon = false;
             ShowInTaskbar = false;
             Load += Form1_Load;
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -102,5 +114,6 @@
         private Label LicenseLabel;
         public Label pluginStatLabel;
         private Label VersionLabel;
+        private PictureBox pictureBox1;
     }
 }

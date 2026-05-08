@@ -1,6 +1,4 @@
-﻿using Cnblogs.DashScope.Core;
-using Cnblogs.DashScope.Sdk.Wanx;
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using NMeCab.Core;
 using OpenAI;
@@ -196,10 +194,10 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentImageOption.Model, "")), 
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, CurrentImageOption.Model, "")), 
                             (models.Any, c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
                             (() => !models.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
-                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentImageOption.Model, "")), 
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, CurrentImageOption.Model, "")), 
                             (models.Any, c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
                             (() => !models.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
                 .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestVideoModelConnection())

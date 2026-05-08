@@ -67,6 +67,11 @@
                     <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
                     <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
                     <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />
+                    <HorizontalStackLayout>
+                        <Label Text="Toggle store mode"></Label>
+                        <Switch x:Name="StoreModeToggleSwitch" Toggled="StoreModeToggleSwitch_Toggled"></Switch>
+                        <Button x:Name="ResetStoreModeButton" Text="Reset" Clicked="ResetStoreModeButton_Clicked" Margin="8,0,0,0"/>
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
             <Border StrokeThickness="4">

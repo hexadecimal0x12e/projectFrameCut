@@ -24,9 +24,7 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-#if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
-            PluginSettingButton.IsVisible = false; 
-#endif
+            if (MauiProgram.IsStoreMode) PluginSettingButton.IsVisible = false; //plugin could broke store review
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
@@ -124,16 +122,26 @@ namespace projectFrameCut
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {
             count++;
-            if (count >= 20)
+            if (MauiProgram.IsStoreMode)
             {
-                count = 0;
-                if (!IsBoolSettingTrue("DeveloperMode"))
+                if (count >= 20)
                 {
-                    WriteSetting("DeveloperMode", "True");
-                    await DisplayAlertAsync(Localized._Info, "🛠️✅", Localized._OK);
+                    var response = await DisplayPromptAsync(Localized._Info, "");
+                    if (!string.IsNullOrWhiteSpace(response)) SettingsManager.WriteSetting("StoreModeOverride", response);
                 }
-
             }
+            else
+            {
+                if (count >= 20)
+                {
+                    if (!IsBoolSettingTrue("DeveloperMode"))
+                    {
+                        WriteSetting("DeveloperMode", "True");
+                        await DisplayAlertAsync(Localized._Info, "🛠️✅", Localized._OK);
+                    }
+                }
+            }
+
         }
 
 

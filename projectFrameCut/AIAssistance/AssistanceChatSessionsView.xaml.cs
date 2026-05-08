@@ -10,14 +10,20 @@ using System.Runtime.CompilerServices;
 public partial class AssistanceChatSessionsView : ContentView
 {
     private readonly ObservableCollection<SessionListItem> _sessions = [];
+    private readonly string? _projectPath;
 
     public AssistanceChatView? Current = null;
 
     public Func<IEnumerable<AIFunction>>? GlobalToolCallFactories;
 
 
-    public AssistanceChatSessionsView()
+    public AssistanceChatSessionsView() : this(null)
     {
+    }
+
+    public AssistanceChatSessionsView(string? projectPath)
+    {
+        _projectPath = projectPath;
         InitializeComponent();
         SessionListView.ItemsSource = _sessions;
         AssistanceChatSessionStore.SessionsChanged += AssistanceChatSessionStore_SessionsChanged;
@@ -42,7 +48,7 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void RefreshSessions()
     {
-        var all = AssistanceChatSessionStore.GetSessions();
+        var all = AssistanceChatSessionStore.GetSessions(_projectPath);
         _sessions.Clear();
         foreach (AssistanceChatSession session in all)
         {
@@ -69,13 +75,13 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void NewSessionButton_Clicked(object? sender, EventArgs e)
     {
-        AssistanceChatSession session = AssistanceChatSessionStore.CreateSession();
+        AssistanceChatSession session = AssistanceChatSessionStore.CreateSession(_projectPath);
         NavigateToSession(session.SessionId);
     }
 
     private void NavigateToSession(Guid sessionId)
     {
-        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories);
+        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories, _projectPath);
         Current = s;
         if (GetHostWindow() is MultiWindowItem host)
         {
@@ -139,7 +145,7 @@ public partial class AssistanceChatSessionsView : ContentView
             string newTitle = await page.DisplayPromptAsync(rename, "", Localized._Confirm, Localized._Cancel, initialValue: item.Title);
             if (!string.IsNullOrWhiteSpace(newTitle))
             {
-                AssistanceChatSessionStore.RenameSession(item.SessionId, newTitle);
+                AssistanceChatSessionStore.RenameSession(_projectPath, item.SessionId, newTitle);
             }
         }
         else if (action == delete)
@@ -147,7 +153,7 @@ public partial class AssistanceChatSessionsView : ContentView
             bool confirm = await page.DisplayAlertAsync(delete, $"{Localized.HomePage_ProjectContextMenu_Delete_Confirm0(item.Title)}?", Localized._Confirm, Localized._Cancel);
             if (confirm)
             {
-                AssistanceChatSessionStore.DeleteSession(item.SessionId);
+                AssistanceChatSessionStore.DeleteSession(_projectPath, item.SessionId);
             }
         }
     }

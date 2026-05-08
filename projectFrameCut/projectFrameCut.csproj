@@ -65,6 +65,7 @@
 		<AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+		<GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -124,10 +125,18 @@
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 
-		<PackageReference Include="Cnblogs.DashScope.Sdk" Version="0.9.0" />
-
 		<!--For which assembles included, see Resources\Assembly\about.txt-->
 		<Reference Include="Resources\Assembly\*.dll" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <AndroidResource Remove="AIAssistance\AgentSystem\**" />
+	  <Compile Remove="AIAssistance\AgentSystem\**" />
+	  <EmbeddedResource Remove="AIAssistance\AgentSystem\**" />
+	  <MauiCss Remove="AIAssistance\AgentSystem\**" />
+	  <MauiXaml Remove="AIAssistance\AgentSystem\**" />
+	  <None Remove="AIAssistance\AgentSystem\**" />
 	</ItemGroup>
 
 
@@ -189,6 +198,7 @@
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 		<AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
 	</PropertyGroup>
+
 
 	<ItemGroup>
 		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
@@ -328,10 +338,6 @@
 
 	<ItemGroup>
 		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="AIAssistance\AgentSystem\" />
 	</ItemGroup>
 
 

@@ -10,11 +10,12 @@
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
 	<Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.4.2.0" />
+	<!--<Identity Name="0xeeeeeeeeeeee.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.4.2.0" /> -->
 
-	<mp:PhoneIdentity PhoneProductId="8bc4e03e-2606-4817-8070-e1aa4a22658f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+	<mp:PhoneIdentity PhoneProductId="3ef3c1fc-97c7-447a-9209-ead7b7c85288" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
 	<Properties>
-		<DisplayName>$placeholder$</DisplayName>
+		<DisplayName>projectFrameCut</DisplayName>
 		<PublisherDisplayName>hexadecimal0x12e</PublisherDisplayName>
 		<Logo>$placeholder$.png</Logo>
 	</Properties>
@@ -44,7 +45,7 @@
 	<Applications>
 		<Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
 			<uap:VisualElements
-        DisplayName="$placeholder$"
+        DisplayName="projectFrameCut"
         Description="$placeholder$"
         Square150x150Logo="$placeholder$.png"
         Square44x44Logo="$placeholder$.png"
@@ -109,7 +110,6 @@
 		<Capability Name="internetClientServer"/>
 		<Capability Name="internetClient"/>
 		<uap:Capability Name="removableStorage"/>
-		<uap:Capability Name="documentsLibrary"/>
 	</Capabilities>
 
 </Package>

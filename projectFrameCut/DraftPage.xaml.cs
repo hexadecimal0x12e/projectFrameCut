@@ -398,7 +398,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
-        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView();
+        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir);
         ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;
@@ -8752,6 +8752,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         if (!ignoreRunningTasks && Window is not null) Window?.SizeChanged -= Window_SizeChanged;
         if (ignoreRunningTasks) return true;
+        _ = Save(true);
         Navigation.PopToRootAsync();
         return true;
     }

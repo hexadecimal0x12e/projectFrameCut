@@ -53,6 +53,8 @@ namespace projectFrameCut
 
         public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
 
+        public static bool IsStoreMode { get; private set; } = true;
+
 
 
         private static readonly string[] FoldersNeedInUserdata =

@@ -91,6 +91,7 @@ namespace projectFrameCut
 
         public static string[] CmdlineArgs = Array.Empty<string>();
 
+        public static bool IsStoreMode { get; private set; } = true;
 
         public static MauiApp CreateMauiApp()
         {
@@ -112,6 +113,7 @@ namespace projectFrameCut
                 try
                 {
                     var pfn = Android.App.Application.Context.PackageName;
+                    IsStoreMode = pfn?.EndsWith("store", StringComparison.InvariantCultureIgnoreCase) ?? false;
                     var userAccessblePath = $"/sdcard/Android/data/{pfn}/";
                     if (Path.Exists(userAccessblePath))
                     {
@@ -123,8 +125,19 @@ namespace projectFrameCut
                 catch //use the default path (/data/data/...)           
                 { }
 #elif WINDOWS
-                loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data or <AppContainer Data>\LocalState
-                DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+                if (projectFrameCut.Helper.HelperProgram.AppChannel.Equals("MS Store", StringComparison.InvariantCultureIgnoreCase)) // <AppContainer Data>\LocalState
+                {
+                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "AppData"));
+                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "UserData"));
+                    DataPath = Path.Combine(FileSystem.AppDataDirectory, "UserData");
+                    BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                    IsStoreMode = true;
+                }
+                else
+                {
+                    DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+                    IsStoreMode = false;
+                }
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
                     if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
@@ -221,6 +234,7 @@ namespace projectFrameCut
 
                     if (SettingsManager.IsBoolSettingTrue("LogDiagnostics") || ProgramConfig == "Debug")
                         MyLoggerExtensions.LoggingDiagnosticInfo = true;
+
                 }
                 else
                 {
@@ -349,6 +363,16 @@ namespace projectFrameCut
                            essentials.UseVersionTracking();
                        });
 #pragma warning restore CA1416
+                try
+                {
+                    Log($"StoreMode: {IsStoreMode}, StoreModeOverride: {SettingsManager.GetSetting("StoreModeOverride", "disable")}");
+
+                    if (SettingsManager.GetSetting("StoreModeOverride", "disable") != "disable")
+                    {
+                        IsStoreMode = SettingsManager.IsBoolSettingTrue("StoreModeOverride");
+                    }
+                }
+                catch { }
                 LogLevel logLevel = LogLevel.Information;
                 if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
                 {
@@ -372,6 +396,8 @@ namespace projectFrameCut
                     handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
                     handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
                 });
+
+
 
                 try
                 {
@@ -789,7 +815,7 @@ namespace projectFrameCut
                 {
                     try
                     {
-                       
+
                     }
                     catch { }
                 }

@@ -90,6 +90,7 @@ public partial class AboutSettingPage : ContentPage
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
                 CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
                 {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
+                Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;
         }
@@ -120,13 +121,30 @@ public partial class AboutSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            Dispatcher.Dispatch(() =>
+            try
             {
-                AboutWebview.Source = new HtmlWebViewSource
+                var filePath = $"AboutApplication/en-US/About.html";
+                using var stream = await FileSystem.OpenAppPackageFileAsync(filePath);
+                using var reader = new StreamReader(stream);
+                var text = await reader.ReadToEndAsync();
+                Dispatcher.Dispatch(() =>
                 {
-                    Html = $"<html><body><h2>Error loading about content</h2><p>{ex.Message}</p></body></html>"
-                };
-            });
+                    AboutWebview.Source = new HtmlWebViewSource
+                    {
+                        Html = text
+                    };
+                });
+            }
+            catch
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    AboutWebview.Source = new HtmlWebViewSource
+                    {
+                        Html = $"<html><body><h2>Error loading about content</h2><p>{ex.Message}</p></body></html>"
+                    };
+                });
+            }
         }
     }
 

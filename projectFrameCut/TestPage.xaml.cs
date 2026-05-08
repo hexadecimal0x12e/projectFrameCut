@@ -1239,6 +1239,17 @@ public partial class TestPage : ContentPage
         myMultiWindowView.TaskbarVisibility = (TaskbarVisibilityMode)TaskbarOptionPicker.SelectedIndex;
     }
 
+    private void StoreModeToggleSwitch_Toggled(object sender, ToggledEventArgs e)
+    {
+        SettingsManager.WriteSetting("StoreModeOverride", e.Value.ToString());
+    }
+
+    private void ResetStoreModeButton_Clicked(object sender, EventArgs e)
+    {
+        SettingsManager.WriteSetting("StoreModeOverride", "disable");
+
+    }
+
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {
         AuthService.Logout();

@@ -265,6 +265,86 @@
         "DontTranslate": false
       },
       {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u4E0D\u597D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u597D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u4E3E\u62A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u6709\u5BB3\u6216\u5371\u9669\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u4EC7\u6068\u6216\u9A9A\u6270\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u4E8B\u5B9E\u4E0D\u51C6\u786E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u4E0E\u95EE\u9898\u65E0\u5173",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u5176\u4ED6\u95EE\u9898",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u4E3E\u62A5\u8FD9\u6761\u56DE\u590D\r(\u5982\u679C\u4F60\u6301\u7EED\u9047\u5230\u6B64\u95EE\u9898\uFF0C\u8BF7\u4F7F\u7528\u90AE\u4EF6\u5411\u6211\u4EEC\u53CD\u9988)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u611F\u8C22\u53CD\u9988\uFF0C\u6211\u4EEC\u5DF2\u6536\u5230\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "AIAssistant_ChatView_Me",
         "Value": "\u6211",
         "Mode": "ConstString",
@@ -959,6 +1039,14 @@
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
         "Value": "\u5BBD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u8BF7\u8F93\u5165\u9879\u76EE\u540D\u79F0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4119,7 +4207,7 @@
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "\u53BB\u521B\u5EFA",
+        "Value": "\u8F6C\u5230\u300C\u521B\u5EFA\u9879\u76EE\u300D\u9875\u9762",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13279,7 +13367,105 @@
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "Go Create",
+        "Value": "Go to the \u0022Create Project\u0022 page",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Please enter the project name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Good",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Bad",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Report",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Report this reply\r(If you keep encountering this problem, please email us your feedback)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Harmful or dangerous content",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Hate or harassment content",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Factually incorrect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Irrelevant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Other issues",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Thank you for your feedback. We have received it.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20439,7 +20625,106 @@
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "\u53BB\u5275\u5EFA",
+        "Value": "\u8F49\u5230\u300C\u5275\u5EFA\u9805\u76EE\u300D\u9801\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u8ACB\u8F38\u5165\u5C08\u6848\u540D\u7A31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u597D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u4E0D\u597D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u8209\u5831",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u6AA2\u8209\u9019\u689D\u56DE\u8986\r(\u5982\u679C\u4F60\u6301\u7E8C\u9047\u5230\u6B64\u554F\u984C\uFF0C\u8ACB\u4F7F\u7528\u90F5\u4EF6\u5411\u6211\u5011\u56DE\u994B)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u6709\u5BB3\u6216\u5371\u96AA\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u4EC7\u6068\u6216\u9A37\u64FE\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u4E8B\u5BE6\u4E0D\u6E96\u78BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u8207\u554F\u984C\u7121\u95DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u5176\u4ED6\u554F\u984C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u611F\u8B1D\u53CD\u994B\uFF0C\u6211\u5011\u5DF2\u6536\u5230\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26915,20 +27200,20 @@
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u540D\u3092\u5165\u529B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "placeholder for project name input",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u76EE\u6A19\u89E3\u50CF\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -26951,11 +27236,11 @@
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u30EA\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -26969,11 +27254,11 @@
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u76EE\u6A19\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -27005,11 +27290,11 @@
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u4F7F\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -27543,74 +27828,173 @@
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u4F5C\u6210\u6A5F\u80FD\u304C\u79FB\u52D5\u3057\u307E\u3057\u305F\u3002\u3053\u3053\u3067\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u4E00\u62EC\u4F5C\u6210\u3057\u3001\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u304B\u3089\u751F\u6210\u3082\u3067\u304D\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u30A2\u30A4\u30B3\u30F3\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u4E00\u89A7\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u8868\u793A\u3057\u306A\u3044",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u4F55\u3082\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u4F5C\u6210\u300D\u306E\u5165\u308A\u53E3\u304C\u898B\u3064\u304B\u3089\u306A\u3044\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u4F5C\u6210\u300D\u30DA\u30FC\u30B8\u3067\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u4F5C\u6210\u3057\u307E\u3057\u3087\u3046\uFF01",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u4F5C\u6210\u300D\u30DA\u30FC\u30B8\u306B\u79FB\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u540D\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u826F\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u60AA\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u5831\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E3E\u62A5\u6309\u94AE\u6587\u672C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u3053\u306E\u8FD4\u4FE1\u3092\u901A\u5831\u3059\u308B\r(\u3053\u306E\u554F\u984C\u304C\u7D9A\u304F\u5834\u5408\u306F\u3001\u30E1\u30FC\u30EB\u3067\u304A\u77E5\u3089\u305B\u304F\u3060\u3055\u3044)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u6709\u5BB3\u307E\u305F\u306F\u5371\u967A\u306A\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u618E\u60AA\u30FB\u5ACC\u304C\u3089\u305B\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u4E8B\u5B9F\u304C\u4E0D\u6B63\u78BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u554F\u984C\u3068\u7121\u95A2\u4FC2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u305D\u306E\u4ED6\u306E\u554F\u984C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5176\u4ED6\u95EE\u9898",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u3054\u610F\u898B\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059\u3002\u627F\u308A\u307E\u3057\u305F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -34048,119 +34432,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uBE60\uB978 \uC2DC\uC791",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uD504\uB85C\uC81D\uD2B8\uBA85",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uBAA9\uD45C \uD574\uC0C1\uB3C4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uB108\uBE44",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uB192\uC774",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uCD08\uAE30\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uAC00\uB85C \uC138\uB85C \uC804\uD658",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uBAA9\uD45C \uD504\uB808\uC784\uB960",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uC0AC\uC6A9\uC790 \uC815\uC758 \uD574\uC0C1\uB3C4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uD15C\uD50C\uB9BF\uC5D0\uC11C \uC2DC\uC791",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uD504\uB85C\uC81D\uD2B8 \uD15C\uD50C\uB9BF\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uD15C\uD50C\uB9BF \uC0AC\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -34685,83 +35069,181 @@
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uBAA9\uB85D \uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uC544\uC774\uCF58 \uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC0DD\uC131 \uAE30\uB2A5\uC774 \uC774\uB3D9\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC5EC\uAE30\uC11C \uD55C \uBC88\uC5D0 \uD504\uB85C\uC81D\uD2B8\uB97C \uC0DD\uC131\uD558\uACE0 \uD15C\uD50C\uB9BF\uC5D0\uC11C \uD504\uB85C\uC81D\uD2B8\uB97C \uC0DD\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uB2E4\uC2DC \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC74C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\uD504\uB85C\uC81D\uD2B8 \uC0DD\uC131\u300D \uD398\uC774\uC9C0\uC5D0\uC11C \uD504\uB85C\uC81D\uD2B8\uB97C \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\uD504\uB85C\uC81D\uD2B8 \uB9CC\uB4E4\uAE30\u300D \uC785\uAD6C\uB97C \uCC3E\uC744 \uC218 \uC5C6\uB098\uC694?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uC5EC\uAE30 \uC544\uBB34\uAC83\uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300C\uD504\uB85C\uC81D\uD2B8 \uB9CC\uB4E4\uAE30\u300D \uD398\uC774\uC9C0\uB85C \uC774\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\uC0DD\uC131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\uC88B\uC544\uC694",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\uB098\uC068",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\uC2E0\uACE0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\uC774 \uB2F5\uBCC0\uC744 \uC2E0\uACE0\uD569\uB2C8\uB2E4\r(\uC774 \uBB38\uC81C\uAC00 \uACC4\uC18D \uBC1C\uC0DD\uD558\uBA74 \uC774\uBA54\uC77C\uB85C \uD53C\uB4DC\uBC31\uC744 \uBCF4\uB0B4 \uC8FC\uC138\uC694)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\uC720\uD574\uD558\uAC70\uB098 \uC704\uD5D8\uD55C \uCF58\uD150\uCE20",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\uD610\uC624 \uB610\uB294 \uAD34\uB86D\uD798 \uB0B4\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\uC0AC\uC2E4\uC774 \uBD80\uC815\uD655\uD568",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\uBB38\uC81C\uC640 \uAD00\uB828 \uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\uAE30\uD0C0 \uBB38\uC81C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\uD53C\uB4DC\uBC31 \uAC10\uC0AC\uD569\uB2C8\uB2E4. \uC798 \uC811\uC218\uD588\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -41197,119 +41679,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "D\u00E9marrage rapide",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nom du projet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Saisissez le nom du projet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "R\u00E9solution cible",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Largeur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Hauteur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "R\u00E9initialiser",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Permuter l\u0027orientation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Fr\u00E9quence d\u0027images cible",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "R\u00E9solution personnalis\u00E9e",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Commencer \u00E0 partir d\u0027un mod\u00E8le",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Aucun mod\u00E8le de projet disponible pour le moment",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Utiliser le mod\u00E8le",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -41834,83 +42316,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Cr\u00E9er",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vue des ic\u00F4nes",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vue en liste",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Ne plus afficher",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Impossible de trouver l\u0027entr\u00E9e \u00ABCr\u00E9er un projet\u00BB ?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "La fonction de cr\u00E9ation de projet a \u00E9t\u00E9 d\u00E9plac\u00E9e. Vous pouvez d\u00E9sormais cr\u00E9er des projets en un seul endroit et g\u00E9n\u00E9rer des projets \u00E0 partir de mod\u00E8les.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Cr\u00E9ez un projet dans la page \u00AB Cr\u00E9er un projet \u00BB !",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Aller \u00E0 la page \u00AB Cr\u00E9er un projet \u00BB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Il n\u0027y a rien ici.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Veuillez entrer le nom du projet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Bien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Mauvais",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Signaler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Signaler cette r\u00E9ponse\r(Si vous rencontrez ce probl\u00E8me de mani\u00E8re persistante, veuillez nous faire part de vos commentaires par e-mail.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Contenu nuisible ou dangereux",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Contenu haineux ou harcelant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Fait inexact",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Hors sujet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Autre probl\u00E8me",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Merci pour votre retour, nous l\u0027avons bien re\u00E7u.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -48362,119 +48943,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u901F\u542F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u9879\u76EE\u4E4B\u540D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u8BF7\u5F55\u5165\u9879\u76EE\u540D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u6240\u6B32\u4E4B\u89E3\u6790\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u76EE\u6807\u5206\u8FA8\u7387\uFF0C\u8BD1\u4E3A\u6587\u8A00\u6587",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5EE3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u5BBD\u5EA6\u5360\u4F4D\u7B26\uFF0C\u6587\u8A00\u6587\u8868\u8FF0",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u9AD8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u66F4\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u6A2A\u7AD6\u76F8\u6613",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5E27\u7387\u4E4B\u76EE\u6807",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u81EA\u5B9A\u89E3\u6790",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u6307\u81EA\u5B9A\u4E49\u5C4F\u5E55\u5206\u8FA8\u7387",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u81EA\u6A21\u677F\u59CB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u4ECE\u6A21\u677F\u5F00\u59CB",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5C1A\u65E0\u53EF\u7528\u4E4B\u9879\u76EE\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u7528\u6A21",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -48999,83 +49580,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5275\u7ACB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5217\u8868\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u4E0D\u5FA9\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u521B\u9879\u76EE\u529F\u80FD\u5DF2\u79FB\uFF0C\u6B64\u5904\u53EF\u4E00\u63FD\u5B50\u521B\u9879\u76EE\uFF0C\u5E76\u81EA\u6A21\u677F\u751F\u9879\u76EE\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u6B64\u5904\u7A7A\u65E0\u4E00\u7269\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u672A\u5F97\u300C\u5275\u5EFA\u9805\u76EE\u300D\u4E4B\u5165\u53E3\u4E4E\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u8BF7\u4E8E\u300C\u521B\u5EFA\u9879\u76EE\u300D\u4E4B\u754C\u9762\uFF0C\u65B0\u5EFA\u4E00\u9879\u76EE\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u5F80\u300C\u521B\u5EFA\u9879\u76EE\u300D\u4E4B\u9875",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u56FE\u6807\u89C6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u8ACB\u8F38\u5165\u9805\u76EE\u540D\u7A31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u5584",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u4E0D\u4F73",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u4E3E\u53D1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E3E\u62A5\u7684\u6587\u8A00\u6587\u7FFB\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u4E3E\u62A5\u6B64\u590D\n\uFF08\u82E5\u4ECD\u9047\u6B64\u5F0A\uFF0C\u8BF7\u4EE5\u90AE\u4EF6\u544A\u543E\u3002\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u7559\u539F\u610F\u548C\u62EC\u53F7\u6362\u884C\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u6709\u5BB3\u6216\u5371\u9669\u4E4B\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u4EC7\u6028\u6216\u9A9A\u6270\u4E4B\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u0027\u4EC7\u6068\u6216\u9A9A\u6270\u5185\u5BB9\u0027\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u0027\u4EC7\u6028\u0027\u5BF9\u5E94\u0027\u4EC7\u6068\u0027\uFF0C\u0027\u9A9A\u6270\u0027\u4E0D\u53D8\uFF0C\u0027\u4E4B\u5185\u5BB9\u0027\u4E3A\u6587\u8A00\u5E38\u7528\u7ED3\u6784\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u4E8B\u5B9E\u4E0D\u786E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u4E0E\u9898\u65E0\u5173",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u4ED6\u6545",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u611F\u8377\u53CD\u9988\uFF0C\u5DF2\u6089\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -55519,119 +56199,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0628\u062F\u0621 \u0633\u0631\u064A\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0633\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0644\u0631\u062C\u0627\u0621 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u062F\u0642\u0629 \u0627\u0644\u0647\u062F\u0641",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0639\u0631\u0636",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0644\u0627\u0631\u062A\u0641\u0627\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u062A\u0628\u062F\u064A\u0644 \u0627\u0644\u0627\u062A\u062C\u0627\u0647",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u0637\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u062F\u0642\u0629 \u0645\u062E\u0635\u0635\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0628\u062F\u0623 \u0645\u0646 \u0627\u0644\u0642\u0627\u0644\u0628",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0642\u0648\u0627\u0644\u0628 \u0645\u0634\u0631\u0648\u0639 \u0645\u062A\u0627\u062D\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0642\u0627\u0644\u0628",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -56156,83 +56836,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0625\u0646\u0634\u0627\u0621",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0639\u0631\u0636 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0639\u0631\u0636 \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u062A\u0645 \u0646\u0642\u0644 \u0648\u0638\u064A\u0641\u0629 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0634\u0631\u0648\u0639\u060C \u064A\u0645\u0643\u0646\u0643 \u0647\u0646\u0627 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639 \u0628\u0634\u0643\u0644 \u0645\u062A\u0643\u0627\u0645\u0644\u060C \u0648\u0643\u0630\u0644\u0643 \u0625\u0646\u0634\u0627\u0621 \u0645\u0634\u0627\u0631\u064A\u0639 \u0645\u0646 \u0627\u0644\u0642\u0648\u0627\u0644\u0628.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0623\u0644\u0627 \u062A\u062C\u062F \u0645\u062F\u062E\u0644 \u00AB\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0634\u0631\u0648\u0639\u00BB\u061F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0644\u0627 \u062A\u0638\u0647\u0631 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0623\u0646\u0634\u0626 \u0645\u0634\u0631\u0648\u0639\u064B\u0627 \u0641\u064A \u0635\u0641\u062D\u0629 \u0027\u0625\u0646\u0634\u0627\u0621 \u0645\u0634\u0631\u0648\u0639\u0027!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u9F13\u52B1\u7528\u6237\u5728\u521B\u5EFA\u9879\u76EE\u9875\u9762\u521B\u5EFA\u9879\u76EE",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0627\u0644\u0627\u0646\u062A\u0642\u0627\u0644 \u0625\u0644\u0649 \u0635\u0641\u062D\u0629 \u00AB\u0625\u0646\u0634\u0627\u0621 \u0645\u0634\u0631\u0648\u0639\u00BB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0644\u0627 \u064A\u0648\u062C\u062F \u0634\u064A\u0621 \u0647\u0646\u0627.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u062C\u064A\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u0633\u064A\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u0627\u0644\u0625\u0628\u0644\u0627\u063A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0631\u062F (\u0625\u0630\u0627 \u0627\u0633\u062A\u0645\u0631\u062A \u0647\u0630\u0647 \u0627\u0644\u0645\u0634\u0643\u0644\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0639\u0628\u0631 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u0645\u062D\u062A\u0648\u0649 \u0636\u0627\u0631 \u0623\u0648 \u062E\u0637\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u0645\u062D\u062A\u0648\u0649 \u0643\u0631\u0627\u0647\u064A\u0629 \u0623\u0648 \u0645\u0636\u0627\u064A\u0642\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u0627\u0644\u062D\u0642\u064A\u0642\u0629 \u063A\u064A\u0631 \u062F\u0642\u064A\u0642\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u063A\u064A\u0631 \u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u0645\u0634\u0643\u0644\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u0645\u0634\u0643\u0644\u0629 \u0623\u062E\u0631\u0649",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u0634\u0643\u0631\u064B\u0627 \u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A\u0643\u060C \u0644\u0642\u062F \u062A\u0644\u0642\u064A\u0646\u0627\u0647\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -62676,119 +63455,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Schnellstart",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Projektname",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Projektnamen eingeben",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Zielaufl\u00F6sung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Breite",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "H\u00F6he",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Zur\u00FCcksetzen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Hoch-/Querformat tauschen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Zielbildrate",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Benutzerdefinierte Aufl\u00F6sung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Mit Vorlage starten",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Keine verf\u00FCgbaren Projektvorlagen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vorlage verwenden",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -63313,83 +64092,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Erstellen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Symbolansicht",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Die Funktion zum Erstellen von Projekten wurde verschoben. Sie k\u00F6nnen hier Projekte in einem Schritt erstellen und aus Vorlagen generieren.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Listenansicht",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nicht mehr anzeigen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Hier gibt es nichts.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u201EProjekt erstellen\u201C nicht gefunden?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Zur Seite \u201EProjekt erstellen\u201C wechseln",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Erstellen Sie ein Projekt auf der Seite \u201EProjekt erstellen\u201C!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Bitte geben Sie den Projektnamen ein.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Gut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Schlecht",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Melden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Report button in chat feedback view",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Melde diese Antwort\r(Wenn Sie dieses Problem weiterhin haben, senden Sie uns bitte eine E-Mail mit Ihrem Feedback)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Sch\u00E4dliche oder gef\u00E4hrliche Inhalte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Hass- oder Bel\u00E4stigungsinhalte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Faktisch ungenau",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u4E8B\u5B9E\u4E0D\u51C6\u786E\u0027 for feedback report reason in AI assistant chat view",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Nicht relevant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Andere Probleme",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Vielen Dank f\u00FCr Ihr Feedback, wir haben es erhalten.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -69829,119 +70707,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Inicio r\u00E1pido",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nombre del proyecto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Introduzca el nombre del proyecto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Resoluci\u00F3n objetivo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Ancho",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Altura",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Restablecer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Intercambiar orientaci\u00F3n",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Velocidad de fotogramas objetivo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Resoluci\u00F3n personalizada",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Empezar desde plantilla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "No hay plantillas de proyecto disponibles",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Usar plantilla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -70466,83 +71344,181 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Crear",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vista de iconos",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vista de lista",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "La funci\u00F3n de crear proyectos se ha movido. Aqu\u00ED puedes crear proyectos de forma completa y a partir de plantillas.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "No mostrar m\u00E1s",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Aqu\u00ED no hay nada.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Ir a la p\u00E1gina \u00ABCrear proyecto\u00BB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u00BFNo encuentras la entrada de \u00ABCrear proyecto\u00BB?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "Mensaje de t\u00EDtulo cuando el usuario no encuentra el acceso a la creaci\u00F3n de proyectos.",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u00A1Crea un proyecto en la p\u00E1gina \u0027Crear proyecto\u0027!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Ingrese el nombre del proyecto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Bien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Malo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Denunciar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Reportar esta respuesta\r(Si contin\u00FAas encontrando este problema, por favor env\u00EDanos un correo electr\u00F3nico para informarnos.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Contenido da\u00F1ino o peligroso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Contenido de odio o acoso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Informaci\u00F3n incorrecta",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "No relacionado con el problema",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Otros problemas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Gracias por tus comentarios, los hemos recibido.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -76986,119 +77962,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Avvio rapido",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nome del progetto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Inserisci il nome del progetto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Risoluzione target",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Larghezza",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Altezza",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Ripristina",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Scambia orientamento",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Frame rate target",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Risoluzione personalizzata",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Inizia dal modello",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nessun modello di progetto disponibile",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Usa modello",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -77623,83 +78599,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Crea",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vista icone",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vista elenco",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Non mostrare pi\u00F9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "La funzione di creazione del progetto \u00E8 stata spostata: qui puoi creare progetti in un unico posto e generare progetti da modelli.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Non trovi l\u0027ingresso \u00ABCrea progetto\u00BB?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Qui non c\u0027\u00E8 niente.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Vai alla pagina \u00ABCrea progetto\u00BB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Crea un progetto nella pagina \u0022Crea progetto\u0022!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Inserisci il nome del progetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Buono",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Non mi piace",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Segnala",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Segnala questa risposta (Se continui a riscontrare questo problema, contattaci via email)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Contenuto nocivo o pericoloso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Contenuti di odio o molestie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Fatto impreciso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Non pertinente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Altri problemi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Grazie per il feedback, lo abbiamo ricevuto.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -84141,119 +85216,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Szybki start",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nazwa projektu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Wprowad\u017A nazw\u0119 projektu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Rozdzielczo\u015B\u0107 docelowa",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Szeroko\u015B\u0107",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Wysoko\u015B\u0107",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Reset",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Zamie\u0144 orientacj\u0119",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Docelowa liczba klatek na sekund\u0119",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Rozdzielczo\u015B\u0107 niestandardowa",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Rozpocznij od szablonu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Brak dost\u0119pnych szablon\u00F3w projekt\u00F3w.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "U\u017Cyj szablonu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -84778,83 +85853,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Utw\u00F3rz",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Widok ikon",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Widok listy",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nie pokazuj wi\u0119cej",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Funkcja tworzenia projektu zosta\u0142a przeniesiona. Mo\u017Cesz tutaj w jednym miejscu tworzy\u0107 projekty oraz generowa\u0107 je z szablon\u00F3w.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nie znaleziono wej\u015Bcia do utworzenia projektu?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nic tu nie ma.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Utw\u00F3rz projekt na stronie \u201EUtw\u00F3rz projekt\u201D!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Przejd\u017A do strony \u201ETworzenie projektu\u201D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Wprowad\u017A nazw\u0119 projektu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Dobrze",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Z\u0142e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Zg\u0142o\u015B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Zg\u0142o\u015B t\u0119 odpowied\u017A\r(Je\u015Bli nadal masz ten problem, skontaktuj si\u0119 z nami przez e-mail)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Szkodliwe lub niebezpieczne tre\u015Bci",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Nienawi\u015B\u0107 lub tre\u015Bci obra\u017Aliwe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Nieprawid\u0142owe informacje",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Nie zwi\u0105zane z pytaniem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Inny problem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Dzi\u0119kujemy za opini\u0119 \u2013 otrzymali\u015Bmy j\u0105.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -91293,119 +92467,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "In\u00EDcio r\u00E1pido",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nome do projeto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Digite o nome do projeto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Resolu\u00E7\u00E3o alvo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Largura",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Altura",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Redefinir",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Trocar orienta\u00E7\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "\u6A2A\u7AD6\u4E92\u6362 - \u7528\u4E8E\u5207\u6362\u6A2A\u5411\u548C\u7EB5\u5411\u65B9\u5411",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Taxa de quadros alvo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Resolu\u00E7\u00E3o personalizada",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Come\u00E7ar a partir do modelo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Nenhum modelo de projeto dispon\u00EDvel no momento.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Usar modelo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -91930,83 +93104,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Criar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "N\u00E3o mostrar novamente",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Visualiza\u00E7\u00E3o de \u00EDcones",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Visualiza\u00E7\u00E3o em lista",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "A funcionalidade de criar projetos foi movida. Aqui voc\u00EA pode criar projetos de forma centralizada e gerar projetos a partir de modelos.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "N\u00E3o h\u00E1 nada aqui.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "N\u00E3o encontra a entrada \u0027Criar Projeto\u0027?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Ir para a p\u00E1gina Criar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Crie um projeto na p\u00E1gina \u0022Criar Projeto\u0022!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "Insira o nome do projeto.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "Bom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "Ruim",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "Denunciar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Denunciar esta resposta\r(Se voc\u00EA continuar encontrando este problema, por favor nos envie um e-mail para feedback.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Conte\u00FAdo prejudicial ou perigoso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Conte\u00FAdo de \u00F3dio ou ass\u00E9dio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Informa\u00E7\u00E3o incorreta",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Irrelevante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Outro problema",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Agradecemos pelo feedback, j\u00E1 o recebemos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -98450,119 +99723,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0411\u044B\u0441\u0442\u0440\u044B\u0439 \u0441\u0442\u0430\u0440\u0442",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0426\u0435\u043B\u0435\u0432\u043E\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0428\u0438\u0440\u0438\u043D\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0412\u044B\u0441\u043E\u0442\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041F\u043E\u043C\u0435\u043D\u044F\u0442\u044C \u043E\u0440\u0438\u0435\u043D\u0442\u0430\u0446\u0438\u044E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0426\u0435\u043B\u0435\u0432\u0430\u044F \u0447\u0430\u0441\u0442\u043E\u0442\u0430 \u043A\u0430\u0434\u0440\u043E\u0432",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u043E\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041D\u0430\u0447\u0430\u0442\u044C \u0441 \u0448\u0430\u0431\u043B\u043E\u043D\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041D\u0435\u0442 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0445 \u0448\u0430\u0431\u043B\u043E\u043D\u043E\u0432 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0448\u0430\u0431\u043B\u043E\u043D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -99087,83 +100360,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0412\u0438\u0434 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0411\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 \u0431\u044B\u043B\u0430 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0430. \u0422\u0435\u043F\u0435\u0440\u044C \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u0441\u043E\u0437\u0434\u0430\u0432\u0430\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B \u0438 \u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0438\u0445 \u0438\u0437 \u0448\u0430\u0431\u043B\u043E\u043D\u043E\u0432 \u0432 \u043E\u0434\u043D\u043E\u043C \u043C\u0435\u0441\u0442\u0435.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0417\u0434\u0435\u0441\u044C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435\u0442.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041D\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u043D\u0430\u0439\u0442\u0438 \u00AB\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u00BB?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0421\u043F\u0438\u0441\u043E\u043A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0443 \u00AB\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u00BB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0440\u043E\u0435\u043A\u0442 \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 \u00AB\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u00BB!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "\u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u0425\u043E\u0440\u043E\u0448\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "\u041F\u043B\u043E\u0445\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u041F\u043E\u0436\u0430\u043B\u043E\u0432\u0430\u0442\u044C\u0441\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "\u041F\u043E\u0436\u0430\u043B\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u044D\u0442\u043E\u0442 \u043E\u0442\u0432\u0435\u0442\r(\u0415\u0441\u043B\u0438 \u0432\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0435\u0442\u0435 \u0441\u0442\u0430\u043B\u043A\u0438\u0432\u0430\u0442\u044C\u0441\u044F \u0441 \u044D\u0442\u043E\u0439 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u043E\u0439, \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0441\u043E\u043E\u0431\u0449\u0438\u0442\u0435 \u043D\u0430\u043C \u043F\u043E \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043D\u043D\u043E\u0439 \u043F\u043E\u0447\u0442\u0435.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "\u0412\u0440\u0435\u0434\u043D\u044B\u0439 \u0438\u043B\u0438 \u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0435\u043D\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "\u041D\u0435\u043D\u0430\u0432\u0438\u0441\u0442\u044C \u0438\u043B\u0438 \u0434\u043E\u043C\u043E\u0433\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0444\u0430\u043A\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "\u041D\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u043A \u0432\u043E\u043F\u0440\u043E\u0441\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "\u0414\u0440\u0443\u0433\u0430\u044F \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "\u0421\u043F\u0430\u0441\u0438\u0431\u043E \u0437\u0430 \u043E\u0442\u0437\u044B\u0432, \u043C\u044B \u0435\u0433\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0438.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -105602,119 +106974,119 @@
       },
       {
         "Id": "CreatePage_QuickStart",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "H\u0131zl\u0131 Ba\u015Flang\u0131\u00E7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectName",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Proje Ad\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ProjectNamePlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Proje ad\u0131n\u0131 girin",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Hedef \u00E7\u00F6z\u00FCn\u00FCrl\u00FCk",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomWidthPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Geni\u015F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomHeightPlaceholder",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Y\u00FCkseklik",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "Placeholder for custom height input on create page",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_ResetCustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "S\u0131f\u0131rla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_SwapAspectRatio",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "En/Boy De\u011Fi\u015Ftir",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_TargetFrameRate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Hedef Kare H\u0131z\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_CustomResolution",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u00D6zel \u00E7\u00F6z\u00FCn\u00FCrl\u00FCk",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_StartFromTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u015Eablondan ba\u015Fla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_NoTemplatesAvailable",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Kullan\u0131labilir proje \u015Fablonu yok.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "CreatePage_UseTemplate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u015Eablon kullan",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -106239,83 +107611,182 @@
       },
       {
         "Id": "AppShell_CreateTab",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Olu\u015Ftur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_Graph",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Simge G\u00F6r\u00FCn\u00FCm\u00FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_DontShowAnymore",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Art\u0131k g\u00F6sterme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "DraftSettingPage_Tab_History_List",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Liste g\u00F6r\u00FCn\u00FCm\u00FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_SubTitle",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Proje olu\u015Fturma \u00F6zelli\u011Fi ta\u015F\u0131nd\u0131. Burada projeleri tek bir yerden olu\u015Fturabilir ve \u015Fablonlardan proje \u00FCretebilirsiniz.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Burada hi\u00E7bir \u015Fey yok.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_Desc",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "Proje Olu\u015Ftur sayfas\u0131nda bir proje olu\u015Fturun!",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_NoDrafts_GoCreate",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300CProje Olu\u015Ftur\u300D sayfas\u0131na git",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "HomePage_CreateControlMovedHint_Title",
-        "Value": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Value": "\u300CProje Olu\u015Ftur\u300Dgiri\u015Fini bulam\u0131yor musunuz?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: HTTP 402 (unknown_error: invalid_request_error)\r\n\r\nInsufficient Balance",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_NoProjectName",
+        "Value": "L\u00FCtfen proje ad\u0131n\u0131 girin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Good",
+        "Value": "\u0130yi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Bad",
+        "Value": "K\u00F6t\u00FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_Report",
+        "Value": "\u015Eikayet Et",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Title",
+        "Value": "Bu yan\u0131t\u0131 bildir\r(Bu sorunla kar\u015F\u0131la\u015Fmaya devam ederseniz, l\u00FCtfen bize e-posta ile geri bildirim yap\u0131n.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Harmful",
+        "Value": "Zararl\u0131 veya tehlikeli i\u00E7erik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Hate",
+        "Value": "Nefret veya taciz i\u00E7eri\u011Fi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Incorrect",
+        "Value": "Yanl\u0131\u015F bilgi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Irrelevant",
+        "Value": "Konuyla ilgisi yok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_ReportReason_Other",
+        "Value": "Di\u011Fer sorun",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
+        "Value": "Geri bildiriminiz i\u00E7in te\u015Fekk\u00FCrler, ald\u0131k.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ]

@@ -1140,9 +1140,15 @@ public partial class HomePage : ContentPage
     {
         base.OnNavigatedTo(args);
 #if WINDOWS
+        bool haveDrafts = false;
+        try
+        {
+            haveDrafts = Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length != 0;
+        } 
+        catch { }
         Task.Delay(5000).ContinueWith(async (_) =>
         {
-            if (!SettingsManager.IsSettingExists("CreateControlMovedHint"))
+            if (!SettingsManager.IsSettingExists("CreateControlMovedHint") && haveDrafts)
             {
                 await MainThread.InvokeOnMainThreadAsync(() =>
                 {
