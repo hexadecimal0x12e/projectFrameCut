@@ -21,7 +21,7 @@ public partial class ProjectAssetView : ContentView
         workingDraft = page;
 
         _viewModel = new ProjectAssetViewModel(
-            addAssetCommand: new Command(async () => await OnAddAssetClicked()),
+            addAssetCommand: new Command(async () => await AddAAsset()),
             removeAssetCommand: new Command<AssetItemViewModel>(async (asset) => await OnRemoveAsset(asset)),
             addToTrackCommand: new Command<AssetItemViewModel>(async (asset) => await OnAddToTrack(asset))
         );
@@ -71,26 +71,26 @@ public partial class ProjectAssetView : ContentView
         }
     }
 
-    private async Task OnAddAssetClicked()
+    public async Task AddAAsset(string? assetSource = null)
     {
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
             workingDraft.SetStateBusy(Localized.DraftPage_WaitForUser);
             try
             {
-                var result = await FilePicker.PickAsync(new PickOptions
+                var result = assetSource ?? (await FilePicker.PickAsync(new PickOptions
                 {
                     PickerTitle = "Select a asset",
                     FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
-                        { DevicePlatform.WinUI, [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"] },
+                        { DevicePlatform.WinUI, ["*", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".pjfc"] },
                         { DevicePlatform.Android, ["image/*", "video/*"] },
 #if iDevices
                         {DevicePlatform.iOS , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]},
                         {DevicePlatform.MacCatalyst , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]}
 #endif
                     })
-                });
+                })).FullPath;
 
                 if (result is not null)
                 {
@@ -110,19 +110,19 @@ public partial class ProjectAssetView : ContentView
                         {
                             case "Reference":
                                 {
-                                    resultPath = result.FullPath;
+                                    resultPath = result;
                                     await AddAssetToProject(resultPath);
                                     break;
                                 }
                             case "Copy":
                                 {
-                                    resultPath = Path.Combine(workingDraft.WorkingPath, "assets", $"imported-{result.FileName}");
+                                    resultPath = Path.Combine(workingDraft.WorkingPath, "assets", Guid.NewGuid().ToString() + Path.GetExtension(resultPath));
                                     if (!string.IsNullOrWhiteSpace(workingDraft.WorkingPath))
                                     {
 #if WINDOWS
-                                        File.Copy(result.FullPath, resultPath, true);
+                                        File.Copy(result, resultPath, true);
 #else
-                                        File.Move(result.FullPath, resultPath, true);
+                                        File.Move(result, resultPath, true);
 #endif
                                         await AddAssetToProject(resultPath);
                                     }
@@ -130,7 +130,7 @@ public partial class ProjectAssetView : ContentView
                                 }
                             case "CopyToShared":
                                 {
-                                    await AssetDatabase.Add(result.FullPath, workingDraft);
+                                    await AssetDatabase.Add(result, workingDraft);
                                     LoadAssets(); // 重新加载共享素材
                                     break;
                                 }

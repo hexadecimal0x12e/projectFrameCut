@@ -49,7 +49,15 @@ namespace projectFrameCut.Render.WindowsRender
                 {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,null)) },
                 {"ResizeComputer", new(() => new ResizeComputer(accelerators,null)) },
                 {"CropComputer", new(() => new CropComputer(accelerators,null)) },
-                {"PlaceComputer", new(() => new PlaceComputer(accelerators,null)) }
+                {"PlaceComputer", new(() => new PlaceComputer(accelerators,null)) },
+                {"AddComputer", new(() => new BlendAddComputer(accelerators,null)) },
+                {"SubtractComputer", new(() => new BlendSubtractComputer(accelerators,null)) },
+                {"MultiplyComputer", new(() => new BlendMultiplyComputer(accelerators,null)) },
+                {"ScreenComputer", new(() => new BlendScreenComputer(accelerators,null)) },
+                {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(accelerators,null)) },
+                {"DarkenComputer", new(() => new BlendDarkenComputer(accelerators,null)) },
+                {"LightenComputer", new(() => new BlendLightenComputer(accelerators,null)) },
+                {"DifferenceComputer", new(() => new BlendDifferenceComputer(accelerators,null)) }
             };
 
 

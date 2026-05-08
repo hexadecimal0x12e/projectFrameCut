@@ -356,7 +356,7 @@ public class AssetItemViewModel : INotifyPropertyChanged
         HasThumbnail = File.Exists(asset.ThumbnailPath);
         DisplayLabel = $"{asset.Icon} {asset.Name}";
         BackgroundColor = ClipElementUI.DetermineAssetColor(asset.AssetType, asset.GetClipMode());
-        FrameCount = (uint)(asset.FrameCount ?? 0L);
+        FrameCount = (uint)(asset.Duration ?? 0L);
         IsInfiniteLength = asset.isInfiniteLength;
         IsLocal = isLocal;
         RemoveAssetCommand = parent.RemoveAssetCommand;

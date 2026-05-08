@@ -117,6 +117,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(CanGoForwardPropertyKey, value);
         }
 
+        private static readonly BindablePropertyKey IsMinimizedPropertyKey =
+            BindableProperty.CreateReadOnly(nameof(IsMinimized), typeof(bool), typeof(MultiWindowItem), false);
+
+        public static readonly BindableProperty IsMinimizedProperty = IsMinimizedPropertyKey.BindableProperty;
+
+        public bool IsMinimized
+        {
+            get => (bool)GetValue(IsMinimizedProperty);
+            private set => SetValue(IsMinimizedPropertyKey, value);
+        }
+
         /// <summary>
         /// A Id to mark this window. Used for comparing.
         /// </summary>
@@ -152,7 +163,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private int _preCol, _preRow, _preColSpan, _preRowSpan;
         private bool _isMaximized = false;
 
-        private bool _isMinimized = false;
         private double _preMinHeight;
 
         // Template Parts
@@ -808,11 +818,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </summary>
         public void Minimize()
         {
-            if (_isMinimized)
+            if (IsMinimized)
             {
                 // Restore
                 this.HeightRequest = _preMinHeight;
-                _isMinimized = false;
+                IsMinimized = false;
                 // Re-enable resize handles
                 if (_resizeGrid != null) _resizeGrid.IsVisible = true;
             }
@@ -821,7 +831,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _preMinHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
                 // Minimize to TitleHeight approx 32 + borders
                 this.HeightRequest = 35;
-                _isMinimized = true;
+                IsMinimized = true;
                 // Disable resize handles
                 if (_resizeGrid != null) _resizeGrid.IsVisible = false;
             }

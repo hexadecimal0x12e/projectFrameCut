@@ -38,6 +38,8 @@ public partial class UserDataManagePage : ContentPage
     public ObservableCollection<UserDataEntry> AssetItems { get; } = [];
     public ObservableCollection<UserDataEntry> TemplateItems { get; } = [];
     public ObservableCollection<UserDataEntry> PluginItems { get; } = [];
+    public long CahceSize = 1;
+    public int CacheFileCount = 0;
 
     public UserDataManagePage()
     {
@@ -188,12 +190,16 @@ public partial class UserDataManagePage : ContentPage
             }
         }
 
+        var cahceFiles = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
+        CacheFileCount = cahceFiles.Count();
+        CahceSize = cahceFiles.Sum(c => new FileInfo(c).Length);
+
         return new UserDataSnapshot
         {
             DraftItems = draftItems.OrderByDescending(i => i.SizeInBytes).ThenBy(i => i.Name).ToList(),
             AssetItems = assetItems.OrderByDescending(i => i.SizeInBytes).ThenBy(i => i.Name).ToList(),
             TemplateItems = templateItems.OrderByDescending(i => i.SizeInBytes).ThenBy(i => i.Name).ToList(),
-            PluginItems = pluginItems.OrderByDescending(i => i.SizeInBytes).ThenBy(i => i.Name).ToList()
+            PluginItems = pluginItems.OrderByDescending(i => i.SizeInBytes).ThenBy(i => i.Name).ToList(),
         };
     }
 
@@ -208,6 +214,8 @@ public partial class UserDataManagePage : ContentPage
         AssetStatLabel.Text = Localized.UserDataManagePage_DataState(AssetItems.Count, FormatSize(AssetItems.Sum(i => i.SizeInBytes)));
         TemplateStatLabel.Text = Localized.UserDataManagePage_DataState(TemplateItems.Count, FormatSize(TemplateItems.Sum(i => i.SizeInBytes)));
         PluginStatLabel.Text = Localized.UserDataManagePage_DataState(PluginItems.Count, FormatSize(PluginItems.Sum(i => i.SizeInBytes)));
+        ClearCacheButton.Text = SettingsManager.SettingLocalizedResources.Misc_ClearCache;
+        CacheStatusLabel.Text = Localized.UserDataManagePage_DataState(CacheFileCount, FormatSize(CahceSize));
     }
 
     private static void SetItems(ObservableCollection<UserDataEntry> target, IEnumerable<UserDataEntry> source)
@@ -284,21 +292,6 @@ public partial class UserDataManagePage : ContentPage
         var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(name), Localized._Confirm, Localized._Cancel, "no");
 
         return confirm2 == "yes";
-    }
-
-    private static void ClearDirectoryContents(string path)
-    {
-        if (!Directory.Exists(path)) return;
-
-        foreach (var file in Directory.GetFiles(path, "*", SearchOption.TopDirectoryOnly))
-        {
-            File.Delete(file);
-        }
-
-        foreach (var dir in Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly))
-        {
-            Directory.Delete(dir, true);
-        }
     }
 
     private async void OnOpenDraftsClicked(object sender, EventArgs e)
@@ -436,5 +429,22 @@ public partial class UserDataManagePage : ContentPage
             Log(ex, "Delete plugin item", this);
             await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
         }
+    }
+
+    private async void ClearCacheButton_Clicked(object sender, EventArgs e)
+    {
+        var files = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
+        var size = Math.Round(files.Sum(f => new FileInfo(f).Length) / 1024.0 / 1024.0, 2);
+        if (!await DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Misc_ClearCache_Confirm((ulong)files.Count(), size), Localized._Confirm, Localized._Cancel)) return;
+        foreach (var item in files)
+        {
+            try
+            {
+                File.Delete(item);
+            }
+            catch { }
+        }
+
+        await DisplayAlertAsync(Localized._Info, Localized._Done, Localized._OK);
     }
 }

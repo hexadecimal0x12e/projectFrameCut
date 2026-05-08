@@ -29,10 +29,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get which kind of effect is. 
         /// </summary>
-        /// <remarks>
-        /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
-        /// </remarks>
-        public virtual EffectType TypeOfEffect => EffectType.NotSpecified;
+        public EffectType TypeOfEffect { get; }
 
         /// <summary>
         /// Get how this effect is implemented.
@@ -50,7 +47,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the effect is created.
-        /// If set, it should be a Guid.
+        /// If set, it <b>should be a Guid</b>.
         /// </remarks>
         public string Id { get; set; }
 
@@ -129,7 +126,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Get the binded EffectGroup's ID
         /// </summary>
         /// <remarks>
-        /// DO NOT set this property manually. EffectGroup will do this.
+        /// <b>DO NOT</b> set this property manually. EffectGroup will do this.
         /// </remarks>
         public string? BindedEffectGroupID { get; set; }
     }
@@ -141,10 +138,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Render the effect on the source picture to produce a new picture with the target width and height.
         /// </summary>
-        /// <param name="source"></param>
-        /// <param name="computer"></param>
-        /// <param name="targetWidth"></param>
-        /// <param name="targetHeight"></param>
+        /// <param name="source">The input frame.</param>
+        /// <param name="computer">A provided computer for accelerated computing.</param>
+        /// <param name="targetWidth">Output canvas' width.</param>
+        /// <param name="targetHeight">Output canvas' height.</param>
         /// <returns>the processed frame</returns>
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
 
@@ -152,13 +149,38 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Generate some process step instead of rendering the picture directly.
         /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
         /// </summary>
-        /// <param name="source"></param>
-        /// <param name="computer"></param>
-        /// <param name="targetWidth"></param>
-        /// <param name="targetHeight"></param>
+        /// <param name="source">The input frame.</param>
+        /// <param name="targetWidth">Output canvas' width.</param>
+        /// <param name="targetHeight">Output canvas' height.</param>
         /// <returns>the processed frame</returns>
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
     }
 
+    public interface IColorAdjustEffect : INormalEffect
+    {
+        /// <summary>
+        /// Adjust the target frame.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="computer"></param>
+        /// <returns>the processed frame</returns>
+        public IPicture Process(IPicture source, IComputer? computer);
+        /// <summary>
+        /// Yield a process step for adjusting the frame.
+        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns>the processed frame</returns>
+        public IPictureProcessStep GetStep(IPicture source);
+
+        IPicture INormalEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) => Process(source, computer);
+        IPictureProcessStep INormalEffect.GetStep(IPicture source, int targetWidth, int targetHeight) => GetStep(source);
+
+        bool IEffect.Enabled { get => true; set { if (!value) Logger.Log("A IColorAdjustEffect should never be disabled. This operation is ignored.", "warn"); } }
+        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IColorAdjustEffect. This operation is ignored.", "warn"); }
+        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IColorAdjustEffect. This operation is ignored.", "warn"); }
+        int IEffect.Index { get => int.MinValue; set => Logger.Log("ColorAdjustment should always be first one to render and it's index should not be changed.", "warn"); }
+
+    }
 
 }

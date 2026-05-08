@@ -41,14 +41,12 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame > targetFrame)
+                clip.ReInit(ppb);
+                if (IsFrameInClipRange(clip, targetFrame))
                 {
-                    if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
-                    {
-                        continue; //keep same behavior in Renderer
-
-                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
-                    }
+                    var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
+                    var actualFrame = clip.GetRelativeFrameIndex(targetFrame) ?? endPoint;
+                    //LogDiagnostic($"Clip {clip.Name}, ID {clip.Id}, Start {clip.StartFrame}, End {endPoint}, Duration {clip.Duration}, EffectiveDuration {clip.GetEffectiveDuration()}, GetRelativeFrameIndex for target frame {targetFrame} is {actualFrame}");
                     IPicture frame = null!;
                     int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
@@ -78,7 +76,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        frame = clip.GetFrame(targetFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
+                        frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -105,7 +103,7 @@ namespace projectFrameCut.Render.Rendering
             foreach (var clip in video)
             {
 
-                if ((clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame > targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
+                if (IsFrameInClipRange(clip, targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -149,10 +147,13 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
+                    ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
+                    ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
                     IPicture effected = srcFrame.Clip;
                     List<IPictureProcessStep> steps = new();
                     bool lastIsProcessStep = false;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
                     foreach (var effect in effectsList)
                     {
                         if (effect.YieldProcessStep != lastIsProcessStep)
@@ -177,9 +178,33 @@ namespace projectFrameCut.Render.Rendering
                         {
                             EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+                        else if (effect is IClipPositionProvider p)
+                        {
+                            (var x, var y, var w, var h, bool delta) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);
+                            if (delta)
+                            {
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                            }
+                            else
+                            {
+                                clipPos = new(x, y, w, h, false);
+                            }
+                        }
+                        else if (effect is IContinuousClipPositionProvider cp)
+                        {
+                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight);
+                            if (delta)
+                            {
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                            }
+                            else
+                            {
+                                clipPos = new(x, y, w, h, false);
+                            }
+                        }
                         else
                         {
-                            throw new NotSupportedException($"The effect Type {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
+                            throw new NotSupportedException($"The effect ClipType {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
                         }
                         if (AfterEffect is not null)
                         {
@@ -202,14 +227,17 @@ namespace projectFrameCut.Render.Rendering
                         steps.Clear();
                     }
 
-                    int clipX = ResolveClipOutputX(srcFrame.ParentClip, targetWidth, projectRelativeWidth);
-                    int clipY = ResolveClipOutputY(srcFrame.ParentClip, targetHeight, projectRelativeHeight);
+                    int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
+                    int clipY = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
                     {
                         clipY += (targetHeight - effected.Height) / 2;
                     }
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
+                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
 
+                    var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
+                    var computerId = mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId;
                     if (result is null)
                     {
                         if (!needsPlacement)
@@ -218,10 +246,10 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else
                         {
-                            result = OverlayMixture.Mix(
+                            result = mixer.Mix(
                                 FallBackImageGetter(targetWidth, targetHeight),
                                 effected,
-                                PluginManager.CreateComputer("OverlayComputer"),
+                                PluginManager.CreateComputer(computerId),
                                 targetPPB,
                                 clipX,
                                 clipY,
@@ -231,10 +259,10 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        result = OverlayMixture.Mix(
+                        result = mixer.Mix(
                             result,
                             effected,
-                            PluginManager.CreateComputer("OverlayComputer"),
+                            PluginManager.CreateComputer(computerId),
                             targetPPB,
                             clipX,
                             clipY,
@@ -256,8 +284,8 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = OverlayMixture
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
+                result = ClassicOverlayMixture.Default
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 if (PictureProcesser.SaveDiagResult)
                 {
@@ -279,6 +307,9 @@ namespace projectFrameCut.Render.Rendering
             StartX = 0,
             StartY = 0
         };
+
+        private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
+            => clip.ContainsFrame(targetFrame);
 
         private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
         {
@@ -475,7 +506,7 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
             }
 
-            Effects = effectInstances;
+            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
         }
     }
 }

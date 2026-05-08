@@ -39,6 +39,15 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Converters;
+using projectFrameCut.ApplicationPluginBase.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
+using System.Collections.Concurrent;
+
+
+
 
 
 #if WINDOWS
@@ -56,22 +65,22 @@ namespace projectFrameCut.DraftStuff
     public class ClipInfoBuilder
     {
         #region id const
-        private const string InternalPlaceID = "__Internal_Place__";
-        private const string InternalResizeID = "__Internal_Resize__";
         private const string InternalRotationID = "__Internal_Rotation__";
         private const string InternalCropID = "__Internal_Crop__";
         private static readonly Guid InternalCropBundleGuid = new("a3a744cc-53b7-4d5e-8dd5-4c66077d9401");
+        private static readonly Guid InternalColorAdjustmentBundleGuid = new("dc3cfef8-1782-4428-8862-f9a0995c02d9");
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
-        private const string LegacyPlaceResizeSettingKey = "Edit_UseLegacyPlaceResizeEffects";
         #endregion
 
         #region init
         DraftPage page;
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+
+        bool showAllEffect = false;
 
         /// <summary>
         /// Gets the default color hex string based on clip type.
@@ -87,339 +96,6 @@ namespace projectFrameCut.DraftStuff
                 projectFrameCut.Shared.ClipMode.SolidColorClip => Colors.OrangeRed.ToArgbHex(),
                 _ => Colors.Gray.ToArgbHex(),
             };
-        }
-
-        private static int ReadIntExtraData(Dictionary<string, object>? data, string key, int fallback)
-        {
-            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
-            {
-                if (raw is int i) return Math.Max(1, i);
-                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
-                if (raw is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
-                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
-                }
-
-                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
-            }
-
-            return Math.Max(1, fallback);
-        }
-
-        private static int ReadIntValue(object? raw, int fallback)
-        {
-            if (raw is null)
-            {
-                return fallback;
-            }
-
-            if (raw is int i)
-            {
-                return i;
-            }
-
-            if (raw is long l)
-            {
-                return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
-            }
-
-            if (raw is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var parsedNumber))
-                {
-                    return parsedNumber;
-                }
-
-                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedString))
-                {
-                    return parsedString;
-                }
-            }
-
-            return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
-        }
-
-        private static float ReadFloatValue(object? raw, float fallback)
-        {
-            if (raw is null)
-            {
-                return fallback;
-            }
-
-            if (raw is float f)
-            {
-                return f;
-            }
-
-            if (raw is double d)
-            {
-                return (float)d;
-            }
-
-            if (raw is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var parsedNumber))
-                {
-                    return parsedNumber;
-                }
-
-                if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedString))
-                {
-                    return parsedString;
-                }
-            }
-
-            return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
-        }
-
-        private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
-            => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
-
-        private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
-            => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
-
-        private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            return ReadDictionaryIntValue(effect.Parameters, key, fallback);
-        }
-
-        private static float ReadEffectFloatParameter(IEffect effect, string key, float fallback)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
-        }
-
-        private static bool TryGetCropSize(IEffect effect, out int width, out int height)
-        {
-            width = Math.Max(0, ReadEffectIntParameter(effect, "Width", 0));
-            height = Math.Max(0, ReadEffectIntParameter(effect, "Height", 0));
-            return width > 0 && height > 0;
-        }
-
-        private static bool IsCropEffect(IEffect effect)
-            => string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal);
-
-        private static bool TryFindInternalCropEffect(ClipElementUI clip, out IEffect effect)
-        {
-            effect = null!;
-            if (clip.Effects == null || clip.Effects.Count == 0)
-            {
-                return false;
-            }
-
-            if (clip.Effects.TryGetValue(InternalCropID, out var legacyCrop) && IsCropEffect(legacyCrop))
-            {
-                effect = legacyCrop;
-                return true;
-            }
-
-            var fromBundle = clip.Effects.Values.FirstOrDefault(e =>
-                IsCropEffect(e)
-                && string.Equals(e.BindedEffectGroupID, InternalCropBundleGuid.ToString(), StringComparison.Ordinal));
-            if (fromBundle != null)
-            {
-                effect = fromBundle;
-                return true;
-            }
-
-            var fromName = clip.Effects.Values.FirstOrDefault(e =>
-                IsCropEffect(e)
-                && string.Equals(e.Name, InternalCropID, StringComparison.Ordinal));
-            if (fromName != null)
-            {
-                effect = fromName;
-                return true;
-            }
-
-            return false;
-        }
-
-        private static EffectImplementType ResolveConfiguredImplementType(IEffectFactory factory, EffectImplementType fallback)
-        {
-            var configured = EffectHelper.DefaultImplementsType.GetValueOrDefault(
-                $"{factory.FromPlugin}.{factory.TypeName}",
-                EffectImplementType.NotSpecified);
-
-            if (configured != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(configured))
-            {
-                return configured;
-            }
-
-            return fallback;
-        }
-
-        private bool ShouldUseLegacyPlaceResizeEffects()
-            => SettingsManager.IsBoolSettingTrue(LegacyPlaceResizeSettingKey);
-
-        private static bool HasExplicitTargetRect(ClipElementUI clip)
-            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
-
-        private static void ReadLegacyPlaceResizeFromEffects(ClipElementUI clip, int relativeWidth, int relativeHeight, ref int x, ref int y, ref int w, ref int h)
-        {
-            if (clip.Effects == null)
-            {
-                return;
-            }
-
-            if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_IPicture p)
-            {
-                x = p.StartX;
-                y = p.StartY;
-                if (p.RelativeWidth > 0 && p.RelativeWidth != relativeWidth)
-                {
-                    x = (int)Math.Round(p.StartX * ((double)relativeWidth / p.RelativeWidth));
-                    y = (int)Math.Round(p.StartY * ((double)relativeHeight / p.RelativeHeight));
-                }
-            }
-
-            if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
-            {
-                w = r.Width;
-                h = r.Height;
-                if (r.RelativeWidth > 0 && r.RelativeWidth != relativeWidth)
-                {
-                    w = (int)Math.Round(r.Width * ((double)relativeWidth / r.RelativeWidth));
-                    h = (int)Math.Round(r.Height * ((double)relativeHeight / r.RelativeHeight));
-                }
-            }
-        }
-
-        private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
-        {
-            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
-            {
-                return changed;
-            }
-
-            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
-            {
-                return parsed;
-            }
-
-            return fallback;
-        }
-
-        private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)
-        {
-            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
-            {
-                if (raw is bool b)
-                {
-                    return b;
-                }
-
-                if (raw is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.True) return true;
-                    if (je.ValueKind == JsonValueKind.False) return false;
-                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsedFromJe)) return parsedFromJe;
-                }
-
-                if (bool.TryParse(raw.ToString(), out var parsed))
-                {
-                    return parsed;
-                }
-            }
-
-            return fallback;
-        }
-
-        private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
-        {
-            var fromExtraData = ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
-            if (clip.ExtraData != null && clip.ExtraData.ContainsKey(AllowFreeScaleResizeKey))
-            {
-                return fromExtraData;
-            }
-
-            if (clip.Effects != null
-                && clip.Effects.TryGetValue(InternalResizeID, out var effect)
-                && effect is ResizeEffect_ImageSharp resize)
-            {
-                return !resize.PreserveAspectRatio;
-            }
-
-            return false;
-        }
-
-        private bool TryGetSourceAspectRatio(ClipElementUI clip, out double aspect)
-        {
-            aspect = 0;
-
-            if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
-            {
-                return false;
-            }
-
-            if (TryFindInternalCropEffect(clip, out var cropEffect))
-            {
-                if (TryGetCropSize(cropEffect, out var cropW, out var cropH))
-                {
-                    aspect = (double)cropW / cropH;
-                    return aspect > 0;
-                }
-                return false; // If there's a crop effect, we can't reliably get the source aspect ratio, so return false to let the caller handle it.
-            }
-
-            AssetItem? asset = null;
-
-            if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
-            {
-                var assetId = clip.SourcePath.Substring(1);
-                if (page.Assets.TryGetValue(assetId, out var byPathAsset))
-                {
-                    asset = byPathAsset;
-                }
-            }
-
-            if (asset == null && page.Assets.TryGetValue(clip.Id, out var byClipAsset))
-            {
-                asset = byClipAsset;
-            }
-
-            if (asset != null && asset.Width > 0 && asset.Height > 0)
-            {
-                aspect = (double)asset.Width / asset.Height;
-                return aspect > 0;
-            }
-            else if (File.Exists(clip.SourcePath))
-            {
-                if (clip.ClipType == ClipMode.PhotoClip)
-                {
-                    try
-                    {
-                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
-                        aspect = (double)img.Width / img.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-                if (clip.ClipType == ClipMode.VideoClip)
-                {
-                    try
-                    {
-                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
-                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-            }
-
-            return false;
-        }
-
-        private static void RemoveLegacyPlaceResizeEffects(ClipElementUI clip)
-        {
-            if (clip.Effects == null)
-            {
-                return;
-            }
-
-            clip.Effects.Remove(InternalPlaceID);
-            clip.Effects.Remove(InternalResizeID);
         }
 
 
@@ -462,6 +138,7 @@ namespace projectFrameCut.DraftStuff
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
                     Content = BuildSizeAndPositionTab(clip, handler)
                 });
+
             }
             if (clip.ClipType != ClipMode.MarkingClip)
             {
@@ -470,12 +147,17 @@ namespace projectFrameCut.DraftStuff
                     Header = PPLocalizedResources.Tabs_Effect,
                     Content = await BuildEffectTab(clip, handler)
                 });
-                if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_Mixture,
+                    Content = BuildMixtureTab(clip, handler)
+                });
+                if (clip.ClipType != ClipMode.AudioClip)
                 {
                     t.TabItems.Add(new TabbedViewItem
                     {
-                        Header = PPLocalizedResources.Tabs_Effect_Classic,
-                        Content = BuildClassicEffectTab(clip, handler)
+                        Header = PPLocalizedResources.Tabs_ColorAdjust,
+                        Content = BuildColorAdjustmentTab(clip, handler)
                     });
                 }
                 if (!clip.isInfiniteLength)
@@ -486,6 +168,16 @@ namespace projectFrameCut.DraftStuff
                         Content = BuildSpeedAndRatioTab(clip, handler)
                     });
                 }
+                if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
+                {
+                    t.TabItems.Add(new TabbedViewItem
+                    {
+                        Header = PPLocalizedResources.Tabs_Effect_Classic,
+                        Content = BuildClassicEffectTab(clip, handler)
+                    });
+                }
+
+
             }
 
             return t;
@@ -498,7 +190,17 @@ namespace projectFrameCut.DraftStuff
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+            IClip? TargetInstance = null;
+            VideoClip? TargetVideoClip = null;
+            try
+            {
+                TargetInstance = DraftImportAndExportHelper.JSONToIClips(new DraftStructureJSON { Clips = [DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip)] }, true, 8).FirstOrDefault();
+                TargetVideoClip = TargetInstance as VideoClip;
+            }
+            catch
+            {
 
+            }
             string ToArgbHex(Color color)
             {
                 var a = (int)Math.Round(color.Alpha * 255);
@@ -561,6 +263,39 @@ namespace projectFrameCut.DraftStuff
                 clip.ExtraData["A"] = (float)Math.Clamp(color.Alpha, 0f, 1f);
             }
 
+            object? GetVideoDecoderRawValue()
+            {
+                if (clip.ExtraData == null)
+                {
+                    return null;
+                }
+
+                if (clip.ExtraData.TryGetValue("TargetDecoder", out var value))
+                {
+                    return value;
+                }
+
+                return clip.ExtraData.TryGetValue("targetdecoder", out var lowerValue)
+                    ? lowerValue
+                    : null;
+            }
+
+            string ReadVideoDecoderId()
+            {
+                var raw = GetVideoDecoderRawValue();
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.String)
+                    {
+                        return je.GetString() ?? "auto";
+                    }
+
+                    return je.ToString();
+                }
+
+                return raw?.ToString() ?? "auto";
+            }
+
             string currentSolidColorHex = clip.ClipType == ClipMode.SolidColorClip
                 ? ToArgbHex(ResolveSolidColorFromExtraData())
                 : "#FFFFFFFF";
@@ -568,23 +303,14 @@ namespace projectFrameCut.DraftStuff
             int valX = 0, valY = 0;
             int valW = page.ProjectInfo.RelativeWidth;
             int valH = page.ProjectInfo.RelativeHeight;
-            bool useLegacyPlaceResize = ShouldUseLegacyPlaceResizeEffects();
-
-            if (!useLegacyPlaceResize && HasExplicitTargetRect(clip))
-            {
-                valX = clip.TargetX;
-                valY = clip.TargetY;
-                if (clip.TargetWidth > 0) valW = clip.TargetWidth;
-                if (clip.TargetHeight > 0) valH = clip.TargetHeight;
-            }
-            else
-            {
-                ReadLegacyPlaceResizeFromEffects(clip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, ref valX, ref valY, ref valW, ref valH);
-            }
+            valX = clip.TargetX;
+            valY = clip.TargetY;
+            if (clip.TargetWidth > 0) valW = clip.TargetWidth;
+            if (clip.TargetHeight > 0) valH = clip.TargetHeight;
 
             if (clip.ClipType == ClipMode.SolidColorClip)
             {
-                if (!useLegacyPlaceResize && clip.TargetWidth > 0)
+                if (clip.TargetWidth > 0)
                 {
                     valW = clip.TargetWidth;
                 }
@@ -593,7 +319,7 @@ namespace projectFrameCut.DraftStuff
                     valW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, valW);
                 }
 
-                if (!useLegacyPlaceResize && clip.TargetHeight > 0)
+                if (clip.TargetHeight > 0)
                 {
                     valH = clip.TargetHeight;
                 }
@@ -602,6 +328,41 @@ namespace projectFrameCut.DraftStuff
                     valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
                 }
             }
+
+            string currentVideoDecoderId = ReadVideoDecoderId();
+            if (string.IsNullOrWhiteSpace(currentVideoDecoderId))
+            {
+                currentVideoDecoderId = "auto";
+            }
+
+            var videoDecoderOptionLabelToId = new Dictionary<string, string>
+            {
+                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
+            };
+            var allVideoDecoderOptionLabelToId = new Dictionary<string, string>
+            {
+                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_http] = "HttpDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_rpsv] = "RawPictureSequenceStreamVideoDecoderContext",
+                [PPLocalizedResources.General_VideoCodec_TargetMode_ffmpegDevices] = "FFmpegDeviceDecoderContext",
+            };
+
+            if (!videoDecoderOptionLabelToId.Values.Contains(currentVideoDecoderId, StringComparer.Ordinal))
+            {
+                videoDecoderOptionLabelToId[PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(currentVideoDecoderId)] = currentVideoDecoderId;
+            }
+
+            string selectedVideoDecoderLabel = videoDecoderOptionLabelToId
+                .FirstOrDefault(kv => string.Equals(kv.Value, currentVideoDecoderId, StringComparison.Ordinal)).Key
+                ?? PPLocalizedResources.General_VideoCodec_TargetMode_Auto;
 
             var ppb = new PropertyPanelBuilder()
             .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
@@ -795,11 +556,33 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
             .AppendWhen(clip.ClipType == ClipMode.AudioClip,
-            (c) => 
+            (c) =>
                 c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
                  .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1))
+            .AppendWhen(clip.ClipType == ClipMode.VideoClip,
+            (c) =>
+                c.AddText(new SingleLineLabel(PPLocalizedResources.General_VideoCodec, 20))
+                 .AppendWhen(!(TargetInstance?.FilePath?.StartsWith("#") ?? false),
+                     cc => cc.AddPicker(
+                             "videoTargetDecoderMode",
+                             PPLocalizedResources.General_VideoCodec_TargetMode,
+                             videoDecoderOptionLabelToId.Keys.ToArray(),
+                             selectedVideoDecoderLabel)
+                             .AppendWhen((TargetVideoClip is not null && TargetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext)),
+                                cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, TargetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
+                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup(TargetVideoClip?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(TargetVideoClip?.DecoderName ?? "Unknown")) }))
+                 .AppendWhen(
+                    clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath),
+                        pp => pp.AppendWhen(clip.SourcePath.StartsWith("$"),
+                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label
+                            {
+                                Text = AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset) ? $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})" : $"Unknown asset: {clip.SourcePath.Substring(1)}"
+                            }),
+                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = System.IO.Path.GetFullPath(clip.SourcePath) })),
+                    pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
+                )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)));
+                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))));
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -825,144 +608,66 @@ namespace projectFrameCut.DraftStuff
                     handler?.Invoke(s, e);
                     return;
                 }
+                if (e.Id == "videoTargetDecoderMode" && clip.ClipType == ClipMode.VideoClip)
+                {
+                    var selectedLabel = e.Value?.ToString() ?? string.Empty;
+                    if (!videoDecoderOptionLabelToId.TryGetValue(selectedLabel, out var selectedDecoderId))
+                    {
+                        selectedDecoderId = currentVideoDecoderId;
+                    }
+
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["TargetDecoder"] = selectedDecoderId;
+                    currentVideoDecoderId = selectedDecoderId;
+
+                    handler?.Invoke(s, e);
+                    return;
+                }
+                if (e.Id == "hdrBrightnessOffset" && clip.ClipType == ClipMode.VideoClip)
+                {
+                    var offset = Convert.ToDouble(e?.Value ?? 1d);
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["HDRBrightnessOffset"] = offset;
+                    handler?.Invoke(s, e);
+                    return;
+                }
                 if (e.Id.StartsWith("place") || e.Id.StartsWith("resize"))
                 {
                     clip.Effects ??= new Dictionary<string, IEffect>();
 
-                    if (!ShouldUseLegacyPlaceResizeEffects())
-                    {
-                        if (e.Id.StartsWith("place"))
-                        {
-                            int currentX = ResolvePanelInt(ppb, e.Id, e.Value, "placeX", clip.TargetX);
-                            int currentY = ResolvePanelInt(ppb, e.Id, e.Value, "placeY", clip.TargetY);
-                            clip.TargetX = currentX;
-                            clip.TargetY = currentY;
-                            RemoveLegacyPlaceResizeEffects(clip);
-                            handler?.Invoke(s, e);
-                            return;
-                        }
-
-                        if (e.Id.StartsWith("resize"))
-                        {
-                            if (clip.ClipType == ClipMode.SolidColorClip)
-                            {
-                                int solidCurrentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth));
-                                int solidCurrentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight));
-
-                                clip.TargetWidth = Math.Max(1, solidCurrentW);
-                                clip.TargetHeight = Math.Max(1, solidCurrentH);
-                                clip.ExtraData ??= new Dictionary<string, object>();
-                                clip.ExtraData[SolidColorOutputWidthKey] = clip.TargetWidth;
-                                clip.ExtraData[SolidColorOutputHeightKey] = clip.TargetHeight;
-                                clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
-                                RemoveLegacyPlaceResizeEffects(clip);
-                                handler?.Invoke(s, e);
-                                return;
-                            }
-
-                            int currentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
-                            int currentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
-                            clip.TargetWidth = Math.Max(1, currentW);
-                            clip.TargetHeight = Math.Max(1, currentH);
-                            RemoveLegacyPlaceResizeEffects(clip);
-                            handler?.Invoke(s, e);
-                            return;
-                        }
-                    }
-
                     if (e.Id.StartsWith("place"))
                     {
-                        // Get current values (normalized to current project resolution) from UI or Effect
-                        int currentX = 0, currentY = 0;
-
-                        PlaceEffect_IPicture? existingP = null;
-                        if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_IPicture pe)
-                        {
-                            existingP = pe;
-                            currentX = pe.StartX;
-                            currentY = pe.StartY;
-                            if (pe.RelativeWidth > 0 && pe.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                            {
-                                currentX = (int)(pe.StartX * ((double)page.ProjectInfo.RelativeWidth / pe.RelativeWidth));
-                                currentY = (int)(pe.StartY * ((double)page.ProjectInfo.RelativeHeight / pe.RelativeHeight));
-                            }
-                        }
-
-                        if (e.Id == "placeX" && int.TryParse(e.Value?.ToString(), out var vx)) currentX = vx;
-                        else if (ppb.Properties.TryGetValue("placeX", out var uiX) && int.TryParse(uiX.ToString(), out var uiXInt)) currentX = uiXInt;
-
-                        if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
-                        else if (ppb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
-
-                        var newP = new PlaceEffect_IPicture
-                        {
-                            StartX = currentX,
-                            StartY = currentY,
-                            RelativeWidth = page.ProjectInfo.RelativeWidth,
-                            RelativeHeight = page.ProjectInfo.RelativeHeight,
-                            Enabled = existingP?.Enabled ?? true,
-                            Name = existingP?.Name ?? InternalPlaceID,
-                            Index = existingP?.Index ?? (int.MaxValue - 100)
-                        };
-                        clip.Effects[InternalPlaceID] = newP;
+                        int currentX = ResolvePanelInt(ppb, e.Id, e.Value, "placeX", clip.TargetX);
+                        int currentY = ResolvePanelInt(ppb, e.Id, e.Value, "placeY", clip.TargetY);
+                        clip.TargetX = currentX;
+                        clip.TargetY = currentY;
+                        handler?.Invoke(s, e);
+                        return;
                     }
-                    else if (e.Id.StartsWith("resize"))
+
+                    if (e.Id.StartsWith("resize"))
                     {
                         if (clip.ClipType == ClipMode.SolidColorClip)
                         {
+                            int solidCurrentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth));
+                            int solidCurrentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight));
+
+                            clip.TargetWidth = Math.Max(1, solidCurrentW);
+                            clip.TargetHeight = Math.Max(1, solidCurrentH);
                             clip.ExtraData ??= new Dictionary<string, object>();
-
-                            int solidCurrentW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth);
-                            int solidCurrentH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight);
-
-                            if (e.Id == "resizeW" && int.TryParse(e.Value?.ToString(), out var sw)) solidCurrentW = sw;
-                            else if (ppb.Properties.TryGetValue("resizeW", out var uiW) && int.TryParse(uiW.ToString(), out var uiWInt)) solidCurrentW = uiWInt;
-
-                            if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var sh)) solidCurrentH = sh;
-                            else if (ppb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) solidCurrentH = uiHInt;
-
-                            clip.ExtraData[SolidColorOutputWidthKey] = Math.Max(1, solidCurrentW);
-                            clip.ExtraData[SolidColorOutputHeightKey] = Math.Max(1, solidCurrentH);
+                            clip.ExtraData[SolidColorOutputWidthKey] = clip.TargetWidth;
+                            clip.ExtraData[SolidColorOutputHeightKey] = clip.TargetHeight;
                             clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
-                            clip.Effects.Remove(InternalResizeID);
-
                             handler?.Invoke(s, e);
                             return;
                         }
 
-                        int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
-                        ResizeEffect_ImageSharp? existingR = null;
-
-                        if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
-                        {
-                            existingR = re;
-                            currentW = re.Width;
-                            currentH = re.Height;
-                            if (re.RelativeWidth > 0 && re.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                            {
-                                currentW = (int)(re.Width * ((double)page.ProjectInfo.RelativeWidth / re.RelativeWidth));
-                                currentH = (int)(re.Height * ((double)page.ProjectInfo.RelativeHeight / re.RelativeHeight));
-                            }
-                        }
-
-                        if (e.Id == "resizeW" && int.TryParse(e.Value?.ToString(), out var vw)) currentW = vw;
-                        else if (ppb.Properties.TryGetValue("resizeW", out var uiW) && int.TryParse(uiW.ToString(), out var uiWInt)) currentW = uiWInt;
-
-                        if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var vh)) currentH = vh;
-                        else if (ppb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) currentH = uiHInt;
-
-                        var newR = new ResizeEffect_ImageSharp
-                        {
-                            Width = currentW,
-                            Height = currentH,
-                            RelativeWidth = page.ProjectInfo.RelativeWidth,
-                            RelativeHeight = page.ProjectInfo.RelativeHeight,
-                            Enabled = existingR?.Enabled ?? true,
-                            Name = existingR?.Name ?? InternalResizeID,
-                            Index = existingR?.Index ?? (int.MinValue + 50),
-                            PreserveAspectRatio = existingR?.PreserveAspectRatio ?? false
-                        };
-                        clip.Effects[InternalResizeID] = newR;
+                        int currentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                        int currentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+                        clip.TargetWidth = Math.Max(1, currentW);
+                        clip.TargetHeight = Math.Max(1, currentH);
+                        handler?.Invoke(s, e);
+                        return;
                     }
 
                     handler?.Invoke(s, e);
@@ -1016,16 +721,16 @@ namespace projectFrameCut.DraftStuff
                             }
                             break;
                         }
-                    case "speedRatio":
-                        {
-                            if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
-                            {
-                                if (ratio != 0f)
-                                    clip.SecondPerFrameRatio = (float)ratio;
-                            }
+                    //case "speedRatio":
+                    //    {
+                    //        if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
+                    //        {
+                    //            if (ratio != 0f)
+                    //                clip.SecondPerFrameRatio = (float)ratio;
+                    //        }
 
-                            break;
-                        }
+                    //        break;
+                    //    }
                     default:
                         {
 
@@ -1050,20 +755,11 @@ namespace projectFrameCut.DraftStuff
             int valW = page.ProjectInfo.RelativeWidth;
             int valH = page.ProjectInfo.RelativeHeight;
             double rotationDeg = 0;
-            bool useLegacyPlaceResize = ShouldUseLegacyPlaceResizeEffects();
             bool allowFreeScaleResize = IsAllowFreeScaleResizeEnabled(clip);
-
-            if (!useLegacyPlaceResize && HasExplicitTargetRect(clip))
-            {
-                valX = clip.TargetX;
-                valY = clip.TargetY;
-                if (clip.TargetWidth > 0) valW = clip.TargetWidth;
-                if (clip.TargetHeight > 0) valH = clip.TargetHeight;
-            }
-            else
-            {
-                ReadLegacyPlaceResizeFromEffects(clip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, ref valX, ref valY, ref valW, ref valH);
-            }
+            valX = clip.TargetX;
+            valY = clip.TargetY;
+            if (clip.TargetWidth > 0) valW = clip.TargetWidth;
+            if (clip.TargetHeight > 0) valH = clip.TargetHeight;
 
             if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_ImageSharp rot)
             {
@@ -1146,7 +842,7 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                 .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
                 .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
-                .AddCheckbox("allowFreeScaleResize", "任意比例缩放", allowFreeScaleResize)
+                .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                 .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
                 .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
@@ -1208,31 +904,8 @@ namespace projectFrameCut.DraftStuff
                 width = Math.Max(1, width);
                 height = Math.Max(1, height);
 
-                if (!ShouldUseLegacyPlaceResizeEffects())
-                {
-                    clip.TargetWidth = width;
-                    clip.TargetHeight = height;
-                    RemoveLegacyPlaceResizeEffects(clip);
-                    return;
-                }
-
-                ResizeEffect_ImageSharp? existingR = null;
-                if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
-                {
-                    existingR = re;
-                }
-
-                clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
-                {
-                    Width = width,
-                    Height = height,
-                    RelativeWidth = page.ProjectInfo.RelativeWidth,
-                    RelativeHeight = page.ProjectInfo.RelativeHeight,
-                    Enabled = existingR?.Enabled ?? true,
-                    Name = existingR?.Name ?? InternalResizeID,
-                    Index = existingR?.Index ?? (int.MinValue + 50),
-                    PreserveAspectRatio = existingR?.PreserveAspectRatio ?? !IsAllowFreeScaleResizeEnabled(clip)
-                };
+                clip.TargetWidth = width;
+                clip.TargetHeight = height;
             }
 
             void SyncOutputSizeFromCropIfNeeded(IEffect crop)
@@ -1257,7 +930,7 @@ namespace projectFrameCut.DraftStuff
 
             void SnapSizeBackToSourceAspectIfNeeded()
             {
-                if (!TryGetSourceAspectRatio(clip, out var sourceAspect) || sourceAspect <= 0)
+                if (!TryGetSourceAspectRatio(clip, [page.Assets, AssetDatabase.Assets], out var sourceAspect) || sourceAspect <= 0)
                 {
                     return;
                 }
@@ -1299,22 +972,6 @@ namespace projectFrameCut.DraftStuff
                     clip.ExtraData ??= new Dictionary<string, object>();
                     clip.ExtraData[AllowFreeScaleResizeKey] = allowFreeScale;
 
-                    if (clip.Effects.TryGetValue(InternalResizeID, out var resizeEff) && resizeEff is ResizeEffect_ImageSharp existingResize)
-                    {
-                        clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
-                        {
-                            Width = existingResize.Width,
-                            Height = existingResize.Height,
-                            RelativeWidth = existingResize.RelativeWidth,
-                            RelativeHeight = existingResize.RelativeHeight,
-                            Enabled = existingResize.Enabled,
-                            Name = existingResize.Name,
-                            Index = existingResize.Index,
-                            PreserveAspectRatio = !allowFreeScale,
-                            Id = existingResize.Id
-                        };
-                    }
-
                     if (!allowFreeScale)
                     {
                         SnapSizeBackToSourceAspectIfNeeded();
@@ -1326,46 +983,8 @@ namespace projectFrameCut.DraftStuff
 
                 if (e.Id.StartsWith("place"))
                 {
-                    if (!ShouldUseLegacyPlaceResizeEffects())
-                    {
-                        clip.TargetX = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeX", clip.TargetX);
-                        clip.TargetY = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeY", clip.TargetY);
-                        RemoveLegacyPlaceResizeEffects(clip);
-                        handler?.Invoke(s, e);
-                        return;
-                    }
-
-                    int currentX = 0, currentY = 0;
-
-                    PlaceEffect_IPicture? existingP = null;
-                    if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_IPicture pe)
-                    {
-                        existingP = pe;
-                        currentX = pe.StartX;
-                        currentY = pe.StartY;
-                        if (pe.RelativeWidth > 0 && pe.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                        {
-                            currentX = (int)Math.Round(pe.StartX * ((double)page.ProjectInfo.RelativeWidth / pe.RelativeWidth));
-                            currentY = (int)Math.Round(pe.StartY * ((double)page.ProjectInfo.RelativeHeight / pe.RelativeHeight));
-                        }
-                    }
-
-                    if (e.Id == "placeX" && int.TryParse(e.Value?.ToString(), out var vx)) currentX = vx;
-                    else if (transformPpb.Properties.TryGetValue("placeX", out var uiX) && int.TryParse(uiX.ToString(), out var uiXInt)) currentX = uiXInt;
-
-                    if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
-                    else if (transformPpb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
-
-                    clip.Effects[InternalPlaceID] = new PlaceEffect_IPicture
-                    {
-                        StartX = currentX,
-                        StartY = currentY,
-                        RelativeWidth = page.ProjectInfo.RelativeWidth,
-                        RelativeHeight = page.ProjectInfo.RelativeHeight,
-                        Enabled = existingP?.Enabled ?? true,
-                        Name = existingP?.Name ?? InternalPlaceID,
-                        Index = existingP?.Index ?? (int.MaxValue - 100)
-                    };
+                    clip.TargetX = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeX", clip.TargetX);
+                    clip.TargetY = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeY", clip.TargetY);
 
                     handler?.Invoke(s, e);
                     return;
@@ -1373,49 +992,10 @@ namespace projectFrameCut.DraftStuff
 
                 if (e.Id.StartsWith("resize"))
                 {
-                    if (!ShouldUseLegacyPlaceResizeEffects())
-                    {
-                        int w = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
-                        int h = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
-                        clip.TargetWidth = Math.Max(1, w);
-                        clip.TargetHeight = Math.Max(1, h);
-                        RemoveLegacyPlaceResizeEffects(clip);
-                        handler?.Invoke(s, e);
-                        return;
-                    }
-
-                    int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
-                    ResizeEffect_ImageSharp? existingR = null;
-
-                    if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
-                    {
-                        existingR = re;
-                        currentW = re.Width;
-                        currentH = re.Height;
-                        if (re.RelativeWidth > 0 && re.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                        {
-                            currentW = (int)Math.Round(re.Width * ((double)page.ProjectInfo.RelativeWidth / re.RelativeWidth));
-                            currentH = (int)Math.Round(re.Height * ((double)page.ProjectInfo.RelativeHeight / re.RelativeHeight));
-                        }
-                    }
-
-                    if (e.Id == "resizeW" && int.TryParse(e.Value?.ToString(), out var vw)) currentW = vw;
-                    else if (transformPpb.Properties.TryGetValue("resizeW", out var uiW) && int.TryParse(uiW.ToString(), out var uiWInt)) currentW = uiWInt;
-
-                    if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var vh)) currentH = vh;
-                    else if (transformPpb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) currentH = uiHInt;
-
-                    clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
-                    {
-                        Width = currentW,
-                        Height = currentH,
-                        RelativeWidth = page.ProjectInfo.RelativeWidth,
-                        RelativeHeight = page.ProjectInfo.RelativeHeight,
-                        Enabled = existingR?.Enabled ?? true,
-                        Name = existingR?.Name ?? InternalResizeID,
-                        Index = existingR?.Index ?? (int.MinValue + 50),
-                        PreserveAspectRatio = existingR?.PreserveAspectRatio ?? !IsAllowFreeScaleResizeEnabled(clip)
-                    };
+                    int w = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                    int h = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+                    clip.TargetWidth = Math.Max(1, w);
+                    clip.TargetHeight = Math.Max(1, h);
 
                     handler?.Invoke(s, e);
                     return;
@@ -2137,18 +1717,23 @@ namespace projectFrameCut.DraftStuff
                 Dictionary<string, TextClipEntry> t = new();
                 Setting.SettingPages.EditSettingPage.LoadTextTemplates(ref t);
                 var picked = await page.DisplayActionSheetAsync(PPLocalizedResources.TextOption_AddAEntry, null, null, t.Keys.ToArray());
-                entries.Add(t[picked] ?? new TextClipEntry
+                if (string.IsNullOrWhiteSpace(picked)) return;
+                if (!t.TryGetValue(picked, out var value))
                 {
-                    text = "",
-                    x = 0,
-                    y = 0,
-                    fontFamily = "Arial",
-                    fontSize = 24f,
-                    r = 65535,
-                    g = 65535,
-                    b = 65535,
-                    a = 1f
-                });
+                    value = new TextClipEntry
+                    {
+                        text = "",
+                        x = 0,
+                        y = 0,
+                        fontFamily = "Arial",
+                        fontSize = 24f,
+                        r = 65535,
+                        g = 65535,
+                        b = 65535,
+                        a = 1f
+                    };
+                }
+                entries.Add(value);
                 UpdateStoredEntries();
                 RebuildEntriesUI();
             };
@@ -2179,12 +1764,13 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
-            var newEffects = clip.Effects ?? new();
+            var newEffects = new Dictionary<string, IEffect>();
             int globalIndex = 0;
             var factories = EffectServices.GetAvailableEffectBundles();
             if (clip.EffectBundles != null)
             {
                 var sortedBundles = SortEffectBundles(clip.EffectBundles);
+                if (!sortedBundles.ListAny()) return;
                 for (int i = 0; i < sortedBundles.Count; i++)
                 {
                     var bundleData = sortedBundles[i];
@@ -2193,6 +1779,7 @@ namespace projectFrameCut.DraftStuff
                 var bundleDict = sortedBundles.ToDictionary(b => b.Id, b => b);
                 var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType));
                 var bundleFacts = sortedBundles
+                    .Where(c => c.Enabled)
                     .SelectMany(bundle => bundle.Create().Select(effectFactory => (bundleId: bundle.Id, effectFactory)))
                     .ToList();
                 var autoImps = EffectFactoryExtensions.DetermineEffectImplementTypes(bundleFacts.Select(c => c.effectFactory).ToArray());
@@ -2240,7 +1827,7 @@ namespace projectFrameCut.DraftStuff
             }
             clip.Effects = newEffects
                 .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectGroupID)
-                            || (clip.EffectBundles?.ContainsKey(new(e.Value.BindedEffectGroupID)) ?? false))
+                            || (clip.EffectBundles?.ContainsKey(Guid.TryParse(e.Value.BindedEffectGroupID, out var g) ? g : Guid.Empty) ?? false))
                 .ToDictionary();
         }
 
@@ -2337,6 +1924,32 @@ namespace projectFrameCut.DraftStuff
             return id != IEffectBundle.NoConnectionGUID && id != IEffectBundle.OutputAnchorGUID;
         }
 
+        /// <summary>
+        /// 将新添加的 EffectBundle 自动接入到输出链中：插在距离输出画面最近的同Target Bundle 与输出画面之间。
+        /// </summary>
+        private static void AutoConnectBundleToOutput(ClipElementUI clip, IEffectBundle newBundle)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+            var target = clip.GetEffectTarget();
+
+            var lastBundle = clip.EffectBundles.Values
+                .FirstOrDefault(b => b.BindedOutputId == IEffectBundle.OutputAnchorGUID
+                                  && b.Target == target
+                                  && b.Id != newBundle.Id);
+
+            if (lastBundle != null)
+            {
+                lastBundle.BindedOutputId = newBundle.Id;
+                newBundle.BindedInputId = lastBundle.Id;
+                newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            }
+            else
+            {
+                newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
+                newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            }
+        }
+
         public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             ArgumentNullException.ThrowIfNull(clip);
@@ -2364,10 +1977,10 @@ namespace projectFrameCut.DraftStuff
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
-
+            var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles)
+                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2402,8 +2015,8 @@ namespace projectFrameCut.DraftStuff
                         var bundlePpb = bundleInstance.CreateUI();
 
                         ppb.AddText(new TitleAndDescriptionLineLabel(bundleInstance.Name ?? bundleInstance.TypeName, bundleInstance.TypeName));
-                        ppb.AddCheckbox($"Effect|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
-                        ppb.AddEntry($"Effect|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
+                        ppb.AddCheckbox($"Bundle|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
+                        ppb.AddEntry($"Bundle|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
 
                         ppb.AddSeparator();
 
@@ -2418,7 +2031,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 selectedInAnchor = bundleInstance.BindedInputIds[0];
                             }
-                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", $"Input anchor {bundleInstance.InputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
+                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", string.IsNullOrWhiteSpace(bundleInstance.InputAnchorDisplayName) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(bundleInstance.InputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
                         }
                         else
                         {
@@ -2428,13 +2041,12 @@ namespace projectFrameCut.DraftStuff
                                 var currentId = (bundleInstance.BindedInputIds != null && idx >= 0 && idx < bundleInstance.BindedInputIds.Count)
                                     ? bundleInstance.BindedInputIds[idx]
                                     : IEffectBundle.NoConnectionGUID;
-                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", $"Input anchor {item}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(currentId));
+                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", string.IsNullOrWhiteSpace(item) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(item), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(currentId));
 
                             }
                         }
 
-                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", $"Output anchor {bundleInstance.OutputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.TypeName} ({b.Key})").Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
-
+                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.TypeName} ({b.Key})").Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
 
                         ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                         ppb.AddSeparator();
@@ -2456,7 +2068,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(page, bundlesFactories, ppb, handler));
+            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -2497,6 +2109,7 @@ namespace projectFrameCut.DraftStuff
             ppb.PropertyChanged += (s, e) =>
             {
                 ArgumentNullException.ThrowIfNull(clip);
+                clip.EffectBundles ??= new();
 
                 if (!ppb.Equals(s)) //from another
                 {
@@ -2546,7 +2159,7 @@ namespace projectFrameCut.DraftStuff
                                     {
                                         if (bool.TryParse(e.Value?.ToString(), out var enabled))
                                         {
-                                            enabledBundle.Enabled = enabled;
+                                            clip.EffectBundles[bundleId].Enabled = enabled;
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -2626,6 +2239,7 @@ namespace projectFrameCut.DraftStuff
                                 instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
                                 clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
                                 clip.EffectBundles[instance.Id] = instance;
+                                AutoConnectBundleToOutput(clip, instance);
 
                                 RebuildAllEffects(clip);
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -2634,23 +2248,27 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             };
+            ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"),
+                  p => p.AddSeparator()
+                        .AddButton("Show all", (s, e) =>
+                        {
+                            showAllEffect = true;
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        })
+                        .AddButton("Rebuild", async (s, e) =>
+                        {
+                            try
+                            {
+                                RebuildAllEffects(clip, true);
+                                await page.DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
 
-#if DEBUG
-            ppb.AddSeparator();
-            ppb.AddButton("Rebuild", async (s, e) =>
-            {
-                try
-                {
-                    RebuildAllEffects(clip, true);
-                    await page.DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
+                            }
+                        }));
 
-                }
-                catch (Exception ex)
-                {
-                    if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
-                }
-            });
-#endif
             var panel = ppb.BuildWithScrollView();
             return panel;
         }
@@ -2666,10 +2284,12 @@ namespace projectFrameCut.DraftStuff
         }
 
         public static View BuildAddEffectPanel(
+            EffectTarget target,
             Page page,
             Dictionary<string, Func<IEffectBundle>> bundlesFactories,
             PropertyPanelBuilder ppb,
-            EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
+            bool showSubfix = true)
         {
             if (bundlesFactories == null || bundlesFactories.Count == 0)
             {
@@ -2697,7 +2317,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserVisibleEffect).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target == target).Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -2716,7 +2336,7 @@ namespace projectFrameCut.DraftStuff
                     cards.Add(new EffectBundleCardItem
                     {
                         BundleTypeName = bundleTypeName,
-                        Title = EffectServices.GetLocalizedEffectBundleNames(Environment.NewLine).GetValueOrDefault(bundleTypeName, bundleTypeName),
+                        Title = EffectServices.GetLocalizedEffectBundleNames(Environment.NewLine, showSubfix).GetValueOrDefault(bundleTypeName, bundleTypeName),
                         Description = display?.Description ?? "",
                         Thumbnail = display?.Thumbnail,
                         VideoThumbnail = display?.VideoThumbnail,
@@ -2920,11 +2540,13 @@ namespace projectFrameCut.DraftStuff
                         }
                     }
                     ppb.AddSeparator();
-                    ppb.AddCustomChild("Implement type", new Label { Text = effect.ImplementType.ToString() });
+                    ppb.AddCustomChild("IEffect.TypeName", new Label { Text = effect.TypeName });
+                    ppb.AddCustomChild("IEffect.TypeOfEffect", new Label { Text = effect.TypeOfEffect.ToString() });
+                    ppb.AddCustomChild("IEffect.ImplementType", new Label { Text = effect.ImplementType.ToString() });
+                    ppb.AppendWhen(!string.IsNullOrWhiteSpace(effect.Id), c => c.AddCustomChild("IEffect.ID", new Label { Text = effect.Id }));
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
-                        ppb.AddCustomChild("ID", new Label { Text = be.Id });
                         switch (be.EffectRole)
                         {
                             case BindableArgumentEffectType.ValueProvider:
@@ -3110,7 +2732,7 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.Effects != null)
             {
-                foreach (var effectKvp in clip.Effects.Where(c => SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects") || c.Value.Name is null || !(c.Value.Name is not null && c.Value.Name.StartsWith("__Internal"))).OrderBy(c => c.Value.Index))
+                foreach (var effectKvp in clip.Effects.OrderBy(c => c.Value.Index))
                 {
                     orderContainer.Children.Add(BuildEffectOrderItem(effectKvp.Key, effectKvp.Value, clip, localizedEffectDisplayName, handler));
                 }
@@ -3224,24 +2846,406 @@ namespace projectFrameCut.DraftStuff
 
         #endregion
 
-        #region misc
+        #region color adjustment
+        private View BuildColorAdjustmentTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var colorAdjustBundleFactories = EffectServices.GetAvailableEffectBundles().Select(c => (c, c.Value())).Where(c => c.Item2.Target == EffectTarget.ColorAdjustment && c.Item2.TypeName != "ColorAdjustment").Select(C => C.c).ToDictionary(c => c.Key, c => c.Value);
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
+            ColorAdjustmentEffectBundle bundle = null!;
+            if (!clip.EffectBundles.TryGetValue(InternalColorAdjustmentBundleGuid, out var b) || b is not ColorAdjustmentEffectBundle cb)
+            {
+                bundle = new ColorAdjustmentEffectBundle() { Id = InternalColorAdjustmentBundleGuid };
+            }
+            else
+            {
+                bundle = cb;
+            }
+
+            var ppb = new PropertyPanelBuilder();
+            ppb.AddFromAnother(bundle.CreateUI(), bundle);
+            foreach (var item in clip.EffectBundles.Where(c => c.Value.Target == EffectTarget.ColorAdjustment && c.Value.Id != InternalColorAdjustmentBundleGuid))
+            {
+                var bundleId = item.Key;
+                var bundleInstance = item.Value;
+                var locedName = localizedBundleNames.TryGetValue(item.Value.Name, out var locName) ? locName : item.Value.TypeName;
+                ppb.AddSeparator();
+                ppb.AddText(new SingleLineLabel(locedName, 25));
+                ppb.AddCheckbox($"Effect|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
+                ppb.AddFromAnother(item.Value.CreateUI(), item.Value);
+                ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
+            }
+            ppb.AppendWhen(colorAdjustBundleFactories.Any(), c => c.AddSeparator());
+            foreach (var item in colorAdjustBundleFactories)
+            {
+                ppb.AddCustomChild(localizedBundleNames.TryGetValue(item.Key, out var value) ? value : item.Key, new Button
+                {
+                    Text = Localized.DraftPage_CenterMenuBar_AddClip,
+                    Command = new Command(
+                        () =>
+                        {
+                            PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, "AddBundle", item.Key);
+                        })
+                });
+            }
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        handler?.Invoke(s, e);
+                    }
+                    else
+                    {
+                        clip.EffectBundles[InternalColorAdjustmentBundleGuid] =
+                            new ColorAdjustmentEffectBundle()
+                            {
+                                Id = InternalColorAdjustmentBundleGuid,
+                                Parameters = senderBundle.HandlePropertyPanelChange(e)
+                            };
+
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id.StartsWith("Bundle|"))
+                {
+                    var parts = e.Id.Split('|');
+                    if (parts.Length >= 3)
+                    {
+                        Guid bundleId = new(parts[1]);
+                        string action = parts[2];
+                        if (!clip.EffectBundles?.ContainsKey(bundleId) ?? false) return;
+
+                        switch (action)
+                        {
+                            case "Remove":
+                                clip.EffectBundles?.Remove(bundleId);
+                                RebuildAllEffects(clip);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                break;
+                            case "Enabled":
+                                if (clip.EffectBundles.TryGetValue(bundleId, out var enabledBundle))
+                                {
+                                    if (bool.TryParse(e.Value?.ToString(), out var enabled))
+                                    {
+                                        enabledBundle.Enabled = enabled;
+                                        RebuildAllEffects(clip);
+                                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    if (e.Value is string bundleTypeName)
+                    {
+                        if (colorAdjustBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
+        }
+        #endregion
+
+        #region speed and ratio
 
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            PropertyPanelBuilder ppb = new();
-            ppb.AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1");
-            ppb.AddButton("applyButton", Localized._Apply);
-            ppb.ListenToChanges(e =>
-            {
-                if (e.Id == "speedRatio")
+            static bool IsSpeedVarianceBundle(IEffectBundle bundle) => bundle.TypeOfEffect == EffectType.SpeedVarianceProvider && bundle.Target == EffectTarget.SpeedVariance;
+
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
+
+            var speedBundleFactoryItems = allBundleFactories
+                .Where(kvp => kvp.Value().Target == EffectTarget.SpeedVariance)
+                .Select(kvp => new
                 {
-                    clip.SecondPerFrameRatio = float.TryParse(e.Value as string, out var result) ? result : 1;
-                    clip.ApplySpeedRatio();
+                    TypeName = kvp.Key,
+                    Factory = kvp.Value,
+                    DisplayName = localizedBundleNames.GetValueOrDefault(kvp.Key, kvp.Key)
+                })
+                .OrderBy(x => x.DisplayName, StringComparer.Ordinal)
+                .ToList();
+
+            var speedBundles = clip.EffectBundles
+                ?.Where(kvp => kvp.Value.Target == EffectTarget.SpeedVariance)
+                ?.Select(c => c.Value)
+                ?.ToList() ?? [];
+
+            var ppb = new PropertyPanelBuilder();
+
+            if (speedBundles.Count > 1)
+            {
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.SpeedAndRatio_ErrMultiplePvd,
+                    TextColor = Colors.Orange
+                });
+            }
+
+            if (speedBundles.Count == 0)
+            {
+                ppb.AddText(new SingleLineLabel(PPLocalizedResources.SpeedAndRatio_None, 20));
+            }
+            var bundle = speedBundles.FirstOrDefault();
+            if (bundle is not null)
+            {
+                var bundleId = bundle.Id;
+                string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
+
+                ppb.AddText(new SingleLineLabel(localizedName ?? bundle.Name, 25));
+
+                try
+                {
+                    var bundlePpb = bundle.CreateUI();
+                    ppb.AddFromAnother(bundlePpb, bundle);
                 }
-            });
-            var panel = ppb.BuildWithScrollView();
-            return panel;
+                catch (Exception ex)
+                {
+                    Log(ex, $"loading speed variance bundle {bundle.TypeName}", this);
+                    ppb.AddText(new Label
+                    {
+                        Text = $"Error loading bundle UI: {ex.Message}",
+                        TextColor = Colors.Yellow
+                    });
+                }
+
+                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                {
+                    clip.EffectBundles?.Remove(bundleId);
+                    RebuildAllEffects(clip);
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return;
+                });
+                ppb.AddSeparator();
+                var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
+                ppb.AddCustomChildWithID("durationHintLabel", new Label { Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "", FontSize = 12, TextColor = Colors.Gray });
+            }
+            else
+            {
+                ppb.AppendWhen(speedBundles.Count == 0 && speedBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, allBundleFactories, ppb, handler, false)));
+            }
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        clip.ApplySpeedRatio();
+                        if (ppb.Components.TryGetValue("durationHintLabel", out var la) && la is Label l)
+                        {
+                            var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
+                            l.Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "";
+                        }
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    int currentCount = clip.EffectBundles.Values.Count(IsSpeedVarianceBundle);
+                    if (currentCount >= 1)
+                    {
+                        page.Dispatcher.Dispatch(async () =>
+                        {
+                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one SpeedVarianceProvider.", Localized._OK);
+                        });
+                        return;
+                    }
+                    if (ppb.Properties.TryGetValue("NewBundleType", out var typeObj) && typeObj is string bundleTypeName)
+                    {
+                        if (allBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
         }
+
+        #endregion
+
+        #region mixture
+
+        private View BuildMixtureTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            static bool IsMixtureBundle(IEffectBundle bundle) => bundle.TypeOfEffect == EffectType.MixtureProvider && bundle.Target == EffectTarget.Mixture;
+
+            clip.Effects ??= new Dictionary<string, IEffect>();
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            var localizedBundleNames = EffectServices.GetLocalizedEffectBundleNames("", false);
+
+            var mixtureBundleFactoryItems = allBundleFactories
+                .Where(kvp => kvp.Value().Target == EffectTarget.Mixture)
+                .Select(kvp => new
+                {
+                    TypeName = kvp.Key,
+                    Factory = kvp.Value,
+                    DisplayName = localizedBundleNames.GetValueOrDefault(kvp.Key, kvp.Key)
+                })
+                .OrderBy(x => x.DisplayName, StringComparer.Ordinal)
+                .ToList();
+
+            var mixtureBundles = clip.EffectBundles
+                ?.Where(kvp => kvp.Value.Target == EffectTarget.Mixture)
+                ?.Select(c => c.Value)
+                ?.ToList() ?? [];
+
+            var ppb = new PropertyPanelBuilder();
+
+            if (mixtureBundles.Count > 1)
+            {
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.Mixture_ErrMultiplePvd,
+                    TextColor = Colors.Orange
+                });
+            }
+
+            if (mixtureBundles.Count == 0)
+            {
+                ppb.AddText(new SingleLineLabel(PPLocalizedResources.Mixture_None));
+            }
+
+            var bundle = mixtureBundles.FirstOrDefault();
+            if (bundle is not null)
+            {
+                var bundleId = bundle.Id;
+                string localizedName = localizedBundleNames.GetValueOrDefault(bundle.TypeName, bundle.TypeName);
+
+                ppb.AddText(new SingleLineLabel(localizedName ?? bundle.Name, 20));
+                ppb.AddText(new Label
+                {
+                    Text = PPLocalizedResources.Mixture_UnsupportWarn,
+                    TextColor = Colors.Yellow
+                });
+                try
+                {
+                    var bundlePpb = bundle.CreateUI();
+                    ppb.AddFromAnother(bundlePpb, bundle);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"loading mixture bundle {bundle.TypeName}", this);
+                    ppb.AddText(new Label
+                    {
+                        Text = $"Error loading bundle UI: {ex.Message}",
+                        TextColor = Colors.Yellow
+                    });
+                }
+
+                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                {
+                    clip.EffectBundles?.Remove(bundleId);
+                    RebuildAllEffects(clip);
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return;
+                });
+                ppb.AddSeparator();
+            }
+            else
+            {
+                ppb.AppendWhen(mixtureBundleFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.Mixture, page, allBundleFactories, ppb, handler, false)));
+            }
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (s is IEffectBundle senderBundle)
+                {
+                    if (clip.EffectBundles.TryGetValue(senderBundle.Id, out var editingBundle))
+                    {
+                        var updated = senderBundle.HandlePropertyPanelChange(e);
+                        editingBundle.Parameters = updated;
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(s, e);
+                    }
+                    return;
+                }
+                else if (e.Id == "AddBundle")
+                {
+                    int currentCount = clip.EffectBundles.Values.Count(IsMixtureBundle);
+                    if (currentCount >= 1)
+                    {
+                        page.Dispatcher.Dispatch(async () =>
+                        {
+                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one Mixture.", Localized._OK);
+                        });
+                        return;
+                    }
+                    if (ppb.Properties.TryGetValue("NewBundleType", out var typeObj) && typeObj is string bundleTypeName)
+                    {
+                        if (allBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
+
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        }
+                    }
+                }
+
+                handler?.Invoke(s, e);
+            };
+
+            return ppb.BuildWithScrollView();
+        }
+
+        #endregion
+
+        #region timing
 
         private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -3369,12 +3373,41 @@ namespace projectFrameCut.DraftStuff
                         Placeholder = "42"
                     };
 
+                    var add1sButton = new Button
+                    {
+                        Text = "+1s",
+                        Command = new Command(() =>
+                        {
+                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) + (1 / page.SecondsPerFrame)).ToString());
+                        })
+                    };
+                    var minus1sButton = new Button
+                    {
+                        Text = "-1s",
+                        Command = new Command(() =>
+                        {
+                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) - (1 / page.SecondsPerFrame)).ToString());
+                        })
+                    };
+
+                    var smallAddLine = new HorizontalStackLayout
+                    {
+                        Children =
+                        {
+                            minus1sButton,
+                            add1sButton,
+                        },
+                        HorizontalOptions = LayoutOptions.End,
+                        Spacing = 8
+                    };
+
                     // 实时秒数提示
                     var secHintLabel = new Label
                     {
                         Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
                         FontSize = 11,
-                        TextColor = Color.FromArgb("#AAAAAA")
+                        TextColor = Color.FromArgb("#AAAAAA"),
+                        HorizontalOptions = LayoutOptions.Start
                     };
                     lengthEntry.TextChanged += (s, e) =>
                     {
@@ -3402,7 +3435,7 @@ namespace projectFrameCut.DraftStuff
                     };
 
                     stack.Children.Add(lengthEntry);
-                    stack.Children.Add(secHintLabel);
+                    stack.Children.Add(new Grid { Children = { secHintLabel, smallAddLine } });
                     stack.Children.Add(applyBtn);
                 }
                 if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
@@ -3476,8 +3509,302 @@ namespace projectFrameCut.DraftStuff
 
             return new ScrollView { Content = stack };
         }
+        #endregion
 
+        #region misc
+        private static int ReadIntExtraData(Dictionary<string, object>? data, string key, int fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i) return Math.Max(1, i);
+                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
+                }
 
+                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
+            }
+
+            return Math.Max(1, fallback);
+        }
+
+        private static int ReadIntValue(object? raw, int fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is int i)
+            {
+                return i;
+            }
+
+            if (raw is long l)
+            {
+                return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static float ReadFloatValue(object? raw, float fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is float f)
+            {
+                return f;
+            }
+
+            if (raw is double d)
+            {
+                return (float)d;
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
+
+        private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
+
+        private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryIntValue(effect.Parameters, key, fallback);
+        }
+
+        private static float ReadEffectFloatParameter(IEffect effect, string key, float fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
+        }
+
+        private static bool TryGetCropSize(IEffect effect, out int width, out int height)
+        {
+            width = Math.Max(0, ReadEffectIntParameter(effect, "Width", 0));
+            height = Math.Max(0, ReadEffectIntParameter(effect, "Height", 0));
+            return width > 0 && height > 0;
+        }
+
+        private static bool IsCropEffect(IEffect effect)
+            => string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal);
+
+        private static bool TryFindInternalCropEffect(ClipElementUI clip, out IEffect effect)
+        {
+            effect = null!;
+            if (clip.Effects == null || clip.Effects.Count == 0)
+            {
+                return false;
+            }
+
+            if (clip.Effects.TryGetValue(InternalCropID, out var legacyCrop) && IsCropEffect(legacyCrop))
+            {
+                effect = legacyCrop;
+                return true;
+            }
+
+            var fromBundle = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.BindedEffectGroupID, InternalCropBundleGuid.ToString(), StringComparison.Ordinal));
+            if (fromBundle != null)
+            {
+                effect = fromBundle;
+                return true;
+            }
+
+            var fromName = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.Name, InternalCropID, StringComparison.Ordinal));
+            if (fromName != null)
+            {
+                effect = fromName;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static EffectImplementType ResolveConfiguredImplementType(IEffectFactory factory, EffectImplementType fallback)
+        {
+            var configured = EffectHelper.DefaultImplementsType.GetValueOrDefault(
+                $"{factory.FromPlugin}.{factory.TypeName}",
+                EffectImplementType.NotSpecified);
+
+            if (configured != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(configured))
+            {
+                return configured;
+            }
+
+            return fallback;
+        }
+
+        private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
+        {
+            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
+            {
+                return changed;
+            }
+
+            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+
+            return fallback;
+        }
+
+        private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is bool b)
+                {
+                    return b;
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsedFromJe)) return parsedFromJe;
+                }
+
+                if (bool.TryParse(raw.ToString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return fallback;
+        }
+
+        private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
+        {
+            return ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
+        }
+
+        public static bool TryGetSourceAspectRatio(ClipElementUI clip, ConcurrentDictionary<string, AssetItem>[] assetDict, out double aspect)
+        {
+            aspect = 0;
+
+            if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
+            {
+                return false;
+            }
+
+            if (TryFindInternalCropEffect(clip, out var cropEffect))
+            {
+                if (TryGetCropSize(cropEffect, out var cropW, out var cropH))
+                {
+                    aspect = (double)cropW / cropH;
+                    return aspect > 0;
+                }
+                return false; // If there's a crop effect, we can't reliably get the source aspect ratio, so return false to let the caller handle it.
+            }
+
+            AssetItem? asset = null;
+            if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
+            {
+                var assetId = clip.SourcePath.Substring(1);
+                foreach (var item in assetDict)
+                {
+                    if (item.TryGetValue(assetId, out var byPathAsset))
+                    {
+                        asset = byPathAsset;
+                        break;
+                    }
+                }
+            }
+
+            if (asset != null && asset.Width > 0 && asset.Height > 0)
+            {
+                aspect = (double)asset.Width / asset.Height;
+                return aspect > 0;
+            }
+            else if (File.Exists(clip.SourcePath))
+            {
+                if (clip.ClipType == ClipMode.PhotoClip)
+                {
+                    try
+                    {
+                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
+                        aspect = (double)img.Width / img.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+                if (clip.ClipType == ClipMode.VideoClip)
+                {
+                    try
+                    {
+                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
+                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+            }
+            else if (asset?.Path is not null && File.Exists(asset?.Path))
+            {
+                if (clip.ClipType == ClipMode.PhotoClip)
+                {
+                    try
+                    {
+                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(asset.Path);
+                        aspect = (double)img.Width / img.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+                if (clip.ClipType == ClipMode.VideoClip)
+                {
+                    try
+                    {
+                        var vid = PluginManager.CreateVideoSource(asset.Path, 8);
+                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+            }
+
+            return false;
+        }
 
         private class DummyEffectBundle : IEffectBundle
         {

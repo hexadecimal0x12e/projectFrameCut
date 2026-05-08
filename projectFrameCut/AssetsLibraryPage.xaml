@@ -111,7 +111,7 @@
                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding SelectedAsset.Name}" />
 
                         <Label Grid.Row="1" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Type}" FontAttributes="Bold" />
-                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedAsset.AssetType, Converter={StaticResource AssetTypeToLocalizedConverter}}" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedAsset, Converter={StaticResource AssetTypeToLocalizedConverter}}" />
 
                         <Label Grid.Row="2" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_CreatedAt}" FontAttributes="Bold" />
                         <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAsset.CreatedAt}" />

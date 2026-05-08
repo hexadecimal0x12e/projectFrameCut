@@ -24,12 +24,15 @@ public partial class SetupPage : ContentPage
             try
             {
                 string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string shortcutPath = Path.Combine(desktopPath, "projectFrameCut.lnk");
-                if(File.Exists(shortcutPath))
+                string shortcutPath = Path.Combine(desktopPath, $"{Localized.AppBrand}.lnk");
+                if (projectFrameCut.Helper.HelperProgram.AppChannel.Equals("MS Store", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    File.Delete(shortcutPath);
+                    File.Copy(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "projectFrameCut.Store.lnk"), shortcutPath);
                 }
-                File.Copy(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "projectFrameCut.lnk"), shortcutPath);
+                else
+                {
+                    File.Copy(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "projectFrameCut.lnk"), shortcutPath);
+                }
             }
             catch (Exception ex)
             {

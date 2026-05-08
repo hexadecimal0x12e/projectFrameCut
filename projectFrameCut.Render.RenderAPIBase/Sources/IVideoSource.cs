@@ -12,6 +12,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     public interface IVideoSource : IDisposable
     {
         /// <summary>
+        /// Get the type name of this decoder. Should be the same as the class name.
+        /// </summary>
+        public string TypeName { get; }
+
+        /// <summary>
         /// Initialize the video source. This method should prepare the video source for frame extraction.
         /// </summary>
         /// <remarks>
@@ -133,12 +138,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
                 return false;
             }
         }
+        /// <summary>
+        /// Metadata key-value pairs to write into the output container.
+        /// Set before calling <see cref="Initialize"/>; changes after initialization may be ignored.
+        /// </summary>
+        Dictionary<string, string>? Metadata { get; set; }
+
         public bool SupportCodec(string codecName);
         public void Finish();
 
 
         public void Append(IPicture<ushort> picture);
         public void Append(IPicture<byte> picture);
+        public void Append(HDRPicture16bpp pic) => Append((IPicture<ushort>)pic);
 
         public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
         public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);

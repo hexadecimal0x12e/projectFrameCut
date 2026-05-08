@@ -33,6 +33,8 @@ using projectFrameCut.Render.ClipsAndTracks;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
 using System.Text;
+using FFmpeg.AutoGen;
+
 
 
 
@@ -56,8 +58,30 @@ public partial class TestPage : ContentPage
 
         Loaded += TestPage_Loaded;
 
+        TaskbarOptionPicker.ItemsSource = Enum.GetValues<TaskbarVisibilityMode>().Select(c => c.ToString()).ToList();
+
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
+
+        ILGPU.Context context = ILGPU.Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        List<AcceleratorInfo> listAccels = new();
+        for (uint i = 0; i < devices.Count; i++)
+        {
+            var item = devices[(int)i];
+            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+        }
+        if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
+        {
+            var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
+            SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
+            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
+        }
+        var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
+                                .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
+                                new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+        Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice.CreateAccelerator(context)];
+
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
@@ -162,7 +186,7 @@ public partial class TestPage : ContentPage
                     sw.Dispose();
                     await Share.RequestAsync(new ShareFileRequest
                     {
-                        Title = "±£´æÍÏ¶¯²âÊÔÊý¾Ý",
+                        Title = "ï¿½ï¿½ï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                         File = new ShareFile(p)
                     });
                     break;
@@ -174,7 +198,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region openGL test
-    private projectFrameCut.Shared.Picture srcA, srcB;
+    private projectFrameCut.Shared.Picture16bpp srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
@@ -183,16 +207,16 @@ public partial class TestPage : ContentPage
         {
             OpenGLESStartButton.IsEnabled = false;
             DeviceDisplay.Current.KeepScreenOn = true;
-            await Task.Delay(500); // È·±£UI¸üÐÂ
+            await Task.Delay(500); // È·ï¿½ï¿½UIï¿½ï¿½ï¿½ï¿½
 
             Task.WaitAll([
                 Task.Run(() =>
                 {
-                    srcA = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
+                    srcA = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
                 Task.Run(() =>
                 {
-                    srcB = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
+                    srcB = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
             ]);
 
@@ -212,12 +236,12 @@ public partial class TestPage : ContentPage
                     srcA.a,
                     srcB.a
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 alphaGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -229,7 +253,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (alphaGlView.Width <= 0 || alphaGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -268,7 +292,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(alphaGlView);
 
-                outA = await tcsA.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outA = await tcsA.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 Debug.WriteLine($"Alpha computation completed, avg :{outA.Average()} first 5 distincted result:{string.Join(',', outA.Distinct().Take(5))}");
 
             } //A
@@ -288,12 +312,12 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.r.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 RGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -305,7 +329,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (RGlView.Width <= 0 || RGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -344,7 +368,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(RGlView);
 
-                outR = await tcsR.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outR = await tcsR.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 RConvertor = new(() =>
                 {
                     uOutR = outR.Select(Convert.ToUInt16).ToArray();
@@ -370,12 +394,12 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.g.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 GGlView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -387,7 +411,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (GGlView.Width <= 0 || GGlView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -426,7 +450,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(GGlView);
 
-                outG = await tcsG.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outG = await tcsG.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 GConvertor = new(() =>
                 {
                     uOutG = outG.Select(Convert.ToUInt16).ToArray();
@@ -451,13 +475,13 @@ public partial class TestPage : ContentPage
                         srcB.a,
                         srcB.b.Select(Convert.ToSingle).ToArray()
                     },
-                    HeightRequest = 120, // È·±£ÓÐ·ÇÁã¸ß¶È´´½¨Surface
+                    HeightRequest = 120, // È·ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½ß¶È´ï¿½ï¿½ï¿½Surface
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Start,
                     JobID = "Blue"
                 };
 
-                // µ±Æ½Ì¨ÊÓÍ¼¾ÍÐ÷ÇÒ³ß´çÓÐÐ§Ê±ÔÙ´¥·¢¼ÆËã
+                // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ß´ï¿½ï¿½ï¿½Ð§Ê±ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 BGLView.HandlerChanged += async (s, e2) =>
                 {
                     try
@@ -469,7 +493,7 @@ public partial class TestPage : ContentPage
                             {
                                 await platformView.WaitUntilReadyAsync();
 
-                                // ÈôÈÔÎªÁã´óÐ¡£¬µÈ´ýÒ»´Î³ß´ç±ä»¯£¨È·±£ÔÚÖ÷Ïß³Ì¶©ÔÄ/¶ÁÈ¡£©
+                                // ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½È´ï¿½Ò»ï¿½Î³ß´ï¿½ä»¯ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¶ï¿½ï¿½ï¿½/ï¿½ï¿½È¡ï¿½ï¿½
                                 if (BGLView.Width <= 0 || BGLView.Height <= 0)
                                 {
                                     var tcsSize = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -508,7 +532,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Children.Clear();
                 ComputeView.Add(BGLView);
 
-                outB = await tcsB.Task; // ±£³ÖÔÚUIÏß³Ì¼ÌÐø
+                outB = await tcsB.Task; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UIï¿½ß³Ì¼ï¿½ï¿½ï¿½
                 BConvertor = new(() =>
                 {
                     uOutB = outB.Select(Convert.ToUInt16).ToArray();
@@ -520,7 +544,7 @@ public partial class TestPage : ContentPage
             Debug.WriteLine("Waiting for convertor done...");
             Task.WaitAll(RConvertor, GConvertor, BConvertor);
             Debug.WriteLine("Writing result...");
-            var outPic = new projectFrameCut.Shared.Picture(srcA.Width, srcA.Height)
+            var outPic = new projectFrameCut.Shared.Picture16bpp(srcA.Width, srcA.Height)
             {
                 r = uOutR,
                 g = uOutG,
@@ -559,7 +583,7 @@ public partial class TestPage : ContentPage
             DeviceDisplay.Current.KeepScreenOn = false;
         }
 #else
-        await DisplayAlert("ÌáÊ¾", "´Ë¹¦ÄÜÄ¿Ç°½öÔÚ Android ÉÏ¿ÉÓÃ¡£", "È·¶¨");
+        await DisplayAlert("ï¿½ï¿½Ê¾", "ï¿½Ë¹ï¿½ï¿½ï¿½Ä¿Ç°ï¿½ï¿½ï¿½ï¿½ Android ï¿½Ï¿ï¿½ï¿½Ã¡ï¿½", "È·ï¿½ï¿½");
 #endif
     }
 
@@ -568,7 +592,7 @@ public partial class TestPage : ContentPage
         {{"#"}}version 310 es            
         layout(local_size_x = 256) in;
 
-        // ÊäÈë£ºa, aAlpha, b, bAlpha
+        // ï¿½ï¿½ï¿½ë£ºa, aAlpha, b, bAlpha
         layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
         layout(std430, binding = 1) buffer BAlphaBuffer { float bAlpha[]; };
 
@@ -645,6 +669,121 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region render
+    private async void HDRTestButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
+            var w = new HDRVideoWriter
+            {
+                OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+                Width = 2560,
+                Height = 1440,
+                FramePerSecond = 30,
+                CodecName = "libx265",
+                PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
+            };
+            w.Initialize();
+            TextClip c = new TextClip { Id = "1", Name = "1" };
+            TextClipEntry te = new TextClipEntry
+            {
+                r = 65535,
+                g = 65535,
+                b = 65535,
+                a = 65535,
+                fontFamily = "Arial",
+                x = 50,
+                y = 50,
+                fontSize = 120,
+            };
+            f.Brightness = new float[f.Pixels];
+            for (int idx = 0; idx < f.Pixels; idx++)
+            {
+                int x = idx % f.Width;
+                if (f.Width > 1)
+                {
+                    float center = (f.Width - 1) * 0.5f;
+                    float distanceToCenter = MathF.Abs(x - center);
+                    float normalized = center > 0 ? distanceToCenter / center : 1f;
+                    // Center stays darkest; both sides brighten smoothly.
+                    f.Brightness[idx] = MathF.Pow(normalized, 0.6f);
+                }
+                else
+                {
+                    f.Brightness[idx] = 1f;
+                }
+            }
+            f.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+
+            for (int i = 0; i < 1; i++)
+            {
+                c.TextEntries = [te with { text = $"Frame {i}" }];
+                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
+                textFrame.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                var t = textFrame.ToHDRPicture(1, 5000);
+                Log(t.GetDiagnosticsInfo());
+                t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
+                r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                w.Append(r);
+                Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
+            }
+            w.Finish();
+        }
+        catch (Exception ex)
+        {
+            if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
+        }
+    }
+
+    private async void HDRTestButton2_Clicked(object sender, EventArgs e)
+    {
+        var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
+        f.Brightness = new float[f.Pixels];
+        for (int idx = 0; idx < f.Pixels; idx++)
+        {
+            f.Brightness[idx] = Random.Shared.NextSingle();
+        }
+        var fThrowBrightness = new Picture16bpp(f)
+        {
+            r = f.r,
+            g = f.g,
+            b = f.b,
+            a = f.a
+        };
+        fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16, true).ToPJFCPicture(16);
+        fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fReplaceAlpha = new Picture16bpp(f)
+        {
+            r = f.r,
+            g = f.g,
+            b = f.b,
+            a = f.Brightness
+        };
+        fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
+        {
+            r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            g = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
+            a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
+        }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
+        fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var w = new HDRVideoWriter
+        {
+            OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+            Width = 2560,
+            Height = 1440,
+            FramePerSecond = 30,
+            CodecName = "libx265",
+            PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
+        };
+        w.Initialize();
+        w.Append(f);
+        w.Finish();
+    }
+
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
@@ -683,7 +822,7 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -695,19 +834,64 @@ public partial class TestPage : ContentPage
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
-
-        var vidFile = await DisplayPromptAsync("info", "input src path");
-        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
-        var src = PluginManager.CreateVideoSource(vidFile);
-        var frame = src.GetFrame(42U, false);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        try
         {
-            MemoryStream ms = new();
-            frame.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-
+            var vidFile = await FileSystemService.PickFileAsync();
+            if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
+            if (string.IsNullOrWhiteSpace(vidFile)) return;
+            if (!uint.TryParse(await DisplayPromptAsync(Localized._Info, "input frame index", initialValue: "0", keyboard: Keyboard.Numeric) ?? "", out var idx)) return;
+            if (await DisplayAlertAsync(Title, "Use HDR?", "yes", "no"))
+            {
+                var src = new HDRDecoderContext(vidFile);
+                src.Initialize();
+                var frame = src.GetFrame(idx, false);
+                if (frame is not HDRPicture16bpp h)
+                {
+                    await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
+                    return;
+                }
+                HDROutputPreview.IsVisible = true;
+                NormalizeBrightnessToRGBOutputImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                OverlayMaskFromBrightnessOutputImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                DiscardBrightnessChannelOutputImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+                LogDiagnostic(h.GetDiagnosticsInfo());
+            }
+            else
+            {
+                var src = PluginManager.CreateVideoSource(vidFile);
+                var frame = src.GetFrame(idx, false);
+                LogDiagnostic(frame.GetDiagnosticsInfo());
+                PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+                {
+                    MemoryStream ms = new();
+                    frame.SaveToSixLaborsImage().SaveAsPng(ms);
+                    ms.Position = 0;
+                    return ms;
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
+        }
     }
 
     private void TestMixtureButton_Clicked(object sender, EventArgs e)
@@ -720,7 +904,7 @@ public partial class TestPage : ContentPage
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = OverlayMixture.Mix(canvas, result, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -765,7 +949,8 @@ public partial class TestPage : ContentPage
     {
 
 #if ANDROID
-        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+        Render.AndroidOpenGL.ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
+        Render.AndroidOpenGL.ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS
@@ -1049,6 +1234,21 @@ public partial class TestPage : ContentPage
 
     }
 
+    private void TaskbarOptionPicker_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        myMultiWindowView.TaskbarVisibility = (TaskbarVisibilityMode)TaskbarOptionPicker.SelectedIndex;
+    }
+
+    private void StoreModeToggleSwitch_Toggled(object sender, ToggledEventArgs e)
+    {
+        SettingsManager.WriteSetting("StoreModeOverride", e.Value.ToString());
+    }
+
+    private void ResetStoreModeButton_Clicked(object sender, EventArgs e)
+    {
+        SettingsManager.WriteSetting("StoreModeOverride", "disable");
+
+    }
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {
@@ -1056,13 +1256,13 @@ public partial class TestPage : ContentPage
 
         if (AuthService.IsLoggedIn)
         {
-            // ÒÑµÇÂ¼£¬ÏÔÊ¾ÓÃ»§ÐÅÏ¢»òµÇ³ö
+            // ï¿½Ñµï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½Ã»ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½Ç³ï¿½
             var user = await AuthService.GetCurrentUserAsync();
-            await DisplayAlertAsync("ÒÑµÇÂ¼", $"µ±Ç°ÓÃ»§: {user.UserName}", "È·¶¨");
+            await DisplayAlertAsync("ï¿½Ñµï¿½Â¼", $"ï¿½ï¿½Ç°ï¿½Ã»ï¿½: {user.UserName}", "È·ï¿½ï¿½");
         }
         else
         {
-            // Î´µÇÂ¼£¬´ò¿ªµÇÂ¼Ò³Ãæ
+            // Î´ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ò¿ªµï¿½Â¼Ò³ï¿½ï¿½
             await Navigation.PushAsync(new LoginPage());
         }
     }

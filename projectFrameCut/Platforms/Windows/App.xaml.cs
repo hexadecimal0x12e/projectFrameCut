@@ -179,7 +179,7 @@ namespace projectFrameCut.WinUI
         }
 
         public static async Task BringToForeground()
-        {
+            {
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];

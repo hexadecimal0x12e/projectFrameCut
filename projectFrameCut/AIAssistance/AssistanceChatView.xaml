@@ -48,26 +48,54 @@
                                                LineBreakMode="WordWrap"/>
                                     </VerticalStackLayout>
                                 </Border>
-                                    <Border StrokeThickness="1"
-                                            StrokeShape="RoundRectangle 8"
-                                            Padding="8,6"
-                                            IsVisible="False">
-                                        <Border.Triggers>
-                                            <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
-                                                <Setter Property="IsVisible" Value="True"/>
-                                            </DataTrigger>
-                                        </Border.Triggers>
-                                        <VerticalStackLayout Spacing="2">
+                                <Border StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 8"
+                                        Padding="8,6"
+                                        IsVisible="False">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
+                                            <Setter Property="IsVisible" Value="True"/>
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <VerticalStackLayout Spacing="2">
                                         <Label Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
-                                                   FontSize="11"
-                                                   FontAttributes="Bold"/>
-                                            <Label Text="{Binding ToolCallsText}"
-                                                   FontSize="12"
-                                                   LineBreakMode="WordWrap"/>
-                                        </VerticalStackLayout>
-                                    </Border>
+                                               FontSize="11"
+                                               FontAttributes="Bold"/>
+                                        <Label Text="{Binding ToolCallsText}"
+                                               FontSize="12"
+                                               LineBreakMode="WordWrap"/>
+                                    </VerticalStackLayout>
+                                </Border>
                                 <Label Text="{Binding Message}"
                                        LineBreakMode="WordWrap"/>
+                                <HorizontalStackLayout Spacing="8"
+                                                       Margin="0,4,0,0"
+                                                       IsVisible="{Binding CanSubmitFeedback}">
+                                    <Button FontFamily="Icons"
+                                            Text="&#xe8dc;"
+                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
+                                            Padding="8,2"
+                                            FontSize="12"
+                                            MinimumHeightRequest="30"
+                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                            Clicked="AIReplyFeedbackGoodButton_Clicked"/>
+                                    <Button FontFamily="Icons"
+                                            Text="&#xe8db;"
+                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
+                                            Padding="8,2"
+                                            FontSize="12"
+                                            MinimumHeightRequest="30"
+                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                            Clicked="AIReplyFeedbackBadButton_Clicked"/>
+                                    <Button FontFamily="Icons"
+                                            Text="&#xe87f;"
+                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
+                                            Padding="8,2"
+                                            FontSize="12"
+                                            MinimumHeightRequest="30"
+                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                            Clicked="AIReplyFeedbackReportButton_Clicked"/>
+                                </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </Border>
                     </Grid>
@@ -75,7 +103,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
         <Grid Grid.Row="1">
-            <Label FontSize="12" TextColor="#80ffffff" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
+            <Label FontSize="12" TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
         </Grid>
 
         

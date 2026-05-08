@@ -1,4 +1,3 @@
-#nullable enable
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
@@ -7,10 +6,13 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
@@ -38,10 +40,15 @@ public partial class AssetsLibraryPage : ContentPage
     private readonly int ItemSize = 200;
     private readonly int ItemSpacing = 5;
 
+    internal static readonly ConcurrentDictionary<string, CancellationTokenSource> perAssetThumbCts = new();
+    private const int AssetThumbIntervalFrames = 30;
+    private const int AssetThumbMaxCount = 60;
+    private const int AssetThumbTargetWidth = 320;
+
     public AssetsLibraryPage()
     {
         InitializeComponent();
-        instance = this;    
+        instance = this;
         SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices",/* Localized.AssetPage_AddASource */};
         SourcePicker.SelectedIndex = 0;
 
@@ -104,7 +111,7 @@ public partial class AssetsLibraryPage : ContentPage
     public async Task AddAsset(string path)
     {
         var asset = await AssetDatabase.Add(path, this);
-        if(asset?.AssetType == AssetType.Font)
+        if (asset?.AssetType == AssetType.Font)
         {
             await MainSettingsPage.RebootApp(this);
         }
@@ -112,11 +119,17 @@ public partial class AssetsLibraryPage : ContentPage
         {
             vm.LoadAssets();
         }
+        if (asset != null)
+        {
+            StartPerAssetThumbGeneration(asset);
+        }
     }
 
 
     DateTime pointerDownTime = DateTime.MinValue;
     string lastClick = "";
+
+    public bool Modified { get; private set; }
 
     private void Border_Loaded(object sender, EventArgs e)
     {
@@ -198,7 +211,6 @@ public partial class AssetsLibraryPage : ContentPage
 
             border.GestureRecognizers.Add(pointerGesture);
 #endif
-
             ToolTipProperties.SetText(border, Localized.AssetPage_DoubleClickToPreview);
             SemanticProperties.SetDescription(border, $"{currentAsset.Name} {currentAsset.DurationDisplay}");
         }
@@ -208,7 +220,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         try
         {
-            if(/*(OperatingSystem.IsAndroid() && (currentAsset.AssetType is AssetType.Video) || (currentAsset.AssetType is AssetType.Audio)) ||*/ (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
+            if (/*(OperatingSystem.IsAndroid() && (currentAsset.AssetType is AssetType.Video) || (currentAsset.AssetType is AssetType.Audio)) ||*/ (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
             {
                 if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
                 {
@@ -234,6 +246,82 @@ public partial class AssetsLibraryPage : ContentPage
 
     }
 
+    public static void StartPerAssetThumbGeneration(AssetItem asset)
+    {
+        if (asset.AssetType != AssetType.Video) return;
+        if (string.IsNullOrWhiteSpace(asset.Path)) return;
+        if (string.IsNullOrWhiteSpace(asset.AssetId)) return;
+        if (asset.isInfiniteLength) return;
+
+        var assetId = asset.AssetId;
+        var outDir = Path.Combine(MauiProgram.DataPath, "My Assets", ".perAssetThumb", assetId);
+
+        if (Directory.Exists(outDir) && Directory.GetFiles(outDir, "*.png").Length > 0)
+            return;
+
+        if (perAssetThumbCts.TryRemove(assetId, out var existingCts))
+        {
+            try { existingCts.Cancel(); } catch { }
+        }
+
+        var cts = new CancellationTokenSource();
+        perAssetThumbCts[assetId] = cts;
+
+        var sourcePath = asset.Path;
+        var totalFrames = asset.Duration > 0 ? (int)asset.Duration : 0;
+        if (totalFrames <= 0) return;
+
+        Log($"Start generating per-asset thumbnails for {assetId} - {asset.Name}");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                Directory.CreateDirectory(outDir);
+
+                using var vidSrc = PluginManager.CreateVideoSource(sourcePath);
+                vidSrc.Initialize();
+
+                var interval = Math.Max(1, AssetThumbIntervalFrames);
+                var frameCount = 0;
+
+                for (int f = 0; f < totalFrames && frameCount < AssetThumbMaxCount; f += interval, frameCount++)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    var outPath = Path.Combine(outDir, $"{f}.png");
+                    if (File.Exists(outPath)) continue;
+
+                    try
+                    {
+                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var aspect = (double)frame.Height / frame.Width;
+                        var targetHeight = (int)(AssetThumbTargetWidth * aspect);
+                        var resized = frame.Resize(AssetThumbTargetWidth, targetHeight, false);
+                        resized.SaveAsPng16bpp(outPath, null);
+                        resized.Dispose();
+                        frame.Dispose();
+                        LogDiagnostic($"Generated per-asset thumb for {assetId} at frame {f}.");
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        Log(ex, $"per-asset thumb gen asset={assetId} frame={f}");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Log(ex, $"per-asset thumb gen failed for {assetId}");
+            }
+            finally
+            {
+                perAssetThumbCts.TryRemove(assetId, out _);
+                cts.Dispose();
+            }
+        }, cts.Token);
+    }
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
@@ -245,6 +333,23 @@ public partial class AssetsLibraryPage : ContentPage
         {
             Log(ex, "Stopping media on AssetsLibraryPage appearing", this);
         }
+        if (Modified)
+        {
+            if (BindingContext is AssetViewModel vm)
+            {
+                vm.LoadAssets();
+            }
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        foreach (var (_, cts) in perAssetThumbCts)
+        {
+            try { cts.Cancel(); } catch { }
+        }
+        perAssetThumbCts.Clear();
     }
 
     private async Task ShowContextMenu(AssetItem asset)
@@ -271,7 +376,7 @@ public partial class AssetsLibraryPage : ContentPage
                         {
                             await FileSystemService.OpenFileAsync(asset.Path);
                         }
-                        break; 
+                        break;
                     case 2:
                         var newName = await DisplayPromptAsync(Localized._Info, Localized.AssetPage_InputNewName, initialValue: asset.Name);
                         if (!string.IsNullOrWhiteSpace(newName) && newName != asset.Name)

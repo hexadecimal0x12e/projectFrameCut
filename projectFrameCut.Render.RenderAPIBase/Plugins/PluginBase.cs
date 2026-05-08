@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 4;
+        public const int CurrentPluginAPIVersion = 5;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -89,14 +89,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
 
         /// <summary>
-        /// Create an IClip instance from the given file path and JSON data.
-        /// </summary>
-        /// <remarks>
-        /// The argument for value is Id of the clip, and the second argument is the name of the clip.
-        /// </remarks>
-        //public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
-
-        /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
         /// </summary>
         /// <remarks>
@@ -125,7 +117,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// Key is effect type name (e.g. "Resize").
         /// </summary>
-        /// 
+        /// <remarks>
+        /// This is also for the factory of <see cref="IColorAdjustEffect"/>, <see cref="IClipPositionProvider"/>, <see cref="IContinuousClipPositionProvider"/> and <see cref="ISpeedVarianceProvider"/>.
+        /// </remarks>
         public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
         /// <summary>
         /// Create an blank IEffect instance from the given id.
@@ -253,10 +247,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
-                effect.RelativeWidth = s.RelativeWidth;
-                effect.RelativeHeight = s.RelativeHeight;
-                effect.Enabled = s.Enabled;
                 effect.BindedEffectGroupID = s.BindedEffectGroupID;
+                if(effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
+                {
+                    effect.RelativeWidth = s.RelativeWidth;
+                    effect.RelativeHeight = s.RelativeHeight;
+                    effect.Enabled = s.Enabled;
+                }
 
                 // Restore IBindableArgumentEffect properties
                 if (effect is IBindableArgumentEffect bindableEffect)
@@ -318,6 +315,41 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                         return ApplyCommonProperties(factory.Build(implementType, ConvertParams(stru.Parameters, factory.ParametersType)), stru);
                     }
                     return ApplyCommonProperties(factory.BuildWithDefaultType(ConvertParams(stru.Parameters, factory.ParametersType)), stru);
+                }
+            }
+
+            // Compatibility fallback: the serialized flags may be stale or inferred from interfaces.
+            // Resolve by TypeName across all factory registries before failing.
+            if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackFactory))
+            {
+                if (implementType != EffectImplementType.NotSpecified && fallbackFactory.SupportsImplementTypes.Contains(implementType))
+                {
+                    return ApplyCommonProperties(fallbackFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
+                }
+
+                return ApplyCommonProperties(fallbackFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
+            }
+
+            if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackContinuousFactory))
+            {
+                if (implementType != EffectImplementType.NotSpecified && fallbackContinuousFactory.SupportsImplementTypes.Contains(implementType))
+                {
+                    return ApplyCommonProperties(fallbackContinuousFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
+                }
+
+                return ApplyCommonProperties(fallbackContinuousFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
+            }
+
+            if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackBindableFactory))
+            {
+                if (fallbackBindableFactory is IBindableEffectFactory fallbackBindable)
+                {
+                    if (implementType != EffectImplementType.NotSpecified && fallbackBindable.SupportsImplementTypes.Contains(implementType))
+                    {
+                        return ApplyCommonProperties(fallbackBindable.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
+                    }
+
+                    return ApplyCommonProperties(fallbackBindable.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
                 }
             }
 

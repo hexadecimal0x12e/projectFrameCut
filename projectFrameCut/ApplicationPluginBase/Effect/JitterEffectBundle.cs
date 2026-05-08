@@ -80,7 +80,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Math.Max(200, maxOffsetX),
                 maxOffsetX,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "MaxOffsetY",
                 EffectBundleUiHelper.L("Effect_Jitter_MaxOffsetY", "Max Y Offset"),
@@ -88,7 +88,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Math.Max(200, maxOffsetY),
                 maxOffsetY,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
             panel.AddPicker("Direction", EffectBundleUiHelper.L("Direction", "Direction"), options, selectedDirection);
             EffectBundleUiHelper.AddNumericEntry(panel, "Seed", EffectBundleUiHelper.L("Effect_Jitter_Seed", "Random Seed"), seed.ToString(), "0");
             return panel;

@@ -1,10 +1,12 @@
-﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -27,9 +29,17 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
-        /// The unique identifier of this clip.
+        /// The unique identifier of this clip. <b>SHOULD BE A GUID.</b>
         /// </summary>
+        /// <remarks>
+        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that API V6.
+        /// </remarks>
         public string Id { get; init; }
+
+        /// <summary>
+        /// The unique identifier of this clip. 
+        /// </summary>
+        public Guid IdAsGUID { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
@@ -55,9 +65,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public uint StartFrame { get; init; }
         /// <summary>
-        /// The start frame within the source clip, in frames.
+        /// The in-point offset on the draft timeline, in frames.
+        /// The render system maps this timeline offset to source-frame index by FrameTime and project FPS.
         /// </summary>
-        public uint RelativeStartFrame { get; init; } // in-point within the source
+        public uint RelativeStartFrame { get; init; } // in-point within timeline
         /// <summary>
         /// The original (in 1x speed ratio) duration of this clip in the draft.
         /// </summary>
@@ -84,13 +95,29 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The source's frame time (1 / frame rate) of this clip, in seconds.
         /// </summary>
         public float FrameTime { get; init; }
+
         /// <summary>
-        /// The actual frame time's ratio
+        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V6.</b>
+        /// The actual frame time's ratio.
         /// </summary>
         /// <remarks>
         /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
         /// </remarks>
+        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V6.", false)]
         public float SecondPerFrameRatio { get; init; }
+
+        /// <summary>
+        /// The ISpeedVarianceProvider for this clip. If this property is not null, the system will use it to get the actual speed ratio for each frame instead of using the SecondPerFrameRatio property. This allows more flexible speed variance effect, such as variable speed or speed ramping.
+        /// </summary>
+        [JsonIgnore]
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+
+        /// <summary>
+        /// The IMixture for this clip. If not null, used for compositing this clip's frames onto the accumulated result.
+        /// If null, the renderer falls back to <see cref="ClassicOverlayMixture"/>.
+        /// </summary>
+        [JsonIgnore]
+        public IMixture? MixtureInstance { get; set; }
 
         /// <summary>
         /// Set which this clip should be extended to the whole draft. 
@@ -115,7 +142,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public IEffect[]? EffectsInstances { get; set; }
 
         /// <summary>
-        /// Get the path of the source file for this clip. May be null for some kind of clips.
+        /// Get the path of the source file for this clip. May be null when <see cref="NeedFilePath"/> is false.
         /// </summary>
         public string? FilePath { get; set; }
 
@@ -123,6 +150,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Indicates whether this clip need a source file path to work. If this property is false, the system will not check the file path and directly call the GetFrame function. Otherwise, the system will check the file path before calling GetFrame, and if the file path is null or invalid, it will throw an exception instead of calling GetFrame.
         /// </summary>
         public bool NeedFilePath { get; }
+
+        /// <summary>
+        /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>
+        /// </summary>
+        public Dictionary<string, object> ExtraData { get; set; }
 
 
         /// <summary>
@@ -138,8 +170,17 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, bool forceResize, IPicture.PicturePixelMode targetPPB);
 
         /// <summary>
+        /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
+        /// </summary>
+        /// <param name="targetPPB">
+        /// The PicturePixelMode used when rendering.
+        /// </param>
+        public void ReInit(IPicture.PicturePixelMode targetPPB);
+
+        /// <summary>
         /// Gets a frame relative to source start point. Kept for compatibility.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
             => GetFrameRelativeToStartPointOfSource(frameIndex, requiredWidth, requiredHeight, true, targetPPB);
 
@@ -147,8 +188,46 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Gets a frame at draft-global frame index.
         /// </summary>
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
             => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
+
+        /// <summary>
+        /// Gets the effective timeline duration for this clip after applying speed ratio/profile.
+        /// </summary>
+        [DebuggerNonUserCode()]
+        public uint GetEffectiveDuration() => SpeedVarianceMapCache.GetOrBuild(this).EffectiveDurationFrames;
+
+        /// <summary>
+        /// Get a <see cref="ClipPositionTuple"/> of this clip.
+        /// </summary>
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
+
+        /// <summary>
+        /// Returns true if the given draft-global frame is inside this clip's visible range.
+        /// </summary>
+        [DebuggerNonUserCode()]
+        public bool ContainsFrame(uint targetFrame)
+        {
+            if (ExtendToWholeDraft)
+            {
+                return true;
+            }
+
+            if (targetFrame < StartFrame)
+            {
+                return false;
+            }
+
+            uint effectiveDuration = GetEffectiveDuration();
+            if (effectiveDuration == 0)
+            {
+                return false;
+            }
+
+            ulong endExclusive = (ulong)StartFrame + effectiveDuration;
+            return (ulong)targetFrame < endExclusive;
+        }
 
 
         /// <summary>
@@ -160,49 +239,277 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         public uint? GetRelativeFrameIndex(uint targetFrame)
         {
-            uint duration = Duration;
-            uint startFrame = StartFrame;
-            uint relativeStartFrame = RelativeStartFrame;
-            if (SecondPerFrameRatio != 1)
-            {
-                duration = (uint)Math.Round(Duration * SecondPerFrameRatio);
-                startFrame = (uint)Math.Round(StartFrame * SecondPerFrameRatio);
-                relativeStartFrame = (uint)Math.Round(RelativeStartFrame * SecondPerFrameRatio);
-            }
+            long offsetFromClipStart = (long)targetFrame - StartFrame;
+            var profile = SpeedVarianceMapCache.GetOrBuild(this);
+            uint effectiveDuration = profile.EffectiveDurationFrames;
 
-            long offsetFromClipStart = (long)targetFrame - startFrame;
-
-            if (offsetFromClipStart == duration)
+            if (offsetFromClipStart == effectiveDuration)
             {
                 return null;
             }
 
-            if (offsetFromClipStart < 0 || offsetFromClipStart >= duration)
+            if (offsetFromClipStart < 0 || offsetFromClipStart >= effectiveDuration)
             {
-                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{startFrame}, {startFrame + duration}).");
+                ulong endExclusive = (ulong)StartFrame + effectiveDuration;
+                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {endExclusive}).");
             }
 
-            ulong sourceIndexLong = (ulong)relativeStartFrame + (ulong)offsetFromClipStart;
+            ulong mappedOffset = profile.MapTimelineOffsetToSourceOffset((uint)offsetFromClipStart);
+            ulong timelineIndexLong = (ulong)RelativeStartFrame + mappedOffset;
+            ulong sourceIndexLong = ConvertTimelineFrameToSourceFrame(this, timelineIndexLong);
             if (sourceIndexLong > uint.MaxValue)
             {
                 throw new IndexOutOfRangeException($"Frame mapping overflow for frame #{targetFrame}.");
             }
 
-            return (uint)Math.Round(sourceIndexLong / SecondPerFrameRatio);
+            return (uint)sourceIndexLong;
         }
 
-        /// <summary>
-        /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
-        /// </summary>
-        public void ReInit(IPicture.PicturePixelMode targetPPB);
+        private static ulong ConvertTimelineFrameToSourceFrame(IClip clip, ulong timelineFrame)
+        {
+            if (timelineFrame == 0)
+            {
+                return 0;
+            }
+
+            if (clip.ClipType != ClipMode.VideoClip)
+            {
+                return timelineFrame;
+            }
+
+            if (!TryResolveProjectFrameRate(clip, out var projectFrameRate) || projectFrameRate <= 0d)
+            {
+                return timelineFrame;
+            }
+
+            if (clip.FrameTime <= 0f || float.IsNaN(clip.FrameTime) || float.IsInfinity(clip.FrameTime))
+            {
+                return timelineFrame;
+            }
+
+            double seconds = timelineFrame / projectFrameRate;
+            double sourceFrame = seconds / clip.FrameTime;
+            if (double.IsNaN(sourceFrame) || double.IsInfinity(sourceFrame) || sourceFrame <= 0d)
+            {
+                return 0;
+            }
+
+            if (sourceFrame >= ulong.MaxValue)
+            {
+                return ulong.MaxValue;
+            }
+
+            return (ulong)Math.Floor(sourceFrame + 1e-9d);
+        }
+
+        private static bool TryResolveProjectFrameRate(IClip clip, out double frameRate)
+        {
+            frameRate = 0d;
+            if (clip.ExtraData is null
+                || !clip.ExtraData.TryGetValue(ClipDraftDTO.ProjectFrameRateMetaKey, out var raw)
+                || raw is null)
+            {
+                return false;
+            }
+
+            switch (raw)
+            {
+                case int i:
+                    frameRate = i;
+                    return i > 0;
+                case uint ui:
+                    frameRate = ui;
+                    return ui > 0;
+                case long l:
+                    frameRate = l;
+                    return l > 0;
+                case ulong ul:
+                    frameRate = ul;
+                    return ul > 0;
+                case float f when !float.IsNaN(f) && !float.IsInfinity(f):
+                    frameRate = f;
+                    return f > 0f;
+                case double d when !double.IsNaN(d) && !double.IsInfinity(d):
+                    frameRate = d;
+                    return d > 0d;
+                case JsonElement je:
+                    return TryResolveProjectFrameRateFromJsonElement(je, out frameRate);
+                default:
+                    if (double.TryParse(raw.ToString(), out var parsed) && parsed > 0d)
+                    {
+                        frameRate = parsed;
+                        return true;
+                    }
+                    return false;
+            }
+        }
+
+        private static bool TryResolveProjectFrameRateFromJsonElement(JsonElement value, out double frameRate)
+        {
+            frameRate = 0d;
+            if (value.ValueKind == JsonValueKind.Number)
+            {
+                if (value.TryGetDouble(out var number) && number > 0d)
+                {
+                    frameRate = number;
+                    return true;
+                }
+                return false;
+            }
+
+            if (value.ValueKind == JsonValueKind.String
+                && double.TryParse(value.GetString(), out var parsed)
+                && parsed > 0d)
+            {
+                frameRate = parsed;
+                return true;
+            }
+
+            return false;
+        }
 
 
-        /// <summary>
-        /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>
-        /// </summary>
-        public Dictionary<string, object> ExtraData { get; set; }
 
+    }
 
+    internal sealed class SpeedVarianceProfile
+    {
+        public required uint Duration { get; init; }
+        public required ISpeedVarianceProvider? Provider { get; init; }
+        public required uint EffectiveDurationFrames { get; init; }
+
+        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset)
+        {
+            if (Duration == 0)
+            {
+                return 0;
+            }
+
+            if (Provider is null)
+            {
+                return Math.Min(timelineOffset, Duration - 1);
+            }
+
+            return MapTimelineOffsetWithProvider(timelineOffset);
+        }
+
+        private ulong MapTimelineOffsetWithProvider(uint timelineOffset)
+        {
+            ulong maxSourceOffset = Duration - 1;
+            ulong left = 0;
+            ulong right = maxSourceOffset;
+            ulong best = 0;
+
+            while (left <= right)
+            {
+                ulong mid = left + ((right - left) / 2);
+                uint mappedTarget = ResolveTargetFrameForSourceOffset((uint)mid);
+
+                if (mappedTarget <= timelineOffset)
+                {
+                    best = mid;
+                    if (mid == maxSourceOffset)
+                    {
+                        break;
+                    }
+
+                    left = mid + 1;
+                    continue;
+                }
+
+                if (mid == 0)
+                {
+                    break;
+                }
+
+                right = mid - 1;
+            }
+
+            return best;
+        }
+
+        private uint ResolveTargetFrameForSourceOffset(uint sourceOffset)
+        {
+            try
+            {
+                return Provider!.GetTargetFrame(sourceOffset);
+            }
+            catch
+            {
+                return sourceOffset;
+            }
+        }
+    }
+
+    internal static class SpeedVarianceMapCache
+    {
+        private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
+
+        public static SpeedVarianceProfile GetOrBuild(IClip clip)
+        {
+            if (Cache.TryGetValue(clip, out var cached)
+                && cached.Duration == clip.Duration
+                && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+            {
+                return cached;
+            }
+
+            Cache.Remove(clip);
+            var rebuilt = Build(clip);
+            Cache.Add(clip, rebuilt);
+            return rebuilt;
+        }
+
+        private static SpeedVarianceProfile Build(IClip clip)
+        {
+            uint duration = clip.Duration;
+            var provider = clip.SpeedVarianceProviderInstance;
+
+            if (duration == 0)
+            {
+                return new SpeedVarianceProfile
+                {
+                    Duration = 0,
+                    Provider = provider,
+                    EffectiveDurationFrames = 0,
+                };
+            }
+
+            if (provider is null)
+            {
+                return new SpeedVarianceProfile
+                {
+                    Duration = duration,
+                    Provider = null,
+                    EffectiveDurationFrames = duration,
+                };
+            }
+
+            uint effectiveDuration = ResolveEffectiveDuration(provider, duration);
+            return new SpeedVarianceProfile
+            {
+                Duration = duration,
+                Provider = provider,
+                EffectiveDurationFrames = effectiveDuration,
+            };
+        }
+
+        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration)
+        {
+            try
+            {
+                uint effective = provider.GetEffectiveLength(duration);
+                if (effective > 0)
+                {
+                    return effective;
+                }
+            }
+            catch
+            {
+            }
+
+            return duration;
+        }
     }
 
     public class ClipEquabilityComparer : IEqualityComparer<IClip>

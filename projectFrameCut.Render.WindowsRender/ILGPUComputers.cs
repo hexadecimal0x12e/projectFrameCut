@@ -825,6 +825,433 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
+    public class BlendAddComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "AddComputer";
+
+        [SetsRequiredMembers]
+        public BlendAddComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = top[i] + bottom[i];
+                    if (blended > 65535f) blended = 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendSubtractComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "SubtractComputer";
+
+        [SetsRequiredMembers]
+        public BlendSubtractComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = bottom[i] - top[i];
+                    if (blended < 0f) blended = 0f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendMultiplyComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "MultiplyComputer";
+
+        [SetsRequiredMembers]
+        public BlendMultiplyComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = top[i] * bottom[i] / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendScreenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "ScreenComputer";
+
+        [SetsRequiredMembers]
+        public BlendScreenComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = 65535f - (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendOverlayBlendComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "OverlayBlendComputer";
+
+        [SetsRequiredMembers]
+        public BlendOverlayBlendComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended;
+                    if (bottom[i] < 32768f)
+                        blended = 2f * top[i] * bottom[i] / 65535f;
+                    else
+                        blended = 65535f - 2f * (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendDarkenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "DarkenComputer";
+
+        [SetsRequiredMembers]
+        public BlendDarkenComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = top[i] < bottom[i] ? top[i] : bottom[i];
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendLightenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "LightenComputer";
+
+        [SetsRequiredMembers]
+        public BlendLightenComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float blended = top[i] > bottom[i] ? top[i] : bottom[i];
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    public class BlendDifferenceComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "DifferenceComputer";
+
+        [SetsRequiredMembers]
+        public BlendDifferenceComputer(Accelerator[] accel, bool? sync)
+        {
+            accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; }
+        private int accelIdx;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator acc)
+        {
+            return KernelCache.GetOrAdd(acc, static a => a.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<float> top, ArrayView<float> bottom, ArrayView<float> topAlpha, ArrayView<float> bottomAlpha,
+                ArrayView<float> outC, ArrayView<float> outA) =>
+            {
+                float aA = topAlpha[i];
+                float bA = bottomAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float diff = top[i] - bottom[i];
+                    float blended = diff < 0f ? -diff : diff;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    if (result < 0f) result = 0f; if (result > 65535f) result = 65535f;
+                    outC[i] = result; outA[i] = outAlpha;
+                }
+            }));
+        }
+
+        public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
+    }
+
+    internal static class BlendModeILGPUHelper
+    {
+        internal static object[] BlendModeCompute(
+            Accelerator[] accelerators, ref int accelIdx, bool sync,
+            Func<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> getKernel,
+            object[] args)
+        {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
+            var top = args[0] as float[] ?? throw new InvalidDataException("Invalid argument for top channel");
+            var bottom = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for base channel");
+            var topAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bottomAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            var pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : top.Length;
+
+            if (topAlpha is null)
+            {
+                topAlpha = new float[pixelCount];
+                Array.Fill(topAlpha, 1f);
+            }
+            if (bottomAlpha is null)
+            {
+                bottomAlpha = new float[pixelCount];
+                Array.Fill(bottomAlpha, 1f);
+            }
+
+            using var topBuf = accelerator.Allocate1D(top);
+            using var bottomBuf = accelerator.Allocate1D(bottom);
+            using var topAlphaBuf = accelerator.Allocate1D(topAlpha);
+            using var bottomAlphaBuf = accelerator.Allocate1D(bottomAlpha);
+            using var outCBuf = accelerator.Allocate1D<float>(pixelCount);
+            using var outABuf = accelerator.Allocate1D<float>(pixelCount);
+
+            var kernel = getKernel(accelerator);
+
+            if (sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+            }
+
+            var outC = outCBuf.GetAsArray1D();
+            var outA = outABuf.GetAsArray1D();
+
+            if (outputBpp == 8)
+            {
+                var byteOut = new byte[pixelCount];
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float v = outC[i] / 257f;
+                    if (v < 0f) v = 0f;
+                    if (v > 255f) v = 255f;
+                    byteOut[i] = (byte)v;
+                }
+                return [byteOut, outA];
+            }
+            else if (outputBpp == 16)
+            {
+                var ushortOut = new ushort[pixelCount];
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float v = outC[i];
+                    if (v < 0f) v = 0f;
+                    if (v > 65535f) v = 65535f;
+                    ushortOut[i] = (ushort)v;
+                }
+                return [ushortOut, outA];
+            }
+            else
+            {
+                return [outC, outA];
+            }
+        }
+    }
+
     public static class ILGPUComputerHelper
     {
         public static Lock locker = new();
@@ -833,7 +1260,14 @@ namespace projectFrameCut.Render.WindowsRender
         {
             Device? pick = null;
             if (acceleratorId >= 0)
+            {
+                if (acceleratorId > devices.Count)
+                {
+                    Log($"ERROR: Accelerator {acceleratorId} is not exist.", "error");
+                    return null;
+                }
                 pick = devices[acceleratorId];
+            }
             else if (accelType == "cuda")
                 pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda);
             else if (accelType == "opencl")
@@ -857,5 +1291,4 @@ namespace projectFrameCut.Render.WindowsRender
 
 
     }
-
 }

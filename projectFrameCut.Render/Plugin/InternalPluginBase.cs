@@ -62,7 +62,21 @@ public class InternalPluginBase : IPluginBase
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
-        {"Rotation",  new(() => new RotationEffect_ImageSharp())},
+        {"Flip", new(() => new FlipEffect_ImageSharp()) },
+        {"Sharpen", new(() => new SharpenEffect_ImageSharp()) },
+        {"Vignette", new(() => new VignetteEffect_ImageSharp()) },
+        {"FadeOpacity", new(() => new FadeOpacityEffect_ImageSharp()) },
+        {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
+        {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
+        {"AddMixture", new(() => new Compose.AddMixture()) },
+        {"SubtractMixture", new(() => new Compose.SubtractMixture()) },
+        {"MultiplyMixture", new(() => new Compose.MultiplyMixture()) },
+        {"ScreenMixture", new(() => new Compose.ScreenMixture()) },
+        {"OverlayBlendMixture", new(() => new Compose.OverlayBlendMixture()) },
+        {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
+        {"LightenMixture", new(() => new Compose.LightenMixture()) },
+        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -72,12 +86,35 @@ public class InternalPluginBase : IPluginBase
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
         {"Blur", new BlurEffectFactory()},
-        {"Rotation", new RotationEffectFactory()},
+        {"Flip", new FlipEffectFactory()},
+        {"Sharpen", new SharpenEffectFactory()},
+        {"Vignette", new VignetteEffectFactory()},
+        {"FadeOpacity", new FadeOpacityEffectFactory()},
+        {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
+        {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
+        {"Jitter", new JitterContinuousEffectFactory()},
+        {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
+        {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
+        {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},
+        {"MultiplyMixture", new BlendModeMixtureFactory { MixtureType = "Multiply" }},
+        {"ScreenMixture", new BlendModeMixtureFactory { MixtureType = "Screen" }},
+        {"OverlayBlendMixture", new BlendModeMixtureFactory { MixtureType = "OverlayBlend" }},
+        {"DarkenMixture", new BlendModeMixtureFactory { MixtureType = "Darken" }},
+        {"LightenMixture", new BlendModeMixtureFactory { MixtureType = "Lighten" }},
+        {"DifferenceMixture", new BlendModeMixtureFactory { MixtureType = "Difference" }},
+
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
-
+        {"AddComputer", () => new Compose.AddComputer() },
+        {"SubtractComputer", () => new Compose.SubtractComputer() },
+        {"MultiplyComputer", () => new Compose.MultiplyComputer() },
+        {"ScreenComputer", () => new Compose.ScreenComputer() },
+        {"OverlayBlendComputer", () => new Compose.OverlayBlendComputer() },
+        {"DarkenComputer", () => new Compose.DarkenComputer() },
+        {"LightenComputer", () => new Compose.LightenComputer() },
+        {"DifferenceComputer", () => new Compose.DifferenceComputer() },
     };
 
     public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -89,7 +126,6 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         {"ZoomIn", new ZoomInContinuousEffectFactory()},
-        {"Jitter", new JitterContinuousEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -111,21 +147,17 @@ public class InternalPluginBase : IPluginBase
     };
 
 
-    public Dictionary<string, Func<string, string, IClip>> ClipProvider => new Dictionary<string, Func<string, string, IClip>>
-    {
-        {"VideoClip", new((i,n) => new VideoClip{Id = i, Name = n}) },
-        {"PhotoClip", new((i,n) => new PhotoClip{Id = i, Name = n}) },
-        {"SolidColorClip", new((i,n) => new SolidColorClip{Id = i, Name = n}) },
-        {"TextClip", new((i,n) => new TextClip{Id = i, Name = n}) }
-    };
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
         (HWAccelOptionGetter() ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
             : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HDRDecoderContext", new((p) => new HDRDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("FFmpegDeviceDecoderContext", new((p) => new FFmpegDeviceDecoderContext(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContextPJFCProject", new((p) => new DecoderContextPJFCProject(p))))
         .ToDictionary();
 
 
@@ -147,6 +179,8 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
     {
         {"VideoWriter", new((_) => new VideoWriter()) },
+        {"HDRVideoWriter", new((_) => new HDRVideoWriter()) },
+        {"HDRWriter", new((_) => new HDRVideoWriter()) },
         {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 
@@ -200,8 +234,8 @@ public class InternalPluginBase : IPluginBase
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
         var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
-        var result = loc.DynamicLookup(key, "!!!NULL!!!");
-        return result == "!!!NULL!!!" ? null : result;
+        if (!loc.IsItemExist(key)) return null;
+        return loc.DynamicLookup(key, key);
     }
 
     bool IPluginBase.OnLoaded(out string FailedReason)

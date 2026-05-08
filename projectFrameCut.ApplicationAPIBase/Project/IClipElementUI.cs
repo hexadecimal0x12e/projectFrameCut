@@ -56,7 +56,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         uint maxFrameCount { get; set; }
         uint relativeStartFrame { get; set; }
         float sourceSecondPerFrame { get; set; }
-        float SecondPerFrameRatio { get; set; }
+        float SecondPerFrameRatio { get; }
         ClipMode ClipType { get; set; }
         /// <summary>
         /// Gets or sets source plugin id for this clip.

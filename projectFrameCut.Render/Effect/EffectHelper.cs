@@ -1,5 +1,6 @@
 ﻿
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -30,6 +31,46 @@ namespace projectFrameCut.Render.Effect
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
+        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
+        {
+            var (effects, provider, _) = GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            return (effects, provider);
+        }
+
+        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider, IMixture? Mixture) GetEffectsInstancesSpeedVarianceAndMixture(EffectAndMixtureJSONStructure[]? Effects)
+        {
+            if (Effects is null || Effects.Length == 0)
+            {
+                return (Array.Empty<IEffect>(), null, null);
+            }
+            List<IEffect> effects = new();
+            bool haveSpeedVarProvider = false;
+            bool haveMixture = false;
+            ISpeedVarianceProvider? provider = null;
+            IMixture? mixture = null;
+            foreach (var item in Effects)
+            {
+                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                if (e is ISpeedVarianceProvider p)
+                {
+                    if (haveSpeedVarProvider) throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
+                    haveSpeedVarProvider = true;
+                    provider = p;
+                }
+                else if (e is IMixture m)
+                {
+                    if (haveMixture) throw new InvalidOperationException("Multiple MixtureProvider effects found.");
+                    haveMixture = true;
+                    mixture = m;
+                }
+                else
+                {
+                    effects.Add(e);
+                }
+            }
+
+            return (effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray(), provider, mixture);
+        }
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {
             if (Effects is null || Effects.Length == 0)
@@ -39,8 +80,12 @@ namespace projectFrameCut.Render.Effect
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
-                effects.Add(PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
+                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                effects.Add(e);
+
+
             }
+
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
 
@@ -416,6 +461,428 @@ namespace projectFrameCut.Render.Effect
                 {
                     { "Sigma", sigma },
                     { "Radius", radius }
+                }
+            }).ToList();
+            return result;
+        }
+
+        public static IPicture FlipPicture(IPicture source, bool horizontal, bool vertical, string operationDisplayName, Type operatorType)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            if (!horizontal && !vertical)
+            {
+                var copied = source.DeepCopy();
+                copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = operationDisplayName,
+                    Operator = operatorType,
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = TimeSpan.Zero,
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "Horizontal", horizontal },
+                        { "Vertical", vertical }
+                    }
+                }).ToList();
+                return copied;
+            }
+
+            var sw = Stopwatch.StartNew();
+            IPicture result;
+            if (source is IPicture<ushort> p16)
+            {
+                var dst = new Picture16bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p16.hasAlphaChannel,
+                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    int srcY = vertical ? source.Height - 1 - y : y;
+                    int srcRow = srcY * source.Width;
+                    int dstRow = y * source.Width;
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int srcX = horizontal ? source.Width - 1 - x : x;
+                        int srcIndex = srcRow + srcX;
+                        int dstIndex = dstRow + x;
+                        dst.r[dstIndex] = p16.r[srcIndex];
+                        dst.g[dstIndex] = p16.g[srcIndex];
+                        dst.b[dstIndex] = p16.b[srcIndex];
+                        if (dst.a is not null && p16.a is not null)
+                        {
+                            dst.a[dstIndex] = p16.a[srcIndex];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                var dst = new Picture8bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p8.hasAlphaChannel,
+                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    int srcY = vertical ? source.Height - 1 - y : y;
+                    int srcRow = srcY * source.Width;
+                    int dstRow = y * source.Width;
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int srcX = horizontal ? source.Width - 1 - x : x;
+                        int srcIndex = srcRow + srcX;
+                        int dstIndex = dstRow + x;
+                        dst.r[dstIndex] = p8.r[srcIndex];
+                        dst.g[dstIndex] = p8.g[srcIndex];
+                        dst.b[dstIndex] = p8.b[srcIndex];
+                        if (dst.a is not null && p8.a is not null)
+                        {
+                            dst.a[dstIndex] = p8.a[srcIndex];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
+
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                OperationDisplayName = operationDisplayName,
+                Operator = operatorType,
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Elapsed = sw.Elapsed,
+                Properties = new Dictionary<string, object>
+                {
+                    { "Horizontal", horizontal },
+                    { "Vertical", vertical }
+                }
+            }).ToList();
+            return result;
+        }
+
+        public static IPicture SharpenPicture(IPicture source, float amount, string operationDisplayName, Type operatorType)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            amount = Math.Clamp(amount, 0f, 5f);
+            if (amount <= 0f)
+            {
+                var copied = source.DeepCopy();
+                copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = operationDisplayName,
+                    Operator = operatorType,
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = TimeSpan.Zero,
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "Amount", amount }
+                    }
+                }).ToList();
+                return copied;
+            }
+
+            var sw = Stopwatch.StartNew();
+            IPicture result;
+            if (source is IPicture<ushort> p16)
+            {
+                var dst = new Picture16bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p16.hasAlphaChannel,
+                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    int yTop = Math.Max(0, y - 1);
+                    int yBottom = Math.Min(source.Height - 1, y + 1);
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int xLeft = Math.Max(0, x - 1);
+                        int xRight = Math.Min(source.Width - 1, x + 1);
+
+                        int i = y * source.Width + x;
+                        int left = y * source.Width + xLeft;
+                        int right = y * source.Width + xRight;
+                        int top = yTop * source.Width + x;
+                        int bottom = yBottom * source.Width + x;
+
+                        float rAvg = (p16.r[left] + p16.r[right] + p16.r[top] + p16.r[bottom]) * 0.25f;
+                        float gAvg = (p16.g[left] + p16.g[right] + p16.g[top] + p16.g[bottom]) * 0.25f;
+                        float bAvg = (p16.b[left] + p16.b[right] + p16.b[top] + p16.b[bottom]) * 0.25f;
+
+                        dst.r[i] = (ushort)Math.Clamp((int)Math.Round(p16.r[i] + amount * (p16.r[i] - rAvg)), 0, 65535);
+                        dst.g[i] = (ushort)Math.Clamp((int)Math.Round(p16.g[i] + amount * (p16.g[i] - gAvg)), 0, 65535);
+                        dst.b[i] = (ushort)Math.Clamp((int)Math.Round(p16.b[i] + amount * (p16.b[i] - bAvg)), 0, 65535);
+                        if (dst.a is not null && p16.a is not null)
+                        {
+                            dst.a[i] = p16.a[i];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                var dst = new Picture8bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p8.hasAlphaChannel,
+                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    int yTop = Math.Max(0, y - 1);
+                    int yBottom = Math.Min(source.Height - 1, y + 1);
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int xLeft = Math.Max(0, x - 1);
+                        int xRight = Math.Min(source.Width - 1, x + 1);
+
+                        int i = y * source.Width + x;
+                        int left = y * source.Width + xLeft;
+                        int right = y * source.Width + xRight;
+                        int top = yTop * source.Width + x;
+                        int bottom = yBottom * source.Width + x;
+
+                        float rAvg = (p8.r[left] + p8.r[right] + p8.r[top] + p8.r[bottom]) * 0.25f;
+                        float gAvg = (p8.g[left] + p8.g[right] + p8.g[top] + p8.g[bottom]) * 0.25f;
+                        float bAvg = (p8.b[left] + p8.b[right] + p8.b[top] + p8.b[bottom]) * 0.25f;
+
+                        dst.r[i] = (byte)Math.Clamp((int)Math.Round(p8.r[i] + amount * (p8.r[i] - rAvg)), 0, 255);
+                        dst.g[i] = (byte)Math.Clamp((int)Math.Round(p8.g[i] + amount * (p8.g[i] - gAvg)), 0, 255);
+                        dst.b[i] = (byte)Math.Clamp((int)Math.Round(p8.b[i] + amount * (p8.b[i] - bAvg)), 0, 255);
+                        if (dst.a is not null && p8.a is not null)
+                        {
+                            dst.a[i] = p8.a[i];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
+
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                OperationDisplayName = operationDisplayName,
+                Operator = operatorType,
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Elapsed = sw.Elapsed,
+                Properties = new Dictionary<string, object>
+                {
+                    { "Amount", amount }
+                }
+            }).ToList();
+            return result;
+        }
+
+        public static IPicture VignettePicture(IPicture source, float strength, float radius, string operationDisplayName, Type operatorType)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            strength = Math.Clamp(strength, 0f, 1f);
+            radius = Math.Clamp(radius, 0.05f, 0.99f);
+            if (strength <= 0f)
+            {
+                var copied = source.DeepCopy();
+                copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = operationDisplayName,
+                    Operator = operatorType,
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = TimeSpan.Zero,
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "Strength", strength },
+                        { "Radius", radius }
+                    }
+                }).ToList();
+                return copied;
+            }
+
+            var sw = Stopwatch.StartNew();
+            double centerX = (source.Width - 1) / 2d;
+            double centerY = (source.Height - 1) / 2d;
+            double maxDistance = Math.Sqrt(centerX * centerX + centerY * centerY);
+            double startDistance = maxDistance * radius;
+            double fadeRange = Math.Max(1e-6, maxDistance - startDistance);
+
+            IPicture result;
+            if (source is IPicture<ushort> p16)
+            {
+                var dst = new Picture16bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p16.hasAlphaChannel,
+                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int i = y * source.Width + x;
+                        double dx = x - centerX;
+                        double dy = y - centerY;
+                        double distance = Math.Sqrt(dx * dx + dy * dy);
+                        double t = distance <= startDistance ? 0d : Math.Clamp((distance - startDistance) / fadeRange, 0d, 1d);
+                        float factor = Math.Clamp((float)(1d - strength * t * t), 0f, 1f);
+
+                        dst.r[i] = (ushort)Math.Clamp((int)Math.Round(p16.r[i] * factor), 0, 65535);
+                        dst.g[i] = (ushort)Math.Clamp((int)Math.Round(p16.g[i] * factor), 0, 65535);
+                        dst.b[i] = (ushort)Math.Clamp((int)Math.Round(p16.b[i] * factor), 0, 65535);
+                        if (dst.a is not null && p16.a is not null)
+                        {
+                            dst.a[i] = p16.a[i];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                var dst = new Picture8bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = p8.hasAlphaChannel,
+                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                };
+
+                for (int y = 0; y < source.Height; y++)
+                {
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        int i = y * source.Width + x;
+                        double dx = x - centerX;
+                        double dy = y - centerY;
+                        double distance = Math.Sqrt(dx * dx + dy * dy);
+                        double t = distance <= startDistance ? 0d : Math.Clamp((distance - startDistance) / fadeRange, 0d, 1d);
+                        float factor = Math.Clamp((float)(1d - strength * t * t), 0f, 1f);
+
+                        dst.r[i] = (byte)Math.Clamp((int)Math.Round(p8.r[i] * factor), 0, 255);
+                        dst.g[i] = (byte)Math.Clamp((int)Math.Round(p8.g[i] * factor), 0, 255);
+                        dst.b[i] = (byte)Math.Clamp((int)Math.Round(p8.b[i] * factor), 0, 255);
+                        if (dst.a is not null && p8.a is not null)
+                        {
+                            dst.a[i] = p8.a[i];
+                        }
+                    }
+                }
+                result = dst;
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
+
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                OperationDisplayName = operationDisplayName,
+                Operator = operatorType,
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Elapsed = sw.Elapsed,
+                Properties = new Dictionary<string, object>
+                {
+                    { "Strength", strength },
+                    { "Radius", radius }
+                }
+            }).ToList();
+            return result;
+        }
+
+        public static IPicture ApplyOpacityPicture(IPicture source, float opacity, string operationDisplayName, Type operatorType)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            opacity = Math.Clamp(opacity, 0f, 1f);
+
+            var sw = Stopwatch.StartNew();
+            IPicture result;
+            if (source is IPicture<ushort> p16)
+            {
+                var dst = new Picture16bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = true,
+                    a = new float[source.Pixels]
+                };
+                Array.Copy(p16.r, dst.r, source.Pixels);
+                Array.Copy(p16.g, dst.g, source.Pixels);
+                Array.Copy(p16.b, dst.b, source.Pixels);
+                if (p16.a is not null)
+                {
+                    for (int i = 0; i < source.Pixels; i++)
+                    {
+                        dst.a![i] = Math.Clamp(p16.a[i] * opacity, 0f, 1f);
+                    }
+                }
+                else
+                {
+                    Array.Fill(dst.a!, opacity);
+                }
+                result = dst;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                var dst = new Picture8bpp(source.Width, source.Height)
+                {
+                    frameIndex = source.frameIndex,
+                    filePath = source.filePath,
+                    hasAlphaChannel = true,
+                    a = new float[source.Pixels]
+                };
+                Array.Copy(p8.r, dst.r, source.Pixels);
+                Array.Copy(p8.g, dst.g, source.Pixels);
+                Array.Copy(p8.b, dst.b, source.Pixels);
+                if (p8.a is not null)
+                {
+                    for (int i = 0; i < source.Pixels; i++)
+                    {
+                        dst.a![i] = Math.Clamp(p8.a[i] * opacity, 0f, 1f);
+                    }
+                }
+                else
+                {
+                    Array.Fill(dst.a!, opacity);
+                }
+                result = dst;
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
+
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                OperationDisplayName = operationDisplayName,
+                Operator = operatorType,
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Elapsed = sw.Elapsed,
+                Properties = new Dictionary<string, object>
+                {
+                    { "Opacity", opacity }
                 }
             }).ToList();
             return result;

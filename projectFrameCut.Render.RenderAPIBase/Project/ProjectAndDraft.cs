@@ -51,12 +51,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public Dictionary<string, string> UserDefinedProperties { get => field ?? new(); set; } //= new();
         /// <summary>
+        /// The properties of the draft. Set and write by code only.
+        /// </summary>
+        public Dictionary<string, string> Properties { get => field ?? new(); set; } //= new();
+        /// <summary>
         /// Gets or sets the file system path to the thumbnail image associated with the item.
         /// </summary>
         public string? ThumbPath { get; set; } = null;
         /// <summary>
         /// The save slot indicator. -1 means unknown.
         /// </summary>
+        [Obsolete("Use LastSnapshotID and SnapshotIDMapping instead.")]
         public int SaveSlotIndicator = -1;
         /// <summary>
         /// Get or set the last changed time of the project.
@@ -66,7 +71,141 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Get whether the project was normally exited.
         /// </summary>
         public bool NormallyExited { get; set; } = false;
+
+        /// <summary>
+        /// Get or set the last known draft snapshot's ID.
+        /// </summary>
+        public Guid LastSnapshotID { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management.
+        /// </summary>
+        [JsonIgnore]
+        public Dictionary<Guid, SnapshotIDMappingStructure> SnapshotIDMapping { get; set; } = new();
+
+        public const string SnapshotMappingFileName = "snapshot_mapping.json";
+
+        /// <summary>
+        /// Save <see cref="SnapshotIDMapping"/> to a separate JSON file under the project directory.
+        /// This keeps the main project.pjfc file from growing too large.
+        /// </summary>
+        public void SaveSnapshotMapping(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            if (SnapshotIDMapping is null || SnapshotIDMapping.Count == 0)
+            {
+                var path = System.IO.Path.Combine(projectDir, SnapshotMappingFileName);
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                return;
+            }
+            System.IO.File.WriteAllText(
+                System.IO.Path.Combine(projectDir, SnapshotMappingFileName),
+                System.Text.Json.JsonSerializer.Serialize(SnapshotIDMapping, options));
+        }
+
+        /// <summary>
+        /// Load <see cref="SnapshotIDMapping"/> from a separate JSON file under the project directory.
+        /// Auto-migrates old-format files where "Next" was a scalar Guid instead of an array.
+        /// </summary>
+        public static Dictionary<Guid, SnapshotIDMappingStructure> LoadSnapshotMapping(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            var mappingPath = System.IO.Path.Combine(projectDir, SnapshotMappingFileName);
+            if (!System.IO.File.Exists(mappingPath))
+                return new();
+
+            var json = System.IO.File.ReadAllText(mappingPath);
+
+            // Try new format first (Next is array)
+            try
+            {
+                var result = System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, SnapshotIDMappingStructure>>(json, options);
+                if (result is not null) return result;
+            }
+            catch { }
+
+            // Migration: try old format where Next was a scalar Guid
+            try
+            {
+                var oldMapping = System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, OldSnapshotIDMappingStructure>>(json, options);
+                if (oldMapping is not null)
+                {
+                    var newMapping = new Dictionary<Guid, SnapshotIDMappingStructure>();
+                    foreach (var kv in oldMapping)
+                    {
+                        var entry = new SnapshotIDMappingStructure { Previous = kv.Value.Previous };
+                        if (kv.Value.Next != Guid.Empty)
+                            entry.Next.Add(kv.Value.Next);
+                        newMapping[kv.Key] = entry;
+                    }
+                    return newMapping;
+                }
+            }
+            catch { }
+
+            return new();
+        }
+
+        /// <summary>Old-format mapping entry used only for migration.</summary>
+        private sealed class OldSnapshotIDMappingStructure
+        {
+            public Guid Previous { get; set; }
+            public Guid Next { get; set; }
+        }
+
+        /// <summary>
+        /// Rebuild <see cref="SnapshotIDMapping"/> from save slot timeline.json files.
+        /// Used as a fallback when migrating from older project files that stored the mapping inline.
+        /// </summary>
+        public static Dictionary<Guid, SnapshotIDMappingStructure> RebuildSnapshotMappingFromSlots(string projectDir, System.Text.Json.JsonSerializerOptions? options = null)
+        {
+            var mapping = new Dictionary<Guid, SnapshotIDMappingStructure>();
+            var slotsDir = System.IO.Path.Combine(projectDir, "saveSlots");
+            if (!System.IO.Directory.Exists(slotsDir))
+                return mapping;
+
+            foreach (var slotDir in System.IO.Directory.GetDirectories(slotsDir, "slot_*"))
+            {
+                var timelinePath = System.IO.Path.Combine(slotDir, "timeline.json");
+                if (!System.IO.File.Exists(timelinePath))
+                    continue;
+
+                try
+                {
+                    var json = System.IO.File.ReadAllText(timelinePath);
+                    var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, options);
+                    if (draft is null || draft.SnapshotID == Guid.Empty)
+                        continue;
+
+                    mapping.TryAdd(draft.SnapshotID, new SnapshotIDMappingStructure
+                    {
+                        Previous = draft.PreviousSnapshot
+                    });
+                }
+                catch { }
+            }
+
+            // Link Next pointers
+            foreach (var kv in mapping)
+            {
+                if (kv.Value.Previous != Guid.Empty && mapping.TryGetValue(kv.Value.Previous, out var prevEntry) && !prevEntry.Next.Contains(kv.Key))
+                {
+                    prevEntry.Next.Add(kv.Key);
+                }
+            }
+
+            return mapping;
+        }
+
+        public sealed record SnapshotIDMappingStructure
+        {
+            public Guid Previous { get; set; }
+            public List<Guid> Next { get; set; } = new();
+
+            [JsonIgnore]
+            public Guid PrimaryNext => Next?.Count > 0 ? Next[0] : Guid.Empty;
+        }
     }
+
 
     /// <summary>
     /// Represents the structure of a draft in JSON format.
@@ -74,10 +213,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     public class DraftStructureJSON
     {
         /// <summary>
-        /// The target frame rate of the draft.
+        /// The unique identifier for the draft snapshot. 
         /// </summary>
-        [Obsolete("Use ProjectInfo.TargetFrameRate instead.", false)]
-        public uint TargetFrameRate { get; set; } = 60;
+        public Guid SnapshotID { get; set; } = Guid.Empty;
 
         /// <summary>
         /// All of the clips in the draft.
@@ -107,6 +245,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Used in history management and undo/redo system.
         /// </summary>
         public string ChangeReason { get; set; } = string.Empty;
+        /// <summary>
+        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        /// <summary>
+        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// </summary>
+        public Guid ChangedByUser { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// The unique identifier of the previous draft snapshot. Used in branch/edition management.
+        /// </summary>
+        public Guid PreviousSnapshot { get; set; } = Guid.Empty;
     }
 
     /// <summary>
@@ -114,6 +265,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// </summary>
     public class ClipDraftDTO
     {
+        public const string ProjectFrameRateMetaKey = "__ProjectFrameRate";
+        public const string FrameSemanticVersionMetaKey = "__ClipFrameSemanticVersion";
+        public const int CurrentFrameSemanticVersion = 2;
+
         public string FromPlugin { get; set; } = string.Empty;
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string TypeName { get; set; } = string.Empty;
@@ -165,15 +320,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// Represents an asset item in the project. 
     /// </summary>
     [DebuggerDisplay("{Name}: {DurationDisplay}")]
-    public class AssetItem
+    public record AssetItem
     {
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
         public AssetType AssetType { get; set; } = AssetType.Other;
-        public ClipMode Type { get; set; }
+        public ClipMode ClipType { get; set; }
 
-        public long? FrameCount { get; set; }
+        public long? Duration { get; set; }
         public float SecondPerFrame { get; set; } = -1;
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
@@ -185,6 +340,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
         public int Width { get; set; }
         public int Height { get; set; }
+        public int BitPerPixel { get; set; }
 
         public ClipMode GetClipMode()
         {
@@ -193,7 +349,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Video => ClipMode.VideoClip,
                 AssetType.Image => ClipMode.PhotoClip,
                 AssetType.Audio => ClipMode.AudioClip,
-                _ => Type
+                _ => ClipType
             };
         }
 
@@ -201,7 +357,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public object? Background { get; set; }
 
         [JsonIgnore]
-        public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || SecondPerFrame <= 0;
+        public bool isInfiniteLength => Duration == null || Duration <= 0 || SecondPerFrame <= 0;
 
         [JsonIgnore]
         public string? Icon
@@ -212,7 +368,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 projectFrameCut.Shared.AssetType.Image => "\ud83d\uddbc\ufe0f",//🖼️
                 projectFrameCut.Shared.AssetType.Audio => "\ud83c\udfb5",//🎵
                 projectFrameCut.Shared.AssetType.Font => "\ud83d\udd24",//🔤
-                _ => Type switch
+                _ => ClipType switch
                 {
                     projectFrameCut.Shared.ClipMode.VideoClip => "\ud83d\udcfd\ufe0f",//📽️
                     projectFrameCut.Shared.ClipMode.PhotoClip => "\ud83d\uddbc\ufe0f",//🖼️
@@ -226,14 +382,25 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         }
 
         [JsonIgnore]
+        public string DurationTimeDisplay
+        {
+            get => AssetType switch
+            {
+                AssetType.Video => ToTimeSpanDisplay((Duration ?? 0) * (double)SecondPerFrame),
+                AssetType.Audio => ToTimeSpanDisplay(Duration ?? 0),
+                _ => string.Empty
+            };
+        }
+
+        [JsonIgnore]
         public string DurationDisplay
         {
-            get => Icon + " " + AssetType switch
-            {
-                AssetType.Video => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString(),
-                AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0d)).ToString(),
-                _ => ""
-            };
+            get => Icon + " " + DurationTimeDisplay;
+        }
+
+        private static string ToTimeSpanDisplay(double seconds)
+        {
+            return TimeSpan.FromTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond)).ToString("hh\\:mm\\:ss");
         }
 
         public static AssetType GetAssetType(string path)
@@ -262,8 +429,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         }
 
         public override int GetHashCode() => Guid.TryParse(AssetId, out var guid) ? guid.GetHashCode() : AssetId?.GetHashCode() ?? base.GetHashCode();
-        public override bool Equals(object? obj) => obj is AssetItem other && AssetId != null && other.AssetId != null && AssetId == other.AssetId;
-        public override string ToString() => $"{Name}: {DurationDisplay}";
+        public override string ToString() => $"{Name}: {DurationDisplay} ({AssetId})";
     }
 
     public class AssetItemComparer : IEqualityComparer<AssetItem>

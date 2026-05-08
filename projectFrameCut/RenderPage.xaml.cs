@@ -27,6 +27,12 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using IPicture = projectFrameCut.Shared.IPicture;
+using static System.Net.Mime.MediaTypeNames;
+using projectFrameCut.Render.Compose;
+using System.Reflection;
+
+
+
 
 
 
@@ -74,6 +80,9 @@ public partial class RenderPage : ContentPage
     private System.Timers.Timer? _moveHintTimer;
     private const int ScreenSaverTimeout = 15000;
 
+    public bool ProjectUsesHDR => _project.Properties.TryGetValue("EnableHDR", out var enableHDR) && bool.TryParse(enableHDR, out var enableHDRBool) && enableHDRBool;
+
+
 #if WINDOWS
     Platforms.Windows.ffmpegHelper ffmpeg = new projectFrameCut.Platforms.Windows.ffmpegHelper();
 #endif
@@ -98,6 +107,7 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vmDefault;
+        SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
@@ -111,11 +121,14 @@ public partial class RenderPage : ContentPage
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
+        OnPropertyChanged(nameof(ProjectUsesHDR));
+        HDRHintLabel.IsVisible = ProjectUsesHDR;
+
         _draft = draft;
         Title = Localized.RenderPage_ExportTitle(projectInfo.ProjectName);
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
-        var vm = new RenderPageViewModel();
+        var vm = new RenderPageViewModel(ProjectUsesHDR);
         try
         {
             vm.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vm.Resoultion);
@@ -126,9 +139,22 @@ public partial class RenderPage : ContentPage
             {
                 vm.SelectedPostRenderActionEnum = action;
             }
+            if (ProjectUsesHDR)
+            {
+                vm.Encoding = vm.Encoding switch
+                {
+                    "h265/hevc" => "h265",
+                    "hevc" => "h265",
+                    "libx265" => "h265",
+                    "h265" => "h265",
+                    _ => "h265"
+                };
+                vm.BitDepth = "10bit";
+            }
         }
         catch { }
         BindingContext = vm;
+        SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
@@ -180,10 +206,8 @@ public partial class RenderPage : ContentPage
         _isLogPanelVisible = visible;
         LoggingBox.IsVisible = visible;
         LoggingBox.HeightRequest = visible ? -1 : 0;
-        if (LoggingBox.Parent is Microsoft.Maui.Controls.Grid progressGrid && progressGrid.RowDefinitions.Count > 4)
-        {
-            progressGrid.RowDefinitions[4].Height = visible ? GridLength.Star : new GridLength(0);
-        }
+        LoggingRowDefinition.Height = visible ? GridLength.Star : new GridLength(0);
+        UpdateRenderLayoutForLogPanel();
         UpdateLogPanelToggleText();
         UpdateLogRefreshState();
 
@@ -191,6 +215,75 @@ public partial class RenderPage : ContentPage
         {
             _ = FlushLogQueue();
         }
+    }
+
+    private void UpdateRenderLayoutForLogPanel()
+    {
+        if (!running)
+        {
+            PreviewRowDefinition.Height = GridLength.Auto;
+            ProgressRowDefinition.Height = GridLength.Star;
+            PreviewLayout.VerticalOptions = LayoutOptions.Start;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Auto;
+            }
+            UpdatePreviewViewportSizing();
+            return;
+        }
+
+        if (_isLogPanelVisible)
+        {
+            PreviewRowDefinition.Height = GridLength.Auto;
+            ProgressRowDefinition.Height = GridLength.Star;
+            PreviewLayout.VerticalOptions = LayoutOptions.Start;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Auto;
+            }
+        }
+        else
+        {
+            PreviewRowDefinition.Height = GridLength.Star;
+            ProgressRowDefinition.Height = GridLength.Auto;
+            PreviewLayout.VerticalOptions = LayoutOptions.Fill;
+            if (PreviewLayout.RowDefinitions.Count > 1)
+            {
+                PreviewLayout.RowDefinitions[1].Height = GridLength.Star;
+            }
+        }
+
+        UpdatePreviewViewportSizing();
+    }
+
+    private void UpdatePreviewViewportSizing()
+    {
+        if (PreviewBorder is null || PreviewLayout is null)
+        {
+            return;
+        }
+
+        if (PreviewLayout.Width <= 0 || PreviewLayout.Height <= 0)
+        {
+            return;
+        }
+
+        var horizontalPadding = 64d;
+        var availableWidth = Math.Max(0, PreviewLayout.Width - horizontalPadding);
+        var availableHeight = Math.Max(0, PreviewLayout.Height - 48);
+
+        if (availableWidth <= 0 || availableHeight <= 0)
+        {
+            return;
+        }
+
+        var heightRatio = _isLogPanelVisible ? 0.72d : 0.9d;
+        var widthRatio = _isLogPanelVisible ? 0.88d : 0.96d;
+
+        PreviewBorder.MaximumWidthRequest = availableWidth * widthRatio;
+        PreviewBorder.MaximumHeightRequest = availableHeight * heightRatio;
+        PreviewImage.MaximumWidthRequest = PreviewBorder.MaximumWidthRequest - 8;
+        PreviewImage.MaximumHeightRequest = PreviewBorder.MaximumHeightRequest - 8;
     }
 
     private void UpdateLogPanelToggleText()
@@ -325,7 +418,9 @@ public partial class RenderPage : ContentPage
     protected override bool OnBackButtonPressed()
     {
         StopScreenSaverTimer();
-        return running;
+        if (running) return true;
+        Navigation.PopToRootAsync();
+        return true;
     }
 
     private async void ContentPage_Loaded(object sender, EventArgs e)
@@ -347,40 +442,11 @@ public partial class RenderPage : ContentPage
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
-        Shell.SetNavBarIsVisible(this, false);
         try
         {
-            var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
-
-            RenderOptionPanel.IsVisible = false;
-            PreviewLayout.IsVisible = true;
-            ProgressBox.IsVisible = true;
-            CancelRender.IsEnabled = true;
-            MoreOptions.IsEnabled = false;
-            await SubProgress.ProgressTo(0, 250, Easing.Linear);
-
-            _logBuffer.Clear();
-            _logQueue.Clear();
-            LoggingBox.Text = string.Empty;
-            UpdateLogRefreshState();
-            if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
-            {
-#if ANDROID || IOS //oled screen, avoid burn-in
-                SettingsManager.WriteSetting("render_EnableScreenSaver", "true");
-#else
-                SettingsManager.WriteSetting("render_EnableScreenSaver", "false");
-#endif
-            }
-            if (SettingsManager.IsBoolSettingTrue("render_EnableScreenSaver"))
-            {
-                _screenSaverTimer?.Stop();
-                _screenSaverTimer?.Start();
-                StopMovingHint();
-            }
-
-
-
-            MyLoggerExtensions.OnLog += _WriteToLogBox;
+            var cacheDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+            Directory.CreateDirectory(cacheDir);
+            await PrepareUIForRender();
 
             if (BindingContext is RenderPageViewModel vm)
             {
@@ -388,7 +454,7 @@ public partial class RenderPage : ContentPage
                 {
                     "8bit" => "AV_PIX_FMT_YUV420P",
                     "10bit" => "AV_PIX_FMT_YUV420P10LE",
-                    "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                    "12bit" => "AV_PIX_FMT_YUV420P10LE",
                     _ => "AV_PIX_FMT_GBRP16LE"
                 };
                 var enc = vm.BitDepth switch
@@ -401,22 +467,20 @@ public partial class RenderPage : ContentPage
                 var ext = enc switch
                 {
                     "libx264" => ".mp4",
-                    "libx265" => ".mov",
+                    "libx265" => ".mp4",
                     "ffv1" => ".mkv",
                     _ => ".mp4"
                 };
 
-
-
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
                 Log("Output options:\r\n" + vm.BuildSummary());
-                string vidOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                string audOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                string compOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
+                string vidOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                string audOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                string compOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
                 var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
-                if (string.IsNullOrWhiteSpace(resultPath)) goto done;
+                if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
                 string resultPath = compOutputPath;
 #endif
@@ -432,20 +496,31 @@ public partial class RenderPage : ContentPage
 
                     Log(ex, "compose audio", this);
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached) throw;
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
                 if (_cts.IsCancellationRequested) return;
 
+                var mtdDict = new Dictionary<string, string>
+                {
+                    { "title", _project.ProjectName ?? "Project" },
+                    { "author", $"projectFrameCut user - {SettingsManager.GetSetting("UserName", "User")}" },
+                    { "artist", $"projectFrameCut user - {SettingsManager.GetSetting("UserName", "User")}" },
+                    { "language", new CultureInfo(Localized._LocaleId_).ThreeLetterISOLanguageName },
+                    { "year", DateTime.Now.Year.ToString() },
+                    { "encoder", $"{MauiProgram.AssemblyName} v{Assembly.GetExecutingAssembly().GetName().Version} ({MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit})" },
+                    { "copyright", $"Made by {Localized.AppBrand}" }
+                };
+
                 try
                 {
-                    await DoCompute(vm, vidOutputPath);
+                    await DoCompute(vm, vidOutputPath, mtdDict);
                 }
                 catch (Exception ex)
                 {
                     Log(ex, "render frames", this);
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached) throw;
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
 
@@ -461,10 +536,13 @@ public partial class RenderPage : ContentPage
                     if (File.Exists(vidOutputPath))
                     {
                         File.Move(vidOutputPath, tempVid);
-                        string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
-                        if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
+                        await Task.Run(async () =>
+                        {
+                            string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
+                            if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
 
-                        await ffmpeg.Run(args);
+                            await ffmpeg.Run(args);
+                        }, _cts.Token);
                         File.Delete(tempVid);
                     }
 #endif
@@ -477,12 +555,12 @@ public partial class RenderPage : ContentPage
                 {
                     try
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true);
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true, mtdDict);
                     }
                     catch (Exception ex)
                     {
                         Log(ex, "compose media", this);
-                        if (Debugger.IsAttached) throw;
+                        if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                         await Dispatcher.DispatchAsync(async () =>
                         {
                             await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
@@ -491,19 +569,6 @@ public partial class RenderPage : ContentPage
                     }
 
                 });
-
-            done:
-                _logUpdateTimer?.Stop();
-                _screenSaverTimer?.Stop();
-                ScreenSaverOverlay.IsVisible = false;
-                StopMovingHint();
-                StopScreenSaverTimer();
-                await FlushLogQueue();
-                MyLoggerExtensions.OnLog -= _WriteToLogBox;
-
-                running = false;
-                CancelRender.IsEnabled = false;
-                UpdateLogRefreshState();
 
 
                 try
@@ -525,6 +590,8 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
                     await FileSystemService.ShowFileInFolderAsync(resultPath);
 #endif
+
+
                 }
                 catch (Exception ex)
                 {
@@ -539,16 +606,12 @@ public partial class RenderPage : ContentPage
         {
             Log(ex, "render", this);
             await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-            if (Debugger.IsAttached) throw;
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
             return;
         }
         finally
         {
-            StopScreenSaverTimer();
-            Shell.SetNavBarIsVisible(this, true);
-            DeviceDisplay.Current.KeepScreenOn = false;
-            await PerformPostRenderAction();
-
+            await CleanupUIForRenderDone();
         }
 
     }
@@ -556,6 +619,8 @@ public partial class RenderPage : ContentPage
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
     VideoBuilder? builder = null;
+
+
     void SetSubProg(string s)
     {
         lastProg = totalProg;
@@ -576,7 +641,7 @@ public partial class RenderPage : ContentPage
         });
     }
 
-    async Task DoCompute(RenderPageViewModel vm, string outputPath)
+    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null)
     {
         try
         {
@@ -584,22 +649,21 @@ public partial class RenderPage : ContentPage
             {
                 "8bit" => "AV_PIX_FMT_YUV420P",
                 "10bit" => "AV_PIX_FMT_YUV420P10LE",
-                "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                "12bit" => "AV_PIX_FMT_YUV420P10LE",
                 _ => "AV_PIX_FMT_GBRP16LE"
             };
-            var enc = vm.BitDepth switch
-            {
-                "8bit" => "libx264",
-                "10bit" => "libx265",
-                "12bit" => "libx265",
-                _ => "ffv1"
-            };
-            var ext = enc switch
+            var enc = vm.Encoding;
+            var ext = vm.Encoding switch
             {
                 "libx264" => ".mp4",
-                "libx265" => ".mov",
+                "h264" => ".mp4",
+                "libx265" => ".mp4",
+                "h265" => ".mp4",
+                "h265/hevc" => ".mp4",
+                "hevc" => ".mp4",
+                "av1" => ".mkv",
                 "ffv1" => ".mkv",
-                _ => ".mp4"
+                _ => ".mkv"
             };
 
             var bpp = vm.BitDepth switch
@@ -607,6 +671,14 @@ public partial class RenderPage : ContentPage
                 "8bit" => IPicture.PicturePixelMode.BytePicture,
                 _ => IPicture.PicturePixelMode.UShortPicture
             };
+
+            if (ProjectUsesHDR)
+            {
+                bpp = IPicture.PicturePixelMode.UShortPicture;
+                fmt = "AV_PIX_FMT_YUV420P10LE";
+                ext = ".mp4";
+                enc = "libx265";
+            }
             bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
 
             if (dumpDiagData && PictureLifecycleTracker.Enabled)
@@ -622,13 +694,14 @@ public partial class RenderPage : ContentPage
             int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
 
 #if ANDROID
-            ComputerHelper.AddGLViewHandler = new((v) =>
+            ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
             {
                 ComputeView.Children.Clear();
                 v.WidthRequest = 50;
                 v.HeightRequest = 50;
                 ComputeView.Children.Add(v);
             });
+            ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS
@@ -660,7 +733,7 @@ public partial class RenderPage : ContentPage
             if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
-            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite") || OperatingSystem.IsAndroid(); //on Android there is a issue on parallel rendering, use sync render as workaround
+            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
 
             Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
@@ -693,7 +766,7 @@ public partial class RenderPage : ContentPage
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
             var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
-            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
+            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
             {
                 EnablePreview = true,
                 DoGCAfterEachWrite = gcOption > 0,
@@ -702,6 +775,8 @@ public partial class RenderPage : ContentPage
                 LogStat = false,
                 BlockWrite = blockwrite
             };
+
+            builder.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
             {
@@ -712,20 +787,58 @@ public partial class RenderPage : ContentPage
                 ProjectRelativeWidth = Math.Max(1, _project.RelativeWidth),
                 ProjectRelativeHeight = Math.Max(1, _project.RelativeHeight),
                 Duration = duration,
-                MaxThreads = parallelThreadCount,
                 LogRenderState = false,
                 LogStaticsData = true,
                 LogProcessStack = dumpDiagData,
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
-                EnableRenderWatchdogForceStart = !(DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Idiom == DeviceIdiom.Tablet),
-                MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
-                {
-                    var t when t == DeviceIdiom.Desktop => 60,
-                    var t when t == DeviceIdiom.Tablet => 30,
-                    _ => 15
-                },
-                MinSchedulePreparedFrames = parallelThreadCount / 4
+                MaxThreads = parallelThreadCount,
+                EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
+                //MinRemainingFramesForPreparedWait = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => parallelThreadCount,
+                //    var t when t == DeviceIdiom.Tablet => parallelThreadCount * 2,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => parallelThreadCount * 3,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => parallelThreadCount * 4,
+                //    _ => parallelThreadCount * 2
+                //},
+                //RenderWorkerLaunchUtilizationThreshold = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 0.8,
+                //    _ => 1
+                //},
+                //RenderSchedulerPreparePollDelayMs = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 8000,
+                //    var t when t == DeviceIdiom.Tablet => 10000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 12500,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 15000,
+                //    _ => 15000
+                //},
+                //RenderSchedulerIdleDelayMs = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 500,
+                //    var t when t == DeviceIdiom.Tablet => 1000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 1000,
+                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 2000,
+                //    _ => 2000
+                //},
+                //MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
+                //{
+                //    var t when t == DeviceIdiom.Desktop => 0,
+                //    var t when t == DeviceIdiom.Tablet => 25000,
+                //    var t when t == DeviceIdiom.Phone => 30000,
+                //    _ => 40000
+                //},
+                MinSchedulePreparedFrames = parallelThreadCount,
+                UseHDR = ProjectUsesHDR,
+                MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
+                SDRClipsBrightnessInHDRMode =
+                    _project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessInHdr) && int.TryParse(sdrBrightnessInHdr, out var sdrBrightnessInHdrInt)
+                        ? sdrBrightnessInHdrInt
+                        : (_project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessInHdr) && int.TryParse(legacySdrBrightnessInHdr, out var legacySdrBrightnessInHdrInt)
+                            ? legacySdrBrightnessInHdrInt
+                            : 203)
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -785,11 +898,18 @@ public partial class RenderPage : ContentPage
             {
                 await Task.Run(async () => await renderer.GoRenderSync(_cts.Token), _cts.Token);
                 Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-                builder?.Writer.Finish();
+                builder?.Writer?.Finish();
             }
             else
             {
-                await renderer.GoRender(_cts.Token);
+                if (SettingsManager.IsBoolSettingTrue("render_RenderByLayer"))
+                {
+                    await renderer.GoRenderByLayer(_cts.Token);
+                }
+                else
+                {
+                    await renderer.GoRender(_cts.Token);
+                }
                 Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
                 SetSubProg("WriteVideo");
@@ -839,14 +959,14 @@ public partial class RenderPage : ContentPage
 
             if (dumpDiagData)
             {
-                string renderCheckpointPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                 Guid SessionId = Guid.NewGuid();
-                Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), renderer);
+                string renderCheckpointPath = Path.Combine(MauiProgram.DataPath, "RenderDiag");
+                Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(renderCheckpointPath, $"RenderDiag-{SessionId}.csv"), renderer);
                 int idx = 0, count = 0;
                 StreamWriter? sw = null;
                 foreach (var item in renderer.FrameProcessStacks.OrderBy(c => c.Key))
                 {
-                    sw ??= new(new FileStream(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint", $"ProcessStack_{SessionId}_{++idx}.md"), FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+                    sw ??= new(new FileStream(Path.Combine(renderCheckpointPath, $"ProcessStack-{SessionId}_{++idx}.md"), FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
                     await sw.WriteLineAsync($"# Frame {item.Key}");
                     await sw.WriteLineAsync();
                     await sw.WriteLineAsync(PictureProcessStack.FormatProcessStackForLogMarkdown(item.Value));
@@ -856,7 +976,7 @@ public partial class RenderPage : ContentPage
                     if (count > 2500) sw = null;
                 }
 
-                await ExportPictureLifecycleTrackerSnapshots(renderCheckpointPath, SessionId);
+                await PictureLifecycleTracker.ExportPictureLifecycleTrackerSnapshots(Path.Combine(renderCheckpointPath, $"PictureLifeCycle-{SessionId}.csv"));
             }
 
 
@@ -933,7 +1053,7 @@ public partial class RenderPage : ContentPage
             });
         };
 
-        await Task.Run(() => composer.Compose((int)_draft.TargetFrameRate, 96000, 2, SettingsManager.GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960), _cts.Token));
+        await Task.Run(() => composer.Compose((int)_project.TargetFrameRate, 96000, 2, SettingsManager.GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960), _cts.Token));
 
         writer.Finish();
         writer.Dispose();
@@ -972,14 +1092,17 @@ public partial class RenderPage : ContentPage
                 if (action == PostRenderAction.None)
                 {
                     WinUI.App.MessageBeep(0x00000040);
-                    await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
                     return;
                 }
             });
 #endif
 
             if (action == PostRenderAction.None)
+            {
+                if (await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized.RenderPage_BackToHome, Localized._OK)) await Navigation.PopToRootAsync();
                 return;
+            }
+
 
             _countdownCts?.Cancel();
             _countdownCts = new CancellationTokenSource();
@@ -1117,7 +1240,7 @@ public partial class RenderPage : ContentPage
 
 
         var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath);
-        await DisplayPromptAsync("Standalone render args", "Copy the args below:", "OK", "Cancel", initialValue: args);
+        await DisplayPromptAsync(Localized._Info, "Copy the args below:", Localized._OK, null, initialValue: args);
     }
 
     private static bool TryParseRenderSettings(RenderPageViewModel vm, out int width, out int height, out int fps)
@@ -1150,12 +1273,206 @@ public partial class RenderPage : ContentPage
         return bitDepth switch
         {
             "8bit" => ("AV_PIX_FMT_YUV420P", "libx264", ".mp4"),
-            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mov"),
-            "12bit" => ("AV_PIX_FMT_YUV444P12LE", "libx265", ".mov"),
+            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
+            "12bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
             _ => ("AV_PIX_FMT_GBRP16LE", "ffv1", ".mkv")
         };
     }
 
+
+
+    private async void ExportAudioOnly_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+#endif
+        try
+        {
+            await ComposeAudio(vm, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
+#if ANDROID
+        var ext = ".wav";
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+    }
+
+    private async void ExportVideoOnly_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+        var ext = vm.Encoding switch
+        {
+            "libx264" => ".mp4",
+            "h264" => ".mp4",
+            "libx265" => ".mov",
+            "h265" => ".mov",
+            "h265/hevc" => ".mov",
+            "hevc" => ".mov",
+            "av1" => ".mkv",
+            "ffv1" => ".mkv",
+            _ => ".mkv"
+        };
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+#endif
+        try
+        {
+            await PrepareUIForRender();
+            await DoCompute(vm, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+#if ANDROID
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+
+    }
+
+    private async void Export16bitRawVideo_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
+#endif
+        try
+        {
+            await PrepareUIForRender();
+            await DoCompute(new RenderPageViewModel { Encoding = "ffv1", BitDepth = "16bit", Width = vm.Width, Height = vm.Height, Framerate = vm.Framerate }, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "compose media", this);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            });
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+#if ANDROID
+        var ext = ".mkv";
+        var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+        if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            try
+            {
+                File.Delete(resultPath);
+            }
+            catch { }
+        }
+#endif
+    }
+
+    private async Task PrepareUIForRender()
+    {
+        running = true;
+        Shell.SetNavBarIsVisible(this, false);
+        RenderOptionPanel.IsVisible = false;
+        PreviewLayout.IsVisible = true;
+        ProgressBox.IsVisible = true;
+        UpdateRenderLayoutForLogPanel();
+        CancelRender.IsEnabled = true;
+        MoreOptions.IsEnabled = false;
+        ExportAudioOnly.IsEnabled = false;
+        ExportVideoOnly.IsEnabled = false;
+        Export16bitRawVideo.IsEnabled = false;
+        await SubProgress.ProgressTo(0, 250, Easing.Linear);
+
+        _logBuffer.Clear();
+        _logQueue.Clear();
+        LoggingBox.Text = string.Empty;
+        UpdateLogRefreshState();
+        if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
+        {
+#if ANDROID || IOS //oled screen, avoid burn-in
+            SettingsManager.WriteSetting("render_EnableScreenSaver", "true");
+#else
+            SettingsManager.WriteSetting("render_EnableScreenSaver", "false");
+#endif
+        }
+        if (SettingsManager.IsBoolSettingTrue("render_EnableScreenSaver"))
+        {
+            _screenSaverTimer?.Stop();
+            _screenSaverTimer?.Start();
+            StopMovingHint();
+        }
+
+
+
+        MyLoggerExtensions.OnLog += _WriteToLogBox;
+    }
+
+    private async Task CleanupUIForRenderDone()
+    {
+        _logUpdateTimer?.Stop();
+        _screenSaverTimer?.Stop();
+        ScreenSaverOverlay.IsVisible = false;
+        StopMovingHint();
+        StopScreenSaverTimer();
+        await FlushLogQueue();
+        MyLoggerExtensions.OnLog -= _WriteToLogBox;
+
+        running = false;
+        UpdateRenderLayoutForLogPanel();
+        CancelRender.IsEnabled = false;
+        UpdateLogRefreshState();
+
+        StopScreenSaverTimer();
+        Shell.SetNavBarIsVisible(this, true);
+        DeviceDisplay.Current.KeepScreenOn = false;
+        await PerformPostRenderAction();
+    }
 
     private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath)
     {
@@ -1199,89 +1516,25 @@ public partial class RenderPage : ContentPage
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
 
-    private async Task ExportPictureLifecycleTrackerSnapshots(string outputDirectory, Guid sessionId)
-    {
-        try
-        {
-            if (!PictureLifecycleTracker.Enabled)
-            {
-                Log("PictureLifecycleTracker is disabled. Skipped lifecycle snapshot export.");
-                return;
-            }
 
-            var snapshots = PictureLifecycleTracker.GetSnapshots(includeDisposed: true);
-            Directory.CreateDirectory(outputDirectory);
-
-            string outputPath = Path.Combine(outputDirectory, $"PictureLifecycle_{sessionId}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-            await using var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-            await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-
-            await writer.WriteLineAsync(string.Join(',',
-            [
-                "Id",
-                "TypeName",
-                "BitPerPixel",
-                "Width",
-                "Height",
-                "Pixels",
-                "CreatedAtUtc",
-                "DisposedAtUtc",
-                "CollectedAtUtc",
-                "IsDisposed",
-                "IsCollected",
-                "LifetimeToDisposeMs",
-                "LifetimeToCollectMs"
-            ]));
-
-            foreach (var snapshot in snapshots)
-            {
-                await writer.WriteLineAsync(string.Join(',',
-                [
-                    EscapeCsv(snapshot.Id.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.TypeName),
-                    EscapeCsv(snapshot.BitPerPixel.ToString()),
-                    EscapeCsv(snapshot.Width.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.Height.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.Pixels.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.DisposedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.CollectedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.IsDisposed ? "true" : "false"),
-                    EscapeCsv(snapshot.IsCollected ? "true" : "false"),
-                    EscapeCsv(snapshot.LifetimeToDispose?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture)),
-                    EscapeCsv(snapshot.LifetimeToCollect?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture))
-                ]));
-            }
-
-            await writer.FlushAsync();
-            Log($"Exported PictureLifecycleTracker snapshots: {snapshots.Count} records, {outputPath}");
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "export PictureLifecycleTracker snapshots", this);
-        }
-    }
-
-    private static string EscapeCsv(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
 
 }
 
 
 public class RenderPageViewModel : INotifyPropertyChanged
 {
+    bool HDREnabled = false;
+
+    public RenderPageViewModel()
+    {
+
+    }
+
+    public RenderPageViewModel(bool hdrEnabled)
+    {
+        HDREnabled = hdrEnabled;
+    }
+
     public string[] ExportOptions_Resolution { get; } = [
         "1280x720",
         "1920x1080",
@@ -1294,14 +1547,44 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public string[] ExportOptions_Framerate { get; } =
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
-    public string[] ExportOptions_Encoding { get; } = [
-        "h264", "h265/hevc", "av1",
-        Localized.RenderPage_CustomOption
-    ];
+    public string[] ExportOptions_Encoding
+    {
+        get
+        {
+            if (HDREnabled)
+            {
+                return
+                [
+                    "h265", // Apple playback compatibility: force HEVC for HDR exports
+                    Localized.RenderPage_CustomOption
+                ];
+            }
+            else
+            {
+                return
+                [
+                    "av1", "h264", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
+                    Localized.RenderPage_CustomOption
+                ];
+            }
+        }
+    }
 
-    public string[] ExportOptions_BitDepth { get; } = [
-        "8bit", "10bit", "12bit"
-    ];
+    public string[] ExportOptions_BitDepth
+    {
+        get
+        {
+            if (HDREnabled)
+            {
+                return ["10bit"];
+            }
+            else
+            {
+                return ["8bit", "10bit", "12bit"];
+            }
+        }
+
+    }
 
     public static Dictionary<string, PostRenderAction> PostRenderActionNames = Enum.GetNames(typeof(PostRenderAction))
         .Select(s => (Localized.DynamicLookup($"RenderPage_PostRenderAction_{s}"), Enum.Parse<PostRenderAction>(s)))
@@ -1371,7 +1654,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _framerate = "30";
+    string _framerate = "60";
     public string Framerate
     {
         get
@@ -1401,7 +1684,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _encoding = "h264";
+    string _encoding = "av1";
     public string Encoding
     {
         get

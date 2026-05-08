@@ -10,22 +10,21 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class RotationEffectBundle : IEffectBundle
+    public class FadeOpacityEffectBundle : IEffectBundle
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "Rotation";
+        public string Name { get; set; } = "FadeOpacity";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
-            { "Angle", 0f },
-            { "ExpandCanvas", false },
+            { "Opacity", 0.8f }
         };
 
-        public List<string> ParametersNeeded => RotationEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => RotationEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => FadeOpacityEffect_ImageSharp.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => FadeOpacityEffect_ImageSharp.ParametersType;
 
-        public string TypeName => "Rotation";
+        public string TypeName => "FadeOpacity";
         public bool IsNormalEffect => true;
         public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
@@ -46,42 +45,33 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public IEffectFactory[] Create()
         {
-            var factory = new RotationEffectFactory();
+            var factory = new FadeOpacityEffectFactory();
             this.ConfigureFactory(factory);
             return [factory];
         }
 
         public PropertyPanelBuilder CreateUI()
         {
-            float angle = EffectBundleUiHelper.GetFloat(Parameters, "Angle", 0f);
-            bool expandCanvas = EffectBundleUiHelper.GetBool(Parameters, "ExpandCanvas", false);
+            float opacity = EffectBundleUiHelper.GetFloat(Parameters, "Opacity", 0.8f);
+            opacity = Math.Clamp(opacity, 0f, 1f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
-                "Angle",
-                EffectBundleUiHelper.ParamLabel("Angle"),
-                -180,
-                180,
-                angle,
+                "Opacity",
+                EffectBundleUiHelper.L("Effect_FadeOpacity_Opacity", "Opacity"),
+                0,
+                1,
+                opacity,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
-            panel.AddCheckbox(
-                "ExpandCanvas",
-                EffectBundleUiHelper.L("Effect_Rotation_ExpandCanvas", "Expand Canvas"),
-                expandCanvas);
-
+                SliderUpdateEventCallMode.OnMouseUp);
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Angle")
+            if (args.Id == "Opacity" && EffectBundleUiHelper.TrySetFloat(Parameters, "Opacity", args.Value))
             {
-                EffectBundleUiHelper.TrySetFloat(Parameters, "Angle", args.Value);
-            }
-            else if (args.Id == "ExpandCanvas")
-            {
-                EffectBundleUiHelper.TrySetBool(Parameters, "ExpandCanvas", args.Value);
+                Parameters["Opacity"] = Math.Clamp(EffectBundleUiHelper.GetFloat(Parameters, "Opacity", 0.8f), 0f, 1f);
             }
 
             return Parameters;
@@ -91,8 +81,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Rotation", "Rotation"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Rotation", "Rotate the frame by angle and optionally expand canvas."),
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_FadeOpacity", "Fade Opacity"),
+                Description = EffectBundleUiHelper.L("Description_Effect_FadeOpacity", "Apply a uniform opacity multiplier to the frame."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

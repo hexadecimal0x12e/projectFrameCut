@@ -28,6 +28,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         Vertical
     }
 
+    public enum TaskbarVisibilityMode
+    {
+        /// <summary>Taskbar is never shown.</summary>
+        AlwaysHidden,
+        /// <summary>Taskbar is shown only when at least one window is minimized.</summary>
+        Auto,
+        /// <summary>Taskbar is always shown, even when empty.</summary>
+        AlwaysVisible
+    }
+
     /// <summary>
     /// A container for all <see cref="MultiWindowItem"/>.
     /// </summary>
@@ -61,6 +71,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public static readonly BindableProperty AutoArrangeModeProperty =
             BindableProperty.Create(nameof(AutoArrangeMode), typeof(WindowArrangeMode), typeof(MultiWindowView), WindowArrangeMode.Grid);
+
+        public static readonly BindableProperty TaskbarVisibilityProperty =
+            BindableProperty.Create(nameof(TaskbarVisibility), typeof(TaskbarVisibilityMode), typeof(MultiWindowView), TaskbarVisibilityMode.Auto, propertyChanged: OnTaskbarVisibilityChanged);
+
+        public static readonly BindableProperty TaskbarHeightProperty =
+            BindableProperty.Create(nameof(TaskbarHeight), typeof(double), typeof(MultiWindowView), 40d, propertyChanged: OnTaskbarLayoutChanged);
 
         /// <summary>
         /// Enable or disable edge/corner snapping while dragging windows.
@@ -116,6 +132,29 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             set => SetValue(AutoArrangeModeProperty, value);
         }
 
+        /// <summary>
+        /// Controls when the taskbar is visible: always hidden, only when minimized windows exist (Auto), or always visible.
+        /// </summary>
+        public TaskbarVisibilityMode TaskbarVisibility
+        {
+            get => (TaskbarVisibilityMode)GetValue(TaskbarVisibilityProperty);
+            set => SetValue(TaskbarVisibilityProperty, value);
+        }
+
+        /// <summary>
+        /// Convenience property. Returns true when <see cref="TaskbarVisibility"/> is not <see cref="TaskbarVisibilityMode.AlwaysHidden"/>.
+        /// </summary>
+        public bool IsTaskbarEnabled => TaskbarVisibility != TaskbarVisibilityMode.AlwaysHidden;
+
+        /// <summary>
+        /// Height of the taskbar in pixels.
+        /// </summary>
+        public double TaskbarHeight
+        {
+            get => (double)GetValue(TaskbarHeightProperty);
+            set => SetValue(TaskbarHeightProperty, value);
+        }
+
         private MultiWindowItem? _activeWindow;
 
         /// <summary>
@@ -168,8 +207,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private readonly HashSet<MultiWindowItem> _managedWindows = new();
         private readonly Dictionary<MultiWindowItem, WindowSnapZone> _snapStates = new();
+        private readonly Dictionary<MultiWindowItem, Border> _taskbarItems = new();
         private MultiWindowItem? _snapTarget;
         private WindowSnapZone _pendingSnapZone = WindowSnapZone.None;
+        private Border? _taskbar;
+        private HorizontalStackLayout? _taskbarItemsContainer;
 
         public MultiWindowView()
         {
@@ -185,6 +227,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 SnapPreviewOverlay.ZIndex = 10000;
             }
 
+            _taskbar = Taskbar;
+            _taskbarItemsContainer = TaskbarItemsContainer;
+            ApplyTaskbarVisibility();
+
             Initialized = true;
         }
 
@@ -192,10 +238,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             foreach (var item in _managedWindows.ToArray())
             {
+                item.PropertyChanged -= OnTaskbarWindowPropertyChanged;
+                item.PropertyChanged -= OnItemPropertyChanged;
                 item.Close(true);
             }
             _managedWindows.Clear();
             _snapStates.Clear();
+            _taskbarItems.Clear();
+            _taskbarItemsContainer?.Children.Clear();
             _snapTarget = null;
             _pendingSnapZone = WindowSnapZone.None;
             HideSnapPreview();
@@ -223,7 +273,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 _managedWindows.Remove(item);
                 _snapStates.Remove(item);
+                RemoveTaskbarItem(item);
                 item.CloseClicked -= OnItemCloseClicked;
+                item.MinimizeClicked -= OnItemMinimizeClicked;
+                item.PropertyChanged -= OnItemPropertyChanged;
             }
         }
 
@@ -291,6 +344,256 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
+        private bool _isHandlingMinimize;
+
+        private void OnItemMinimizeClicked(object? sender, EventArgs e)
+        {
+            // The actual taskbar logic is handled by OnItemPropertyChanged
+            // listening for IsMinimized changes. But for the button click,
+            // Minimize() is called AFTER this event. OnItemPropertyChanged
+            // will catch the IsMinimized change and handle taskbar logic.
+        }
+
+        private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (sender is not MultiWindowItem item) return;
+            if (!IsTaskbarEnabled) return;
+            if (e.PropertyName != nameof(MultiWindowItem.IsMinimized)) return;
+            if (_isHandlingMinimize) return;
+
+            _isHandlingMinimize = true;
+            try
+            {
+                if (item.IsMinimized)
+                {
+                    MinimizeWindowToTaskbar(item);
+                }
+                else if (_taskbarItems.ContainsKey(item))
+                {
+                    // Restore: the Minimize() call already toggled the state.
+                    // Only act if the window is actually tracked in the taskbar.
+                    item.IsVisible = true;
+                    RemoveTaskbarItem(item);
+                    BringToFront(item);
+                }
+            }
+            finally
+            {
+                _isHandlingMinimize = false;
+            }
+        }
+
+        private void MinimizeWindowToTaskbar(MultiWindowItem item)
+        {
+            item.IsVisible = false;
+            AddTaskbarItem(item);
+        }
+
+        private void RestoreWindowFromTaskbar(MultiWindowItem item)
+        {
+            item.IsVisible = true;
+            if (item.IsMinimized)
+            {
+                _isHandlingMinimize = true;
+                item.Minimize();
+                _isHandlingMinimize = false;
+            }
+            RemoveTaskbarItem(item);
+            BringToFront(item);
+        }
+
+        private void AddTaskbarItem(MultiWindowItem item)
+        {
+            if (_taskbarItemsContainer is null) return;
+            if (_taskbarItems.ContainsKey(item)) return;
+
+            var label = new Label
+            {
+                Text = item.Title,
+                TextColor = Colors.White,
+                FontSize = 12,
+                VerticalOptions = LayoutOptions.Center,
+                Margin = new Thickness(8, 0),
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1
+            };
+
+            var border = new Border
+            {
+                Content = label,
+                BackgroundColor = Color.FromArgb("#3C3C40"),
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+                Stroke = Colors.Transparent,
+                HeightRequest = 32,
+                MinimumWidthRequest = 120,
+                MaximumWidthRequest = 200,
+                VerticalOptions = LayoutOptions.Center,
+                Margin = new Thickness(2, 0),
+            };
+
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += (s, e) => OnTaskbarItemTapped(item);
+            border.GestureRecognizers.Add(tap);
+
+            _taskbarItems[item] = border;
+            _taskbarItemsContainer.Children.Add(border);
+
+            // Track title changes
+            item.PropertyChanged += OnTaskbarWindowPropertyChanged;
+
+            UpdateTaskbarHighlight();
+            UpdateTaskbarDynamicVisibility();
+        }
+
+        private void RemoveTaskbarItem(MultiWindowItem item)
+        {
+            item.PropertyChanged -= OnTaskbarWindowPropertyChanged;
+
+            if (_taskbarItems.TryGetValue(item, out var border))
+            {
+                _taskbarItems.Remove(item);
+                if (_taskbarItemsContainer is not null)
+                {
+                    _taskbarItemsContainer.Children.Remove(border);
+                }
+                UpdateTaskbarDynamicVisibility();
+            }
+        }
+
+        private void OnTaskbarWindowPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (sender is not MultiWindowItem item) return;
+            if (e.PropertyName == nameof(MultiWindowItem.Title))
+            {
+                if (_taskbarItems.TryGetValue(item, out var border) && border.Content is Label label)
+                {
+                    label.Text = item.Title;
+                }
+            }
+        }
+
+        private void OnTaskbarItemTapped(MultiWindowItem item)
+        {
+            RestoreWindowFromTaskbar(item);
+            ActiveWindow = item;
+        }
+
+        private void UpdateTaskbarHighlight()
+        {
+            if (_taskbar is null) return;
+
+            foreach (var (window, border) in _taskbarItems)
+            {
+                var isActive = _activeWindow is not null && MultiWindowItem.ReferenceEquals(_activeWindow, window);
+                border.BackgroundColor = isActive
+                    ? Color.FromArgb("#505055")
+                    : Color.FromArgb("#3C3C40");
+            }
+        }
+
+        private void ApplyTaskbarVisibility()
+        {
+            if (_taskbar is null) return;
+
+            switch (TaskbarVisibility)
+            {
+                case TaskbarVisibilityMode.AlwaysHidden:
+                    RestoreAllMinimizedWindows();
+                    SetTaskbarVisible(false);
+                    break;
+                case TaskbarVisibilityMode.AlwaysVisible:
+                    SetTaskbarVisible(true);
+                    break;
+                case TaskbarVisibilityMode.Auto:
+                    SetTaskbarVisible(_taskbarItems.Count > 0);
+                    break;
+            }
+
+            // Re-apply snaps to adjust for taskbar height change
+            foreach (var pair in _snapStates.ToArray())
+            {
+                if (!Children.Contains(pair.Key))
+                {
+                    _snapStates.Remove(pair.Key);
+                    continue;
+                }
+                ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
+            }
+        }
+
+        private void UpdateTaskbarDynamicVisibility()
+        {
+            if (_taskbar is null) return;
+            if (TaskbarVisibility != TaskbarVisibilityMode.Auto) return;
+
+            var shouldShow = _taskbarItems.Count > 0;
+            if (_taskbar.IsVisible != shouldShow)
+            {
+                SetTaskbarVisible(shouldShow);
+
+                // Re-apply snaps when taskbar toggles in Auto mode
+                foreach (var pair in _snapStates.ToArray())
+                {
+                    if (!Children.Contains(pair.Key))
+                    {
+                        _snapStates.Remove(pair.Key);
+                        continue;
+                    }
+                    ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
+                }
+            }
+        }
+
+        private void SetTaskbarVisible(bool visible)
+        {
+            if (_taskbar is null) return;
+            _taskbar.IsVisible = visible;
+            _taskbar.HeightRequest = visible ? TaskbarHeight : 0;
+        }
+
+        private void RestoreAllMinimizedWindows()
+        {
+            foreach (var item in _taskbarItems.Keys.ToArray())
+            {
+                RestoreWindowFromTaskbar(item);
+                if (item.IsMinimized) item.Minimize();
+            }
+            _taskbarItems.Clear();
+            if (_taskbarItemsContainer is not null)
+                _taskbarItemsContainer.Children.Clear();
+        }
+
+        private static void OnTaskbarVisibilityChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowView view)
+            {
+                view.ApplyTaskbarVisibility();
+            }
+        }
+
+        private static void OnTaskbarLayoutChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowView view)
+            {
+                view.ApplyTaskbarVisibility();
+            }
+        }
+
+        private double GetEffectiveMdiHeight()
+        {
+            var h = Math.Max(0, Height);
+            if (_taskbar?.IsVisible == true)
+            {
+                h = Math.Max(0, h - TaskbarHeight);
+            }
+            return h;
+        }
+
+        private Rect GetMdiArea()
+        {
+            return new Rect(0, 0, Math.Max(0, Width), GetEffectiveMdiHeight());
+        }
+
         private void OnChildAdded(object? sender, ElementEventArgs e)
         {
             if (e.Element is MultiWindowItem item)
@@ -299,6 +602,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     item.CloseClicked += OnItemCloseClicked;
                     item.Activated += OnItemActivated;
+                    item.MinimizeClicked += OnItemMinimizeClicked;
+                    item.PropertyChanged += OnItemPropertyChanged;
                     item.DragStarted += OnItemDragStarted;
                     item.Dragging += OnItemDragging;
                     item.DragCompleted += OnItemDragCompleted;
@@ -319,11 +624,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 item.CloseClicked -= OnItemCloseClicked;
                 item.Activated -= OnItemActivated;
+                item.MinimizeClicked -= OnItemMinimizeClicked;
+                item.PropertyChanged -= OnItemPropertyChanged;
                 item.DragStarted -= OnItemDragStarted;
                 item.Dragging -= OnItemDragging;
                 item.DragCompleted -= OnItemDragCompleted;
                 _managedWindows.Remove(item);
                 _snapStates.Remove(item);
+                RemoveTaskbarItem(item);
 
                 if (_activeWindow is not null && MultiWindowItem.ReferenceEquals(_activeWindow, item))
                 {
@@ -356,6 +664,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 SnapPreviewOverlay.ZIndex = item.ZIndex + 1;
             }
+
+            UpdateTaskbarHighlight();
         }
 
         private static Rect CreateRectFromWindow(MultiWindowItem item)
@@ -387,6 +697,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             foreach (var other in Windows)
             {
                 if (MultiWindowItem.ReferenceEquals(other, movedItem)) continue;
+                if (!other.IsVisible) continue;
 
                 var intersection = GetIntersectionArea(movedBounds, CreateRectFromWindow(other));
                 if (intersection <= 0) continue;
@@ -404,10 +715,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private WindowSnapZone DetectSnapZone(WindowBoundsChangedEventArgs e)
         {
             var threshold = Math.Max(8, SnapThreshold);
+            var mdiHeight = GetEffectiveMdiHeight();
             var nearLeft = e.X <= threshold;
             var nearRight = e.X + e.Width >= Width - threshold;
             var nearTop = e.Y <= threshold;
-            var nearBottom = e.Y + e.Height >= Height - threshold;
+            var nearBottom = e.Y + e.Height >= mdiHeight - threshold;
 
             if (nearTop && nearLeft) return WindowSnapZone.TopLeftQuarter;
             if (nearTop && nearRight) return WindowSnapZone.TopRightQuarter;
@@ -423,8 +735,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private Rect GetSnapBounds(WindowSnapZone zone)
         {
-            var w = Math.Max(0, Width);
-            var h = Math.Max(0, Height);
+            var area = GetMdiArea();
+            var w = area.Width;
+            var h = area.Height;
             var halfW = w / 2;
             var halfH = h / 2;
 
@@ -445,8 +758,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private Rect GetAssistBoundsForOtherWindows(WindowSnapZone snappedZone)
         {
-            var w = Math.Max(0, Width);
-            var h = Math.Max(0, Height);
+            var area = GetMdiArea();
+            var w = area.Width;
+            var h = area.Height;
             var halfW = w / 2;
             var halfH = h / 2;
 
@@ -538,7 +852,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void AutoArrangeRemainingWindows(MultiWindowItem snappedItem, WindowSnapZone snappedZone)
         {
-            var remaining = Windows.Where(w => !MultiWindowItem.ReferenceEquals(w, snappedItem)).ToList();
+            var remaining = Windows.Where(w => !MultiWindowItem.ReferenceEquals(w, snappedItem) && w.IsVisible).ToList();
             if (remaining.Count == 0) return;
 
             var assistBounds = GetAssistBoundsForOtherWindows(snappedZone);
@@ -593,10 +907,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="mode">The arrangement mode.</param>
         public void ArrangeWindows(WindowArrangeMode mode)
         {
-            var windows = Windows.ToList();
+            var windows = Windows.Where(w => w.IsVisible).ToList();
             if (windows.Count == 0 || Width <= 0 || Height <= 0) return;
 
-            ArrangeWindowsInternal(windows, new Rect(0, 0, Width, Height), mode);
+            ArrangeWindowsInternal(windows, GetMdiArea(), mode);
         }
 
         private void ArrangeWindowsInternal(IReadOnlyList<MultiWindowItem> windows, Rect area, WindowArrangeMode mode)

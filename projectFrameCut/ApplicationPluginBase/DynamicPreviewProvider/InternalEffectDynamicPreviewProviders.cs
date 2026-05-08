@@ -344,6 +344,66 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
         }
     }
 
+    internal sealed class FlipEffectDynamicPreviewProvider : InternalEffectDynamicPreviewProviderBase
+    {
+        public override string TypeName => "Flip";
+
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        {
+            if (input is not VisualElement visual)
+            {
+                return input;
+            }
+
+            var horizontal = false;
+            var vertical = false;
+            TryGetParameter<bool>(target, "Horizontal", out horizontal);
+            TryGetParameter<bool>(target, "Vertical", out vertical);
+
+            visual.ScaleX *= horizontal ? -1 : 1;
+            visual.ScaleY *= vertical ? -1 : 1;
+            return input;
+        }
+    }
+
+    internal sealed class SharpenEffectDynamicPreviewProvider : InternalEffectDynamicPreviewProviderBase
+    {
+        public override string TypeName => "Sharpen";
+
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        {
+            return input;
+        }
+    }
+
+    internal sealed class VignetteEffectDynamicPreviewProvider : InternalEffectDynamicPreviewProviderBase
+    {
+        public override string TypeName => "Vignette";
+
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        {
+            return input;
+        }
+    }
+
+    internal sealed class FadeOpacityEffectDynamicPreviewProvider : InternalEffectDynamicPreviewProviderBase
+    {
+        public override string TypeName => "FadeOpacity";
+
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        {
+            if (input is not VisualElement visual)
+            {
+                return input;
+            }
+
+            var opacity = 1f;
+            TryGetParameter<float>(target, "Opacity", out opacity);
+            visual.Opacity = Math.Clamp(visual.Opacity * opacity, 0d, 1d);
+            return input;
+        }
+    }
+
     internal sealed class PointPlacerEffectDynamicPreviewProvider : InternalEffectDynamicPreviewProviderBase
     {
         public override string TypeName => "PointPlacer";

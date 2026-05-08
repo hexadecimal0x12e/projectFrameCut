@@ -76,7 +76,9 @@ namespace projectFrameCut.Services
 #pragma warning disable CS8603 // shut up pls
             return await Task<ImageSource>.Run(() =>
             {
-                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName}.png");
+                var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
+
+                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", isDark ? "dark" : "light", $"{item.FontName}.png");
                 if (File.Exists(cachePath))
                 {
                     return ImageSource.FromFile(cachePath);
@@ -95,7 +97,6 @@ namespace projectFrameCut.Services
                         font = TextClip.FontsCache.TryGet(item.FontName, out var family) ? family.CreateFont(fontSize) : throw new InvalidOperationException("Font not available.");
                     }
 
-                    var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
 
                     // 当未指定 sample 时，优先使用 FontItem.PrimaryLanguageTag 判断语言，
                     // 再尝试从字体文件直接读取（如果能找到路径的话）。
@@ -146,6 +147,8 @@ namespace projectFrameCut.Services
         public static void LoadFonts()
         {
             Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache"));
+            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "dark"));
+            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "light"));
             LoadedFonts.Clear();
             foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
             {
@@ -167,6 +170,7 @@ namespace projectFrameCut.Services
                     DisplayName = info.DisplayName,
                     PrimaryLanguageTag = TextHelper.ToLanguageCode(info.PrimaryLanguage, true),
                     FontName = info.EnglishName,
+                    Path = f
 
                 });
 

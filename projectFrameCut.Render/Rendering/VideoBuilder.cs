@@ -28,10 +28,18 @@ namespace projectFrameCut.Render.Rendering
         /// or when <see cref="BlockWrite"/> is enabled, writing a frame with an existing index will throw an exception.
         /// </summary>
         public bool StrictMode { get; set; } = true;
+
+        /// <summary>
+        /// Ignore all frame range check and allow writing frames with duplicated indexes. 
+        /// </summary>
+        /// <remarks>
+        /// Affected when <see cref="StrictMode"/> is false.
+        /// </remarks>
+        public bool AllowDuplicatedFrameWrite { get; set; } = false;
         /// <summary>
         /// Call GC to collect unreferenced objects after each frame is written.
         /// </summary>
-        public bool DoGCAfterEachWrite { get; set; } = true;
+        public bool DoGCAfterEachWrite { get; set; } = false;
         /// <summary>
         /// Dispose the source <see cref="IPicture"/> when it's written to video.
         /// </summary>
@@ -83,17 +91,33 @@ namespace projectFrameCut.Render.Rendering
         /// </remarks>
         public ConcurrentDictionary<uint, bool> FramePendedToWrite { get; private set; } = new();
 
-        public VideoBuilder(string path, int width, int height, int framerate, string encoder, string fmt)
+        public VideoBuilder(IVideoWriter writer)
+        {
+            this.writer = writer;
+            writer.Initialize();
+        }
+
+        public VideoBuilder(string path, int width, int height, int framerate, string encoder, string fmt, string? writerType = null)
         {
             outputPath = path;
             index = 0;
-            writer = PluginManager.CreateVideoWriter(encoder);
+            writer = string.IsNullOrWhiteSpace(writerType)
+                ? PluginManager.CreateVideoWriter(encoder)
+                : PluginManager.CreateVideoWriter(writerType);
             writer.Width = width;
             writer.Height = height;
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
-            writer.CodecName = encoder;
+
+            if (!string.IsNullOrWhiteSpace(writerType))
+            {
+                writer.CodecName = encoder;
+            }
+            else if (string.IsNullOrWhiteSpace(writer.CodecName))
+            {
+                writer.CodecName = encoder;
+            }
             writer.Initialize();
 
 
@@ -109,7 +133,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
-
+            if (AllowDuplicatedFrameWrite) goto write;
             if (index > Duration)
             {
                 Log($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.", "warn");
@@ -134,6 +158,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             Interlocked.Increment(ref _totalFramesCount);
+            frame.frameIndex = index;
 
             if (!IPicture.AllowPixelModeDowngrade && writer.TargetPPB is IPicture.PicturePixelMode m)
             {
@@ -142,7 +167,7 @@ namespace projectFrameCut.Render.Rendering
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
             }
-
+        write:
             if (!BlockWrite)
             {
                 Cache.AddOrUpdate(index, frame,
@@ -205,6 +230,10 @@ namespace projectFrameCut.Render.Rendering
                         {
                             WriteFrame(index, frame, LogStat ? $"[VideoBuilder] Frame #{index} wrote." : null);
                         }
+                        else
+                        {
+                            Thread.Sleep(1);
+                        }
                     }
                 }
                 finally
@@ -215,7 +244,7 @@ namespace projectFrameCut.Render.Rendering
             })
             {
                 Name = $"VideoWriter for {outputPath}",
-                Priority = ThreadPriority.Highest
+                Priority = ThreadPriority.AboveNormal
             };
 
 

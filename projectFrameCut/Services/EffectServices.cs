@@ -24,14 +24,14 @@ namespace projectFrameCut.Services
 
             newEffect.RelativeWidth = page?.ProjectInfo?.RelativeWidth ?? 1920;
             newEffect.RelativeHeight = page?.ProjectInfo?.RelativeHeight ?? 1080;
-            
+
             // Preserve IBindableArgumentEffect properties
             if (effect is IBindableArgumentEffect oldBindable && newEffect is IBindableArgumentEffect newBindable)
             {
                 newBindable.Id = oldBindable.Id;
                 newBindable.BindedArgumentProviderID = oldBindable.BindedArgumentProviderID;
             }
-            
+
             // Preserve BindedEffectGroupID
             newEffect.BindedEffectGroupID = effect.BindedEffectGroupID;
 
@@ -43,12 +43,13 @@ namespace projectFrameCut.Services
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffect>> e)
             {
                 var instance = e.Value();
-                var type = instance switch
-                {
-                    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    var t when t is IBindableArgumentEffect => PPLocalizedResources.Effect_BindableArgsEffect,
-                    _ => PPLocalizedResources.Effect_GeneralEffect,
-                };
+                var type = instance.TypeOfEffect.ToString();
+                //instance switch
+                //{
+                //    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                //    var t when t is IBindableArgumentEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                //    _ => PPLocalizedResources.Effect_GeneralEffect,
+                //};
                 if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
@@ -68,37 +69,28 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, Func<IEffectBundle>> GetAvailableEffectBundles()
         {
-            var bundles = new Dictionary<string, Func<IEffectBundle>>();
-            if (!PluginManager.Inited) return bundles;
-
-            foreach (var plugin in PluginManager.LoadedPlugins.Values)
-            {
-                if (plugin is IApplicationPluginBase appPlugin)
-                {
-                    foreach (var kvp in appPlugin.EffectBundleProvider)
-                    {
-                        if (!bundles.ContainsKey(kvp.Key))
-                        {
-                            bundles.Add(kvp.Key, kvp.Value);
-                        }
-                    }
-                }
-            }
-            return bundles;
+            if (!PluginManager.Inited) return [];
+            return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).ToDictionary(k => k.Key, v => v.Value);
         }
 
-        public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ")
+        public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ", bool haveSubFix = true)
         {
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffectBundle>> e)
             {
                 var instance = e.Value();
-                var type = instance switch
+                var type = instance.TypeOfEffect switch
                 {
-                    var t when t.IsContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    var t when t.IsBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                    Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                    Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
-                if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
+                if (!haveSubFix)
+                {
+                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);   
+                }
+                else if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                     return $"{dispName}{splitter}({type})";

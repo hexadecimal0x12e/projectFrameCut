@@ -78,6 +78,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
+
+        private Dictionary<string, string>? _metadata;
+        public Dictionary<string, string>? Metadata
+        {
+            get => _metadata;
+            set
+            {
+                if (_isHeaderWritten) throw new InvalidOperationException("Cannot modify metadata after header has been written");
+                _metadata = value;
+            }
+        }
+
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
         private AVStream* _videoStream;
@@ -117,8 +129,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             if (OutputPath is null || _inited == true) return;
             if (Width <= 0 || Height <= 0 || FramePerSecond <= 0) throw new ArgumentOutOfRangeException("You set an invalid width, height or fps.");
-            _pixelFormat = typeof(AVPixelFormat).GetEnumValues().Cast<AVPixelFormat>().FirstOrDefault(f => f.ToString().Equals(PixelFormat, StringComparison.OrdinalIgnoreCase), AVPixelFormat.AV_PIX_FMT_NONE);
-            if (_pixelFormat is AVPixelFormat.AV_PIX_FMT_NONE)
+            if (Path.GetDirectoryName(OutputPath) is not string p || !Directory.Exists(p)) throw new DirectoryNotFoundException($"The target directory '{Path.GetDirectoryName(OutputPath)}' does not exist or it's invalid.");
+            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists."); 
+            if (!Enum.TryParse(PixelFormat, out _pixelFormat) || _pixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 throw new ArgumentException($"The pixel format '{PixelFormat}' is not found. Please check the pixel format name.");
             }
@@ -129,35 +142,38 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 try
                 {
-                    using (var fs = System.IO.File.Create(OutputPath))
+                    using (var fs = System.IO.File.OpenWrite(OutputPath))
                     {
                         fs.WriteByte(1);
-                        goto writable;
+                        FFmpegHelper.Throw(ret, "Init video stream (avformat_alloc_output_context2)");
                     }
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    throw new FileLoadException($"projectFrameCut can't write the video file '{OutputPath}' because of no enough privileges. Try restart the projectFrameCut with administrator privileges, or modify the privileges of output dir. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
                 catch (DirectoryNotFoundException)
                 {
-                    throw new DirectoryNotFoundException($"The directory '{Path.GetDirectoryName(OutputPath)}' isn't exist. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})");
+                    throw new DirectoryNotFoundException($"The target directory '{Path.GetDirectoryName(OutputPath)}' not exist. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})");
                 }
                 catch (PathTooLongException ex)
                 {
                     throw new FileLoadException($"projectFrameCut can't write the video file '{OutputPath}' because of path is too long. Try modify the temp directory in the settings. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
+                catch (IOException io)
+                {
+                    throw new IOException($"projectFrameCut can't write the target video file '{OutputPath}' because I/O operation fail: {io.Message} \r\n(FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", io);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    throw new FileLoadException($"projectFrameCut can't write the target video file '{OutputPath}' because of no enough privileges. Try modify the privileges of output dir. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
+                }
+
                 catch (Exception ex)
                 {
                     throw new InvalidOperationException($"projectFrameCut failed to write the file because of '{ex.Message}'. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
-            writable:
-                FFmpegHelper.Throw(ret, "Prepare the file to write video (avformat_alloc_output_context2)");
             }
             _fmtCtx = oc;
 
             AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(CodecName);
-            if (codec == null) throw new EntryPointNotFoundException($"Could not found a encoder '{CodecName}' for the video file '{OutputPath}'. Try reinstall projectFrameCut.");
+            if (codec == null) throw new EntryPointNotFoundException($"Could not found the encoder '{CodecName}'. Try install codec extension-pack, or reinstall projectFrameCut.");
 
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
             if (_videoStream == null) throw new InvalidOperationException("Failed to create a stream to write video.");
@@ -187,7 +203,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
             }
 
-            FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "avcodec_open2");
+            FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
             ffmpeg.av_dict_free(&opts);
 
             FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(_videoStream->codecpar, _codecCtx),
@@ -195,7 +211,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0)
             {
-                FFmpegHelper.Throw(ffmpeg.avio_open(&_fmtCtx->pb, OutputPath, ffmpeg.AVIO_FLAG_WRITE), "avio_open");
+                FFmpegHelper.Throw(ffmpeg.avio_open(&_fmtCtx->pb, OutputPath, ffmpeg.AVIO_FLAG_WRITE), "Open target audio/video stream");
             }
 
             _frameDst = ffmpeg.av_frame_alloc();
@@ -227,7 +243,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             // SWS_BICUBIC == 4
 
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
-            Console.WriteLine($"[VideoBuilder] Successfully initialized encoder for {OutputPath}");
+            Log($"[VideoBuilder] Successfully initialized encoder for {OutputPath}");
 
             _inited = true;
 
@@ -463,6 +479,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private void EnsureHeader()
         {
             if (_isHeaderWritten) return;
+
+            if (_metadata != null && _metadata.Count > 0)
+            {
+                foreach (var kv in _metadata)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var value = kv.Value ?? string.Empty;
+                    // Write to container-level metadata
+                    ffmpeg.av_dict_set(&_fmtCtx->metadata, kv.Key, value, 0);
+                    // Also write to stream-level metadata — some readers only look there
+                    if (_videoStream != null)
+                        ffmpeg.av_dict_set(&_videoStream->metadata, kv.Key, value, 0);
+                }
+            }
+
             FFmpegHelper.Throw(ffmpeg.avformat_write_header(_fmtCtx, null), "avformat_write_header");
             _isHeaderWritten = true;
         }

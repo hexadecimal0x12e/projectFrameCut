@@ -26,7 +26,7 @@ namespace projectFrameCut.Helper
             Process.Start(new ProcessStartInfo
             {
                 UseShellExecute = true,
-                FileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pjfc.exe")
+                FileName = "pjfc:"
             });
             Process.GetCurrentProcess().Kill();
         }

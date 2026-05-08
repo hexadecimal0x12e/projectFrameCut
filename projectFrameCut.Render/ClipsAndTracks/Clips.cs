@@ -15,12 +15,14 @@ using projectFrameCut.Render.Plugin;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class VideoClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -28,7 +30,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? FilePath { get; set; }
 
@@ -50,18 +52,64 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
+
+        public string TargetDecoder { get; set; } = string.Empty;
+        public double HDRBrightnessOffset { get; set; } = 0;
+
+        [JsonIgnore()]
+        public string? DecoderName => Decoder?.TypeName;
+
 
         public VideoClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
-
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            if(Decoder is null)
+            {
+                throw new NullReferenceException("Decoder is null. Please init it.");
+            }
+            targetFrame = ClampFrameToDecoderRange(targetFrame);
+            if(Decoder is HDRDecoderContext h)
+            {
+                return h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
+            }
+            return (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+        }
+
+        private uint ClampFrameToDecoderRange(uint targetFrame)
+        {
+            if (Decoder is null)
+            {
+                return targetFrame;
+            }
+
+            long totalFrames = Decoder.TotalFrames;
+            if (totalFrames <= 0)
+            {
+                return targetFrame;
+            }
+
+            uint maxFrame = (uint)Math.Max(0, totalFrames - 1);
+            return targetFrame > maxFrame ? maxFrame : targetFrame;
+        }
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
-            Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
+            if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+            if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+            {
+                var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
+                Decoder = supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+                return;
+            }
+            Decoder = PluginManager.CreateVideoSource(FilePath);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+
         }
 
 
@@ -76,6 +124,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class PhotoClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -83,7 +132,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
@@ -109,11 +158,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public PhotoClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
-
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
@@ -131,10 +181,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     ProcessingFuncStackTrace = null,
                     Properties = new Dictionary<string, object>
                     {
-                        { "SourcePath", FilePath }
+                        { "Path", FilePath }
                     }
                 }
             };
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+
         }
 
 
@@ -149,6 +201,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class SolidColorClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -156,7 +209,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
@@ -200,6 +253,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
         {
@@ -220,11 +275,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+
         }
 
         public void ReInit()
         {
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -306,6 +363,18 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class TextClip : IClip
     {
         public required string Id { get; init; }
+        public Guid IdAsGUID
+        {
+            get;
+            init
+            {
+                if(!Guid.TryParse(Id, out field))
+                {
+                    Log($"A clip's ID field should be a valid guid. The input field has an invalid data '{Id}'", "warn");
+                    field = Guid.Empty;
+                }
+            }
+        }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }
@@ -313,7 +382,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
@@ -330,15 +399,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         string? IClip.FilePath { get => null; set => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
-        public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
+        public List<TextClipEntry> TextEntries { get; set; } = new List<TextClipEntry>();
 
         public string FontPath { get; set; } = string.Empty;
         private const int MaxTextFrameCacheEntries = 16;
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<string, IPicture> textFrameCache = new(StringComparer.Ordinal);
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-            => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
@@ -481,14 +547,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return rendered.DeepCopy();
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-        {
-            throw new NotSupportedException();
-        }
 
         public TextClip()
         {
-            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -499,6 +562,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 fontsCache.Add(FontPath);
             }
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -519,6 +583,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public static FontCollection GetFont(bool force = false)
         {
@@ -734,6 +800,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ClipMode ClipType => ClipMode.MarkingClip;
 
         public string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public string Name { get; init; }
         public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }
@@ -742,7 +809,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
@@ -756,6 +823,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public string? MarkData;
         public Guid MarkID;

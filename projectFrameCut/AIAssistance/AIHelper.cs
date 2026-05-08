@@ -1,6 +1,4 @@
-﻿using Cnblogs.DashScope.Core;
-using Cnblogs.DashScope.Sdk.Wanx;
-using OpenAI.Images;
+﻿using OpenAI.Images;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -105,7 +103,7 @@ namespace projectFrameCut.AIAssistance
                 return option.Provider switch
                 {
                     "OpenAI" or "Doubao" or "Custom" => await GenerateImageWithOpenAI(prompt, options, option),
-                    "Qwen (WanX)" => await GenerateImageWithQwenWanX(prompt, options, option),
+                    //"Qwen (WanX)" => await GenerateImageWithQwenWanX(prompt, options, option),
                     "Qwen" => await GenerateImageWithQwen(prompt, options, option),
                     _ => new ImageGenerationResult { Success = false, ErrorMessage = $"Unsupported AI provider: {option.Provider}" }
                 };
@@ -200,49 +198,49 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<ImageGenerationResult> GenerateImageWithQwenWanX(string prompt, ImageGenerationOptions options, AIOption aiOption)
-        {
-            // Note: This implementation requires DashScope SDK to be installed
-            // Install-Package Alibabacloud.SDK
-            try
-            {
+        //private static async Task<ImageGenerationResult> GenerateImageWithQwenWanX(string prompt, ImageGenerationOptions options, AIOption aiOption)
+        //{
+        //    // Note: This implementation requires DashScope SDK to be installed
+        //    // Install-Package Alibabacloud.SDK
+        //    try
+        //    {
 
-                var client = new DashScopeClient(aiOption.Key);
-                var task = await client.CreateWanxImageSynthesisTaskAsync(
-                    Enum.Parse<WanxModel>(aiOption.Model, true),
-                    prompt,
-                    null,
-                    new ImageSynthesisParameters
-                    {
-                        Style = options.Style.ToString()
-                    });
+        //        var client = new DashScopeClient(aiOption.Key);
+        //        var task = await client.CreateWanxImageSynthesisTaskAsync(
+        //            Enum.Parse<WanxModel>(aiOption.Model, true),
+        //            prompt,
+        //            null,
+        //            new ImageSynthesisParameters
+        //            {
+        //                Style = options.Style.ToString()
+        //            });
 
-                while (true)
-                {
-                    var result = await client.GetWanxImageSynthesisTaskAsync(task.TaskId);
-                    if (result.Output.TaskStatus == DashScopeTaskStatus.Succeeded)
-                    {
-                        return new ImageGenerationResult
-                        {
-                            Success = true,
-                            ImageUrl = result.Output.Results[0].Url,
-                            Description = prompt
-                        };
-                    }
-                    else if (result.Output.TaskStatus == DashScopeTaskStatus.Failed)
-                    {
-                        return new ImageGenerationResult { Success = false, ErrorMessage = "Image generation task failed" };
-                    }
-                    await Task.Delay(500);
-                }
+        //        while (true)
+        //        {
+        //            var result = await client.GetWanxImageSynthesisTaskAsync(task.TaskId);
+        //            if (result.Output.TaskStatus == DashScopeTaskStatus.Succeeded)
+        //            {
+        //                return new ImageGenerationResult
+        //                {
+        //                    Success = true,
+        //                    ImageUrl = result.Output.Results[0].Url,
+        //                    Description = prompt
+        //                };
+        //            }
+        //            else if (result.Output.TaskStatus == DashScopeTaskStatus.Failed)
+        //            {
+        //                return new ImageGenerationResult { Success = false, ErrorMessage = "Image generation task failed" };
+        //            }
+        //            await Task.Delay(500);
+        //        }
 
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex, "generate image with Qwen WanX", typeof(AIHelper));
-                return new ImageGenerationResult { Success = false, ErrorMessage = ex.Message };
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.Log(ex, "generate image with Qwen WanX", typeof(AIHelper));
+        //        return new ImageGenerationResult { Success = false, ErrorMessage = ex.Message };
+        //    }
+        //}
 
         private static async Task<ImageGenerationResult> GenerateImageWithQwen(string prompt, ImageGenerationOptions options, AIOption aiOption)
         {

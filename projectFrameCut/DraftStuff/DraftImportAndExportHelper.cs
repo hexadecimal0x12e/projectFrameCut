@@ -49,7 +49,7 @@ namespace projectFrameCut.DraftStuff
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
 
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true)
+        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true, bool fixOverlap = false)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -145,14 +145,23 @@ namespace projectFrameCut.DraftStuff
 
             var d = new DraftStructureJSON
             {
-                TargetFrameRate = page.ProjectInfo.TargetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
                 SoundTracks = soundtracks.Cast<object>().ToArray(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
             if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
-            FixSmallOverlaps(d, 3);
+            if (fixOverlap)
+            {
+                try
+                {
+                    FixSmallOverlaps(d, 3);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Fix small overlap");
+                }
+            }
             return d;
         }
 
@@ -191,21 +200,7 @@ namespace projectFrameCut.DraftStuff
 
             if (elem.ClipType == ClipMode.AudioClip && wrapSoundtrackAsClip)
             {
-                // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
-                Dictionary<string, object>? normalizedMeta = null;
-                if (elem.ExtraData != null)
-                {
-                    normalizedMeta = new Dictionary<string, object>(elem.ExtraData.Count);
-                    foreach (var kv in elem.ExtraData)
-                    {
-                        if (kv.Key == "TextEntries")
-                        {
-                            try { normalizedMeta[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
-                            catch { normalizedMeta[kv.Key] = kv.Value; }
-                        }
-                        else normalizedMeta[kv.Key] = kv.Value;
-                    }
-                }
+                var normalizedMeta = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
                 return new ClipDraftDTO
                 {
@@ -234,21 +229,7 @@ namespace projectFrameCut.DraftStuff
                 };
             }
 
-            // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
-            Dictionary<string, object>? normalizedMeta2 = null;
-            if (elem.ExtraData != null)
-            {
-                normalizedMeta2 = new Dictionary<string, object>(elem.ExtraData.Count);
-                foreach (var kv in elem.ExtraData)
-                {
-                    if (kv.Key == "TextEntries")
-                    {
-                        try { normalizedMeta2[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
-                        catch { normalizedMeta2[kv.Key] = kv.Value; }
-                    }
-                    else normalizedMeta2[kv.Key] = kv.Value;
-                }
-            }
+            var normalizedMeta2 = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
             return new ClipDraftDTO
             {
@@ -286,8 +267,7 @@ namespace projectFrameCut.DraftStuff
                         Enabled = effect.Enabled,
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
-                        IsMixture = false,
-                        IsContinuousEffect = effect is IContinuousEffect,
+                        IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
                         IsVariableArgumentEffect = effect is IBindableArgumentEffect,
                         ImplementType = effect.ImplementType,
                         BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
@@ -317,6 +297,7 @@ namespace projectFrameCut.DraftStuff
                         BundleTypeName = b.TypeName,
                         Parameters = b.Parameters,
                         Name = b.Name,
+                        Enabled = b.Enabled,
                         BindedInputId = b.BindedInputId,
                         BindedOutputId = b.BindedOutputId,
                         BindedInputIds = b.BindedInputIds?.ToArray(),
@@ -324,11 +305,36 @@ namespace projectFrameCut.DraftStuff
             };
         }
 
+        private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
+        {
+            int capacity = Math.Max(4, source?.Count ?? 0);
+            var normalized = new Dictionary<string, object>(capacity);
+            if (source != null)
+            {
+                foreach (var kv in source)
+                {
+                    if (kv.Key == "TextEntries")
+                    {
+                        try { normalized[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
+                        catch { normalized[kv.Key] = kv.Value; }
+                    }
+                    else
+                    {
+                        normalized[kv.Key] = kv.Value;
+                    }
+                }
+            }
+
+            normalized[ClipDraftDTO.ProjectFrameRateMetaKey] = targetFrameRate;
+            normalized[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+            return normalized;
+        }
+
         public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
-            if(!elements.Any())
+            if (!elements.Any())
             {
                 if (json.Clips.Any())
                 {
@@ -349,7 +355,7 @@ namespace projectFrameCut.DraftStuff
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping})})");
+                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -380,7 +386,7 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                if(InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
+                if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
                 clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
                 if (clipInstance is null) throw new NullReferenceException();
                 clipsList.Add(clipInstance);
@@ -698,12 +704,10 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
-                element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.TargetWidth = dto.TargetWidth;
                 element.TargetHeight = dto.TargetHeight;
                 element.TargetX = dto.TargetX;
                 element.TargetY = dto.TargetY;
-                element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
                 element.Effects = dto.Effects?.ToDictionary(
@@ -719,6 +723,7 @@ namespace projectFrameCut.DraftStuff
                         var b = dto.EffectBundles[i];
                         var f = EffectServices.GetAvailableEffectBundles()[b.BundleTypeName]();
                         f.Id = b.Id;
+                        f.Enabled = b.Enabled;
                         f.Name = b.Name;
                         f.Parameters = b.Parameters ?? new Dictionary<string, object>();
                         f.BindedInputId = b.BindedInputId;
@@ -733,6 +738,10 @@ namespace projectFrameCut.DraftStuff
                 {
                     element.Effects = new Dictionary<string, IEffect>();
                 }
+
+                // Rebuild generated effects from bundles before applying UI width from speed ratio.
+                ClipInfoBuilder.RebuildAllEffects(element);
+                element.ApplySpeedRatio();
 
                 if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
                 {
@@ -799,7 +808,7 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
-                element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
+                //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
@@ -941,15 +950,11 @@ namespace projectFrameCut.DraftStuff
             element.ClipType = clip.ClipType;
             element.ExtraData = clip.MetaData ?? new();
             element.sourceSecondPerFrame = clip.FrameTime;
-            element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
+            //element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
             element.TargetWidth = clip.TargetWidth;
             element.TargetHeight = clip.TargetHeight;
             element.TargetX = clip.TargetX;
             element.TargetY = clip.TargetY;
-
-            // Apply visual properties
-            element.ApplySpeedRatio();
-            element.ApplyClipColor();
 
             element.TypeName = clip.TypeName;
             element.FromPlugin = clip.FromPlugin;
@@ -984,6 +989,13 @@ namespace projectFrameCut.DraftStuff
             {
                 element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
             }
+
+            // Rebuild generated effects from bundles before applying UI width from speed ratio.
+            ClipInfoBuilder.RebuildAllEffects(element);
+
+            // Apply visual properties after speed/effects are fully restored.
+            element.ApplySpeedRatio();
+            element.ApplyClipColor();
 
             if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
             {

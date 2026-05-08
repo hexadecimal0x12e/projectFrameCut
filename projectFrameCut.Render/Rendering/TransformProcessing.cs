@@ -31,10 +31,9 @@ namespace projectFrameCut.Render.Rendering
             // Helper: clamp a global frameIndex into a valid frame index for a clip
             static uint ClampFrameForClip(IClip clip, uint globalFrame)
             {
-                double dur = clip.Duration * clip.SecondPerFrameRatio;
-                uint endExclusive = clip.StartFrame + (uint)Math.Round(dur);
-                if (endExclusive == clip.StartFrame) return clip.StartFrame;
-                uint lastFrame = endExclusive - 1;
+                ulong endExclusive = (ulong)clip.StartFrame + clip.GetEffectiveDuration();
+                if (endExclusive <= clip.StartFrame) return clip.StartFrame;
+                uint lastFrame = (uint)Math.Min((ulong)uint.MaxValue, endExclusive - 1);
                 if (globalFrame < clip.StartFrame) return clip.StartFrame;
                 if (globalFrame > lastFrame) return lastFrame;
                 return globalFrame;

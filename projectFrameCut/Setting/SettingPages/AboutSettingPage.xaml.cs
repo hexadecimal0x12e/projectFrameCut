@@ -26,6 +26,7 @@ public partial class AboutSettingPage : ContentPage
         InitializeComponent();
         Loaded += AboutSettingPage_Loaded;
         AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
+        AppLogoIcon_Narrow.Source = ImageHelper.LoadFromAsset("projectframecut");
 #if WINDOWS
         tap.Tapped
 #else
@@ -44,8 +45,10 @@ public partial class AboutSettingPage : ContentPage
 
         };
         AppLogoIcon.GestureRecognizers.Clear();
+        AppLogoIcon_Narrow.GestureRecognizers.Clear();
 #if WINDOWS
         AppLogoIcon.GestureRecognizers.Add(tap);
+        AppLogoIcon_Narrow.GestureRecognizers.Add(tap);
         try
         {
             var pfn = WinUI.App.GetPackageFamilyName();
@@ -58,6 +61,7 @@ public partial class AboutSettingPage : ContentPage
                 _ => "Non-official build"
             };
             AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"} ({channel} channel)";
+            AppVersionLabel_Narrow.Text = AppVersionLabel.Text;
 
         }
         catch
@@ -67,7 +71,9 @@ public partial class AboutSettingPage : ContentPage
 
 #else
         AppLogoIcon.GestureRecognizers.Add(pinch);
+        AppLogoIcon_Narrow.GestureRecognizers.Add(pinch);
         AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
+        AppVersionLabel_Narrow.Text = AppVersionLabel.Text;
 #endif
         try
         {
@@ -83,8 +89,10 @@ public partial class AboutSettingPage : ContentPage
                 $"""
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
                 CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
-                {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
+                {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
+                Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
+            AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;
         }
         catch { }
     }
@@ -113,13 +121,30 @@ public partial class AboutSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            Dispatcher.Dispatch(() =>
+            try
             {
-                AboutWebview.Source = new HtmlWebViewSource
+                var filePath = $"AboutApplication/en-US/About.html";
+                using var stream = await FileSystem.OpenAppPackageFileAsync(filePath);
+                using var reader = new StreamReader(stream);
+                var text = await reader.ReadToEndAsync();
+                Dispatcher.Dispatch(() =>
                 {
-                    Html = $"<html><body><h2>Error loading about content</h2><p>{ex.Message}</p></body></html>"
-                };
-            });
+                    AboutWebview.Source = new HtmlWebViewSource
+                    {
+                        Html = text
+                    };
+                });
+            }
+            catch
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    AboutWebview.Source = new HtmlWebViewSource
+                    {
+                        Html = $"<html><body><h2>Error loading about content</h2><p>{ex.Message}</p></body></html>"
+                    };
+                });
+            }
         }
     }
 

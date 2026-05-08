@@ -8,6 +8,7 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -24,6 +25,8 @@ namespace projectFrameCut.Shared
 {
     public static class PictureExtensions
     {
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IPicture DeepCopy(this IPicture source)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
@@ -231,10 +234,12 @@ namespace projectFrameCut.Shared
 
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SaveAsPng16bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null) //compatibility
             => SaveAsPng(image, path, 16, null, imageEncoder);
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SaveAsPng8bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null)
             => SaveAsPng(image, path, 8, null, imageEncoder);
 
@@ -248,11 +253,15 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
+        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false) 
         {
+            if (image is IHDRPicture<ushort> hdrImage)
+            {
+                return SaveToSixLaborsImage(hdrImage, resultPPB, saveAlpha, DefaultHDRImageDegradeToSDRMode);
+            }
             lock (image)
             {
-                IEnumerable<float>? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
                 bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
 
                 Image result;
@@ -266,7 +275,7 @@ namespace projectFrameCut.Shared
                     ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<ushort>.b));
                     if (alpha)
                     {
-                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                        var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
                         result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, alphaArray);
                     }
                     else
@@ -284,7 +293,7 @@ namespace projectFrameCut.Shared
                     ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<byte>.b));
                     if (alpha)
                     {
-                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                        var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
                         result = _SaveToInternal8bppWithAlpha(image, rr, gg, bb, alphaArray);
                     }
                     else
@@ -299,13 +308,49 @@ namespace projectFrameCut.Shared
                 return result;
             }
         }
+        [DebuggerStepThrough()]
+        public static Image SaveToSixLaborsImage(this IHDRPicture<ushort> image, int resultPPB = 16, bool? saveAlpha = null, HDRImageDegradeToSDRMode? degradeToSDRMode = null)
+        {
+            var mode = degradeToSDRMode ??= DefaultHDRImageDegradeToSDRMode;
+            lock (image)
+            {
+                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
 
-        private static IImageEncoder DefaultEncoder = new PngEncoder()
+                Image result;
+                if (alpha)
+                {
+                    var alphaArray = aa ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                    result = _SaveToInternalHDR16bppWithAlpha(image, image.r, image.g, image.b, alphaArray, image.Brightness, image.MaximumBrightness, mode);
+                }
+                else
+                {
+                    result = _SaveToInternalHDR16bppWithNoAlpha(image, image.r, image.g, image.b, image.Brightness, image.MaximumBrightness, mode);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// A shared instance of a <see cref="PngEncoder"/>.
+        /// </summary>
+        public static IImageEncoder DefaultEncoder = new PngEncoder()
         {
             BitDepth = PngBitDepth.Bit16
         };
 
+        /// <summary>
+        /// Determine the default action while degrading HDR images to SDR.
+        /// </summary>
+        public static HDRImageDegradeToSDRMode DefaultHDRImageDegradeToSDRMode = HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB;
+
+        private const float HdrSdrReferenceNits = 100f;
+        private const float HdrToneMapKnee = 1.5f;
+        private const float HdrOutputGamma = 2.2f;
+        private const float HdrLumaEpsilon = 1e-6f;
+
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
@@ -332,17 +377,47 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
             int x = 0, y = 0;
+            IHDRPicture<ushort>? hdrImage = image as IHDRPicture<ushort>;
+            bool isHdrWithBrightness = hdrImage?.Brightness != null && hdrImage.Brightness.Length == image.Pixels;
             for (int i = 0; i < image.Pixels; i++)
             {
+                ushort outputR = rr[i];
+                ushort outputG = gg[i];
+                ushort outputB = bb[i];
+
+                if (isHdrWithBrightness)
+                {
+                    float pixelBrightness = hdrImage!.Brightness![i];
+                    switch (DefaultHDRImageDegradeToSDRMode)
+                    {
+                        case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], pixelBrightness, hdrImage.MaximumBrightness, out outputR, out outputG, out outputB);
+                            break;
+                        case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                            float brightnessMask = Math.Clamp(pixelBrightness, 0f, 1f);
+                            outputR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
+                            outputG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
+                            outputB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                            break;
+                        case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                            break;
+                        case HDRImageDegradeToSDRMode.DisallowDowngrade:
+                            throw new InvalidOperationException($"HDR to SDR degrade is disabled. Current mode: {nameof(HDRImageDegradeToSDRMode.DisallowDowngrade)}.");
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
+                    }
+                }
+
                 result[x, y] = new Rgb48
                 {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
+                    R = outputR,
+                    G = outputG,
+                    B = outputB,
                 };
                 if (x == image.Width - 1)
                 {
@@ -356,7 +431,153 @@ namespace projectFrameCut.Shared
             }
             return result;
         }
+
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Image _SaveToInternalHDR16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
+        {
+            var result = new Image<Rgba64>(image.Width, image.Height);
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                ushort mappedR = rr[i];
+                ushort mappedG = gg[i];
+                ushort mappedB = bb[i];
+                switch (degradeMode)
+                {
+                    case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                        _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                        break;
+                    case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                        float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
+                        mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
+                        mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
+                        mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                        break;
+                    case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                        break;
+                    case HDRImageDegradeToSDRMode.DisallowDowngrade:
+                        throw new InvalidOperationException($"HDR to SDR degrade is disabled. Current mode: {nameof(HDRImageDegradeToSDRMode.DisallowDowngrade)}.");
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
+                }
+
+                result[x, y] = new Rgba64
+                {
+                    R = mappedR,
+                    G = mappedG,
+                    B = mappedB,
+                    A = (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f)
+                };
+
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Image _SaveToInternalHDR16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
+        {
+            var result = new Image<Rgb48>(image.Width, image.Height);
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                ushort mappedR = rr[i];
+                ushort mappedG = gg[i];
+                ushort mappedB = bb[i];
+                switch (degradeMode)
+                {
+                    case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                        _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                        break;
+                    case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                        float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
+                        mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
+                        mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
+                        mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                        break;
+                    case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                        break;
+                    case HDRImageDegradeToSDRMode.DisallowDowngrade:
+                        throw new InvalidOperationException($"HDR to SDR degrade is disabled. Mode: {degradeMode}(current)/{DefaultHDRImageDegradeToSDRMode}(global default).");
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
+                }
+                result[x, y] = new Rgb48
+                {
+                    R = mappedR,
+                    G = mappedG,
+                    B = mappedB,
+                };
+
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void _MapHDRSignalPixelToDisplaySignal(ushort sourceR, ushort sourceG, ushort sourceB, float brightness, float maximumBrightness, out ushort mappedR, out ushort mappedG, out ushort mappedB)
+        {
+            if (!float.IsFinite(brightness))
+            {
+                mappedR = sourceR;
+                mappedG = sourceG;
+                mappedB = sourceB;
+                return;
+            }
+
+            float r = sourceR / 65535f;
+            float g = sourceG / 65535f;
+            float b = sourceB / 65535f;
+            float sourceSignalLuma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
+            if (sourceSignalLuma <= HdrLumaEpsilon)
+            {
+                mappedR = sourceR;
+                mappedG = sourceG;
+                mappedB = sourceB;
+                return;
+            }
+
+            float validMaximumBrightness = maximumBrightness > 0f && float.IsFinite(maximumBrightness)
+                ? maximumBrightness
+                : HdrSdrReferenceNits;
+
+            // A lightweight SDR tone map driven by HDR brightness metadata.
+            float relativeToSdrWhite = Math.Max(0f, brightness) * (validMaximumBrightness / HdrSdrReferenceNits);
+            float toneMappedLinearLuma = (relativeToSdrWhite * HdrToneMapKnee) / (1f + relativeToSdrWhite * HdrToneMapKnee);
+            toneMappedLinearLuma = Math.Clamp(toneMappedLinearLuma, 0f, 1f);
+            float targetSignalLuma = MathF.Pow(toneMappedLinearLuma, 1f / HdrOutputGamma);
+            float gain = targetSignalLuma / sourceSignalLuma;
+
+            r = Math.Clamp(r * gain, 0f, 1f);
+            g = Math.Clamp(g * gain, 0f, 1f);
+            b = Math.Clamp(b * gain, 0f, 1f);
+
+            mappedR = (ushort)Math.Clamp((int)Math.Round(r * 65535f), 0, 65535);
+            mappedG = (ushort)Math.Clamp((int)Math.Round(g * 65535f), 0, 65535);
+            mappedB = (ushort)Math.Clamp((int)Math.Round(b * 65535f), 0, 65535);
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba32>(image.Width, image.Height);
@@ -383,6 +604,7 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
         {
             var result = new Image<Rgb24>(image.Width, image.Height);
@@ -409,6 +631,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IPicture ToPJFCPicture(this Image source, int targetPPB)
         {
             return targetPPB switch
@@ -419,6 +642,71 @@ namespace projectFrameCut.Shared
             };
         }
 
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static HDRPicture16bpp ToHDRPicture(this IPicture source, float brightness, int maximumBrightness = 5000)
+        {
+            var s = source.ToBitPerPixel(16) as IPicture<ushort>;
+            if (s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
+            float normalizedBrightness = float.IsFinite(brightness) ? Math.Clamp(brightness, 0f, 1f) : 1f;
+            return new HDRPicture16bpp(s, false)
+            {
+                r = s.r,
+                g = s.g,
+                b = s.b,
+                a = s.a,
+                hasAlphaChannel = s.hasAlphaChannel && s.a is not null,
+                Brightness = Enumerable.Repeat(normalizedBrightness, s.Pixels).ToArray(),
+                MaximumBrightness = maximumBrightness,
+                ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = $"Converted to HDR with brightness {brightness} and max brightness {maximumBrightness}",
+                    Operator = typeof(PictureExtensions),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }).ToList()
+            };
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static HDRPicture16bpp ToHDRPictureBySignal(this IPicture source, int maximumBrightness = 203)
+        {
+            var s = source.ToBitPerPixel(16) as IPicture<ushort>;
+            if (s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
+
+            int validMaximumBrightness = Math.Clamp(maximumBrightness, 100, 10000);
+            var brightness = new float[s.Pixels];
+
+            for (int i = 0; i < s.Pixels; i++)
+            {
+                float r = s.r[i] / 65535f;
+                float g = s.g[i] / 65535f;
+                float b = s.b[i] / 65535f;
+                float luma = 0.2627f * r + 0.6780f * g + 0.0593f * b;
+                brightness[i] = float.IsFinite(luma) ? Math.Clamp(luma, 0f, 1f) : 0f;
+            }
+
+            return new HDRPicture16bpp(s, false)
+            {
+                r = s.r,
+                g = s.g,
+                b = s.b,
+                a = s.a,
+                hasAlphaChannel = s.hasAlphaChannel && s.a is not null,
+                Brightness = brightness,
+                MaximumBrightness = validMaximumBrightness,
+                ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = $"Converted to HDR using signal-derived brightness and max brightness {validMaximumBrightness}",
+                    Operator = typeof(PictureExtensions),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }).ToList()
+            };
+        }
+
+
+        public static (int Width, int Height) GetDimensions(this IPicture picture) => (picture.Width, picture.Height);
+        public static (int Width, int Height) GetDimensions(string picPath) => new Picture8bpp(picPath).GetDimensions();
 
         public static bool TryFromXYToArrayIndex(this IPicture reference, int x, int y, out int index)
             => TryFromXYToArrayIndex(x, y, reference.Width, reference.Height, out index);
@@ -468,10 +756,8 @@ namespace projectFrameCut.Shared
     public readonly record struct PictureLifecycleSnapshot(
         long Id,
         string TypeName,
-        IPicture.PicturePixelMode BitPerPixel,
         int Width,
         int Height,
-        int Pixels,
         DateTime CreatedAtUtc,
         DateTime? DisposedAtUtc,
         DateTime? CollectedAtUtc,
@@ -480,7 +766,8 @@ namespace projectFrameCut.Shared
         TimeSpan? LifetimeToDispose,
         TimeSpan? LifetimeToCollect,
         StackTrace CreateStack,
-        StackTrace? DisposeStack);
+        StackTrace? DisposeStack,
+        List<PictureProcessStack>? FinalProcessStack);
 
     /// <summary>
     /// Centralized lifecycle tracker for <see cref="IPicture"/> objects.
@@ -489,25 +776,31 @@ namespace projectFrameCut.Shared
     {
         private sealed record PictureIdentity(long Id);
 
-        private sealed record PictureLifecycleState(long Id, string TypeName, IPicture.PicturePixelMode BitPerPixel, int Width, int Height, int Pixels, DateTime CreatedAtUtc, StackTrace CreateStack)
+        private sealed record PictureLifecycleState(long Id, string TypeName, int Width, int Height, DateTime CreatedAtUtc, StackTrace CreateStack)
         {
             private long _disposedAtTicks;
             private long _collectedAtTicks;
             private StackTrace? DisposedStack;
+            private List<PictureProcessStack>? FinalStack;
 
-            public PictureLifecycleState(long id, IPicture picture) : this(id, picture.GetType().FullName ?? picture.GetType().Name, picture.bitPerPixel, picture.Width, picture.Height, picture.Pixels, DateTime.UtcNow, new StackTrace(true))
+            public PictureLifecycleState(long id, IPicture picture) : this(id, picture.GetType().FullName ?? picture.GetType().Name, picture.Width, picture.Height, DateTime.UtcNow, new StackTrace(true))
             {
             }
 
-            public void MarkDisposed()
+            public void MarkDisposed(List<PictureProcessStack>? stack)
             {
                 Interlocked.CompareExchange(ref _disposedAtTicks, DateTime.UtcNow.Ticks, 0);
                 Interlocked.Exchange(ref DisposedStack, new StackTrace(true));
+                Interlocked.Exchange(ref FinalStack, stack);
             }
 
-            public void MarkCollected()
+            public void MarkCollected(List<PictureProcessStack>? stack)
             {
                 Interlocked.CompareExchange(ref _collectedAtTicks, DateTime.UtcNow.Ticks, 0);
+                if (stack != null)
+                {
+                    Interlocked.Exchange(ref FinalStack, stack);
+                }
             }
 
             public PictureLifecycleSnapshot ToSnapshot()
@@ -520,10 +813,8 @@ namespace projectFrameCut.Shared
                 return new PictureLifecycleSnapshot(
                     Id,
                     TypeName,
-                    BitPerPixel,
                     Width,
                     Height,
-                    Pixels,
                     CreatedAtUtc,
                     disposedAt,
                     collectedAt,
@@ -532,22 +823,31 @@ namespace projectFrameCut.Shared
                     disposedAt?.Subtract(CreatedAtUtc),
                     collectedAt?.Subtract(CreatedAtUtc),
                     CreateStack,
-                    DisposedStack);
+                    DisposedStack,
+                    FinalStack);
             }
         }
 
         private sealed class FinalizationSentinel
         {
             private readonly long _id;
+            private readonly WeakReference<IPicture> _picture;
 
-            public FinalizationSentinel(long id)
+            public FinalizationSentinel(long id, IPicture picture)
             {
                 _id = id;
+                _picture = new WeakReference<IPicture>(picture);
             }
 
             ~FinalizationSentinel()
             {
-                PictureLifecycleTracker.MarkCollected(_id);
+                if (_picture.TryGetTarget(out IPicture? picture))
+                {
+                    PictureLifecycleTracker.MarkCollected(_id, picture.ProcessStack);
+                    return;
+                }
+
+                PictureLifecycleTracker.MarkCollected(_id, null);
             }
         }
 
@@ -581,7 +881,7 @@ namespace projectFrameCut.Shared
 
             if (TrackCollection)
             {
-                Sentinels.GetValue(picture, _ => new FinalizationSentinel(identity.Id));
+                Sentinels.GetValue(picture, _ => new FinalizationSentinel(identity.Id, picture));
             }
         }
 
@@ -592,7 +892,7 @@ namespace projectFrameCut.Shared
             if (!Identities.TryGetValue(picture, out PictureIdentity? identity)) return;
             if (States.TryGetValue(identity.Id, out PictureLifecycleState? state))
             {
-                state.MarkDisposed();
+                state.MarkDisposed(picture.ProcessStack);
             }
         }
 
@@ -611,12 +911,93 @@ namespace projectFrameCut.Shared
             States.Clear();
         }
 
-        private static void MarkCollected(long id)
+        private static void MarkCollected(long id, List<PictureProcessStack>? stack)
         {
             if (States.TryGetValue(id, out PictureLifecycleState? state))
             {
-                state.MarkCollected();
+                state.MarkCollected(stack);
             }
+        }
+
+        public static async Task ExportPictureLifecycleTrackerSnapshots(string outputPath)
+        {
+            try
+            {
+                if (!PictureLifecycleTracker.Enabled)
+                {
+                    Logger.Log("PictureLifecycleTracker is disabled. Skipped lifecycle snapshot export.");
+                    return;
+                }
+
+                var snapshots = PictureLifecycleTracker.GetSnapshots(includeDisposed: true);
+                await using var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+                await writer.WriteLineAsync(string.Join(',',
+                [
+                    "Id",
+                    "TypeName",
+                    "Width",
+                    "Height",
+                    "CreatedAtUtc",
+                    "DisposedAtUtc",
+                    "CollectedAtUtc",
+                    "IsDisposed",
+                    "IsCollected",
+                    "LifetimeToDisposeMs",
+                    "LifetimeToCollectMs",
+                    "CreateStackTrace",
+                    "DisposeStackTrace",
+                    "FinalProcessStack"
+                ]));
+
+                foreach (var snapshot in snapshots)
+                {
+                    await writer.WriteLineAsync(string.Join(',',
+                    [
+                        EscapeCsv(snapshot.Id.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.TypeName),
+                        EscapeCsv(snapshot.Width.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.Height.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.DisposedAtUtc?.ToString("O", CultureInfo.InvariantCulture)?? "N/A"),
+                        EscapeCsv(snapshot.CollectedAtUtc?.ToString("O", CultureInfo.InvariantCulture)?? "N/A"),
+                        EscapeCsv(snapshot.IsDisposed ? "true" : "false"),
+                        EscapeCsv(snapshot.IsCollected ? "true" : "false"),
+                        EscapeCsv(snapshot.LifetimeToDispose?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.LifetimeToCollect?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(snapshot.CreateStack.ToString()),
+                        EscapeCsv(snapshot.DisposeStack?.ToString() ?? "N/A"),
+                        EscapeCsv(snapshot.FinalProcessStack is List<PictureProcessStack> p ? PictureProcessStack.FormatProcessStackForLog(p, 12): "N/A"),
+
+                    ]));
+                }
+
+                await writer.FlushAsync();
+                await stream.FlushAsync();
+                await writer.DisposeAsync();
+                await stream.DisposeAsync();
+                Logger.Log($"Exported PictureLifecycleTracker snapshots: {snapshots.Count} records, {outputPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "export PictureLifecycleTracker snapshots");
+            }
+        }
+
+        private static string EscapeCsv(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
         }
     }
 }

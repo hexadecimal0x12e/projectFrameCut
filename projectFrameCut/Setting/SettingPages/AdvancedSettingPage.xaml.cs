@@ -1,3 +1,4 @@
+using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -38,9 +39,16 @@ public partial class AdvancedSettingPage : ContentPage
     {
         Title = Localized.MainSettingsPage_Tab_Advanced;
         string[] codecs = ["Unknown"];
+        string ffVersion = "unknown", ffArgs = "unknown";
         try
         {
-            codecs = FFmpegHelper.CodecUtils.GetAllCodecs().Select(C => C.Name).Order().ToArray();
+            codecs = FFmpegHelper.CodecUtils
+                .GetCodecsByType(FFmpeg.AutoGen.AVMediaType.AVMEDIA_TYPE_VIDEO, true)
+                .Select(c => c.Name)
+                .Order()
+                .ToArray();
+            ffVersion = $"FFmpeg {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}";
+            ffArgs = ffmpeg.avcodec_configuration();
         }
         catch (Exception ex)
         {
@@ -131,8 +139,8 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSeparator()
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
-        .AddSwitch("Edit_UseLegacyPlaceResizeEffects", SettingLocalizedResources.Edit_UseLegacyPlaceResizeEffects, SettingsManager.IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects"))
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)
@@ -160,7 +168,9 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
         .AddSeparator()
-
+        .AddEntry("argsFromEnv", "Environment.GetCommandLineArgs()", string.Join(',', Environment.GetCommandLineArgs()), "", c => c.IsReadOnly = true)
+        .AddEntry("argsParsed", "MauiProgram.CmdlineArgs", string.Join(',', MauiProgram.CmdlineArgs), "", c => c.IsReadOnly = true)
+        .AddSeparator()
         .AddText(SettingLocalizedResources.General_UserData, fontSize: 20)
         .AddButton(SettingLocalizedResources.Diag_OpenBaseData, async (s, e) =>
         {
@@ -171,6 +181,7 @@ public partial class AdvancedSettingPage : ContentPage
             var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
             await FileSystemService.OpenFileAsync(jsonPath);
         })
+        .AddSeparator()
         .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 20))
         .AddButton(SettingLocalizedResources.Advanced_ShowWelcomePage, async (_, _) => await Navigation.PushAsync(new SetupPage()))
         .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>
@@ -374,30 +385,27 @@ public partial class AdvancedSettingPage : ContentPage
                             }
                             await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
                         }
-                        else if (e.Id == "OverrideCulture")
-                        {
-                            var DispName = e.Value?.ToString() ?? "default";
-                            if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
-                            {
-                                Settings.Remove("OverrideCulture", out _);
-                                ToggleSaveSignal();
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    var overrideLocate = overrideOpts.ReverseLookup(DispName);
-                                    WriteSetting("OverrideCulture", overrideLocate);
-                                }
-                                catch { }
-                            }
-
-                            await MainSettingsPage.RebootApp(this);
-
-                        }
                         return;
                     }
+                case "OverrideCulture":
+                    var DispName = e.Value?.ToString() ?? "default";
+                    if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
+                    {
+                        Settings.Remove("OverrideCulture", out _);
+                        ToggleSaveSignal();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var overrideLocate = overrideOpts.ReverseLookup(DispName);
+                            WriteSetting("OverrideCulture", overrideLocate);
+                        }
+                        catch { }
+                    }
 
+                    await MainSettingsPage.RebootApp(this);
+                    break;
                 case "codecs":
                     {
                         var cid = e.Value?.ToString();
@@ -406,7 +414,7 @@ public partial class AdvancedSettingPage : ContentPage
                             try
                             {
                                 var writer = PluginManager.CreateVideoWriter(cid);
-                                await DisplayAlertAsync(Localized._Info, $"Successfully create video writer with codec {writer.CodecName}.", Localized._OK);
+                                await DisplayAlertAsync(Localized._Info, $"Successfully create video writer with codec {writer.CodecName} ({cid}).", Localized._OK);
                             }
                             catch (Exception ex)
                             {

@@ -1,4 +1,5 @@
 ﻿
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -283,5 +284,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             return effect as IContinuousEffect
                 ?? throw new InvalidOperationException($"EffectFactory '{factory.TypeName}' created '{effect.GetType().FullName}', which is not an IContinuousEffect.");
         }
+    }
+
+    /// <summary>
+    /// Represents a simple implementation of <see cref="IEffectFactory"/>. You can use this class to quickly create an effect factory without defining a new class.
+    /// </summary>
+    /// <param name="FromPlugin"></param>
+    /// <param name="TypeName"></param>
+    /// <param name="Target"></param>
+    /// <param name="ImplementType"></param>
+    /// <param name="ParametersType"></param>
+    /// <param name="CreateCallback"></param>
+    public class SimpleEffectFactory(string FromPlugin, string TypeName, EffectTarget Target, EffectImplementType ImplementType,  Dictionary<string, string> ParametersType, Func<Dictionary<string, object>, IEffect> CreateCallback) : IEffectFactory
+    {
+        string IEffectFactory.FromPlugin => FromPlugin;
+        string IEffectFactory.TypeName =>  TypeName;
+        Dictionary<string, string> IEffectFactory.ParametersType => ParametersType;
+        List<string> IEffectFactory.ParametersNeeded => ParametersType.Keys.ToList();
+        IEffect IEffectFactory.BuildWithDefaultType(Dictionary<string, object>? parameters)
+        {
+            return CreateCallback(parameters ?? new Dictionary<string, object>());
+        }
+        IEffect IEffectFactory.Build(EffectImplementType implementType, Dictionary<string, object>? parameters)
+        {
+            return CreateCallback(parameters ?? new Dictionary<string, object>());
+        }
+        EffectImplementType[] IEffectFactory.SupportsImplementTypes => [ImplementType];
+        EffectImplementType IEffectFactory.DefaultImplementType => ImplementType;
+        EffectTarget IEffectFactory.Target => Target;
     }
 }

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -12,41 +14,13 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Path = System.IO.Path;
-using projectFrameCut.ApplicationAPIBase.Project;
 
 
 namespace projectFrameCut.DraftStuff
 {
-    [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
+    [DebuggerDisplay("{DisplayName}, {ClipType} ({Id})")]
     public class ClipElementUI : IClipElementUI
     {
-        static ClipElementUI()
-        {
-            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
-        }
-
-        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
-        {
-            try
-            {
-                if (reason == ClipUpdateReason.PropertyChanged)
-                {
-                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
-                }
-
-                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
-                {
-                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
-        }
-
         public required string Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
@@ -81,7 +55,7 @@ namespace projectFrameCut.DraftStuff
         public uint relativeStartFrame { get; set; } = 0u;
 
         public float sourceSecondPerFrame { get; set; } = 1f;
-        public float SecondPerFrameRatio { get; set; } = 1f;
+        public float SecondPerFrameRatio => GetAverageSpeedRatio();
 
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string FromPlugin { get; set; } = string.Empty;
@@ -104,9 +78,56 @@ namespace projectFrameCut.DraftStuff
         public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
+        public float GetAverageSpeedRatio()
+        {
+            float ratio = 0;
+
+            var spvProvider = Effects?.FirstOrDefault(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider);
+            if (spvProvider?.Value is ISpeedVarianceProvider pvd)
+            {
+                uint sourceLength = maxFrameCount;
+                if (sourceLength == 0)
+                {
+                    sourceLength = 1;
+                }
+
+                try
+                {
+                    uint effectiveLength = pvd.GetEffectiveLength(sourceLength);
+                    ratio = (float)effectiveLength / sourceLength;
+                }
+                catch
+                {
+                    ratio = 1f;
+                }
+            }
+            return ratio > 0 ? ratio : 1;
+        }
+
+        public void UpdateSourceDuration()
+        {
+            if (ClipType != ClipMode.VideoClip || ClipType != ClipMode.AudioClip || ClipType != ClipMode.ExtendClip)
+            {
+                isInfiniteLength = true;
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(SourcePath)) return;
+            try
+            {
+                var src = PluginManager.CreateVideoSource(SourcePath, 8);
+                maxFrameCount = (uint)src.TotalFrames;
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Refresh clip {DisplayName}'s duration", this);
+            }
+        }
+
         public void ApplySpeedRatio()
         {
-            Clip.WidthRequest = origLength * SecondPerFrameRatio;
+            Clip.WidthRequest = origLength * GetAverageSpeedRatio();
+
         }
 
         public void ApplyClipColor()
@@ -177,6 +198,79 @@ namespace projectFrameCut.DraftStuff
             return false;
         }
 
+        public EffectTarget GetEffectTarget() => ClipType switch
+        {
+            ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
+            ClipMode.AudioClip => EffectTarget.Audio,
+            _ => EffectTarget.Video
+        };
+
+        public void UpdateContent(View? content)
+        {
+            if (content is not null) content.BindingContext = this;
+            var cont = content ?? new HorizontalStackLayout
+            {
+                Children =
+                {
+                    new Label
+                    {
+                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id[^4..]}" : DisplayName,
+                        LineBreakMode = LineBreakMode.TailTruncation,
+                        MaxLines = 1,
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        VerticalTextAlignment = TextAlignment.Center,
+                        InputTransparent = true
+                    }
+                },
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                InputTransparent = true,
+                Padding = 0,
+                Spacing = 0,
+                BindingContext = this
+            };
+
+            Grid.SetColumn(LeftHandle, 0);
+            Grid.SetColumn(RightHandle, 2);
+            Grid.SetColumn(cont, 1);
+
+            if (Clip.Content is Grid existingGrid)
+            {
+                // Update in-place: swap only the content column so gesture recognizers on the Grid survive.
+                for (int i = existingGrid.Children.Count - 1; i >= 0; i--)
+                {
+                    if (existingGrid.Children[i] is Microsoft.Maui.Controls.View v && Grid.GetColumn(v) == 1)
+                        existingGrid.Children.RemoveAt(i);
+                }
+                existingGrid.Children.Add(cont);
+                Grid.SetColumn(cont, 1);
+            }
+            else
+            {
+                Clip.Content = new Grid
+                {
+                    Children =
+                    {
+                        LeftHandle,
+                        cont,
+                        RightHandle
+                    },
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
+                        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                        new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
+                    }
+                };
+            }
+
+            ToolTipProperties.SetText(Clip, DisplayName);
+            SemanticProperties.SetDescription(Clip, $"{DisplayName}, {TypeName}");
+
+        }
+
         [SetsRequiredMembers]
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
         public ClipElementUI()
@@ -185,6 +279,33 @@ namespace projectFrameCut.DraftStuff
         }
 
         private static double _defaultClipHeight = 62;
+
+        static ClipElementUI()
+        {
+            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
+        }
+
+        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
+        {
+            try
+            {
+                if (reason == ClipUpdateReason.PropertyChanged)
+                {
+                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
+                }
+
+                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
+                {
+                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
 
         public static ClipElementUI CreateClip(
         double startX,
@@ -195,7 +316,8 @@ namespace projectFrameCut.DraftStuff
         Brush? background = null,
         Border? prototype = null,
         uint relativeStart = 0,
-        uint maxFrames = 0)
+        uint maxFrames = 0,
+        View? ContentOverride = null)
         {
 
             string cid = id ?? Guid.NewGuid().ToString();
@@ -265,17 +387,29 @@ namespace projectFrameCut.DraftStuff
                 origX = startX
             };
 
-            var cont = new HorizontalStackLayout
+            var titleLabel = new Label
+            {
+                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid[^4..]}" : labelText,
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                InputTransparent = true
+            };
+
+            var cont = ContentOverride ?? new HorizontalStackLayout
             {
                 Children =
                 {
-                    new Label
-                    {
-                        Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
-                    }
+                    titleLabel
                 },
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
+                InputTransparent = true,
+                Padding = 0,
+                Spacing = 0
             };
 
             Grid.SetColumn(element.LeftHandle, 0);
@@ -304,7 +438,7 @@ namespace projectFrameCut.DraftStuff
 
             if (!string.IsNullOrWhiteSpace(element.DisplayName))
             {
-                ToolTipProperties.SetText(element.Clip, element.DisplayName);
+                ToolTipProperties.SetText(titleLabel, element.DisplayName);
                 SemanticProperties.SetDescription(element.Clip, $"{element.DisplayName}, {element.TypeName}");
             }
             AutomationProperties.SetIsInAccessibleTree(element.Clip, true);

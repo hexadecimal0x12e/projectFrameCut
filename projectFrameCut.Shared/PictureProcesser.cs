@@ -24,6 +24,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
+        [Obsolete("Implement GetSixLaborsImageSharpProcess if possible for better performance, or Implement INormalEffect.Process if the step cannot be represented as a SixLabors.ImageSharp process. This method will be removed in API v5.", false)]
         public IPicture Process(IPicture source);
 
         /// <summary>

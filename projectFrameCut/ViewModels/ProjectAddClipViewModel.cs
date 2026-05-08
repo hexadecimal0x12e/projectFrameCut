@@ -751,7 +751,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 Clips = clipDtos.Cast<object>().ToArray(),
                 SoundTracks = soundtrackDtos.Cast<object>().ToArray(),
-                TargetFrameRate = _draftPage.ProjectInfo.TargetFrameRate,
                 SavedAt = DateTime.Now
             };
 
@@ -2045,9 +2044,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         BeginTimelineClipPlacement((trackIndex, startX) =>
         {
+            var targetFps = Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
+            var sourceSpf = vidSrc.Fps > 0 ? (1d / vidSrc.Fps) : 0d;
+            var timelineLength = ResolveTimelineFrameCount((uint)Math.Max(0, vidSrc.TotalFrames), sourceSpf, targetFps);
+
             var element = _draftPage.CreateAndAddClip(
                 startX: startX,
-                width: _draftPage.FrameToPixel((uint)vidSrc.TotalFrames),
+                width: _draftPage.FrameToPixel(timelineLength),
                 trackIndex: trackIndex,
                 id: null,
                 labelText: "Alternative source 1",
@@ -2061,13 +2064,40 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             element.SourcePath = path;
             element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
             element.isInfiniteLength = false;
-            element.maxFrameCount = (uint)vidSrc.TotalFrames;
-            element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
+            element.maxFrameCount = timelineLength;
+            element.sourceSecondPerFrame = (float)(vidSrc.Fps > 0 ? (1d / vidSrc.Fps) : (1d / Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate)));
             element.ExtraData = new();
             return element;
         }, name: path);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static uint ResolveTimelineFrameCount(uint sourceFrames, double sourceSecondPerFrame, uint targetFrameRate)
+    {
+        if (sourceFrames == 0)
+        {
+            return 1;
+        }
+
+        if (sourceSecondPerFrame <= 0 || targetFrameRate == 0)
+        {
+            return sourceFrames;
+        }
+
+        double seconds = sourceFrames * sourceSecondPerFrame;
+        double timelineFrames = seconds * targetFrameRate;
+        if (timelineFrames < 1d)
+        {
+            return 1;
+        }
+
+        if (timelineFrames >= uint.MaxValue)
+        {
+            return uint.MaxValue;
+        }
+
+        return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
     }
 
 
@@ -2708,7 +2738,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Path = localPath,
                 CreatedAt = DateTime.Now,
                 SecondPerFrame = -1,
-                FrameCount = 0,
+                Duration = 0,
                 IsAIGenerated = true
             };
 
@@ -2724,7 +2754,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     case AssetType.Video:
                         {
                             var vid = PluginManager.CreateVideoSource(localPath);
-                            item.FrameCount = vid.TotalFrames;
+                            item.Duration = vid.TotalFrames;
                             item.SecondPerFrame = (float)(1f / vid.Fps);
                             vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
                             item.ThumbnailPath = thumbnailPath;
@@ -2908,7 +2938,7 @@ public class TextStyleItemViewModel
             var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
             var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
             return img.ToImageSource();
         }
     }

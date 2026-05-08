@@ -41,7 +41,6 @@ namespace projectFrameCut.Shared
         SpecialTrack
     }
 
-    [Flags]
     public enum EffectType
     {
         NormalEffect,
@@ -50,6 +49,10 @@ namespace projectFrameCut.Shared
         AudioNormalEffect,
         AudioContinuousEffect,
         AudioBindableEffect,
+        SpeedVarianceProvider,
+        ClipPositionProvider,
+        ContinuousClipPositionProvider,
+        MixtureProvider,
         NotSpecified = -1,
     }
 
@@ -57,6 +60,9 @@ namespace projectFrameCut.Shared
     {
         Video,
         Audio,
+        SpeedVariance,
+        ColorAdjustment,
+        Mixture,
         NotSpecified = -1,
     }
 
@@ -216,4 +222,37 @@ namespace projectFrameCut.Shared
     }
 
     public record struct AcceleratorInfo(uint index, string name, string Type);
+
+    /// <summary>
+    /// A tuple representing the position of a clip on the target canvas. The position is represented by a tuple of (X, Y, Width, Height).
+    /// </summary>
+    /// <param name="TargetX">The X coordinate of the clip's position.</param>
+    /// <param name="TargetY">The Y coordinate of the clip's position.</param>
+    /// <param name="TargetWidth">The width of the clip.</param>
+    /// <param name="TargetHeight">The height of the clip.</param>
+    /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
+    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
+
+    /// <summary>
+    /// Determines the method to degrade HDR image to SDR when the renderer or display does not support HDR.
+    /// </summary>
+    public enum HDRImageDegradeToSDRMode
+    {
+        /// <summary>
+        /// Normalize the pixels from the <see cref="IHDRPicture{T}.Brightness"/> channel to the range of RGB channels.
+        /// </summary>
+        NormalizeBrightnessToRGB,
+        /// <summary>
+        /// Overlay a black mask which has <see cref="IPicture{T}.a"/> channel from <see cref="IHDRPicture{T}.Brightness"/> to the RGB(A) channels.
+        /// </summary>
+        OverlayMaskFromBrightness,
+        /// <summary>
+        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away, and cast the remaining channels to an <see cref="Picture16bpp"/>.
+        /// </summary>
+        DiscardBrightnessChannel,
+        /// <summary>
+        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.bitPerPixel"/>.
+        /// </summary>
+        DisallowDowngrade
+    }
 }

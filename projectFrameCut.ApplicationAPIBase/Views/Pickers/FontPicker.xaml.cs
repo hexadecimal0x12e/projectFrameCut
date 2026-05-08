@@ -13,6 +13,8 @@ public class FontItem : INotifyPropertyChanged
 
     public string[] Tags { get; set; } = [];
 
+    public string Path { get; set; } = "";
+
     public FontFileInfo? InnerItem { get; set; }
 
     public FontCollection? InnerFont { get; set; }

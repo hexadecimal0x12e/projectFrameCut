@@ -36,6 +36,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public bool EnableLock { get; set; }
 
         public bool StrictMode { get; set; } = true;
+        
+        public string TypeName => "RawPictureSequenceStreamVideoDecoderContext";
 
         #region Receive Mode Configuration
 

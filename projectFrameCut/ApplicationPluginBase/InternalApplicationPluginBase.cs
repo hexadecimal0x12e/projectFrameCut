@@ -21,7 +21,17 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
-            {"Crop", () => new Effect.CropEffectBundle() }
+            { "Crop", () => new Effect.CropEffectBundle() },
+            { "Place", () => new Effect.PlaceEffectBundle() },
+            { "Resize", () => new Effect.ResizeEffectBundle() },
+            { "Flip", () => new Effect.FlipEffectBundle() },
+            { "Sharpen", () => new Effect.SharpenEffectBundle() },
+            { "Vignette", () => new Effect.VignetteEffectBundle() },
+            { "FadeOpacity", () => new Effect.FadeOpacityEffectBundle() },
+            { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() },
+            { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
+            { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
+            { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;
@@ -44,6 +54,10 @@ namespace projectFrameCut.ApplicationPluginBase
             { "RemoveColor", new RemoveColorEffectDynamicPreviewProvider() },
             { "Resize", new ResizeEffectDynamicPreviewProvider() },
             { "Rotation", new RotationEffectDynamicPreviewProvider() },
+            { "Flip", new FlipEffectDynamicPreviewProvider() },
+            { "Sharpen", new SharpenEffectDynamicPreviewProvider() },
+            { "Vignette", new VignetteEffectDynamicPreviewProvider() },
+            { "FadeOpacity", new FadeOpacityEffectDynamicPreviewProvider() },
             { "StraightLineMovementValueProducer", new StraightLineMovementValueProducerEffectDynamicPreviewProvider() },
             { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorEffectDynamicPreviewProvider() },
             { "ZoomIn", new ZoomInEffectDynamicPreviewProvider() },

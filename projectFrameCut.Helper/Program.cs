@@ -204,6 +204,10 @@ namespace projectFrameCut.Helper
             Application.Exit();
         }
 
+        public static void UpdateStatus(string text)
+        {
+            splash?.Invoke(() => splash?.pluginStatLabel.Text = text);
+        }
         public static void UpdatePluginLoadingStat(string id)
         {
             splash?.Invoke(() => splash?.pluginStatLabel.Text = SimpleLocalizerBaseGeneratedHelper.Localized.SplashForm_PluginLoading(id));

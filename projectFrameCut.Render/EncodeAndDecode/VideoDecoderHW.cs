@@ -48,6 +48,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => [".mp4", ".mov"];
+        public string TypeName => "DecoderContextHW";
+
 
         public int? ResultBitPerPixel => 8;
 
@@ -247,6 +249,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return available.Count > 0 ? available[0] : AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
         }
 
+        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         [DebuggerNonUserCode()]
         public IPicture GetFrame(uint targetFrame, bool hasAlpha)
         {
@@ -258,6 +261,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     locker.Enter();
                     lockTaken = true;
                 }
+
+                if (Disposed)
+                    throw new ObjectDisposedException(nameof(DecoderContextHW), $"Decoder for '{_path}' was disposed while waiting for lock (frame {targetFrame}).");
 
                 EnsureDecoderReady(targetFrame);
 
@@ -373,6 +379,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     srcFrame = _swFrame;
                 }
 
+                // Validate source frame dimensions
+                if (srcFrame->width != _width || srcFrame->height != _height)
+                {
+                    Log($"[DecoderContextHW] Frame dimensions mismatch: expected {_width}x{_height}, got {srcFrame->width}x{srcFrame->height} for '{_path}' frame {targetFrame}.", "warning");
+                }
+
                 // Initialize or re-initialize SWS context if format changed
                 if (_sws == null || _lastPixelFormat != (AVPixelFormat)srcFrame->format)
                 {
@@ -398,8 +410,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     _rgb->linesize);
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
+                if (scaledRows < _height)
+                    Log($"[DecoderContextHW] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
 
                 // Cache the frame (keep last 3 frames)
                 if (_frameCache.Count >= 3)
@@ -430,7 +444,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                    fmt == AVPixelFormat.AV_PIX_FMT_MEDIACODEC;
         }
 
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
         {
             // Validate input parameters
             if (data == null)
@@ -455,9 +469,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     ProcessingFuncStackTrace = new StackTrace(true),
                 }
             };
+            int validRows = Math.Min(height, maxRows);
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
-            for (y = 0; y < height; y++)
+            for (y = 0; y < validRows; y++)
             {
                 srcRow = data + y * stride;
                 baseIndex = y * width;
@@ -465,11 +480,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     idx = baseIndex + x;
                     offset = x * 3;
-                    // Boundary check: ensure we don't read beyond stride
-                    if (offset + 2 >= stride)
-                    {
-                        throw new OverflowException($"Buffer overflow: stride={stride}, attempting to access at offset={offset + 2} (width={width}, height={height}, y={y}, x={x})");
-                    }
+                    if (offset + 2 >= stride) break;
                     result.r[idx] = srcRow[offset + 2];
                     result.g[idx] = srcRow[offset + 1];
                     result.b[idx] = srcRow[offset + 0];
@@ -482,7 +493,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public void Dispose()
         {
             if (Disposed) return;
-            Disposed = true;
+
+            locker.Enter();
+            try
+            {
+                if (Disposed) return;
+                Disposed = true;
+            }
+            finally
+            {
+                locker.Exit();
+            }
 
             // Clear cache
             _frameCache.Clear();

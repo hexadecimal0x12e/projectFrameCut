@@ -1,6 +1,7 @@
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -31,6 +32,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private bool _isInitialized = false;
         private bool _isDisposed = false;
+
+        /// <summary>
+        /// Metadata key-value pairs to write into the output container.
+        /// Set before calling <see cref="Mux"/>; changes after muxing has started may be ignored.
+        /// </summary>
+        public Dictionary<string, string>? Metadata { get; set; }
 
         /// <summary>
         /// Creates a new VideoAudioMuxer instance.
@@ -221,6 +228,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void WriteOutput(AudioBuffer audioBuffer)
         {
+            // Write metadata
+            if (Metadata != null && Metadata.Count > 0)
+            {
+                foreach (var kv in Metadata)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var value = kv.Value ?? string.Empty;
+                    ffmpeg.av_dict_set(&_outputFmtCtx->metadata, kv.Key, value, 0);
+                    if (_outputVideoStream != null)
+                        ffmpeg.av_dict_set(&_outputVideoStream->metadata, kv.Key, value, 0);
+                    if (_outputAudioStream != null)
+                        ffmpeg.av_dict_set(&_outputAudioStream->metadata, kv.Key, value, 0);
+                }
+            }
+
             // Write header
             FFmpegHelper.Throw(ffmpeg.avformat_write_header(_outputFmtCtx, null), "avformat_write_header");
 
@@ -403,7 +425,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// <param name="audioInputPath">Path to the input audio file.</param>
         /// <param name="outputPath">Path to the output file.</param>
         /// <param name="reencodeAudio">If true, re-encodes audio to match the output container format. If false, tries to copy the audio stream directly.</param>
-        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false)
+        /// <param name="metadata">Optional metadata key-value pairs to write into the output container.</param>
+        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false, Dictionary<string, string>? metadata = null)
         {
             if (string.IsNullOrEmpty(videoInputPath))
                 throw new ArgumentNullException(nameof(videoInputPath));
@@ -413,7 +436,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 throw new ArgumentNullException(nameof(outputPath));
             if (!File.Exists(videoInputPath))
                 throw new FileNotFoundException($"Video input file not found: {videoInputPath}");
-            if (!File.Exists(audioInputPath))
+            if (!File.Exists(audioInputPath) || new FileInfo(audioInputPath).Length < 256)
             {
                 File.Copy(videoInputPath, outputPath, overwrite: true);
                 return;
@@ -435,10 +458,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     "avformat_open_input (video)");
                 FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(videoFmtCtx, null), "avformat_find_stream_info (video)");
 
-                // Open audio input
-                FFmpegHelper.Throw(
-                    ffmpeg.avformat_open_input(&audioFmtCtx, audioInputPath, null, null),
-                    "avformat_open_input (audio)");
+                var audOpenRet = ffmpeg.avformat_open_input(&audioFmtCtx, audioInputPath, null, null);
+                if (audOpenRet != 0)
+                {
+                    Log($"Cannot open input audio file '{audioInputPath}' because '{FFmpegHelper.GetErrorString(audOpenRet)}' (ffmpeg error code: 0x{audOpenRet:x8}). Audio will be skipped.","warn");
+                    File.Copy(videoInputPath, outputPath, overwrite: true);
+                    return;
+                }
+
                 FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(audioFmtCtx, null), "avformat_find_stream_info (audio)");
 
                 // Find video stream
@@ -667,6 +694,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         "avio_open");
                 }
 
+                // Write metadata
+                if (metadata != null && metadata.Count > 0)
+                {
+                    foreach (var kv in metadata)
+                    {
+                        if (string.IsNullOrEmpty(kv.Key)) continue;
+                        var value = kv.Value ?? string.Empty;
+                        ffmpeg.av_dict_set(&outputFmtCtx->metadata, kv.Key, value, 0);
+                        if (outputVideoStream != null)
+                            ffmpeg.av_dict_set(&outputVideoStream->metadata, kv.Key, value, 0);
+                        if (outputAudioStream != null)
+                            ffmpeg.av_dict_set(&outputAudioStream->metadata, kv.Key, value, 0);
+                    }
+                }
+
                 // Write header
                 FFmpegHelper.Throw(ffmpeg.avformat_write_header(outputFmtCtx, null), "avformat_write_header");
 
@@ -871,6 +913,45 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     AVFormatContext* tempFmt = videoFmtCtx;
                     ffmpeg.avformat_close_input(&tempFmt);
                 }
+            }
+        }
+
+        public class AudioBuffer : IDisposable
+        {
+            /// <summary>
+            /// The audio samples. The first dimension is the channel, the second is the sample index.
+            /// Samples are typically in the range [-1.0, 1.0].
+            /// </summary>
+            public float[][] Samples { get; set; }
+
+            /// <summary>
+            /// The sample rate of the audio data.
+            /// </summary>
+            public int SampleRate { get; set; }
+
+            /// <summary>
+            /// The number of channels.
+            /// </summary>
+            public int Channels => Samples?.Length ?? 0;
+
+            /// <summary>
+            /// The number of samples per channel.
+            /// </summary>
+            public int SampleCount => Samples != null && Samples.Length > 0 ? Samples[0].Length : 0;
+
+            public AudioBuffer(int channels, int sampleCount, int sampleRate)
+            {
+                Samples = new float[channels][];
+                for (int i = 0; i < channels; i++)
+                {
+                    Samples[i] = new float[sampleCount];
+                }
+                SampleRate = sampleRate;
+            }
+
+            public void Dispose()
+            {
+                Samples = null!;
             }
         }
     }

@@ -2,6 +2,7 @@
 using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -34,7 +35,33 @@ namespace projectFrameCut.StandaloneRender
         {
             if (!args.Contains("--nolog"))
             {
-                MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
+                MyLoggerExtensions.OnLog += (m, l) =>
+                {
+                    if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine(m);
+                        return;
+                    }
+
+                    var oldColor = Console.ForegroundColor;
+                    try
+                    {
+                        Console.ForegroundColor = l.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
+                                              l.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
+                                              (l.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || l.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
+                                              (l.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || l.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
+                                              l.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta :
+                                              ConsoleColor.Gray;
+
+                        Console.Write($"[{l}]");
+                    }
+                    finally
+                    {
+                        Console.ForegroundColor = oldColor;
+                    }
+
+                    Console.WriteLine($" {m}");
+                };
                 Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
                 Console.Write(GetInfo());
                 Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
@@ -72,12 +99,13 @@ namespace projectFrameCut.StandaloneRender
                         [-pluginRoot=<path to plugin root>]
                         [-Use16bpp=<true|false>]
                         [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
+                        [-renderByLayer=<true|false>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]
                         [-outputIntermediatePath=<intermediate output path>]
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
-                        [-diagReportPath=<path to .csv file or output directory>]
+                        [-diagReportPath=<path diag report output directory>]
 
 
                     Mode 'bench':
@@ -274,10 +302,20 @@ namespace projectFrameCut.StandaloneRender
         private static async Task<int> GoRender(ConcurrentDictionary<string, string> switches)
         {
             #region init encoder
+            bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             Log("Initiliazing FFmpeg...");
             ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
             FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-            FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+            if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+            {
+                FFmpegHelper.SetupFFmpegLogging(trace ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
+                Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+            }
+            else
+            {
+                Log($"FFmpeg library failed to load. ({ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")})", "error");
+                return 1;
+            }
             FFmpegHelper.SetupFFmpegLogging();
             Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
@@ -294,16 +332,12 @@ namespace projectFrameCut.StandaloneRender
             height = int.Parse(outputOptions[1]);
             fps = int.Parse(outputOptions[2]);
 
-            Type pxfmtEnumType = typeof(FFmpeg.AutoGen.AVPixelFormat);
-            var pxfmtFields = pxfmtEnumType.GetFields(BindingFlags.Public | BindingFlags.Static);
-            var pxfmtInfo = pxfmtFields.Where((s) => s.Name == outputOptions[3]).FirstOrDefault(defaultValue: null);
-            if (pxfmtInfo == null)
+            if (!Enum.TryParse(outputOptions[3], out outputFormat) || outputFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
                 return 1;
             }
 
-            outputFormat = (FFmpeg.AutoGen.AVPixelFormat)Convert.ToInt64(pxfmtInfo.GetValue(null)!);
             outputEncoder = outputOptions[4];
 
             var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
@@ -413,13 +447,15 @@ namespace projectFrameCut.StandaloneRender
 
             if (switches.TryGetValue("assetDbFile", out var assetDbPath))
             {
-                assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDbPath))
+                var globalAsset = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDbPath))
                     ?? new ConcurrentDictionary<string, AssetItem>();
+                DecoderContextPJFCProject.GlobalAssetGetter = new(() => globalAsset);
+                assets = new(globalAsset);
                 Log($"Read {assets.Count} assets from asset database.");
             }
 
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
-            bool blockWrite = false;
+            bool blockWrite = false, renderByLayer = false;
             if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
             {
                 maxParallelThreads = 1;
@@ -429,11 +465,11 @@ namespace projectFrameCut.StandaloneRender
             {
                 blockWrite = false;
             }
+            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
 
-            bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 
@@ -471,6 +507,7 @@ namespace projectFrameCut.StandaloneRender
                 var projAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json")), savingOpts) ?? new();
                 ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(projAssets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
                 assets = new ConcurrentDictionary<string, AssetItem>(assets.Concat(assetDict));
+
             }
             else
             {
@@ -482,11 +519,16 @@ namespace projectFrameCut.StandaloneRender
 
             CancellationTokenSource cts = new();
             VideoBuilder builder = null!;
+            var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
             async Task composeVideo(string resultPath)
             {
                 var clips = JSONToIClips(timeline, assets, bpp);
 
                 switches.TryGetValue("diagReportPath", out var diagReportPath);
+                if (PictureLifecycleTracker.Enabled)
+                {
+                    PictureLifecycleTracker.Clear();
+                }
 
                 builder = new VideoBuilder(resultPath, width, height, fps, outputEncoder, outputFormat.ToString())
                 {
@@ -519,11 +561,11 @@ namespace projectFrameCut.StandaloneRender
                     {
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
                         }
                     };
                 }
@@ -538,6 +580,10 @@ namespace projectFrameCut.StandaloneRender
                     if (blockWrite)
                     {
                         await renderer.GoRenderSync(cts.Token);
+                    }
+                    else if (renderByLayer)
+                    {
+                        await renderer.GoRenderByLayer(cts.Token);
                     }
                     else
                     {
@@ -561,7 +607,9 @@ namespace projectFrameCut.StandaloneRender
                 {
                     try
                     {
+                        Log("Export diag data...");
                         DiagReportExporter.ExportCsv(diagReportPath!, renderer);
+                        await PictureLifecycleTracker.ExportPictureLifecycleTrackerSnapshots(Path.Combine(diagReportPath!, $"PictureLifeCycle-{Guid.NewGuid()}.csv"));
                     }
                     catch (Exception ex)
                     {
@@ -647,8 +695,7 @@ namespace projectFrameCut.StandaloneRender
                 t.Change(stopAfter * 1000, Timeout.Infinite);
 
             }
-
-            if (!Environment.GetCommandLineArgs().Contains("--noSigInt"))
+            if (!noSigInt)
             {
                 var cancelled = false;
                 Console.CancelKeyPress += (s, e) =>

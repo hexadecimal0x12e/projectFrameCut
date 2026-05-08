@@ -27,11 +27,16 @@ public partial class GeneralSettingPage : ContentPage
         Title = Localized.MainSettingsPage_Tab_General;
         FFmpegProviderDisplayNameMapping =
             new Dictionary<string, string>
-            { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
+            {
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" },
+#if WINDOWS
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" } 
+#endif
+            }
             .Concat(
                 PluginManager.LoadedPlugins
                 .Where(c => c.Value.Properties.TryGetValue("IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
-                .Select(p => new KeyValuePair<string, string>(p.Value.Name, p.Key))
+                .Select(p => new KeyValuePair<string, string>($"{Localized.DraftPage_MenuBar_Extensions}: {p.Value.Name}", p.Key))
             )
             .ToDictionary(c => c.Key, c => c.Value);
         BuildPPB();
@@ -72,9 +77,7 @@ public partial class GeneralSettingPage : ContentPage
 
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
-#if !WINDOWS
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
-#endif
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, -10, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
             .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
@@ -93,22 +96,6 @@ public partial class GeneralSettingPage : ContentPage
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
             .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
-             .AddButton(SettingLocalizedResources.Misc_ClearCache, async (s, e) =>
-             {
-                 var files = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories)).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), "*", SearchOption.AllDirectories));
-                 var size = Math.Round(files.Sum(f => new FileInfo(f).Length) / 1024.0 / 1024.0, 2);
-                 if (!await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Misc_ClearCache_Confirm((ulong)files.Count(), size), Localized._Confirm, Localized._Cancel)) return;
-                 foreach (var item in files)
-                 {
-                     try
-                     {
-                         File.Delete(item);
-                     }
-                     catch { }
-                 }
-
-                 await DisplayAlertAsync(Localized._Info, Localized._Done, Localized._OK);
-             })
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
     }
@@ -373,6 +360,22 @@ public partial class GeneralSettingPage : ContentPage
 #endif
                         WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
 
+                    }
+                    else if (id == "external")
+                    {
+                        await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
+                        var libsDir = await FileSystemService.PickFolderAsync();
+                        if (!string.IsNullOrWhiteSpace(libsDir))
+                        {
+                            WriteSetting("PluginProvidedFFmpeg_Enable", true.ToString());
+                            WriteSetting("PluginProvidedFFmpeg_PluginID", "external");
+                            WriteSetting("PluginProvidedFFmpeg_LibPath", libsDir);
+                        }
+                        else
+                        {
+                            WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
+                            WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
+                        }
                     }
                     else
                     {

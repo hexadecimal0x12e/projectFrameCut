@@ -17,7 +17,7 @@ namespace projectFrameCut.SplashScreen
         {
             VersionLabel.Text = Localized.SplashForm_Version();
             VersionLabel.Left = this.ClientSize.Width - VersionLabel.Width - 15;
-            TitleLabel.Text = HelperProgram.AppTitle;
+            //TitleLabel.Text = HelperProgram.AppTitle;
             CopyrightLabel.Text = Localized.SplashForm_Copyright();
             CopyrightLabel.Left = this.ClientSize.Width - CopyrightLabel.Width - 15;
             LicenseLabel.Text = HelperProgram.AppChannel;

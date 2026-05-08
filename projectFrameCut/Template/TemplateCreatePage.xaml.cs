@@ -529,7 +529,6 @@ public partial class TemplateCreatePage : ContentView
             project.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             project.LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
             project.PluginUsed ??= [];
-            project.TargetFrameRate = draft.TargetFrameRate;
 
             draft.SavedAt = DateTime.Now;
 

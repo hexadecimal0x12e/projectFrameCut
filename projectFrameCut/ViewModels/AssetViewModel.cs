@@ -2,8 +2,11 @@
 using Microsoft.Maui.Storage;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -80,12 +83,58 @@ namespace projectFrameCut.ViewModels
             Assets.Clear();
             if (AssetDatabase.Assets != null)
             {
-                foreach (var asset in AssetDatabase.Assets.Values)
+                foreach (var currentAsset in AssetDatabase.Assets.Values)
                 {
-                    _allAssets.Add(asset);
+                    if (FixAsset(currentAsset, false, out var modified)) AssetDatabase.Assets.AddOrUpdate(modified.AssetId, (_) => modified, (_, _) => modified);
+                    _allAssets.Add(modified);
                 }
             }
             FilterAssets();
+        }
+
+        public static bool FixAsset(AssetItem input, bool force, out AssetItem result)
+        {
+            result = input;
+            if (input.AssetType == AssetType.Video)
+            {
+                if (force || input.Duration is null || input.Duration <= 0 || input.Width * input.Height <= 0 || input.SecondPerFrame == 0 || input.BitPerPixel <= 0)
+                {
+                    if (Guid.TryParse(input.AssetId ?? "", out var id) && !string.IsNullOrWhiteSpace(input.Path) && File.Exists(input.Path))
+                    {
+                        try
+                        {
+                            var vid = PluginManager.CreateVideoSource(input.Path, 8);
+                            var bpp = FFmpegHelper.DetectVideoBitDepth(input.Path);
+                            result = input with { Duration = vid.TotalFrames, Width = vid.Width, Height = vid.Height, SecondPerFrame = (float)(1 / vid.Fps), BitPerPixel = bpp };
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Auto fix asset info for {input}");
+                        }
+                    }
+                }
+            }
+            else if (input.AssetType == AssetType.Audio)
+            {
+                if (force || input.Duration is null || input.Duration <= 0)
+                {
+                    if (Guid.TryParse(input.AssetId ?? "", out var id) && !string.IsNullOrWhiteSpace(input.Path) && File.Exists(input.Path))
+                    {
+                        try
+                        {
+                            var aud = PluginManager.CreateAudioSource(input.Path);
+                            result = input with { Duration = aud.Duration, SecondPerFrame = 1 };
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Auto fix asset info for {input}");
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         public async void FilterAssets()

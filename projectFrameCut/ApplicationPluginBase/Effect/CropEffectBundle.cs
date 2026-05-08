@@ -74,7 +74,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 180,
                 angle,
                 null,
-                SliderUpdateEventCallMode.OnValueChanged);
+                SliderUpdateEventCallMode.OnMouseUp);
 
             return panel;
         }

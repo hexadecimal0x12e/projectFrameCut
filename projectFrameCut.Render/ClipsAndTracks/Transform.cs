@@ -16,6 +16,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
         public string Id { get; init; }
+        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public string Name { get; init; }
         public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }
@@ -51,12 +52,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
                 return field;
             }
-            set 
-            { 
-                field = value; 
-                TransformElement = value is null ? null : JsonSerializer.SerializeToElement(value, value.GetType()); 
+            set
+            {
+                field = value;
+                TransformElement = value is null ? null : JsonSerializer.SerializeToElement(value, value.GetType());
             }
         }
+
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
 
         public void Dispose()
         {

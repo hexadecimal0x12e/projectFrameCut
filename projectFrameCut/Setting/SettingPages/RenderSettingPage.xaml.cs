@@ -29,6 +29,13 @@ public partial class RenderSettingPage : ContentPage
             { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
     };
 
+    Dictionary<string, string> AndroidHWAccelImpTypeMapping = new Dictionary<string, string>
+    {
+        {SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan, "vulkan" },
+        {SettingLocalizedResources.Render_AndroidHwAccleImpType_OpenGL, "opengl" },
+
+    };
+
     string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
     string[] framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
     string[] encodings = new[] { "h264", "h265/hevc", "av1" };
@@ -117,9 +124,9 @@ public partial class RenderSettingPage : ContentPage
             .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
             .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null))
-            .AddSeparator();
-
-        rootPPB
+            .AddSeparator()
+            .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
+            .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
             .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
             .AddSeparator();
@@ -142,6 +149,7 @@ public partial class RenderSettingPage : ContentPage
 
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
+            .AppendWhen(AcceleratorInfos?.Count() < 1, (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
             .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
             .AppendWhen(AcceleratorInfos?.Count(c => c.Type != "CPU") < 2, (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
             .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out result) ? accels[result] : "", null);
@@ -166,6 +174,10 @@ public partial class RenderSettingPage : ContentPage
         }
         catch (Exception ex) { Log(ex); }
         finally { rootPPB.AddSeparator(); }
+#elif ANDROID
+        rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
+            .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
 
 
@@ -191,7 +203,7 @@ public partial class RenderSettingPage : ContentPage
         try
         {
             ILGPU.Context context = ILGPU.Context.CreateDefault();
-            var devices = context.Devices.ToList();
+            var devices = context.Devices.Where(C => C.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).ToList();
             List<AcceleratorInfo> listAccels = new();
             for (uint i = 0; i < devices.Count; i++)
             {
@@ -199,7 +211,7 @@ public partial class RenderSettingPage : ContentPage
                 listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
             }
 
-            return listAccels.ToArray();
+            return listAccels.Any() ? listAccels.ToArray() : [new AcceleratorInfo(0, "No support accelerator found on this device.", "CPU")];
         }
         catch (Exception ex)
         {
@@ -232,7 +244,7 @@ public partial class RenderSettingPage : ContentPage
                     {
                         showMoreOpts = true;
                         BuildPPB();
-                        break;
+                        return;
                     }
                 case "accel_enableMultiAccel":
                     if (args.Value is bool en)
@@ -334,6 +346,13 @@ public partial class RenderSettingPage : ContentPage
                         }
                         return;
                     }
+                case "render_AndroidHWAccelType":
+                    {
+                        var type = AndroidHWAccelImpTypeMapping.TryGetValue(args.Value as string, out var hwt) ? hwt : "vulkan";
+                        WriteSetting("render_AndroidHWAccelType", type);
+                        await MainSettingsPage.RebootApp(this);
+                        return;
+                    }
 
                 case var _ when args.Id != null && args.Id.StartsWith("effectImplement,"):
                     {
@@ -359,10 +378,10 @@ public partial class RenderSettingPage : ContentPage
 
             }
 
-            if (args.Value != null)
-            {
-                WriteSetting(args.Id, args.Value?.ToString() ?? "");
-            }
+            //if (args.Value != null)
+            //{
+            //    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+            //}
         }
         catch (Exception ex)
         {

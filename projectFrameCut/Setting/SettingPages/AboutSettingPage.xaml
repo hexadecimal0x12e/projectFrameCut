@@ -4,20 +4,48 @@
              x:Class="projectFrameCut.Setting.SettingPages.AboutSettingPage"
              xmlns:l="clr-namespace:LocalizedResources"
              Title="{l:Localized Key=MainSettingsPage_Tab_About}">
-    <VerticalStackLayout Padding="8">
-        <HorizontalStackLayout Padding="8">
+    <Grid RowDefinitions="Auto,*" Padding="8">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter TargetName="WideLayout" Property="IsVisible" Value="False" />
+                        <Setter TargetName="NarrowLayout" Property="IsVisible" Value="True" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="600" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter TargetName="WideLayout" Property="IsVisible" Value="True" />
+                        <Setter TargetName="NarrowLayout" Property="IsVisible" Value="False" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
 
-            <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="180" HeightRequest="180" Grid.Column="0" Source="appicon.png"/>
-            <VerticalStackLayout Grid.Column="1" Padding="8" >
-                <Label Grid.Column="1" FontSize="72" Text="{l:Localized Key=AppBrand}"/>
-                <Label x:Name="AppVersionLabel" FontSize="32" Margin="0,1,0,10" Text="@Version"/>
-                <Label x:Name="AppDetailVersionLabel" FontSize="16" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"  Text="@Detail"/>
+        <!-- Wide layout: logo left, info right -->
+        <HorizontalStackLayout x:Name="WideLayout" Grid.Row="0" Padding="8">
+            <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="180" HeightRequest="180" Source="appicon.png" />
+            <VerticalStackLayout Padding="8">
+                <Label FontSize="72" Text="{l:Localized Key=AppBrand}" />
+                <Label x:Name="AppVersionLabel" FontSize="32" Margin="0,1,0,10" Text="@Version" />
+                <Label x:Name="AppDetailVersionLabel" FontSize="16" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" />
             </VerticalStackLayout>
-            
         </HorizontalStackLayout>
 
-        <WebView Margin="0,8,0,0" MinimumHeightRequest="500"  x:Name="AboutWebview">
-            
-        </WebView>
-    </VerticalStackLayout>
+        <!-- Narrow layout: logo centered top, details below -->
+        <VerticalStackLayout x:Name="NarrowLayout" Grid.Row="0" Padding="8" IsVisible="False" HorizontalOptions="Center" Spacing="2">
+            <Image Background="Black" x:Name="AppLogoIcon_Narrow" WidthRequest="120" HeightRequest="120" Source="appicon.png" HorizontalOptions="Center" />
+            <Label FontSize="48" Text="{l:Localized Key=AppBrand}" HorizontalOptions="Center" />
+            <Label x:Name="AppVersionLabel_Narrow" FontSize="24" Margin="0,1,0,8" Text="@Version" HorizontalOptions="Center" />
+            <Label x:Name="AppDetailVersionLabel_Narrow" FontSize="14" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <WebView Grid.Row="1" Margin="0,8,0,0" MinimumHeightRequest="500" x:Name="AboutWebview" />
+    </Grid>
 </ContentPage>
