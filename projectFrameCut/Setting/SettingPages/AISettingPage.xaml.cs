@@ -22,7 +22,7 @@ namespace projectFrameCut.Setting.SettingPages
     {
         private string[] textModelProviders = { "OpenAI", "Anthropic", "Google", "Doubao", "Qwen", "DeepSeek", "Ollama", "Custom" };
         private string[] imageModelProviders = { "OpenAI", "Google", "Doubao", "Qwen", "Qwen (WanX)", "Custom" };
-        private string[] videoModelProviders = { "Sora (OpenAI)", "Doubao", "Qwen", "Custom" };
+        private string[] videoModelProviders = {  "Doubao", "Qwen", "HappyHorse", "Custom" };
 
         public AIOption CurrentOption = new();
         public AIOption CurrentImageOption = new();
@@ -194,12 +194,12 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, CurrentImageOption.Model, "")), 
-                            (models.Any, c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
-                            (() => !models.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
-                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, CurrentImageOption.Model, "")), 
-                            (models.Any, c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
-                            (() => !models.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, CurrentVideoOption.Text2VideoModel, "")), 
+                            (models.Any, c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, models, CurrentVideoOption.Text2VideoModel)), 
+                            (() => !models.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, CurrentVideoOption.Image2VideoModel, "")), 
+                            (models.Any, c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, models, CurrentVideoOption.Image2VideoModel)), 
+                            (() => !models.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
                 .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestVideoModelConnection())
                 .ListenToChanges((_, e) =>
                 {
@@ -307,9 +307,9 @@ namespace projectFrameCut.Setting.SettingPages
         {
             return provider switch
             {
-                "Sora (OpenAI)" => "https://api.openai.com/v1",
                 "Doubao" => "https://ark.cn-beijing.volces.com/api/v3",
                 "Qwen" => "https://dashscope.aliyuncs.com/api/v1",
+                "HappyHorse" => "https://dashscope.aliyuncs.com/api/v1",
 
                 _ => defaultUri
             };

@@ -1513,6 +1513,78 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u770B\u8D77\u6765\u4E0D\u9519",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u5C06\u6B64\u7D20\u6750\u6DFB\u52A0\u5230\u8F68\u9053\u4E0A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u6682\u4E0D\u6DFB\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u53D6\u6D88\u6DFB\u52A0\u64CD\u4F5C\uFF0C\u4F46\u751F\u6210\u7684\u7D20\u6750\u4ECD\u5728\u7D20\u6750\u5E93\u4E2D\u53EF\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u53CD\u9988",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u611F\u8C22\u4F60\u7684\u53CD\u9988\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u91CD\u65B0\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u4F7F\u7528\u76F8\u540C\u7684\u63D0\u793A\u8BCD\u91CD\u65B0\u751F\u6210\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "\u9884\u89C8 AI \u751F\u6210\u7D20\u6750\r(\u5F80\u4E0B\u6EDA\u52A8\u4EE5\u67E5\u770B\u66F4\u591A\u9009\u9879)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_AddClipView_ClickToPlace",
         "Value": "\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
@@ -13471,6 +13543,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Looks good",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Regenerate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Feedback",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Skip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Thank you for your feedback.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Add this clip to the track",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Cancel the add operation, but the generated material is still available in the material library.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Regenerate content using the same prompt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Preview AI-generated assets\r(Scroll down to see more options)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -20725,6 +20878,87 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "\u611F\u8B1D\u53CD\u994B\uFF0C\u6211\u5011\u5DF2\u6536\u5230\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u770B\u8D77\u4F86\u4E0D\u932F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u91CD\u65B0\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u56DE\u994B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u66AB\u4E0D\u6DFB\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u611F\u8B1D\u4F60\u7684\u56DE\u994B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u53D6\u6D88\u6DFB\u52A0\u64CD\u4F5C\uFF0C\u4F46\u751F\u6210\u7684\u7D20\u6750\u4ECD\u5728\u7D20\u6750\u5EAB\u4E2D\u53EF\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u5C07\u6B64\u7D20\u6750\u6DFB\u52A0\u5230\u8ECC\u9053\u4E0A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u4F7F\u7528\u76F8\u540C\u7684\u63D0\u793A\u8A5E\u91CD\u65B0\u7522\u751F\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "\u9810\u89BD AI \u751F\u6210\u7D20\u6750\r(\u5F80\u4E0B\u6EFE\u52D5\u4EE5\u67E5\u770B\u66F4\u591A\u9078\u9805)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27996,6 +28230,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u826F\u3055\u305D\u3046",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u518D\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u30D5\u30A3\u30FC\u30C9\u30D0\u30C3\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u8FFD\u52A0\u3057\u306A\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u3054\u610F\u898B\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u3053\u306E\u7D20\u6750\u3092\u30C8\u30E9\u30C3\u30AF\u306B\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u8FFD\u52A0\u64CD\u4F5C\u3092\u53D6\u308A\u6D88\u3057\u3066\u3082\u3001\u751F\u6210\u3055\u308C\u305F\u7D20\u6750\u306F\u7D20\u6750\u30E9\u30A4\u30D6\u30E9\u30EA\u3067\u5229\u7528\u53EF\u80FD\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u53D6\u6D88\u6DFB\u52A0\u64CD\u4F5C\u540E\uFF0C\u751F\u6210\u7684\u7D20\u6750\u4ECD\u5728\u7D20\u6750\u5E93\u4E2D\u53EF\u7528",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u540C\u3058\u30D7\u30ED\u30F3\u30D7\u30C8\u3067\u5185\u5BB9\u3092\u518D\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "AI\u751F\u6210\u7D20\u6750\u30D7\u30EC\u30D3\u30E5\u30FC\uFF08\u4E0B\u3078\u30B9\u30AF\u30ED\u30FC\u30EB\u3067\u4ED6\u306E\u9078\u629E\u80A2\u3092\u8868\u793A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -35245,6 +35560,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\uAD1C\uCC2E\uC544 \uBCF4\uC778\uB2E4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\uC7AC\uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\uD53C\uB4DC\uBC31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\uCD94\uAC00\uD558\uC9C0 \uC54A\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\uD53C\uB4DC\uBC31 \uAC10\uC0AC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\uC774 \uC18C\uC7AC\uB97C \uD2B8\uB799\uC5D0 \uCD94\uAC00\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\uCD94\uAC00 \uC791\uC5C5\uC744 \uCDE8\uC18C\uD588\uC9C0\uB9CC \uC0DD\uC131\uB41C \uC18C\uC7AC\uB294 \uC18C\uC7AC \uB77C\uC774\uBE0C\uB7EC\uB9AC\uC5D0\uC11C \uACC4\uC18D \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\uB3D9\uC77C\uD55C \uD504\uB86C\uD504\uD2B8\uB85C \uCF58\uD150\uCE20 \uB2E4\uC2DC \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "AI \uC0DD\uC131 \uC18C\uC7AC \uBBF8\uB9AC\uBCF4\uAE30\r(\uB354 \uB9CE\uC740 \uC635\uC158\uC744 \uBCF4\uB824\uBA74 \uC544\uB798\uB85C \uC2A4\uD06C\uB864\uD558\uC138\uC694)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -42488,6 +42884,87 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "Merci pour votre retour, nous l\u0027avons bien re\u00E7u.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u00C7a a l\u0027air bien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "R\u00E9g\u00E9n\u00E9rer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Commentaires",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Ne pas ajouter",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Merci pour votre retour.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Ajouter ce clip \u00E0 la piste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Annuler l\u0027op\u00E9ration d\u0027ajout, mais le mat\u00E9riel g\u00E9n\u00E9r\u00E9 reste disponible dans la biblioth\u00E8que de mat\u00E9riel.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Message d\u0027annulation indiquant que le mat\u00E9riel g\u00E9n\u00E9r\u00E9 reste accessible dans la biblioth\u00E8que.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "R\u00E9g\u00E9n\u00E9rer le contenu avec les m\u00EAmes prompts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Aper\u00E7u des contenus g\u00E9n\u00E9r\u00E9s par IA\r(Faites d\u00E9filer vers le bas pour voir plus d\u0027options)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -49757,6 +50234,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u751A\u4F73",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u91CD\u884C\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u8FD4\u62A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u6682\u4E14\u4E0D\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u611F\u8377\u53CD\u9988\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u611F\u8C22\u4F60\u7684\u53CD\u9988\uFF0C\u4F7F\u7528\u6587\u8A00\u6587\u8868\u8FBE\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u7F62\u6DFB\u52A0\u4E4B\u52A1\uFF0C\u6240\u6210\u4E4B\u6750\u4ECD\u5B58\u65BC\u7D20\u6750\u5E93\u4E2D\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u4EE5\u6B64\u7D20\u6750\u7F6E\u4E8E\u8F68\u9053\u4E4B\u4E0A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "\u9884\u89C8AI\u751F\u6210\u4E4B\u6750\r\uFF08\u4E0B\u6ED1\u4EE5\u89C8\u66F4\u591A\u9009\u9879\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u590D\u7528\u539F\u8BCD\uFF0C\u91CD\u64B0\u5176\u6587\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7FFB\u8BD1\u81EA\u73B0\u4EE3\u6C49\u8BED\u201C\u4F7F\u7528\u76F8\u540C\u7684\u63D0\u793A\u8BCD\u91CD\u65B0\u751F\u6210\u5185\u5BB9\u201D\uFF0C\u610F\u4E3A\u4FDD\u6301\u63D0\u793A\u8BCD\u4E0D\u53D8\uFF0C\u91CD\u65B0\u751F\u6210\u5185\u5BB9\u3002",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -57008,6 +57566,86 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "\u0634\u0643\u0631\u064B\u0627 \u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A\u0643\u060C \u0644\u0642\u062F \u062A\u0644\u0642\u064A\u0646\u0627\u0647\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u064A\u0628\u062F\u0648 \u062C\u064A\u062F\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u0625\u0646\u0634\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u062A\u0639\u0644\u064A\u0642\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u0644\u0627 \u062A\u0636\u0641 \u0627\u0644\u0622\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u0634\u0643\u0631\u064B\u0627 \u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A\u0643.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u0623\u0636\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0627\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u0633\u0627\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u0625\u0644\u063A\u0627\u0621 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629\u060C \u0648\u0644\u0643\u0646 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062A\u064A \u062A\u0645 \u0625\u0646\u0634\u0627\u0624\u0647\u0627 \u0644\u0627 \u062A\u0632\u0627\u0644 \u0645\u062A\u0627\u062D\u0629 \u0641\u064A \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0645\u0648\u0627\u062F.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0646\u0641\u0633 \u0627\u0644\u0645\u0637\u0627\u0644\u0628\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0645\u064F\u0646\u0634\u0623\u0629 \u0628\u0648\u0627\u0633\u0637\u0629 AI\r(\u0642\u0645 \u0628\u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0644\u0623\u0633\u0641\u0644 \u0644\u0631\u0624\u064A\u0629 \u0627\u0644\u0645\u0632\u064A\u062F \u0645\u0646 \u0627\u0644\u062E\u064A\u0627\u0631\u0627\u062A)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -64269,6 +64907,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Sieht gut aus",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Neu generieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Feedback",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Jetzt nicht hinzuf\u00FCgen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Vielen Dank f\u00FCr Ihr Feedback.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Dieses Material zur Spur hinzuf\u00FCgen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Abbrechen des Hinzuf\u00FCgens, aber das erstellte Material bleibt in der Materialbibliothek verf\u00FCgbar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Inhalt mit demselben Prompt erneut generieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Vorschau des KI-generierten Materials (nach unten scrollen, um weitere Optionen anzuzeigen)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -71515,6 +72234,87 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "Gracias por tus comentarios, los hemos recibido.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Se ve bien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Regenerar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Comentarios",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "No a\u00F1adir ahora",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Bot\u00F3n para cancelar la acci\u00F3n de a\u00F1adir un clip en la vista previa de IA",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Gracias por tus comentarios.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "A\u00F1adir este material a la pista",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Cancelar la operaci\u00F3n de agregar, pero el material generado sigue disponible en la biblioteca de materiales.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Regenerar contenido con las mismas indicaciones",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Vista previa de material generado por IA\r(Despl\u00E1zate hacia abajo para ver m\u00E1s opciones)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -78776,6 +79576,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Sembra buono",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Rigenera",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Feedback",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Non aggiungere ora",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Grazie per il tuo feedback.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Aggiungi questo clip alla traccia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Annulla l\u0027operazione di aggiunta, ma il materiale generato \u00E8 ancora disponibile nella libreria dei materiali.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Rigenera il contenuto con lo stesso prompt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Anteprima dei materiali generati dall\u0027AI\n(Scorri verso il basso per vedere pi\u00F9 opzioni)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -86030,6 +86911,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Wygl\u0105da dobrze",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Generuj ponownie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Opinie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Nie dodawaj teraz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Dzi\u0119kujemy za twoj\u0105 opini\u0119.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Anuluj operacj\u0119 dodawania, ale wygenerowane materia\u0142y s\u0105 nadal dost\u0119pne w bibliotece materia\u0142\u00F3w.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Wygeneruj ponownie z tym samym promptem.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Podgl\u0105d materia\u0142\u00F3w wygenerowanych przez AI\r(przewi\u0144 w d\u00F3\u0142, aby zobaczy\u0107 wi\u0119cej opcji)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Dodaj ten materia\u0142 do \u015Bcie\u017Cki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -93276,6 +94238,86 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "Agradecemos pelo feedback, j\u00E1 o recebemos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "Parece bom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Regenerar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Feedback",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "N\u00E3o adicionar agora",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Obrigado pelo seu feedback.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Adicionar este material \u00E0 trilha",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Cancelar a opera\u00E7\u00E3o de adicionar, mas o material gerado ainda est\u00E1 dispon\u00EDvel na biblioteca de materiais.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "Pr\u00E9-visualizar material gerado por IA\r(role para baixo para ver mais op\u00E7\u00F5es)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Regenerar conte\u00FAdo com o mesmo prompt",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -100537,6 +101579,87 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "\u0412\u044B\u0433\u043B\u044F\u0434\u0438\u0442 \u043D\u0435\u043F\u043B\u043E\u0445\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "\u041F\u0435\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "\u041E\u0442\u0437\u044B\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "\u041D\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0442\u044C \u0441\u0435\u0439\u0447\u0430\u0441",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "\u0421\u043F\u0430\u0441\u0438\u0431\u043E \u0437\u0430 \u0432\u0430\u0448 \u043E\u0442\u0437\u044B\u0432.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u044D\u0442\u043E\u0442 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044E \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u044F, \u043D\u043E \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u0432\u0441\u0435 \u0435\u0449\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0432 \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0435 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u043E \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u0441 \u0442\u0435\u043C \u0436\u0435 \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u043C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "\u041F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 AI-\u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u0430\r(\u041F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\u0442\u0435 \u0432\u043D\u0438\u0437, \u0447\u0442\u043E\u0431\u044B \u0443\u0432\u0438\u0434\u0435\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -107783,6 +108906,87 @@
       {
         "Id": "AIAssistant_ChatView_Feedback_SubmitDone",
         "Value": "Geri bildiriminiz i\u00E7in te\u015Fekk\u00FCrler, ald\u0131k.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply",
+        "Value": "G\u00FCzel g\u00F6r\u00FCn\u00FCyor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate",
+        "Value": "Yeniden Olu\u015Ftur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Feedback",
+        "Value": "Geri bildirim",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel",
+        "Value": "Hen\u00FCz Ekleme",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_FeedbackSubmitted",
+        "Value": "Geri bildiriminiz i\u00E7in te\u015Fekk\u00FCr ederiz.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Apply_Hint",
+        "Value": "Bu materyali par\u00E7aya ekle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Cancel_Hint",
+        "Value": "Ekleme i\u015Flemini iptal edin, ancak olu\u015Fturulan malzemeler malzeme kitapl\u0131\u011F\u0131nda hala kullan\u0131labilir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
+        "Value": "Ayn\u0131 istemle i\u00E7eri\u011Fi yeniden olu\u015Ftur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIPreview_Title",
+        "Value": "AI taraf\u0131ndan olu\u015Fturulan \u00F6\u011Feleri \u00F6nizle\r(daha fazla se\u00E7enek i\u00E7in a\u015Fa\u011F\u0131 kayd\u0131r\u0131n)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

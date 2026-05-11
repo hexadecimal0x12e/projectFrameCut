@@ -4079,6 +4079,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         double selectedWidth = center.Clip.WidthRequest > 0 ? center.Clip.WidthRequest : center.origLength;
         double selectedRight = selectedLeft + selectedWidth;
 
+        _transformMenuActivatedCenterClip = null;
+        _transformMenuActivatedHandle = "none";
 
         if (left)
         {
@@ -6173,9 +6175,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         OverlayLayer.InputTransparent = true;
 
         popupShowingDirection = "none";
-
-        _transformMenuActivatedCenterClip = null;
-        _transformMenuActivatedHandle = "none";
 
     }
 

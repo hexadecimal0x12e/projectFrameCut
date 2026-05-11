@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.AIAssistance.AIPreviewDialogView"
+             xmlns:viewmodels="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:projectFrameCut.Converters"
+             x:DataType="viewmodels:ProjectAddClipViewModel">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="AvaliableColorBrush">Green</SolidColorBrush>
+            <SolidColorBrush x:Key="NotAvaliableColorBrush">Gray</SolidColorBrush>
+
+            <toolkit:BoolToObjectConverter x:Key="IsValidConverter"
+                TrueObject="{StaticResource AvaliableColorBrush}"
+                FalseObject="{StaticResource NotAvaliableColorBrush}"/>
+        </ResourceDictionary>
+    </ContentView.Resources>
+
+    <ScrollView>
+        <Grid RowDefinitions="*,*,Auto" Padding="20">
+            <Label Grid.Row="0" Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Title}"/>
+            <!-- Preview Media Area -->
+            <Grid Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center" MaximumHeightRequest="350">
+                <Image Source="{Binding PreviewResultPath}"
+                       Aspect="AspectFit"
+                       IsVisible="{Binding IsPreviewImageType}"
+                   
+                       MaximumWidthRequest="800" />
+                <toolkit:MediaElement Source="{Binding PreviewResultPath}"
+                                      Aspect="AspectFit"
+                                      ShouldAutoPlay="True"
+                                      ShouldLoopPlayback="True"
+                                      ShouldShowPlaybackControls="True"
+                                      ShouldMute="False"
+                                      IsVisible="{Binding IsPreviewVideoType}"
+                                      MaximumWidthRequest="800" />
+            </Grid>
+
+            <!-- Action Buttons + Feedback Panel -->
+            <Grid Grid.Row="2" RowDefinitions="Auto,Auto" Margin="0,16,0,0">
+                <VerticalStackLayout Grid.Row="0"
+                                     HorizontalOptions="Center" 
+                                     Spacing="16">
+                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Apply}"
+                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Apply_Hint}"                    
+                            FontSize="16"
+                            Padding="24,12"
+                            CornerRadius="8"
+                            IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                            Command="{Binding ApplyAIPreviewCommand}" />
+                    <HorizontalStackLayout Spacing="16">
+                        <Button Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Regenerate}"
+                                ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Regenerate_Hint}"
+                                FontSize="16"
+                                Padding="24,12"
+                                CornerRadius="8"
+                                IsEnabled="{Binding IsRegenerateAvailable}"
+                                Command="{Binding RegenerateAIContentCommand}" />
+                        <ActivityIndicator IsVisible="{Binding IsRegenerateAvailable, Converter={toolkit:InvertedBoolConverter}}" WidthRequest="20" HeightRequest="20" IsRunning="True" Margin="8,0,8,0" />
+                        <Button Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Feedback}"
+                                FontSize="16"
+                                Padding="24,12"
+                                CornerRadius="8"
+                                IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                                IsVisible="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding ToggleFeedbackPanelCommand}" />
+                        <Button Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Cancel}"
+                                ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_Cancel_Hint}"
+                                FontSize="16"
+                                Padding="24,12"
+                                CornerRadius="8"
+                                IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding CancelAIPreviewCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+                <!-- Primary Buttons -->
+
+
+                <!-- Feedback Panel -->
+                <Grid Grid.Row="1"
+                      IsVisible="{Binding IsFeedbackPanelVisible}"
+                      Margin="0,16,0,0"
+                      RowDefinitions="Auto,Auto">
+                    <HorizontalStackLayout Grid.Row="0"
+                                           HorizontalOptions="Center"
+                                           Spacing="12">
+                        <Button Text="&#x1F44D;"
+                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
+                                Padding="12,6"
+                                FontSize="16"
+                                CornerRadius="8"
+                                MinimumWidthRequest="50"
+                                MinimumHeightRequest="40"
+                                BackgroundColor="{Binding IsFeedbackGoodSelected, Converter={StaticResource IsValidConverter}}"
+                                IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding SubmitAIFeedbackCommand}"
+                                CommandParameter="Good" />
+                        <Button Text="&#x1F44E;"
+                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
+                                Padding="12,6"
+                                FontSize="16"
+                                CornerRadius="8"
+                                MinimumWidthRequest="50"
+                                MinimumHeightRequest="40"
+                                BackgroundColor="{Binding IsFeedbackBadSelected, Converter={StaticResource IsValidConverter}}"
+                                IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding SubmitAIFeedbackCommand}"
+                                CommandParameter="Bad" />
+                        <Button Text="&#x1F6A9;"
+                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
+                                Padding="12,6"
+                                FontSize="16"
+                                CornerRadius="8"
+                                MinimumWidthRequest="50"
+                                MinimumHeightRequest="40"
+                                BackgroundColor="{Binding IsFeedbackReportSelected, Converter={StaticResource IsValidConverter}}"
+                                IsEnabled="{Binding IsSubmittingFeedback, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding SubmitAIFeedbackCommand}"
+                                CommandParameter="Report" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Grid.Row="1"
+                                           HorizontalOptions="Center"
+                                           Margin="0,8,0,0">
+                        <ActivityIndicator IsVisible="{Binding IsSubmittingFeedback}"
+                                           IsRunning="{Binding IsSubmittingFeedback}"
+                                           WidthRequest="20"
+                                           HeightRequest="20"
+                                           Margin="0,0,8,0" />
+                        <Label Text="{l:Localized Key=DraftPage_AddClipView_AIPreview_FeedbackSubmitted}"
+                               IsVisible="{Binding HasFeedbackSubmitted}"
+                               FontSize="14"
+                               TextColor="{AppThemeBinding Light=#4CAF50, Dark=#81C784}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Grid>
+            </Grid>
+        </Grid>
+    </ScrollView>
+</ContentView>

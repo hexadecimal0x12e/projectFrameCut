@@ -130,6 +130,7 @@ namespace projectFrameCut.AIAssistance
                 return option.Provider switch
                 {
                     "Qwen" => await GenerateVideoWithQwen(prompt, options, option),
+                    "HappyHorse" => await GenerateVideoWithHappyHorse(prompt, options, option),
                     "Doubao" => await GenerateVideoWithDoubao(prompt, options, option),
                     "OpenAI" or "Custom" => await GenerateVideoWithOpenAI(prompt, options, option),
                     _ => new VideoGenerationResult { Success = false, ErrorMessage = $"Unsupported AI provider for video generation: {option.Provider}" }
@@ -157,6 +158,7 @@ namespace projectFrameCut.AIAssistance
                 return option.Provider switch
                 {
                     "Qwen" => await GenerateVideoWithQwenFrames(firstFrame, lastFrame, prompt, options, option),
+                    "HappyHorse" => await GenerateVideoWithHappyHorseFrames(firstFrame, lastFrame, prompt, options, option),
                     _ => new VideoGenerationResult { Success = false, ErrorMessage = $"Frame-based video generation is not supported for provider: {option.Provider}" }
                 };
             }
@@ -321,13 +323,13 @@ namespace projectFrameCut.AIAssistance
                 {
                     ["prompt"] = prompt
                 };
-                
+
                 // 如果提供了图片URL，添加到input中（图生视频）
                 if (!string.IsNullOrWhiteSpace(options.ImageUrl))
                 {
                     inputObject["img_url"] = options.ImageUrl;
                 }
-                
+
                 var parametersObject = new Dictionary<string, object>
                 {
                     ["size"] = $"{options.Width}*{options.Height}",
@@ -335,13 +337,12 @@ namespace projectFrameCut.AIAssistance
                     ["watermark"] = options.Watermark,
                     ["duration"] = options.Duration
                 };
-                
-                // 添加可选参数
+
                 if (!string.IsNullOrWhiteSpace(options.ShotType))
                 {
                     parametersObject["shot_type"] = options.ShotType;
                 }
-                
+
                 var requestBody = new
                 {
                     model = aiOption.Text2VideoModel,
@@ -392,12 +393,12 @@ namespace projectFrameCut.AIAssistance
                 }
 
                 // 步骤2：轮询任务状态直到完成
-                var maxRetries = 60; // 最大重试60次，每次等待5秒，总共5分钟
+                var maxRetries = 60;
                 var retryCount = 0;
 
                 while (retryCount < maxRetries)
                 {
-                    await Task.Delay(5000); // 等待5秒
+                    await Task.Delay(5000);
 
                     var statusResponse = await client.GetAsync($"{aiOption.BaseAddress}/tasks/{taskId}");
 
@@ -449,9 +450,7 @@ namespace projectFrameCut.AIAssistance
                             {
                                 var message_text = messageElement.GetString();
                                 if (!string.IsNullOrEmpty(message_text))
-                                {
                                     errorMessage += $": {message_text}";
-                                }
                             }
                             return new VideoGenerationResult
                             {
@@ -459,7 +458,6 @@ namespace projectFrameCut.AIAssistance
                                 ErrorMessage = errorMessage
                             };
                         }
-                        // 任务还在进行中，继续等待
                     }
 
                     retryCount++;
@@ -474,6 +472,167 @@ namespace projectFrameCut.AIAssistance
             catch (Exception ex)
             {
                 Logger.Log(ex, "generate video with Qwen", typeof(AIHelper));
+                return new VideoGenerationResult { Success = false, ErrorMessage = ex.Message };
+            }
+        }
+
+        private static string GetHappyHorseRatio(int width, int height)
+        {
+            double r = (double)width / height;
+            if (r > 1.7) return "16:9";
+            if (r > 1.55) return "16:9";
+            if (r > 1.45) return "4:3";
+            if (r > 1.35) return "4:3";
+            if (r > 1.2) return "5:4";
+            if (r > 1.05) return "1:1";
+            if (r > 0.9) return "1:1";
+            if (r > 0.78) return "4:5";
+            if (r > 0.7) return "3:4";
+            return "9:16";
+        }
+
+        private static async Task<VideoGenerationResult> GenerateVideoWithHappyHorse(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        {
+            try
+            {
+                var parametersObject = new Dictionary<string, object>
+                {
+                    ["resolution"] = options.Resolution,
+                    ["ratio"] = GetHappyHorseRatio(options.Width, options.Height),
+                    ["duration"] = Math.Clamp(options.Duration, 3, 15),
+                    ["watermark"] = options.Watermark
+                };
+                if (options.Seed.HasValue)
+                    parametersObject["seed"] = options.Seed.Value;
+
+                var requestBody = new
+                {
+                    model = aiOption.Text2VideoModel,
+                    input = new { prompt },
+                    parameters = parametersObject
+                };
+
+                var message = JsonSerializer.Serialize(requestBody);
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", aiOption.Key);
+                client.DefaultRequestHeaders.Add("X-DashScope-Async", "enable");
+
+                var createResponse = await client.PostAsync($"{aiOption.BaseAddress}/services/aigc/video-generation/video-synthesis",
+                    new StringContent(message, Encoding.UTF8, "application/json"));
+
+                if (!createResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await createResponse.Content.ReadAsStringAsync();
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"HTTP {createResponse.StatusCode}: {createResponse.ReasonPhrase}\n{errorContent}"
+                    };
+                }
+
+                var createContent = await createResponse.Content.ReadAsStringAsync();
+                var createJsonDoc = JsonDocument.Parse(createContent);
+                var createRoot = createJsonDoc.RootElement;
+
+                if (!createRoot.TryGetProperty("output", out var output) ||
+                    !output.TryGetProperty("task_id", out var taskIdElement))
+                {
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Failed to get task_id from create response"
+                    };
+                }
+
+                var taskId = taskIdElement.GetString();
+                if (string.IsNullOrEmpty(taskId))
+                {
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Invalid task_id received"
+                    };
+                }
+
+                var maxRetries = 60;
+                var retryCount = 0;
+
+                while (retryCount < maxRetries)
+                {
+                    await Task.Delay(5000);
+
+                    var statusResponse = await client.GetAsync($"{aiOption.BaseAddress}/tasks/{taskId}");
+
+                    if (!statusResponse.IsSuccessStatusCode)
+                    {
+                        var errorContent = await statusResponse.Content.ReadAsStringAsync();
+                        return new VideoGenerationResult
+                        {
+                            Success = false,
+                            ErrorMessage = $"Failed to check task status: HTTP {statusResponse.StatusCode}: {statusResponse.ReasonPhrase}\n{errorContent}"
+                        };
+                    }
+
+                    var statusContent = await statusResponse.Content.ReadAsStringAsync();
+                    var statusJsonDoc = JsonDocument.Parse(statusContent);
+                    var statusRoot = statusJsonDoc.RootElement;
+
+                    if (statusRoot.TryGetProperty("output", out var statusOutput) &&
+                        statusOutput.TryGetProperty("task_status", out var taskStatusElement))
+                    {
+                        var taskStatus = taskStatusElement.GetString();
+
+                        if (taskStatus == "SUCCEEDED")
+                        {
+                            if (statusOutput.TryGetProperty("video_url", out var videoUrlElement))
+                            {
+                                var videoUrl = videoUrlElement.GetString();
+                                return new VideoGenerationResult
+                                {
+                                    Success = true,
+                                    VideoUrl = videoUrl,
+                                    Description = prompt,
+                                    TaskId = taskId
+                                };
+                            }
+                            else
+                            {
+                                return new VideoGenerationResult
+                                {
+                                    Success = false,
+                                    ErrorMessage = $"Task succeeded but no video_url found{Environment.NewLine}{statusRoot.GetRawText()}"
+                                };
+                            }
+                        }
+                        else if (taskStatus == "FAILED")
+                        {
+                            var errorMessage = "Video generation task failed";
+                            if (statusOutput.TryGetProperty("message", out var messageElement))
+                            {
+                                var msgText = messageElement.GetString();
+                                if (!string.IsNullOrEmpty(msgText))
+                                    errorMessage += $": {msgText}";
+                            }
+                            return new VideoGenerationResult
+                            {
+                                Success = false,
+                                ErrorMessage = errorMessage
+                            };
+                        }
+                    }
+
+                    retryCount++;
+                }
+
+                return new VideoGenerationResult
+                {
+                    Success = false,
+                    ErrorMessage = "Video generation timeout - task did not complete within expected time"
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "generate video with HappyHorse", typeof(AIHelper));
                 return new VideoGenerationResult { Success = false, ErrorMessage = ex.Message };
             }
         }
@@ -595,7 +754,7 @@ namespace projectFrameCut.AIAssistance
                                 return new VideoGenerationResult
                                 {
                                     Success = false,
-                                    ErrorMessage = "Task succeeded but no video_url found"
+                                    ErrorMessage = $"Task succeeded but no video_url found{Environment.NewLine}{statusRoot.GetRawText()}"
                                 };
                             }
                         }
@@ -604,7 +763,7 @@ namespace projectFrameCut.AIAssistance
                             return new VideoGenerationResult
                             {
                                 Success = false,
-                                ErrorMessage = "Video generation task failed"
+                                ErrorMessage = $"Video generation task failed{Environment.NewLine}{statusRoot.GetRawText()}"
                             };
                         }
                         // 任务还在进行中（queued 或 running），继续等待
@@ -646,7 +805,6 @@ namespace projectFrameCut.AIAssistance
         {
             try
             {
-                // Convert frames to base64
                 var firstFrameBase64 = ConvertPictureToBase64(firstFrame);
                 var lastFrameBase64 = ConvertPictureToBase64(lastFrame);
 
@@ -657,12 +815,16 @@ namespace projectFrameCut.AIAssistance
                     input = new
                     {
                         first_frame_url = firstFrameBase64,
-                        last_frame_url = lastFrameBase64,
-                        prompt = prompt
+                        media = new[]
+                        {
+                            new { type = "first_clip", url = firstFrameBase64 },
+                            new { type = "last_frame", url = lastFrameBase64 }
+                        }
                     },
                     parameters = new
                     {
-                        resolution = options.Width >= 1280 ? "720P" : "480P", // 根据宽度选择分辨率
+                        resolution = options.Width >= 1280 ? "720P" : "480P",
+                        duration = options.Duration >= 3 && options.Duration <= 15 ? options.Duration : Math.Clamp(options.Duration, 3, 15),
                         prompt_extend = options.PromptExtend,
                         watermark = options.Watermark
                     }
@@ -673,7 +835,7 @@ namespace projectFrameCut.AIAssistance
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", aiOption.Key);
                 client.DefaultRequestHeaders.Add("X-DashScope-Async", "enable");
 
-                var createResponse = await client.PostAsync($"{aiOption.BaseAddress}/services/aigc/image2video/video-synthesis",
+                var createResponse = await client.PostAsync($"{aiOption.BaseAddress}/services/aigc/video-generation/video-synthesis",
                     new StringContent(message, Encoding.UTF8, "application/json"));
 
                 if (!createResponse.IsSuccessStatusCode)
@@ -757,7 +919,7 @@ namespace projectFrameCut.AIAssistance
                                 return new VideoGenerationResult
                                 {
                                     Success = false,
-                                    ErrorMessage = "Task succeeded but no video_url found"
+                                    ErrorMessage = $"Task succeeded but no video_url found{Environment.NewLine}{statusRoot.GetRawText()}"
                                 };
                             }
                         }
@@ -766,7 +928,7 @@ namespace projectFrameCut.AIAssistance
                             return new VideoGenerationResult
                             {
                                 Success = false,
-                                ErrorMessage = "Video generation task failed"
+                                ErrorMessage = $"Video generation task failed{Environment.NewLine}{statusRoot.GetRawText()}"
                             };
                         }
                         // 任务还在进行中，继续等待
@@ -784,6 +946,164 @@ namespace projectFrameCut.AIAssistance
             catch (Exception ex)
             {
                 Logger.Log(ex, "generate video with Qwen frames", typeof(AIHelper));
+                return new VideoGenerationResult { Success = false, ErrorMessage = ex.Message };
+            }
+        }
+
+        private static async Task<VideoGenerationResult> GenerateVideoWithHappyHorseFrames(IPicture firstFrame, IPicture lastFrame, string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        {
+            try
+            {
+                var firstFrameBase64 = ConvertPictureToBase64(firstFrame);
+                var lastFrameBase64 = ConvertPictureToBase64(lastFrame);
+
+                var parametersObject = new Dictionary<string, object>
+                {
+                    ["resolution"] = options.Resolution,
+                    ["ratio"] = GetHappyHorseRatio(options.Width, options.Height),
+                    ["duration"] = Math.Clamp(options.Duration, 3, 15),
+                    ["watermark"] = options.Watermark
+                };
+                if (options.Seed.HasValue)
+                    parametersObject["seed"] = options.Seed.Value;
+
+                var requestBody = new
+                {
+                    model = aiOption.Image2VideoModel,
+                    input = new
+                    {
+                        prompt,
+                        first_frame_url = firstFrameBase64,
+                        media = new[]
+                        {
+                            new { type = "reference_image", url = firstFrameBase64 },
+                            new { type = "reference_image", url = lastFrameBase64 }
+                        }
+                    },
+                    parameters = parametersObject
+                };
+
+                var message = JsonSerializer.Serialize(requestBody);
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", aiOption.Key);
+                client.DefaultRequestHeaders.Add("X-DashScope-Async", "enable");
+
+                var createResponse = await client.PostAsync($"{aiOption.BaseAddress}/services/aigc/video-generation/video-synthesis",
+                    new StringContent(message, Encoding.UTF8, "application/json"));
+
+                if (!createResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await createResponse.Content.ReadAsStringAsync();
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"HTTP {createResponse.StatusCode}: {createResponse.ReasonPhrase}\n{errorContent}"
+                    };
+                }
+
+                var createContent = await createResponse.Content.ReadAsStringAsync();
+                var createJsonDoc = JsonDocument.Parse(createContent);
+                var createRoot = createJsonDoc.RootElement;
+
+                if (!createRoot.TryGetProperty("output", out var output) ||
+                    !output.TryGetProperty("task_id", out var taskIdElement))
+                {
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Failed to get task_id from create response"
+                    };
+                }
+
+                var taskId = taskIdElement.GetString();
+                if (string.IsNullOrEmpty(taskId))
+                {
+                    return new VideoGenerationResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Invalid task_id received"
+                    };
+                }
+
+                var maxRetries = 60;
+                var retryCount = 0;
+
+                while (retryCount < maxRetries)
+                {
+                    await Task.Delay(5000);
+
+                    var statusResponse = await client.GetAsync($"{aiOption.BaseAddress}/tasks/{taskId}");
+
+                    if (!statusResponse.IsSuccessStatusCode)
+                    {
+                        var errorContent = await statusResponse.Content.ReadAsStringAsync();
+                        return new VideoGenerationResult
+                        {
+                            Success = false,
+                            ErrorMessage = $"Failed to check task status: HTTP {statusResponse.StatusCode}: {statusResponse.ReasonPhrase}\n{errorContent}"
+                        };
+                    }
+
+                    var statusContent = await statusResponse.Content.ReadAsStringAsync();
+                    var statusJsonDoc = JsonDocument.Parse(statusContent);
+                    var statusRoot = statusJsonDoc.RootElement;
+
+                    if (statusRoot.TryGetProperty("output", out var statusOutput) &&
+                        statusOutput.TryGetProperty("task_status", out var taskStatusElement))
+                    {
+                        var taskStatus = taskStatusElement.GetString();
+
+                        if (taskStatus == "SUCCEEDED")
+                        {
+                            if (statusOutput.TryGetProperty("video_url", out var videoUrlElement))
+                            {
+                                var videoUrl = videoUrlElement.GetString();
+                                return new VideoGenerationResult
+                                {
+                                    Success = true,
+                                    VideoUrl = videoUrl,
+                                    Description = prompt,
+                                    TaskId = taskId
+                                };
+                            }
+                            else
+                            {
+                                return new VideoGenerationResult
+                                {
+                                    Success = false,
+                                    ErrorMessage = $"Task succeeded but no video_url found{Environment.NewLine}{statusRoot.GetRawText()}"
+                                };
+                            }
+                        }
+                        else if (taskStatus == "FAILED")
+                        {
+                            var errorMessage = "Video generation task failed";
+                            if (statusOutput.TryGetProperty("message", out var messageElement))
+                            {
+                                var msgText = messageElement.GetString();
+                                if (!string.IsNullOrEmpty(msgText))
+                                    errorMessage += $": {msgText}";
+                            }
+                            return new VideoGenerationResult
+                            {
+                                Success = false,
+                                ErrorMessage = errorMessage
+                            };
+                        }
+                    }
+
+                    retryCount++;
+                }
+
+                return new VideoGenerationResult
+                {
+                    Success = false,
+                    ErrorMessage = "Video generation timeout - task did not complete within expected time"
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "generate video with HappyHorse frames", typeof(AIHelper));
                 return new VideoGenerationResult { Success = false, ErrorMessage = ex.Message };
             }
         }
@@ -1016,6 +1336,10 @@ namespace projectFrameCut.AIAssistance
         public bool Watermark { get; set; } = true;
         public int Duration { get; set; } = 15;
         public string ShotType { get; set; } = "multi";
+
+        // HappyHorse 参数
+        public string Resolution { get; set; } = "1080P";
+        public int? Seed { get; set; }
 
         // Doubao 特有参数
         public bool GenerateAudio { get; set; } = true;

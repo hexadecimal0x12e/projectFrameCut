@@ -203,6 +203,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 field = value;
                 _draftPage?.IsPopupClosableByTapBackground = !field;
+                IsRegenerateAvailable = true;
                 OnPropertyChanged();
             }
         }
@@ -243,12 +244,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 field = value;
                 _draftPage?.IsPopupClosableByTapBackground = !field;
+                IsRegenerateAvailable = true;
                 OnPropertyChanged();
             }
         }
     } = false;
 
-    // ???? Clip ????????
+    // ?? Clip ????????
     public bool CanGenerateAITransition
     {
         get
@@ -258,6 +260,133 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             return left != null || right != null;
         }
     }
+
+    #region AI Generation Preview
+
+    private AssetItem? _pendingGeneratedAsset;
+    private string _pendingTransitionDirection = "";
+
+    public string PreviewResultPath
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsPreviewImageType));
+                OnPropertyChanged(nameof(IsPreviewVideoType));
+            }
+        }
+    } = "";
+
+    public string PreviewContentType
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsPreviewImageType));
+                OnPropertyChanged(nameof(IsPreviewVideoType));
+            }
+        }
+    } = "";
+
+    public bool IsPreviewImageType => PreviewContentType == "Image";
+    public bool IsPreviewVideoType => PreviewContentType == "Video";
+
+    public bool IsShowingPreview
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                if (_draftPage != null)
+                    _draftPage.IsPopupClosableByTapBackground = !value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsFeedbackPanelVisible
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsSubmittingFeedback
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool HasFeedbackSubmitted
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public string FeedbackSelectedType
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsFeedbackGoodSelected));
+                OnPropertyChanged(nameof(IsFeedbackBadSelected));
+                OnPropertyChanged(nameof(IsFeedbackReportSelected));
+            }
+        }
+    } = "";
+
+    public bool IsRegenerateAvailable
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsFeedbackGoodSelected => FeedbackSelectedType == "Good";
+    public bool IsFeedbackBadSelected => FeedbackSelectedType == "Bad";
+    public bool IsFeedbackReportSelected => FeedbackSelectedType == "Report";
+
+    #endregion
 
     public bool IsDraftSelectedAnyClip
     {
@@ -456,6 +585,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     // AI ????????
     public ICommand GenerateAITransitionCommand { get; set; } = null!;
 
+    // AI Preview
+    public ICommand ApplyAIPreviewCommand { get; set; } = null!;
+    public ICommand RegenerateAIContentCommand { get; set; } = null!;
+    public ICommand CancelAIPreviewCommand { get; set; } = null!;
+    public ICommand ToggleFeedbackPanelCommand { get; set; } = null!;
+    public ICommand SubmitAIFeedbackCommand { get; set; } = null!;
+
     public ICommand DrawingContentUndoCommand { get; set; } = null!;
     public ICommand DrawingContentRedoCommand { get; set; } = null!;
     public ICommand DrawingSelectPenColorCommand { get; set; } = null!;
@@ -484,6 +620,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         // AI ??????
         GenerateAITransitionCommand = new Command(async (d) => await GenerateAITransition(d));
+
+        // AI Preview
+        ApplyAIPreviewCommand = new Command(async () => await ApplyAIPreview());
+        RegenerateAIContentCommand = new Command(async () => await RegenerateAIContent());
+        CancelAIPreviewCommand = new Command(async () => await CancelAIPreview());
+        ToggleFeedbackPanelCommand = new Command(ToggleFeedbackPanel);
+        SubmitAIFeedbackCommand = new Command<string>(async (type) => await SubmitAIFeedback(type));
     }
     #endregion
 
@@ -2293,15 +2436,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // ????????
-            await AddAIGeneratedImageToTimeline(asset.Path, AIPrompt);
-
-            // ????
-            AIPrompt = "";
-
-            // ??????
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Image";
+            ShowPreviewDialog();
         }
         catch (Exception ex)
         {
@@ -2399,12 +2538,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            await AddAIGeneratedVideoToTimeline(asset.Path, AIPrompt);
-
-            AIPrompt = "";
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Video";
+            ShowPreviewDialog();
         }
         catch (Exception ex)
         {
@@ -2629,19 +2767,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             var sourcePath = asset.Path; // ????????
 
-            _draftPage.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
-            {
-                Name = "AITransform",
-                BindedLeftClip = a,
-                BindedRightClip = b,
-                SourcePath = sourcePath
-            }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
-
-
-            AITransitionPrompt = "";
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            _pendingTransitionDirection = directionStr;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Video";
+            ShowPreviewDialog();
             LoadTransforms();
         }
         catch (Exception ex)
@@ -2789,6 +2920,210 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
+
+    #endregion
+
+    #region AI Generation Preview Actions
+
+    private async void ShowPreviewDialog()
+    {
+        await _draftPage.HidePopup(true);
+        _draftPage.IsPopupClosableByTapBackground = true;
+        ResetPreviewFeedbackState();
+        var previewView = new AIPreviewDialogView { BindingContext = this };
+        await _draftPage.ShowAPopup(previewView, mode: "dialog");
+    }
+
+    private void ResetPreviewFeedbackState()
+    {
+        FeedbackSelectedType = "";
+        IsFeedbackPanelVisible = false;
+        HasFeedbackSubmitted = false;
+        IsSubmittingFeedback = false;
+    }
+
+    private async Task ApplyAIPreview()
+    {
+        if (_pendingGeneratedAsset == null) return;
+
+        await _draftPage.HidePopup(true);
+
+        try
+        {
+            if (PreviewContentType == "Image")
+            {
+                await AddAIGeneratedImageToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
+            }
+            else if (!string.IsNullOrWhiteSpace(_pendingTransitionDirection))
+            {
+                AddAITransitionToTimeline(_pendingGeneratedAsset.Path);
+            }
+            else
+            {
+                await AddAIGeneratedVideoToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
+            }
+
+            AIPrompt = "";
+            AITransitionPrompt = "";
+            _pendingTransitionDirection = "";
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+            await _draftPage.HidePopup(true);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, "Apply AI preview", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, ex.Message, Localized._OK);
+        }
+        finally
+        {
+            CleanupPreviewState();
+        }
+    }
+
+    private void AddAITransitionToTimeline(string sourcePath)
+    {
+        var directionStr = _pendingTransitionDirection;
+        bool left = directionStr == "left";
+        bool right = directionStr == "right";
+        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
+        {
+            left = _draftPage._transformMenuActivatedHandle == "left";
+            right = _draftPage._transformMenuActivatedHandle == "right";
+        }
+
+        var selectedClip = _draftPage?.SelectedClip;
+        if (selectedClip == null) return;
+
+        _draftPage!.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
+        {
+            Name = "AITransform",
+            BindedLeftClip = a,
+            BindedRightClip = b,
+            SourcePath = sourcePath
+        }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
+    }
+
+    private async Task RegenerateAIContent()
+    {
+        IsRegenerateAvailable = false;
+        var wasTransition = !string.IsNullOrWhiteSpace(_pendingTransitionDirection);
+        var savedDirection = _pendingTransitionDirection;
+
+        //await _draftPage.HidePopup(true);
+        CleanupPreviewState();
+
+        if (wasTransition)
+        {
+            await GenerateAITransition(savedDirection);
+        }
+        else
+        {
+            await GenerateAIContent();
+        }
+    }
+
+    private async Task CancelAIPreview()
+    {
+        await _draftPage.HidePopup(true);
+        CleanupPreviewState();
+    }
+
+    private void CleanupPreviewState()
+    {
+        _pendingGeneratedAsset = null;
+        _pendingTransitionDirection = "";
+        PreviewResultPath = "";
+        PreviewContentType = "";
+        ResetPreviewFeedbackState();
+    }
+
+    private void ToggleFeedbackPanel()
+    {
+        IsFeedbackPanelVisible = !IsFeedbackPanelVisible;
+        if (!IsFeedbackPanelVisible)
+        {
+            FeedbackSelectedType = "";
+        }
+    }
+
+    private async Task SubmitAIFeedback(string feedbackTypeStr)
+    {
+        if (!Enum.TryParse<AssistanceChatView.ChatReplyFeedbackType>(feedbackTypeStr, out var feedbackType))
+            return;
+
+        FeedbackSelectedType = feedbackType switch
+        {
+            AssistanceChatView.ChatReplyFeedbackType.Good => "Good",
+            AssistanceChatView.ChatReplyFeedbackType.Bad => "Bad",
+            AssistanceChatView.ChatReplyFeedbackType.Report => "Report",
+            _ => ""
+        };
+
+        string reasonCode = "";
+        string reasonText = "";
+
+        if (feedbackType == AssistanceChatView.ChatReplyFeedbackType.Report)
+        {
+            var harmful = Localized.AIAssistant_ChatView_Feedback_ReportReason_Harmful;
+            var hate = Localized.AIAssistant_ChatView_Feedback_ReportReason_Hate;
+            var incorrect = Localized.AIAssistant_ChatView_Feedback_ReportReason_Incorrect;
+            var irrelevant = Localized.AIAssistant_ChatView_Feedback_ReportReason_Irrelevant;
+            var other = Localized.AIAssistant_ChatView_Feedback_ReportReason_Other;
+
+            string? selectedReason;
+            if (Application.Current?.Windows?[0]?.Page is Page page)
+            {
+                selectedReason = await page.DisplayActionSheetAsync(
+                    Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
+                    Localized._Cancel,
+                    null,
+                    harmful, hate, incorrect, irrelevant, other);
+            }
+            else
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedReason) || selectedReason == Localized._Cancel)
+            {
+                FeedbackSelectedType = "";
+                return;
+            }
+
+            reasonCode = selectedReason switch
+            {
+                var x when x == harmful => "harmful_or_dangerous",
+                var x when x == hate => "hateful_or_harassing",
+                var x when x == incorrect => "factually_incorrect",
+                var x when x == irrelevant => "irrelevant",
+                _ => "other",
+            };
+            reasonText = selectedReason;
+        }
+
+        IsSubmittingFeedback = true;
+        try
+        {
+            var prompt = string.IsNullOrWhiteSpace(AIPrompt) ? AITransitionPrompt : AIPrompt;
+            var payload = new
+            {
+                ContentType = PreviewContentType,
+                Prompt = prompt,
+                FeedbackType = feedbackType.ToString(),
+                ReasonCode = reasonCode,
+                ReasonText = reasonText,
+                CreatedAt = DateTimeOffset.Now,
+            };
+            await Task.Delay(5000);
+            Logger.Log($"AI Preview Feedback submitted: {JsonSerializer.Serialize(payload)}", "Info");
+            HasFeedbackSubmitted = true;
+            IsFeedbackPanelVisible = false;
+        }
+        finally
+        {
+            IsSubmittingFeedback = false;
+        }
+    }
 
     #endregion
 

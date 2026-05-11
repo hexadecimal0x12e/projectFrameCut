@@ -106,7 +106,7 @@ namespace projectFrameCut.DraftStuff
 
         public void UpdateSourceDuration()
         {
-            if (ClipType != ClipMode.VideoClip || ClipType != ClipMode.AudioClip || ClipType != ClipMode.ExtendClip)
+            if (ClipType != ClipMode.VideoClip && ClipType != ClipMode.AudioClip && ClipType != ClipMode.ExtendClip)
             {
                 isInfiniteLength = true;
                 return;
