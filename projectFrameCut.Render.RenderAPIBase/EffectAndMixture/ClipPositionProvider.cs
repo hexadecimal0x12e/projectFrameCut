@@ -13,9 +13,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>The position of the clip on the target canvas.</returns>
         public ClipPositionTuple GetPosition(IClip source, int targetWidth, int targetHeight);
 
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.Index { get => int.MinValue; set => Logger.Log("Cannot set Index for a IClipPositionProvider. This operation is ignored.", "warn"); }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
+        int IEffect.Index { get => int.MinValue; set { } }
 
         string? IEffect.NeedComputer => null;
         bool IEffect.YieldProcessStep => false;
@@ -36,9 +36,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight);
 
 
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.Index { get => int.MinValue; set => Logger.Log("Cannot set Index for a IContinuousClipPositionProvider. This operation is ignored.", "warn"); }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
+        int IEffect.Index { get => int.MinValue; set { } }
 
         string? IEffect.NeedComputer => null;
         bool IEffect.YieldProcessStep => false;

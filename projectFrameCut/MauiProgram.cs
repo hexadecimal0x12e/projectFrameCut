@@ -131,12 +131,10 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "UserData"));
                     DataPath = Path.Combine(FileSystem.AppDataDirectory, "UserData");
                     BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
-                    IsStoreMode = true;
                 }
                 else
                 {
                     DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
-                    IsStoreMode = false;
                 }
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
@@ -150,6 +148,8 @@ namespace projectFrameCut
                     }
                     loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 }
+
+                IsStoreMode = WinUI.Program.IsStoreModeEnabled;
 #endif
                 Directory.CreateDirectory(loggingDir);
                 try

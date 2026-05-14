@@ -176,9 +176,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         IPicture INormalEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) => Process(source, computer);
         IPictureProcessStep INormalEffect.GetStep(IPicture source, int targetWidth, int targetHeight) => GetStep(source);
 
-        bool IEffect.Enabled { get => true; set { if (!value) Logger.Log("A IColorAdjustEffect should never be disabled. This operation is ignored.", "warn"); } }
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IColorAdjustEffect. This operation is ignored.", "warn"); }
+        bool IEffect.Enabled { get => true; set { } }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MinValue; set => Logger.Log("ColorAdjustment should always be first one to render and it's index should not be changed.", "warn"); }
 
     }

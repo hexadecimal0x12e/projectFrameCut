@@ -11,7 +11,8 @@
       "Bash(splc-edit add-item *)",
       "Bash(splc-edit update-item *)",
       "Bash(xxd)",
-      "Bash(findstr Value)"
+      "Bash(findstr Value)",
+      "Bash(dotnet restore *)",
     ]
   }
 }

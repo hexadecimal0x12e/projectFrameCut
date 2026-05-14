@@ -698,12 +698,105 @@ namespace projectFrameCut.InteractableEditor
                     return;
                 }
 
+                if (view is not null
+                    && PreviewHost.Content is View existingPreview
+                    && !ReferenceEquals(existingPreview, view)
+                    && TryUpdatePreviewTreeInPlace(existingPreview, view))
+                {
+                    UpdatePreviewHostVisibility();
+                    return;
+                }
+
                 if (!ReferenceEquals(PreviewHost.Content, view))
                 {
                     PreviewHost.Content = view;
                 }
 
                 UpdatePreviewHostVisibility();
+            }
+
+            private static bool TryUpdatePreviewTreeInPlace(View existing, View incoming)
+            {
+                if (ReferenceEquals(existing, incoming))
+                {
+                    return true;
+                }
+
+                if (existing.GetType() != incoming.GetType())
+                {
+                    return false;
+                }
+
+                ApplySharedViewState(existing, incoming);
+
+                switch (existing)
+                {
+                    case Image existingImage when incoming is Image incomingImage:
+                        existingImage.Aspect = incomingImage.Aspect;
+                        existingImage.Source = incomingImage.Source;
+                        return true;
+                    case ContentView existingContent when incoming is ContentView incomingContent:
+                        if (incomingContent.Content is null)
+                        {
+                            existingContent.Content = null;
+                            return true;
+                        }
+
+                        if (existingContent.Content is not View existingContentChild
+                            || incomingContent.Content is not View incomingContentChild)
+                        {
+                            return false;
+                        }
+
+                        return TryUpdatePreviewTreeInPlace(existingContentChild, incomingContentChild);
+                    case Grid existingGrid when incoming is Grid incomingGrid:
+                        if (existingGrid.Children.Count != incomingGrid.Children.Count)
+                        {
+                            return false;
+                        }
+
+                        for (var i = 0; i < existingGrid.Children.Count; i++)
+                        {
+                            if (existingGrid.Children[i] is not View existingGridChild
+                                || incomingGrid.Children[i] is not View incomingGridChild
+                                || !TryUpdatePreviewTreeInPlace(existingGridChild, incomingGridChild))
+                            {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            private static void ApplySharedViewState(View target, View source)
+            {
+                target.WidthRequest = source.WidthRequest;
+                target.HeightRequest = source.HeightRequest;
+                target.MinimumWidthRequest = source.MinimumWidthRequest;
+                target.MinimumHeightRequest = source.MinimumHeightRequest;
+                target.MaximumWidthRequest = source.MaximumWidthRequest;
+                target.MaximumHeightRequest = source.MaximumHeightRequest;
+                target.HorizontalOptions = source.HorizontalOptions;
+                target.VerticalOptions = source.VerticalOptions;
+                target.Margin = source.Margin;
+                target.InputTransparent = source.InputTransparent;
+                target.AnchorX = source.AnchorX;
+                target.AnchorY = source.AnchorY;
+                target.Scale = source.Scale;
+                target.ScaleX = source.ScaleX;
+                target.ScaleY = source.ScaleY;
+                target.TranslationX = source.TranslationX;
+                target.TranslationY = source.TranslationY;
+                target.Rotation = source.Rotation;
+                target.RotationX = source.RotationX;
+                target.RotationY = source.RotationY;
+                target.Opacity = source.Opacity;
+                target.IsVisible = source.IsVisible;
+                target.ZIndex = source.ZIndex;
+                if (string.IsNullOrWhiteSpace(target.AutomationId)) target.AutomationId = source.AutomationId;
             }
 
             public void RefreshPreviewVisibility()

@@ -41,6 +41,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "VideoClip", new VideoClipDynamicPreviewProvider() },
             { "PhotoClip", new PhotoClipDynamicPreviewProvider() },
             { "SolidColorClip", new SolidColorClipDynamicPreviewProvider() },
+            { "TransformClip", new TransformClipDynamicPreviewProvider() },
             { "TextClip", new TextClipDynamicPreviewProvider() },
         };
 

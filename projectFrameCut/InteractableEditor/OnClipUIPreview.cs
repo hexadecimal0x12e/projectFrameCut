@@ -72,7 +72,8 @@ namespace projectFrameCut.InteractableEditor
                 : (clip.origLength > 0 ? clip.origLength : clip.Clip.Width);
             // Subtract handle widths (30px each) to match the actual content column width
             var availableWidth = Math.Max(1, clipWidth - 60);
-            var countOfFrame = Math.Max(1, (int)(availableWidth / frameWidth)) - 1;
+            var countOfFrame = (int)(availableWidth / frameWidth) - 1;
+            if (countOfFrame <= 0) return null;
             if (Math.Abs((countOfFrame + 1f) * frameWidth - availableWidth) < frameWidth * 0.75f) countOfFrame++;
             var totalFramesWidth = countOfFrame * frameWidth;
             var spacing = countOfFrame > 1 ? (availableWidth - totalFramesWidth) / (countOfFrame - 1) : 0;
@@ -94,7 +95,7 @@ namespace projectFrameCut.InteractableEditor
                 VerticalOptions = LayoutOptions.Fill,
                 HorizontalOptions = LayoutOptions.Fill,
                 Spacing = spacing / 2,
-                Padding = 0,
+                Padding = 0
             };
             foreach (var item in frameToShow)
             {

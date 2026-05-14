@@ -215,7 +215,7 @@ namespace projectFrameCut.Render.Rendering
             if (BlockWrite)
             {
                 Log($"[VideoWriter] Working in sync-writing mode.");
-                return new(() => { });
+                return new(() => { }    );
             }
             return new Thread(() =>
             {

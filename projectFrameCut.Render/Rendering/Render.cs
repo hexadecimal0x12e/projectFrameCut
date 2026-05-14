@@ -132,6 +132,13 @@ namespace projectFrameCut.Render.Rendering
         // (IEffect instances in EffectCache are shared and may be stateful)
         private ConcurrentDictionary<string, object> _clipEffectLocks = new();
 
+        // Thread-local pool for frame-level cache dictionaries to reduce GC pressure
+        private ThreadLocal<Stack<Dictionary<string, object>>> _frameLocalCachePool =
+            new(() => new Stack<Dictionary<string, object>>(4));
+
+        // Cache for clip effects to avoid repeated ToList() conversions
+        private ConcurrentDictionary<string, List<IEffect>> _clipEffectsListCache = new();
+
         static ClipEquabilityComparer clipEquabilityComparer = new();
 
         #endregion
@@ -1140,7 +1147,10 @@ namespace projectFrameCut.Render.Rendering
                     {
                         List<IPictureProcessStep> steps = new();
                         bool lastIsProcessStep = false, effectsChanged = false;
-                        var effectCopy = effects.ToList();
+                        // Use pre-converted effects list from cache to avoid ToList() allocation
+                        var effectCopy = _clipEffectsListCache.TryGetValue(clip.Id, out var cachedEffectsList)
+                            ? new List<IEffect>(cachedEffectsList)
+                            : effects.ToList();
                         foreach (var item in effects)
                         {
                             var computer = GetOrCreateComputer(item.NeedComputer);
@@ -1369,52 +1379,59 @@ namespace projectFrameCut.Render.Rendering
         {
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
-            Dictionary<string, object> frameLocalCache = new();
-            int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-            int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
-
-            foreach (var (clip, Frame) in clipsNeed)
+            var frameLocalCache = RentFrameLocalCache();
+            try
             {
-                var frame = Frame;
-                if (token.IsCancellationRequested) return;
+                int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+                int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
-                if (frame == null)
+                foreach (var (clip, Frame) in clipsNeed)
                 {
-                    continue;
+                    var frame = Frame;
+                    if (token.IsCancellationRequested) return;
+
+                    if (frame == null)
+                    {
+                        continue;
+                    }
+
+                    usedFrames?.Add(frame);
+
+                    result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, usedFrames, token);
+                    if (result is null) return; // cancelled
                 }
 
-                usedFrames?.Add(frame);
+                if (result is null)
+                {
+                    result = BlankFrame;
+                }
+                else if (result.Width < TargetWidth || result.Height < TargetHeight)
+                {
+                    // Bug fix: BlankPlace was a shared instance, not thread-safe under concurrent render
+                    result = _threadLocalBlankPlace.Value!.Render(result, null, TargetWidth, TargetHeight);
+                }
+                else if (result.Width > TargetWidth || result.Height > TargetHeight)
+                {
+                    result = result.Resize(TargetWidth, TargetHeight, false);
+                }
 
-                result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, usedFrames, token);
-                if (result is null) return; // cancelled
+                builder!.Append(targetFrame, result);
+                Interlocked.Increment(ref Finished);
+                sw.Stop();
+                if (LogProcessStack)
+                {
+                    FrameProcessStacks[targetFrame] = result.ProcessStack;
+                    FrameDirtyTime[targetFrame] = sw.Elapsed - TimeSpan.FromTicks(result.ProcessStack.Where(c => c.Elapsed is not null).Sum(c => c.Elapsed!.Value.Ticks));
+                }
+                InvokeProgress();
+                if (LogRenderState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
+                EachElapsed.Add(sw.Elapsed);
+                FrameRenderElapsed[targetFrame] = sw.Elapsed;
             }
-
-            if (result is null)
+            finally
             {
-                result = BlankFrame;
+                ReturnFrameLocalCache(frameLocalCache);
             }
-            else if (result.Width < TargetWidth || result.Height < TargetHeight)
-            {
-                // Bug fix: BlankPlace was a shared instance, not thread-safe under concurrent render
-                result = _threadLocalBlankPlace.Value!.Render(result, null, TargetWidth, TargetHeight);
-            }
-            else if (result.Width > TargetWidth || result.Height > TargetHeight)
-            {
-                result = result.Resize(TargetWidth, TargetHeight, false);
-            }
-
-            builder!.Append(targetFrame, result);
-            Interlocked.Increment(ref Finished);
-            sw.Stop();
-            if (LogProcessStack)
-            {
-                FrameProcessStacks[targetFrame] = result.ProcessStack;
-                FrameDirtyTime[targetFrame] = sw.Elapsed - TimeSpan.FromTicks(result.ProcessStack.Where(c => c.Elapsed is not null).Sum(c => c.Elapsed!.Value.Ticks));
-            }
-            InvokeProgress();
-            if (LogRenderState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
-            EachElapsed.Add(sw.Elapsed);
-            FrameRenderElapsed[targetFrame] = sw.Elapsed;
         }
 
         #region layer-by-layer render helpers
@@ -1466,23 +1483,30 @@ namespace projectFrameCut.Render.Rendering
             if (clipsNeed.Count == 0) return null;
 
             IPicture? result = null;
-            Dictionary<string, object> frameLocalCache = new();
-            int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-            int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
-
-            foreach (var (clip, framePic) in clipsNeed)
+            var frameLocalCache = RentFrameLocalCache();
+            try
             {
-                if (token.IsCancellationRequested) return result;
-                if (framePic == null) continue;
+                int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+                int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
-                result = ProcessAndCompositeClip(clip, framePic, result, frame,
-                    layoutRelativeWidth, layoutRelativeHeight, frameLocalCache,
-                    usedFrames: null, // layer rendering always disposes frames immediately
-                    token);
-                if (result is null) return null; // cancelled
+                foreach (var (clip, framePic) in clipsNeed)
+                {
+                    if (token.IsCancellationRequested) return result;
+                    if (framePic == null) continue;
+
+                    result = ProcessAndCompositeClip(clip, framePic, result, frame,
+                        layoutRelativeWidth, layoutRelativeHeight, frameLocalCache,
+                        usedFrames: null, // layer rendering always disposes frames immediately
+                        token);
+                    if (result is null) return null; // cancelled
+                }
+
+                return result;
             }
-
-            return result;
+            finally
+            {
+                ReturnFrameLocalCache(frameLocalCache);
+            }
         }
 
         /// <summary>
@@ -1728,6 +1752,7 @@ namespace projectFrameCut.Render.Rendering
             }
             if (SDRClipsBrightnessInHDRMode > MaximumHDRBrightness) SDRClipsBrightnessInHDRMode = MaximumHDRBrightness;
             EffectCache.Clear();
+            _clipEffectsListCache.Clear();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
                 item.ReInit(_ppb);
@@ -1747,6 +1772,7 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
+                _clipEffectsListCache.AddOrUpdate(item.Id, effectInstances.ToList(), (_, _) => effectInstances.ToList());
                 foreach (var effect in effectInstances)
                 {
                     if (effect.YieldProcessStep == true && effect.NeedComputer is not null)
@@ -1803,6 +1829,22 @@ namespace projectFrameCut.Render.Rendering
             return newComputer;
         }
 
+        private Dictionary<string, object> RentFrameLocalCache()
+        {
+            var pool = _frameLocalCachePool.Value;
+            if (pool != null && pool.Count > 0)
+                return pool.Pop();
+            return new Dictionary<string, object>();
+        }
+
+        private void ReturnFrameLocalCache(Dictionary<string, object> cache)
+        {
+            cache.Clear();
+            var pool = _frameLocalCachePool.Value;
+            if (pool != null && pool.Count < 8)
+                pool.Push(cache);
+        }
+
         private void ReleaseResources()
         {
             try
@@ -1841,6 +1883,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 catch { }
                 EffectCache.Clear();
+                _clipEffectsListCache.Clear();
 
                 try { BlankFrame?.Dispose(); } catch { }
 
@@ -1849,6 +1892,9 @@ namespace projectFrameCut.Render.Rendering
 
                 // Clean up thread-local BlankPlace
                 try { _threadLocalBlankPlace?.Dispose(); } catch { }
+
+                // Clean up thread-local frame cache pool
+                try { _frameLocalCachePool?.Dispose(); } catch { }
 
                 _clipEffectLocks.Clear();
 

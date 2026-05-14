@@ -223,7 +223,7 @@ namespace projectFrameCut.LivePreview
             return audDestPath;
         }
 
-        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
+        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)
         {
 
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
@@ -257,11 +257,15 @@ namespace projectFrameCut.LivePreview
             renderer.OnProgressChanged += OnProgressChanged;
             await renderer.GoRender(token);
             renderer.OnProgressChanged -= OnProgressChanged;
-            audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
+
+            if (includeAudio)
+            {
+                audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
+            }
             builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
             builder.Dispose();
 
-            if (!string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
+            if (includeAudio && !string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
             {
                 await Task.Run(() => VideoAudioMuxer.MuxFromFiles(destPath, audDestPath, resultPath, true), token);
                 File.Delete(audDestPath);

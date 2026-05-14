@@ -12,6 +12,7 @@ using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using Microsoft.Maui.Controls.Shapes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,12 +21,29 @@ using System.Threading;
 using IPicture = projectFrameCut.Shared.IPicture;
 using projectFrameCut.Asset;
 using Path = System.IO.Path;
+using RenderITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 
 namespace projectFrameCut.InteractableEditor;
 
 public sealed class DynamicPreview : ContentView, IDisposable
 {
     private const double MinTextPreviewSize = 10d;
+    private const int ParallelPreparationThreshold = 4;
+    private const int TextMeasureCacheLimit = 2048;
+    private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
+    private static readonly IComparer<IClip> s_clipLayerComparer = Comparer<IClip>.Create(static (left, right) =>
+    {
+        var layerCompare = right.LayerIndex.CompareTo(left.LayerIndex);
+        if (layerCompare != 0)
+        {
+            return layerCompare;
+        }
+
+        return right.SubLayerIndex.CompareTo(left.SubLayerIndex);
+    });
+    private static readonly Dictionary<TextMeasureCacheKey, Rect> s_textMeasureCache = new();
+    private static readonly object s_textMeasureCacheGate = new();
 
     public sealed record PreparedPreview(string ClipId, View? View, string? ErrorMessage, IClip? Source);
 
@@ -40,6 +58,12 @@ public sealed class DynamicPreview : ContentView, IDisposable
     private readonly object _clipsGate = new();
     private int _activePreviewOps;
     private readonly List<IClip[]> _pendingDisposeClipBatches = new();
+    private readonly ConcurrentDictionary<string, byte> _sourceColorFallbackLogKeys = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _missingProviderFallbackLogKeys = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _effectFallbackLogKeys = new(StringComparer.Ordinal);
+    private long _prepareVersion;
+    private readonly object _preparedOverlayCacheGate = new();
+    private IReadOnlyList<PreparedPreview> _lastPreparedOverlayPreviews = [];
 
     public DynamicPreview()
     {
@@ -86,13 +110,21 @@ public sealed class DynamicPreview : ContentView, IDisposable
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight)
     {
         _currentFrame = frameIndex;
+        var prepareVersion = Interlocked.Increment(ref _prepareVersion);
         var clipsSnapshot = AcquireClipsSnapshot();
         try
         {
             var requests = ResolveRequests(clipsSnapshot, frameIndex);
             var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
             var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-            return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false).ConfigureAwait(false);
+            var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, prepareVersion).ConfigureAwait(false);
+            if (prepared is not null)
+            {
+                CacheOverlayPreparedPreviews(prepared);
+                return prepared;
+            }
+
+            return GetCachedOverlayPreparedPreviews();
         }
         finally
         {
@@ -178,6 +210,9 @@ public sealed class DynamicPreview : ContentView, IDisposable
         {
             DisposeClipBatch(batchToDispose);
         }
+
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
     }
 
     public void SetLivePreviewer(ref LivePreviewer? previewer)
@@ -202,18 +237,24 @@ public sealed class DynamicPreview : ContentView, IDisposable
     {
         _currentFrame = frameIndex;
         var renderVersion = Interlocked.Increment(ref _renderVersion);
+        var prepareVersion = Interlocked.Increment(ref _prepareVersion);
         var clipsSnapshot = AcquireClipsSnapshot();
-        IReadOnlyList<PreparedPreview> prepared;
+        IReadOnlyList<PreparedPreview>? prepared;
         var viewportWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
         var viewportHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
         try
         {
             var requests = ResolveRequests(clipsSnapshot, frameIndex);
-            prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true).ConfigureAwait(false);
+            prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true, prepareVersion).ConfigureAwait(false);
         }
         finally
         {
             ReleaseClipsSnapshot();
+        }
+
+        if (prepared is null)
+        {
+            return false;
         }
 
         if (Dispatcher.IsDispatchRequired)
@@ -227,23 +268,71 @@ public sealed class DynamicPreview : ContentView, IDisposable
     public void Dispose()
     {
         Interlocked.Increment(ref _renderVersion);
+        Interlocked.Increment(ref _prepareVersion);
         DisposeClips();
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
         _outputHost.Content = null;
     }
 
-    private async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout)
+    private async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, long prepareVersion)
     {
         if (requests.Count == 0)
         {
             return [];
         }
 
-        var preparationTasks = requests
-            .Reverse()
-            .Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout)))
-            .ToArray();
+        if (prepareVersion != Interlocked.Read(ref _prepareVersion))
+        {
+            return null;
+        }
 
-        return await Task.WhenAll(preparationTasks).ConfigureAwait(false);
+        var orderedRequests = new PreviewRequest[requests.Count];
+        for (var i = 0; i < requests.Count; i++)
+        {
+            orderedRequests[i] = requests[requests.Count - 1 - i];
+        }
+
+        var prepared = new PreparedPreview[orderedRequests.Length];
+        if (orderedRequests.Length < ParallelPreparationThreshold)
+        {
+            for (var i = 0; i < orderedRequests.Length; i++)
+            {
+                if (prepareVersion != Interlocked.Read(ref _prepareVersion))
+                {
+                    return null;
+                }
+
+                prepared[i] = GenerateClipPreviewPrepared(orderedRequests[i], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout);
+            }
+
+            return prepared;
+        }
+
+        await Task.Run(() =>
+        {
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = s_maxPreparationParallelism
+            };
+            Parallel.For(0, orderedRequests.Length, options, (index, state) =>
+            {
+                if (prepareVersion != Interlocked.Read(ref _prepareVersion))
+                {
+                    state.Stop();
+                    return;
+                }
+
+                prepared[index] = GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout);
+            });
+        }).ConfigureAwait(false);
+
+        if (prepareVersion != Interlocked.Read(ref _prepareVersion))
+        {
+            return null;
+        }
+
+        return prepared;
     }
 
     private bool ApplyPreparedRequests(IReadOnlyList<PreparedPreview> prepared, long renderVersion, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
@@ -263,14 +352,8 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return false;
         }
 
-        Microsoft.Maui.Controls.Grid composite = new()
-        {
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            InputTransparent = true
-        };
-
-        var renderedCount = 0;
+        Microsoft.Maui.Controls.View? firstRenderedView = null;
+        Microsoft.Maui.Controls.Grid? composite = null;
         string? lastErrorMessage = null;
 
         foreach (var result in prepared)
@@ -284,34 +367,53 @@ public sealed class DynamicPreview : ContentView, IDisposable
             {
                 continue;
             }
-
             generatedView.ZIndex = (int)((result.Source?.LayerIndex ?? 1) * 100);
+            if (firstRenderedView is null)
+            {
+                firstRenderedView = generatedView;
+                continue;
+            }
+
+            composite ??= CreateCompositeHost();
+            if (composite.Children.Count == 0 && firstRenderedView is not null)
+            {
+                composite.Children.Add(firstRenderedView);
+            }
             composite.Children.Add(generatedView);
-            renderedCount++;
         }
 
-        Microsoft.Maui.Controls.View? finalView = null;
-        if (renderedCount == 1)
-        {
-            if (composite.Children[0] is Microsoft.Maui.Controls.View singleView)
-            {
-                finalView = singleView;
-            }
-        }
-        else if (renderedCount > 1)
-        {
-            finalView = composite as Microsoft.Maui.Controls.View;
-        }
+        var finalView = composite is not null ? composite as Microsoft.Maui.Controls.View : firstRenderedView;
 
         var alignedView = BuildViewportAlignedView(finalView, viewportWidth, viewportHeight, targetWidth, targetHeight);
-        _outputHost.Content = alignedView;
-        _outputHost.IsVisible = alignedView is not null;
-        _placeholder.Text = lastErrorMessage ?? string.Empty;
-        _placeholder.IsVisible = alignedView is null && !string.IsNullOrWhiteSpace(lastErrorMessage);
-        IsVisible = alignedView is not null || _placeholder.IsVisible;
+        View? viewToDisplay = alignedView;
+        if (_outputHost.Content is View existingContent
+            && alignedView is not null
+            && !ReferenceEquals(existingContent, alignedView)
+            && TryUpdatePreviewTreeInPlace(existingContent, alignedView))
+        {
+            viewToDisplay = existingContent;
+        }
 
-        return alignedView is not null;
+        if (!ReferenceEquals(_outputHost.Content, viewToDisplay))
+        {
+            _outputHost.Content = viewToDisplay;
+        }
+
+        _outputHost.IsVisible = viewToDisplay is not null;
+        _placeholder.Text = lastErrorMessage ?? string.Empty;
+        _placeholder.IsVisible = viewToDisplay is null && !string.IsNullOrWhiteSpace(lastErrorMessage);
+        IsVisible = viewToDisplay is not null || _placeholder.IsVisible;
+
+        return viewToDisplay is not null;
     }
+
+    private static Microsoft.Maui.Controls.Grid CreateCompositeHost()
+        => new()
+        {
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            InputTransparent = true
+        };
 
     private static int ResolveCanvasSize(double hostSize, double selfSize, int cachedSize, int fallbackSize)
     {
@@ -375,6 +477,106 @@ public sealed class DynamicPreview : ContentView, IDisposable
         };
     }
 
+    private static bool TryUpdatePreviewTreeInPlace(View existing, View incoming)
+    {
+        if (ReferenceEquals(existing, incoming))
+        {
+            return true;
+        }
+
+        if (existing.GetType() != incoming.GetType())
+        {
+            return false;
+        }
+
+        ApplySharedViewState(existing, incoming);
+
+        switch (existing)
+        {
+            case Image existingImage when incoming is Image incomingImage:
+                existingImage.Aspect = incomingImage.Aspect;
+                existingImage.Source = incomingImage.Source;
+                return true;
+            case ContentView existingContent when incoming is ContentView incomingContent:
+                if (incomingContent.Content is null)
+                {
+                    existingContent.Content = null;
+                    return true;
+                }
+
+                if (existingContent.Content is not View existingContentChild
+                    || incomingContent.Content is not View incomingContentChild)
+                {
+                    return false;
+                }
+
+                return TryUpdatePreviewTreeInPlace(existingContentChild, incomingContentChild);
+            case Grid existingGrid when incoming is Grid incomingGrid:
+                if (existingGrid.Children.Count != incomingGrid.Children.Count)
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < existingGrid.Children.Count; i++)
+                {
+                    if (existingGrid.Children[i] is not View existingGridChild
+                        || incomingGrid.Children[i] is not View incomingGridChild
+                        || !TryUpdatePreviewTreeInPlace(existingGridChild, incomingGridChild))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static void ApplySharedViewState(View target, View source)
+    {
+        target.WidthRequest = source.WidthRequest;
+        target.HeightRequest = source.HeightRequest;
+        target.MinimumWidthRequest = source.MinimumWidthRequest;
+        target.MinimumHeightRequest = source.MinimumHeightRequest;
+        target.MaximumWidthRequest = source.MaximumWidthRequest;
+        target.MaximumHeightRequest = source.MaximumHeightRequest;
+        target.HorizontalOptions = source.HorizontalOptions;
+        target.VerticalOptions = source.VerticalOptions;
+        target.Margin = source.Margin;
+        target.InputTransparent = source.InputTransparent;
+        target.AnchorX = source.AnchorX;
+        target.AnchorY = source.AnchorY;
+        target.Scale = source.Scale;
+        target.ScaleX = source.ScaleX;
+        target.ScaleY = source.ScaleY;
+        target.TranslationX = source.TranslationX;
+        target.TranslationY = source.TranslationY;
+        target.Rotation = source.Rotation;
+        target.RotationX = source.RotationX;
+        target.RotationY = source.RotationY;
+        target.Opacity = source.Opacity;
+        target.IsVisible = source.IsVisible;
+        target.ZIndex = source.ZIndex;
+        target.AutomationId = source.AutomationId;
+    }
+
+    private void CacheOverlayPreparedPreviews(IReadOnlyList<PreparedPreview> prepared)
+    {
+        lock (_preparedOverlayCacheGate)
+        {
+            _lastPreparedOverlayPreviews = prepared.Count == 0 ? [] : prepared.ToArray();
+        }
+    }
+
+    private IReadOnlyList<PreparedPreview> GetCachedOverlayPreparedPreviews()
+    {
+        lock (_preparedOverlayCacheGate)
+        {
+            return _lastPreparedOverlayPreviews;
+        }
+    }
+
     private static Rect CalculateAspectFitRect(int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
     {
         if (viewportWidth <= 0 || viewportHeight <= 0 || targetWidth <= 0 || targetHeight <= 0)
@@ -420,13 +622,77 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return [];
         }
 
-        return clips
-            .Where(c => c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
-            .Where(c => c.ContainsFrame(frameIndex))
-            .OrderByDescending(c => c.LayerIndex)
-            .ThenByDescending(c => c.SubLayerIndex)
-            .Select(clip => new PreviewRequest(clip, ResolveProvider(clip)))
-            .ToArray();
+        var visibleClips = new List<IClip>(clips.Count);
+        for (var i = 0; i < clips.Count; i++)
+        {
+            var clip = clips[i];
+            if (clip.ClipType == ClipMode.AudioClip || clip.ClipType == ClipMode.MarkingClip)
+            {
+                continue;
+            }
+
+            if (!clip.ContainsFrame(frameIndex))
+            {
+                continue;
+            }
+
+            visibleClips.Add(clip);
+        }
+
+        if (visibleClips.Count == 0)
+        {
+            return [];
+        }
+
+        var clipIndex = new Dictionary<string, IClip>(clips.Count, StringComparer.Ordinal);
+        for (var i = 0; i < clips.Count; i++)
+        {
+            var sourceClip = clips[i];
+            if (!string.IsNullOrWhiteSpace(sourceClip.Id))
+            {
+                clipIndex[sourceClip.Id] = sourceClip;
+            }
+        }
+
+        visibleClips.Sort(s_clipLayerComparer);
+        var requests = new PreviewRequest[visibleClips.Count];
+        for (var i = 0; i < visibleClips.Count; i++)
+        {
+            var clip = visibleClips[i];
+            if (clip is TransformContainer transformClip)
+            {
+                BindTransformRuntimeSources(transformClip, clipIndex);
+            }
+            requests[i] = new PreviewRequest(clip, ResolveProvider(clip));
+        }
+
+        return requests;
+    }
+
+    private static void BindTransformRuntimeSources(TransformContainer transformClip, IReadOnlyDictionary<string, IClip> clipIndex)
+    {
+        if (transformClip.ExtraData is null || transformClip.Transform is not RenderITransform transform)
+        {
+            return;
+        }
+
+        if (clipIndex.TryGetValue(transform.BindedLeftClip.ToString(), out var leftClip))
+        {
+            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.LeftClip] = leftClip;
+        }
+        else
+        {
+            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.LeftClip);
+        }
+
+        if (clipIndex.TryGetValue(transform.BindedRightClip.ToString(), out var rightClip))
+        {
+            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.RightClip] = rightClip;
+        }
+        else
+        {
+            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.RightClip);
+        }
     }
 
     private View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message, bool applyClipTargetLayout)
@@ -438,15 +704,20 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return null;
         }
 
-        var sourceColorAdjustEffects = clip.EffectsInstances?
-            .Where(e => e.Enabled)
-            .OfType<IColorAdjustEffect>()
-            .OrderBy(e => e.Index)
-            .ToArray() ?? Array.Empty<IColorAdjustEffect>();
+        var enabledEffects = GetEnabledEffectsSorted(clip.EffectsInstances);
+        List<IColorAdjustEffect>? sourceColorAdjustEffects = null;
+        for (var i = 0; i < enabledEffects.Length; i++)
+        {
+            if (enabledEffects[i] is IColorAdjustEffect colorAdjustEffect)
+            {
+                sourceColorAdjustEffects ??= new List<IColorAdjustEffect>(enabledEffects.Length);
+                sourceColorAdjustEffects.Add(colorAdjustEffect);
+            }
+        }
 
         View? generatedView = null;
         var usedFullRenderFallback = false;
-        if (sourceColorAdjustEffects.Length == 0 && request.Provider is not null && request.Provider.IsAvailable(clip))
+        if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
         {
             try
             {
@@ -459,16 +730,16 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
         else
         {
-            if (sourceColorAdjustEffects.Length > 0)
+            if (sourceColorAdjustEffects is { Count: > 0 })
             {
-                Log($"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
+                LogOnce(_sourceColorFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
             }
             else
             {
-                Log($"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
+                LogOnce(_missingProviderFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
             }
 
-            var useFullRenderFallback = _previewer is not null && sourceColorAdjustEffects.Length == 0;
+            var useFullRenderFallback = _previewer is not null && (sourceColorAdjustEffects?.Count ?? 0) == 0;
             generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback, sourceColorAdjustEffects);
             usedFullRenderFallback = useFullRenderFallback;
         }
@@ -491,12 +762,11 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return null;
         }
 
-        if (clip.EffectsInstances?.Any() == true && !usedFullRenderFallback)
+        if (enabledEffects.Length > 0 && !usedFullRenderFallback)
         {
-            foreach (var effect in clip.EffectsInstances
-                .Where(e => e.Enabled)
-                .OrderBy(e => e.Index))
+            for (var i = 0; i < enabledEffects.Length; i++)
             {
+                var effect = enabledEffects[i];
                 if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
                 {
                     continue;
@@ -518,13 +788,14 @@ public sealed class DynamicPreview : ContentView, IDisposable
                     }
                 }
                 var provider = ResolveEffectProvider(effect, generatedView.GetType());
-                if (provider?.IsAvailable(effect, generatedView.GetType()) ?? false)
+                if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
                 {
-                    generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
+                    generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex);
                 }
                 else
                 {
-                    Log($"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using frame fallback.");
+                    var effectKey = $"{clip.Id}:{effect.TypeName}:{effect.Name}";
+                    LogOnce(_effectFallbackLogKeys, effectKey, $"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using frame fallback.");
                     var useFullRenderFallback = _previewer is not null;
                     generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback);
                     usedFullRenderFallback = useFullRenderFallback;
@@ -555,10 +826,10 @@ public sealed class DynamicPreview : ContentView, IDisposable
             return generatedView;
         }
 
-        return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight, frameIndex);
+        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
     }
 
-    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, int canvasWidth, int canvasHeight, uint frameIndex)
+    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int canvasWidth, int canvasHeight, uint frameIndex)
     {
         var baseW = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
         var baseH = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
@@ -567,7 +838,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
         double w = baseW;
         double h = baseH;
 
-        ApplyPositionProvidersToClip(clip, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
+        ApplyPositionProvidersToClip(clip, enabledEffects, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
 
         if (!HasExplicitTargetRect(clip))
         {
@@ -589,16 +860,16 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return input;
     }
 
-    private static void ApplyPositionProvidersToClip(IClip clip, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
+    private static void ApplyPositionProvidersToClip(IClip clip, IReadOnlyList<IEffect> enabledEffects, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
     {
-        var effects = clip.EffectsInstances;
-        if (effects is null || effects.Length == 0)
+        if (enabledEffects.Count == 0)
         {
             return;
         }
 
-        foreach (var effect in effects.Where(e => e.Enabled).OrderBy(e => ((IEffect)e).Index))
+        for (var i = 0; i < enabledEffects.Count; i++)
         {
+            var effect = enabledEffects[i];
             ClipPositionTuple pos;
             if (effect is IContinuousClipPositionProvider cp)
             {
@@ -848,6 +1119,15 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
     private static bool TryMeasureTextEntryRectForPreparedPreview(TextClipEntry entry, out double x, out double y, out double w, out double h)
     {
+        if (TryGetCachedTextMeasureRect(entry, out var cachedRect))
+        {
+            x = cachedRect.X;
+            y = cachedRect.Y;
+            w = cachedRect.Width;
+            h = cachedRect.Height;
+            return true;
+        }
+
         x = entry.x;
         y = entry.y;
         w = MinTextPreviewSize;
@@ -972,6 +1252,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
             h = Math.Max(MinTextPreviewSize, maxRy - minRy);
         }
 
+        SetCachedTextMeasureRect(entry, new Rect(x, y, w, h));
         return true;
     }
 
@@ -1194,14 +1475,8 @@ public sealed class DynamicPreview : ContentView, IDisposable
         };
     }
 
-    private static View ApplyEffectPreview(View input, IEffect effect, int targetWidth, int targetHeight, uint frameIndex)
+    private static View ApplyEffectPreview(View input, IEffect effect, IEffectDynamicPreviewProvider provider, int targetWidth, int targetHeight, uint frameIndex)
     {
-        var provider = ResolveEffectProvider(effect, input.GetType());
-        if (provider is null)
-        {
-            return input;
-        }
-
         try
         {
             return provider.Generate(effect, input, input.GetType(), targetWidth, targetHeight, frameIndex) ?? input;
@@ -1254,6 +1529,97 @@ public sealed class DynamicPreview : ContentView, IDisposable
         {
             return false;
         }
+    }
+
+    private static IEffect[] GetEnabledEffectsSorted(IEffect[]? effects)
+    {
+        if (effects is null || effects.Length == 0)
+        {
+            return Array.Empty<IEffect>();
+        }
+
+        var enabledEffects = new List<IEffect>(effects.Length);
+        for (var i = 0; i < effects.Length; i++)
+        {
+            var effect = effects[i];
+            if (effect.Enabled)
+            {
+                enabledEffects.Add(effect);
+            }
+        }
+
+        if (enabledEffects.Count <= 1)
+        {
+            return enabledEffects.ToArray();
+        }
+
+        enabledEffects.Sort(static (left, right) => left.Index.CompareTo(right.Index));
+        return enabledEffects.ToArray();
+    }
+
+    private static bool TryGetCachedTextMeasureRect(TextClipEntry entry, out Rect rect)
+    {
+        var key = BuildTextMeasureCacheKey(entry);
+        lock (s_textMeasureCacheGate)
+        {
+            return s_textMeasureCache.TryGetValue(key, out rect);
+        }
+    }
+
+    private static void SetCachedTextMeasureRect(TextClipEntry entry, Rect rect)
+    {
+        var key = BuildTextMeasureCacheKey(entry);
+        lock (s_textMeasureCacheGate)
+        {
+            if (s_textMeasureCache.Count >= TextMeasureCacheLimit)
+            {
+                s_textMeasureCache.Clear();
+            }
+
+            s_textMeasureCache[key] = rect;
+        }
+    }
+
+    private static TextMeasureCacheKey BuildTextMeasureCacheKey(TextClipEntry entry)
+        => new(
+            entry.text ?? string.Empty,
+            entry.fontFamily ?? string.Empty,
+            NormalizeCacheNumber(entry.fontSize),
+            NormalizeCacheNumber(entry.dpi ?? 72d),
+            NormalizeCacheNumber(entry.strokeWidth ?? 0f),
+            NormalizeCacheNumber(entry.lineSpacing),
+            NormalizeCacheNumber(entry.wrappingWidth ?? 0f),
+            entry.UseVerticalLayout,
+            (int)entry.fontStyle,
+            (int)entry.horizontalAlignment,
+            (int)entry.verticalAlignment,
+            NormalizeCacheNumber(entry.rotation),
+            NormalizeCacheNumber(entry.x),
+            NormalizeCacheNumber(entry.y));
+
+    private static double NormalizeCacheNumber(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0d;
+        }
+
+        return Math.Round(value, 4, MidpointRounding.AwayFromZero);
+    }
+
+    private static void LogOnce(ConcurrentDictionary<string, byte> gate, string key, string message)
+    {
+        if (gate.TryAdd(key, 0))
+        {
+            Log(message);
+        }
+    }
+
+    private void ResetFallbackLogs()
+    {
+        _sourceColorFallbackLogKeys.Clear();
+        _missingProviderFallbackLogKeys.Clear();
+        _effectFallbackLogKeys.Clear();
     }
 
     private void DisposeClips()
@@ -1345,6 +1711,22 @@ public sealed class DynamicPreview : ContentView, IDisposable
             }
         }
     }
+
+    private readonly record struct TextMeasureCacheKey(
+        string Text,
+        string FontFamily,
+        double FontSize,
+        double Dpi,
+        double StrokeWidth,
+        double LineSpacing,
+        double WrappingWidth,
+        bool UseVerticalLayout,
+        int FontStyle,
+        int HorizontalAlignment,
+        int VerticalAlignment,
+        double Rotation,
+        double X,
+        double Y);
 
     private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 

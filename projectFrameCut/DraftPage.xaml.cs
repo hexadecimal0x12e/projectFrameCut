@@ -132,8 +132,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     // Parameters for resizing popup when window size changes
     private double _popupHeightRatio = 0;
     private double _popupWidthRatio = 0;
-    private Border? _popupClipBorder = null;
-    private ClipElementUI? _popupClipElement = null;
+    private View? _popupAnchorView = null;
 
 
     private Size WindowSize = new(500, 500);
@@ -166,6 +165,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _isPreRendering = false;
     private bool _isLivePreviewPlayerEventsHooked = false;
     private Grid? _livePreviewRealtimeHost = null;
+    private string? _fullContinuousAudioPath = null;
+    private Stopwatch? _continuousAudioStopwatch = null;
+    private double _continuousAudioStartFrame = 0;
 
     Lock saveLocker = new();
 
@@ -5459,7 +5461,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
+    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "")
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
         bool disablePopupScrollWrapping = clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
@@ -5510,8 +5512,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
                 case "clip":
                     {
-                        if (border is not null && clip is not null)
-                            await ShowClipPopup(border, clip);
+                        if (border is not null)
+                            await ShowClipPopup(border, content, clip);
                         else
                             await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
                         break;
@@ -5527,13 +5529,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
+    private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
     {
         popupShowingDirection = "clip";
         _popupHeightRatio = 0;
         _popupWidthRatio = 0;
-        _popupClipBorder = clipBorder;
-        _popupClipElement = clip;
+        _popupAnchorView = anchorView;
 
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
@@ -5552,20 +5553,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         double minPopupHeight = 120;
         double margin = 8;
 
-        Point clipAbs = GetAbsolutePosition(clipBorder, null);
+        Point clipAbs = GetAbsolutePosition(anchorView, null);
         Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
 
         int retries = 0;
         while ((OverlayLayer.Width <= 0 || OverlayLayer.Height <= 0 || double.IsNaN(clipAbs.Y) || clipAbs.Y <= 0) && retries < 6)
         {
             await Task.Delay(30);
-            clipAbs = GetAbsolutePosition(clipBorder, null);
+            clipAbs = GetAbsolutePosition(anchorView, null);
             overlayAbs = GetAbsolutePosition(OverlayLayer, null);
             retries++;
         }
 
         double cumulativeScrollY = 0;
-        VisualElement? parent = clipBorder.Parent as VisualElement;
+        VisualElement? parent = anchorView.Parent as VisualElement;
         while (parent != null && parent != OverlayLayer)
         {
             if (parent is ScrollView sv)
@@ -5574,8 +5575,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             parent = parent.Parent as VisualElement;
         }
-        double clipWidth = (clipBorder.Width > 0) ? clipBorder.Width : clipBorder.WidthRequest;
-        double clipHeight = (clipBorder.Height > 0) ? clipBorder.Height : clipBorder.HeightRequest;
+        double clipWidth = (anchorView.Width > 0) ? anchorView.Width : anchorView.WidthRequest;
+        double clipHeight = (anchorView.Height > 0) ? anchorView.Height : anchorView.HeightRequest;
 
         Point abs = new Point(clipAbs.X - overlayAbs.X, clipAbs.Y - overlayAbs.Y - cumulativeScrollY);
 
@@ -5693,7 +5694,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             StrokeShape = new RoundRectangle { CornerRadius = 4 },
             Padding = new Thickness(2),
             Opacity = 0.95,
-            Content = WrapPropertyPanelContent(clip, await BuildPropertyPanel(clip))
+            Content = clip is not null ? WrapPropertyPanelContent(clip, popupContent) : popupContent
         };
 
         frame.GestureRecognizers.Add(nopGesture);
@@ -5711,7 +5712,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
-            var popupContent = new AbsoluteLayout
+            var toolkitPopupContent = new AbsoluteLayout
             {
                 WidthRequest = popupWidth,
                 HeightRequest = popupHeight + arrowSize,
@@ -5724,7 +5725,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
-                Content = popupContent,
+                Content = toolkitPopupContent,
                 CanBeDismissedByTappingOutsideOfPopup = true
             };
 
@@ -5809,7 +5810,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
                     break;
                 case "clip":
-                    if (_popupClipBorder is not null && _popupClipElement is not null)
+                    if (_popupAnchorView is not null)
                     {
                         _ = Dispatcher.Dispatch(async () =>
                         {
@@ -5848,8 +5849,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         popupShowingDirection = "none";
         _popupHeightRatio = 0;
         _popupWidthRatio = 0;
-        _popupClipBorder = null;
-        _popupClipElement = null;
+        _popupAnchorView = null;
     }
 
     private async Task HideClipPopup()
@@ -6773,9 +6773,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log(ex, "Render one frame via DynamicPreview", this);
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
-            if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK)) throw;
+            if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
 #else
-            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK);
+            await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
 #endif
             return false;
         }
@@ -6862,9 +6862,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log(ex, "Render one frame", this);
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
-            if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), "Throw", Localized._OK)) throw;
+            if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), "Throw", Localized._OK))) throw;
 #else
-            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), Localized._OK);
+            await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), Localized._OK));
 #endif
         }
         finally
@@ -6928,6 +6928,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     MediaElement LivePreviewPlayer = new();
     MediaElement DynamicPreviewAudioProvider = new();
 
+    private int GetContinuousAudioFrame()
+    {
+        if (_continuousAudioStopwatch == null)
+            return (int)_currentFrame;
+        double fps = Math.Max(1d, ProjectInfo.TargetFrameRate);
+        return (int)_continuousAudioStartFrame + (int)Math.Round(_continuousAudioStopwatch.Elapsed.TotalSeconds * fps);
+    }
+
     private void StopNonRealtimePlayheadSyncLoop()
     {
         try
@@ -6971,6 +6979,47 @@ public partial class DraftPage : ContentPage, IDraftPage
                         var frameOffset = (int)Math.Round(LivePreviewPlayer.Position.TotalSeconds * fps);
                         var frame = Math.Max(0, _nonRealtimePlaybackChunkStartFrame + frameOffset);
 
+                        _currentFrame = frame;
+                        SyncClipEditorCurrentFrame();
+                        UpdatePlayheadPosition();
+                        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
+                    });
+
+                    await Task.Delay(40, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // expected on pause/stop
+            }
+        }, token);
+    }
+
+    private void StartContinuousPlayheadSyncLoop(int chunkStartFrame)
+    {
+        _nonRealtimePlaybackChunkStartFrame = Math.Max(0, chunkStartFrame);
+        if (_nonRealtimePlayheadSyncCts is not null)
+            return;
+
+        _nonRealtimePlayheadSyncCts = new CancellationTokenSource();
+        var token = _nonRealtimePlayheadSyncCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (!isPlaying || UseDynamicPreview)
+                    {
+                        await Task.Delay(100, token);
+                        continue;
+                    }
+
+                    int frame = GetContinuousAudioFrame();
+
+                    await Dispatcher.DispatchAsync(() =>
+                    {
                         _currentFrame = frame;
                         SyncClipEditorCurrentFrame();
                         UpdatePlayheadPosition();
@@ -7095,6 +7144,40 @@ public partial class DraftPage : ContentPage, IDraftPage
             _nextPlaybackPath = null;
             await previewer.ResetAudioPlaybackSources();
 
+            // Render all remaining audio as one continuous WAV to eliminate block-switching gaps
+            int totalFrames = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
+            int remainingFrames = totalFrames - (int)_currentFrame;
+            if (previewer.HasAudioSources() && remainingFrames > 0)
+            {
+                SetStatusText("Preparing audio...");
+                _fullContinuousAudioPath = await previewer.RenderSomeAudio(
+                    (int)_currentFrame, remainingFrames,
+                    (int)ProjectInfo.TargetFrameRate, token);
+
+                if (_fullContinuousAudioPath != null && File.Exists(_fullContinuousAudioPath))
+                {
+                    _continuousAudioStartFrame = _currentFrame;
+                    _continuousAudioStopwatch = Stopwatch.StartNew();
+                    await Dispatcher.DispatchAsync(() =>
+                    {
+                        DynamicPreviewAudioProvider = new MediaElement
+                        {
+                            Source = MediaSource.FromFile(_fullContinuousAudioPath),
+                            ShouldAutoPlay = true,
+                            ShouldKeepScreenOn = false,
+                            ShouldLoopPlayback = false,
+                            ShouldShowPlaybackControls = false,
+                        };
+                        DynamicPreviewAudioProvider.MediaEnded += (s, e) =>
+                        {
+                            try { ComputeView.Children.Remove(DynamicPreviewAudioProvider); }
+                            catch { }
+                        };
+                        ComputeView.Add(DynamicPreviewAudioProvider);
+                    });
+                }
+            }
+
             if (UseDynamicPreview)
             {
                 SetStateBusy();
@@ -7106,9 +7189,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                var audioTask = PlayRealtimeAudioPreview((int)_currentFrame, token);
-                await RenderSomeFrames((int)_currentFrame, token);
-                await audioTask;
+                await RenderSomeFramesDynamicSynced((int)_currentFrame, token);
                 return;
             }
 
@@ -7126,7 +7207,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             });
 
 
-            var path = await RenderSomeFrames((int)_currentFrame, token);
+            var path = await RenderSomeFrames((int)_currentFrame, token, includeAudio: false);
             var currentStartFrame = (int)_currentFrame;
             Dispatcher.Dispatch(() =>
             {
@@ -7134,7 +7215,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 LivePreviewPlayer.Source = MediaSource.FromFile(path);
                 LivePreviewPlayer.Play();
             });
-            StartNonRealtimePlayheadSyncLoop(currentStartFrame);
+            StartContinuousPlayheadSyncLoop(currentStartFrame);
 
             while (!token.IsCancellationRequested)
             {
@@ -7149,7 +7230,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                     LogDiagnostic($"Start continue Render from {nextStart}...");
 
-                    _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token);
+                    _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token, includeAudio: false);
                     LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
                     while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
                     LogDiagnostic("Previewer is ready!");
@@ -7187,8 +7268,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log(ex, "LivePreview", this);
             isPlaying = false;
             await PauseLivePreview();
-            SetPlayPauseIconToPlay();
-            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK);
+            await MainThread.InvokeOnMainThreadAsync(() => SetPlayPauseIconToPlay());
+            await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
         }
     }
 
@@ -7205,6 +7286,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             _playbackCts = null;
         }
+
+        _continuousAudioStopwatch?.Stop();
+        _continuousAudioStopwatch = null;
 
         await Dispatcher.DispatchAsync(() =>
         {
@@ -7237,9 +7321,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch { }
         _lastRealtimeAudioPath = null;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(_fullContinuousAudioPath) && File.Exists(_fullContinuousAudioPath))
+            {
+                File.Delete(_fullContinuousAudioPath);
+            }
+        }
+        catch { }
+        _fullContinuousAudioPath = null;
     }
 
-    private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct)
+    private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct, bool includeAudio = true)
     {
         Stopwatch cd = Stopwatch.StartNew();
         void progChanged(double p, TimeSpan _)
@@ -7311,12 +7405,42 @@ public partial class DraftPage : ContentPage, IDraftPage
                 (int)(previewWidth / LivePreviewResolutionFactor),
                 (int)ProjectInfo.TargetFrameRate,
                 (int)(previewHeight / LivePreviewResolutionFactor),
-                ct);
+                ct,
+                includeAudio);
         }
         finally
         {
             previewer.OnProgressChanged -= progChanged;
         }
+    }
+
+    private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
+    {
+        int lastRenderedFrame = -1;
+
+        while (!ct.IsCancellationRequested)
+        {
+            int targetFrame = GetContinuousAudioFrame();
+            int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
+            if (targetFrame > maxFrame) break;
+
+            if (targetFrame == lastRenderedFrame)
+            {
+                await Task.Delay(15, ct);
+                continue;
+            }
+
+            lastRenderedFrame = targetFrame;
+            _currentFrame = targetFrame;
+            SyncClipEditorCurrentFrame();
+            await RefreshDynamicPreviewOverlay();
+            await Dispatcher.DispatchAsync(() =>
+            {
+                UpdatePlayheadPosition();
+                CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
+            });
+        }
+        SetStateOK();
     }
 
     private static View CreatePropertiesPlaceholder(string text)
@@ -9022,7 +9146,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     void IDraftPage.RegisterClip(IClipElementUI element, bool resolveOverlap) => RegisterClip(RequireConcreteClip(element, nameof(element)), resolveOverlap);
 
-    Task IDraftPage.ShowAPopup(View? content, Border? border, IClipElementUI? clip, string mode)
+    Task IDraftPage.ShowAPopup(View? content, View? border, IClipElementUI? clip, string mode)
     {
         var concrete = clip is null ? null : RequireConcreteClip(clip, nameof(clip));
         return ShowAPopup(content, border, concrete, mode);
