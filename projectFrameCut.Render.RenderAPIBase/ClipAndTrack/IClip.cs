@@ -238,6 +238,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
         [DebuggerNonUserCode()]
         public uint? GetRelativeFrameIndex(uint targetFrame)
+            => TryGetRelativeFrameIndex(targetFrame, null) ?? throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + GetEffectiveDuration()}).");
+
+        [DebuggerNonUserCode()]
+        public uint? TryGetRelativeFrameIndex(uint targetFrame, uint? onFail)
         {
             long offsetFromClipStart = (long)targetFrame - StartFrame;
             var profile = SpeedVarianceMapCache.GetOrBuild(this);
@@ -250,8 +254,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             if (offsetFromClipStart < 0 || offsetFromClipStart >= effectiveDuration)
             {
-                ulong endExclusive = (ulong)StartFrame + effectiveDuration;
-                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {endExclusive}).");
+                return onFail;
             }
 
             ulong mappedOffset = profile.MapTimelineOffsetToSourceOffset((uint)offsetFromClipStart);
@@ -259,7 +262,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             ulong sourceIndexLong = ConvertTimelineFrameToSourceFrame(this, timelineIndexLong);
             if (sourceIndexLong > uint.MaxValue)
             {
-                throw new IndexOutOfRangeException($"Frame mapping overflow for frame #{targetFrame}.");
+                return onFail;
             }
 
             return (uint)sourceIndexLong;

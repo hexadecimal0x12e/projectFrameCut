@@ -79,6 +79,10 @@
                     <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
                     <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
                 </HorizontalStackLayout>
+                <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="Record keyframe on clip edit">
+                    <CheckBox IsChecked="{Binding EnableKeyframeRecording}" />
+                    <Label Text="KF" Margin="-6,0,0,0" VerticalOptions="Center" FontSize="11" />
+                </HorizontalStackLayout>
 
                 <Border x:Name="DefaultColorSwatchBorder"
                         Margin="4,0"

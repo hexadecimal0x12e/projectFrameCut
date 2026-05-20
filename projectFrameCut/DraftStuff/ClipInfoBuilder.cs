@@ -1766,6 +1766,21 @@ namespace projectFrameCut.DraftStuff
         {
             var newEffects = new Dictionary<string, IEffect>();
             int globalIndex = 0;
+
+            // Preserve manually-added effects (those without a BindedEffectGroupID) from the current Effects.
+            if (clip.Effects != null)
+            {
+                foreach (var kvp in clip.Effects)
+                {
+                    if (string.IsNullOrWhiteSpace(kvp.Value.BindedEffectGroupID))
+                    {
+                        newEffects[kvp.Key] = kvp.Value;
+                        if (kvp.Value.Index >= globalIndex)
+                            globalIndex = kvp.Value.Index + 1;
+                    }
+                }
+            }
+
             var factories = EffectServices.GetAvailableEffectBundles();
             if (clip.EffectBundles != null)
             {

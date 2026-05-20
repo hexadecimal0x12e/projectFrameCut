@@ -13,6 +13,11 @@
       "Bash(xxd)",
       "Bash(findstr Value)",
       "Bash(dotnet restore *)",
+      "Bash(Select-Object -Last 20)",
+      "PowerShell(dotnet build *)",
+      "Bash(Select-Object -Last 15)",
+      "Bash(splc-edit --help)",
+      "Bash(Select-String -Pattern \"error|Error|错误\")"
     ]
   }
 }

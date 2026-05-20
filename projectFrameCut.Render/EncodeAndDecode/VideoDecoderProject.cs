@@ -20,6 +20,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
     {
         public static Func<ConcurrentDictionary<string, AssetItem>>? GlobalAssetGetter = null;
 
+        public static Func<string, string?>? RemotePathResolver = null;
+
         public string TypeName => "DecoderContextPJFCProject";
 
         public int? ResultBitPerPixel { get; private set; } = null;

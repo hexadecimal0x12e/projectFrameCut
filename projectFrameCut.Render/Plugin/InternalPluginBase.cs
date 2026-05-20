@@ -93,6 +93,7 @@ public class InternalPluginBase : IPluginBase
         {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
         {"Jitter", new JitterContinuousEffectFactory()},
+        {"ProgressPlacer", new ProgressPlacerFactory()},
         {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
         {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
         {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},
@@ -120,7 +121,8 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
-        {"Jitter", new(() => new JitterEffect()) }
+        {"Jitter", new(() => new JitterEffect()) },
+        {"ProgressPlacer", new(() => new ProgressPlacer()) }
     };
 
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>

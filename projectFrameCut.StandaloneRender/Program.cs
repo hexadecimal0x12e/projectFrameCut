@@ -62,9 +62,21 @@ namespace projectFrameCut.StandaloneRender
 
                     Console.WriteLine($" {m}");
                 };
-                Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
-                Console.Write(GetInfo());
-                Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
+                try
+                {
+                    Assembly assembly = Assembly.GetExecutingAssembly();
+                    if (assembly is not null)
+                    {
+                        var ProgramConfig = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                        var ProgramCommit = new string((assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray());
+                        var AssemblyName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut StandaloneRender";
+                        Console.WriteLine($"{AssemblyName} v{assembly.GetName().Version} {ProgramConfig}@{ProgramCommit}");
+                        Console.WriteLine("Copyright (c) hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
+                        Console.WriteLine();
+                    }
+
+                }
+                catch { }
 
             }
             if (args.Contains("--logDiagnostic"))

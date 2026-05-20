@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.HighPerformance;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,6 +13,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.IO.Hashing;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -67,10 +68,7 @@ namespace projectFrameCut.Shared
         /// The file path this picture comes from. Used for diagnostics only.
         /// </summary>
         public string? filePath { get; set; } //诊断用
-        /// <summary>
-        /// Determine some flag for the picture.
-        /// </summary>
-        public PictureFlag Flag { get; set; }
+
         /// <summary>
         /// Records each step of the image processed.
         /// </summary>
@@ -130,21 +128,17 @@ namespace projectFrameCut.Shared
         /// <param name="force">Ignore <see cref="CanBeDisposed"/> and dispose it anyway.</param>
         public void Dispose(bool force = false);
 
+        /// <summary>
+        /// Compute a content-based hash of the pixel data for unique identification.
+        /// </summary>
+        public long GetUniqueID();
+
         public enum ChannelId
         {
             Red = 0,
             Green = 1,
             Blue = 2,
             Alpha = 3
-        }
-
-        [Obsolete("No longer used. To prevent disposing, use CanBeDisposed property; To tag this image, use frameIndex or filePath.")]
-        [Flags]
-        public enum PictureFlag
-        {
-            None = 0,
-            IsGenerated = 1 << 0,
-            NoDisposeAfterWrite = 1 << 1,
         }
 
         public readonly record struct PicturePixelMode(int Value)
@@ -272,7 +266,7 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; set; } //诊断用
         public string? filePath { get; set; } //诊断用
-        public PictureFlag Flag { get; set; }
+
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
@@ -816,6 +810,17 @@ namespace projectFrameCut.Shared
             return Resize(targetWidth, targetHeight, preserveAspect);
         }
 
+        public long GetUniqueID()
+        {
+            var hash = new XxHash64();
+            hash.Append(MemoryMarshal.AsBytes<ushort>(r.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<ushort>(g.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<ushort>(b.AsSpan()));
+            if (a is not null)
+                hash.Append(MemoryMarshal.AsBytes<float>(a.AsSpan()));
+            return (long)hash.GetCurrentHashAsUInt64();
+        }
+
         public object? GetSpecificChannel(IPicture.ChannelId channelId)
         {
             return channelId switch
@@ -856,7 +861,6 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; set; } //诊断用
         public string? filePath { get; set; } //诊断用
-        public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
@@ -1343,7 +1347,7 @@ namespace projectFrameCut.Shared
 
         public void Dispose(bool force = false)
         {
-            Dispose(disposing: true,force);
+            Dispose(disposing: true, force);
             GC.SuppressFinalize(this);
         }
 
@@ -1411,6 +1415,17 @@ namespace projectFrameCut.Shared
             return Resize(targetWidth, targetHeight, preserveAspect);
         }
 
+        public long GetUniqueID()
+        {
+            var hash = new XxHash64();
+            hash.Append(r.AsSpan());
+            hash.Append(g.AsSpan());
+            hash.Append(b.AsSpan());
+            if (a is not null)
+                hash.Append(MemoryMarshal.AsBytes<float>(a.AsSpan()));
+            return (long)hash.GetCurrentHashAsUInt64();
+        }
+
         public object? GetSpecificChannel(IPicture.ChannelId channelId)
         {
             return channelId switch
@@ -1444,7 +1459,7 @@ namespace projectFrameCut.Shared
         public int Pixels { get; init; }
         public uint? frameIndex { get; set; }
         public string? filePath { get; set; }
-        public PictureFlag Flag { get; set; }
+
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool hasAlphaChannel { get; set; }
         public bool Disposed { get; set; } = false;
@@ -1458,6 +1473,15 @@ namespace projectFrameCut.Shared
 
         public string GetDiagnosticsInfo() => $"BitMaskPicture image, Size: {Width}*{Height}, avg R:{r.Average(v => v ? 1 : 0)} G:{g.Average(v => v ? 1 : 0)} B:{b.Average(v => v ? 1 : 0)}";
 
+
+        public long GetUniqueID()
+        {
+            var hash = new XxHash64();
+            hash.Append(MemoryMarshal.AsBytes<bool>(r.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<bool>(g.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<bool>(b.AsSpan()));
+            return (long)hash.GetCurrentHashAsUInt64();
+        }
 
         public object? GetSpecificChannel(IPicture.ChannelId channelId)
         {
@@ -1541,7 +1565,7 @@ namespace projectFrameCut.Shared
 
         public void Dispose(bool force = false)
         {
-            Dispose(disposing: true,force);
+            Dispose(disposing: true, force);
             GC.SuppressFinalize(this);
         }
     }
@@ -1815,6 +1839,19 @@ namespace projectFrameCut.Shared
         }
 
         public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average()}(0..1), {Brightness.Average() * MaximumBrightness}nit";
+
+        public long GetUniqueID()
+        {
+            var hash = new XxHash64();
+            hash.Append(MemoryMarshal.AsBytes<ushort>(r.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<ushort>(g.AsSpan()));
+            hash.Append(MemoryMarshal.AsBytes<ushort>(b.AsSpan()));
+            if (a is not null)
+                hash.Append(MemoryMarshal.AsBytes<float>(a.AsSpan()));
+            if (Brightness is not null)
+                hash.Append(MemoryMarshal.AsBytes<float>(Brightness.AsSpan()));
+            return (long)hash.GetCurrentHashAsUInt64();
+        }
 
         private const float SdrReferenceNits = 100f;
         private const float ToneMapKnee = 1.5f;

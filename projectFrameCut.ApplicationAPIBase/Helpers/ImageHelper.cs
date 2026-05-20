@@ -140,17 +140,37 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         {
             if (picture == null) return null;
 
+            var imgId = picture.GetUniqueID();
+            var cachePath = Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache", $"{imgId}.png");
+
+            if (File.Exists(cachePath))
+            {
+                try
+                {
+                    return ImageSource.FromFile(cachePath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to load image from cache file path: {cachePath}. Will try to load from memory stream.");
+                }
+            }
+
             try
             {
+                Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache"));
+                picture.SaveAsPng8bpp(cachePath);
+                return ImageSource.FromFile(cachePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Failed to save image to cache file path: {cachePath}. Will try to load from memory stream.");
                 var ms = new MemoryStream();
-                using var img = picture.SaveToSixLaborsImage(16, true, false);
+                using var img = picture.SaveToSixLaborsImage(8, true, false);
                 img.SaveAsPng(ms);
                 var bytes = ms.ToArray();
                 return ImageSource.FromStream(() => new MemoryStream(bytes));
             }
-            finally
-            {
-            }
+
         }
 
     }

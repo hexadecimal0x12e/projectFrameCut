@@ -481,22 +481,22 @@ namespace projectFrameCut
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
-                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
-                    {
-                        string[][] paths = { Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly), Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly), TextHelper.ScanSystemFont().ToArray() };
-                        foreach (var item in paths.SelectMany(c => c))
-                        {
-                            try
-                            {
-#if WINDOWS
-                                //HelperProgram.UpdateStatus($"Loading font: {item}");
-#endif
-                                var info = TextHelper.ReadFontFileInfo(item);
-                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
-                            }
-                            catch { }
-                        }
-                    }
+//                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
+//                    {
+//                        string[][] paths = { Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly), Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly), TextHelper.ScanSystemFont().ToArray() };
+//                        foreach (var item in paths.SelectMany(c => c))
+//                        {
+//                            try
+//                            {
+//#if WINDOWS
+//                                //HelperProgram.UpdateStatus($"Loading font: {item}");
+//#endif
+//                                var info = TextHelper.ReadFontFileInfo(item);
+//                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
+//                            }
+//                            catch { }
+//                        }
+//                    }
 
                 }
                 catch

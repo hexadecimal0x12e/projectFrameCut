@@ -31,6 +31,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Effect;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Runtime;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -46,6 +47,7 @@ using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 
 
 
@@ -73,6 +75,7 @@ using Microsoft.Maui.Platform;
 using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
 using Google.Android.Material.Chip;
+using Java.Nio.Channels;
 
 #endif
 
@@ -100,8 +103,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         "proxy",
 #if WINDOWS
         "thumbs\\perClip",
+        "thumbs\\clipLocalFallback",
 #else
         "thumbs/perClip",
+        "thumbs/clipLocalFallback",
 #endif
     ];
 
@@ -168,6 +173,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private string? _fullContinuousAudioPath = null;
     private Stopwatch? _continuousAudioStopwatch = null;
     private double _continuousAudioStartFrame = 0;
+    private DateTime _lastDynamicPreviewUIUpdate = DateTime.MinValue;
 
     Lock saveLocker = new();
 
@@ -302,6 +308,13 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool MultiSelectEnabled { get; set; }
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
+    public int DynamicPreviewTimeout { get; set; } = 2048;
+
+    /// <summary>
+    /// Resolution divisor for dynamic preview. 1 = full, 2 = half, etc.
+    /// Higher values reduce rendering load.
+    /// </summary>
+    public int DynamicPreviewResolutionDivisor { get; set; } = 1;
 
 
     #endregion
@@ -317,7 +330,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
-        DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
+        DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
+        DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
@@ -326,6 +340,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
+        ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
+        ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
         HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
@@ -370,7 +386,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
-        DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
+        DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
+        DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
@@ -379,6 +396,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
+        ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
+        ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
         ClipEditor.ConfigureReferenceLinesChanged(() =>
         {
             ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
@@ -560,6 +579,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         Inited = true;
 
         ApplyClipEditorPreviewOverlayMode();
+
+        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "perClip");
+        DynamicPreview.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
 
         previewWidth = ProjectInfo.RelativeWidth;
         previewHeight = ProjectInfo.RelativeHeight;
@@ -851,6 +873,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             bool.TryParse(showReferenceLinesStr, out var showReferenceLines))
         {
             ClipEditor.ShowReferenceLines = showReferenceLines;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableKeyframeRecording", out var enableKeyframeRecordingStr) &&
+            bool.TryParse(enableKeyframeRecordingStr, out var enableKeyframeRecording))
+        {
+            ClipEditor.EnableKeyframeRecording = enableKeyframeRecording;
         }
     }
 
@@ -1321,7 +1349,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             elem.UpdateSourceDuration();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log(ex, $"Update VideoClip info for {elem.DisplayName}", this);
         }
@@ -6551,6 +6579,140 @@ public partial class DraftPage : ContentPage, IDraftPage
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
+    private void OnClipEditorKeyframeCandidateCaptured(string clipId, uint frame, ClipPositionTuple position)
+    {
+        if (ClipEditor is null || !ClipEditor.EnableKeyframeRecording)
+        {
+            return;
+        }
+
+        if (!Clips.TryGetValue(clipId, out var clip))
+        {
+            clip = Clips.Values.FirstOrDefault(c => c is not null && string.Equals(c.Id, clipId, StringComparison.Ordinal));
+            if (clip is null)
+            {
+                LogDiagnostic($"Skip keyframe candidate: clip '{clipId}' not found in DraftPage.Clips.");
+                return;
+            }
+        }
+
+        if (clip.ClipType is ClipMode.AudioClip or ClipMode.MarkingClip)
+        {
+            return;
+        }
+
+        clip.Effects ??= new Dictionary<string, projectFrameCut.Render.RenderAPIBase.EffectAndMixture.IEffect>();
+
+        string? effectKey = null;
+        ProgressPlacer? progressPlacer = null;
+        foreach (var effectEntry in clip.Effects)
+        {
+            if (effectEntry.Value is ProgressPlacer placer)
+            {
+                effectKey = effectEntry.Key;
+                progressPlacer = placer;
+                break;
+            }
+
+            if (string.Equals(effectEntry.Value.TypeName, "ProgressPlacer", StringComparison.Ordinal))
+            {
+                effectKey = effectEntry.Key;
+                var rebuilt = (ProgressPlacer)new ProgressPlacer().WithParameters(effectEntry.Value.Parameters);
+                rebuilt.Name = effectEntry.Value.Name;
+                rebuilt.Id = effectEntry.Value.Id;
+                rebuilt.Index = effectEntry.Value.Index;
+                rebuilt.Enabled = effectEntry.Value.Enabled;
+                rebuilt.RelativeWidth = effectEntry.Value.RelativeWidth;
+                rebuilt.RelativeHeight = effectEntry.Value.RelativeHeight;
+                rebuilt.BindedEffectGroupID = effectEntry.Value.BindedEffectGroupID;
+                progressPlacer = rebuilt;
+                clip.Effects[effectKey] = rebuilt;
+                break;
+            }
+        }
+
+        if (progressPlacer is null)
+        {
+            var maxIndex = clip.Effects.Count == 0 ? 0 : clip.Effects.Values.Max(e => e.Index) + 1;
+            progressPlacer = new ProgressPlacer
+            {
+                Name = "ProgressPlacer",
+                Id = Guid.NewGuid().ToString(),
+                Index = maxIndex,
+                Enabled = true,
+                RelativeWidth = (int)Math.Max(1, ProjectInfo.RelativeWidth),
+                RelativeHeight = (int)Math.Max(1, ProjectInfo.RelativeHeight),
+                ProgressList = new List<ProgressData>()
+            };
+            effectKey = $"ProgressPlacer-{Guid.NewGuid():N}";
+            clip.Effects[effectKey] = progressPlacer;
+        }
+
+        var progress = ComputeClipProgressForFrame(clip, frame);
+        var safePosition = new ClipPositionTuple(
+            position.TargetX,
+            position.TargetY,
+            Math.Max(1, position.TargetWidth),
+            Math.Max(1, position.TargetHeight),
+            false);
+
+        var existingIndex = progressPlacer.ProgressList.FindIndex(p => Math.Abs(p.Index - progress) <= 0.000001d);
+        var keyframeData = new ProgressData(progress, safePosition);
+        if (existingIndex >= 0)
+        {
+            progressPlacer.ProgressList[existingIndex] = keyframeData;
+        }
+        else
+        {
+            progressPlacer.ProgressList.Add(keyframeData);
+        }
+
+        progressPlacer.ProgressList.Sort((a, b) => a.Index.CompareTo(b.Index));
+    }
+
+    private double ComputeClipProgressForFrame(ClipElementUI clip, uint frame)
+    {
+        double clipStartPx = clip.Clip?.TranslationX ?? clip.layoutX;
+        if (double.IsNaN(clipStartPx) || double.IsInfinity(clipStartPx))
+        {
+            clipStartPx = clip.layoutX;
+        }
+
+        clipStartPx = Math.Max(0d, clipStartPx);
+        uint startFrame = PixelToFrame(clipStartPx);
+
+        uint duration = clip.lengthInFrame;
+        if (duration == 0)
+        {
+            double widthPx = clip.origLength;
+            if (clip.Clip is not null)
+            {
+                widthPx = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.Clip.Width;
+            }
+
+            duration = Math.Max(1u, PixelToFrame(Math.Max(0d, widthPx)));
+        }
+
+        if (duration == 0)
+        {
+            return 1d;
+        }
+
+        if (frame <= startFrame)
+        {
+            return 0d;
+        }
+
+        ulong endExclusive = (ulong)startFrame + duration;
+        if ((ulong)frame >= endExclusive)
+        {
+            return 1d;
+        }
+
+        var progress = (double)(frame - startFrame) / duration;
+        return Math.Clamp(progress, 0d, 1d);
+    }
+
     private void SyncClipEditorCurrentFrame()
     {
         if (ClipEditor is null)
@@ -6765,7 +6927,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             // Keep dynamic preview generation in project coordinate space so overlay rects stay aligned.
             var targetWidth = Math.Max(1, ProjectInfo.RelativeWidth);
             var targetHeight = Math.Max(1, ProjectInfo.RelativeHeight);
-            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight);
+            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, CancellationToken.None);
             return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
         }
         catch (Exception ex)
@@ -6831,7 +6993,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
                     LivePreviewPlayer.IsVisible = false;
-                    DynamicPreviewProvider.IsVisible = false;
                 });
 
                 string path = string.Empty;
@@ -6928,12 +7089,12 @@ public partial class DraftPage : ContentPage, IDraftPage
     MediaElement LivePreviewPlayer = new();
     MediaElement DynamicPreviewAudioProvider = new();
 
-    private int GetContinuousAudioFrame()
+    private uint GetContinuousAudioFrame()
     {
         if (_continuousAudioStopwatch == null)
-            return (int)_currentFrame;
+            return (uint)_currentFrame;
         double fps = Math.Max(1d, ProjectInfo.TargetFrameRate);
-        return (int)_continuousAudioStartFrame + (int)Math.Round(_continuousAudioStopwatch.Elapsed.TotalSeconds * fps);
+        return (uint)_continuousAudioStartFrame + (uint)Math.Round(_continuousAudioStopwatch.Elapsed.TotalSeconds * fps);
     }
 
     private void StopNonRealtimePlayheadSyncLoop()
@@ -6948,51 +7109,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             _nonRealtimePlayheadSyncCts = null;
         }
-    }
-
-    private void StartNonRealtimePlayheadSyncLoop(int chunkStartFrame)
-    {
-        _nonRealtimePlaybackChunkStartFrame = Math.Max(0, chunkStartFrame);
-        if (_nonRealtimePlayheadSyncCts is not null)
-        {
-            return;
-        }
-
-        _nonRealtimePlayheadSyncCts = new CancellationTokenSource();
-        var token = _nonRealtimePlayheadSyncCts.Token;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    if (!isPlaying || UseDynamicPreview)
-                    {
-                        await Task.Delay(100, token);
-                        continue;
-                    }
-
-                    await Dispatcher.DispatchAsync(() =>
-                    {
-                        var fps = Math.Max(1d, ProjectInfo.TargetFrameRate);
-                        var frameOffset = (int)Math.Round(LivePreviewPlayer.Position.TotalSeconds * fps);
-                        var frame = Math.Max(0, _nonRealtimePlaybackChunkStartFrame + frameOffset);
-
-                        _currentFrame = frame;
-                        SyncClipEditorCurrentFrame();
-                        UpdatePlayheadPosition();
-                        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
-                    });
-
-                    await Task.Delay(40, token);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // expected on pause/stop
-            }
-        }, token);
     }
 
     private void StartContinuousPlayheadSyncLoop(int chunkStartFrame)
@@ -7016,7 +7132,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         continue;
                     }
 
-                    int frame = GetContinuousAudioFrame();
+                    int frame = (int)GetContinuousAudioFrame();
 
                     await Dispatcher.DispatchAsync(() =>
                     {
@@ -7044,92 +7160,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         var host = new Grid();
-        host.Children.Add(DynamicPreviewProvider);
         host.Children.Add(LivePreviewPlayer);
         _livePreviewRealtimeHost = host;
         return host;
     }
 
-    private async Task PlayRealtimeAudioPreview(int startFrame, CancellationToken token)
-    {
-        if (!previewer.HasAudioSources())
-        {
-            return;
-        }
-
-        try
-        {
-            int currentStartFrame = Math.Max(0, startFrame);
-            while (!token.IsCancellationRequested)
-            {
-                var nextAudioPath = await previewer.RenderSomeAudio(currentStartFrame, LiveVideoPreviewBufferLength, (int)ProjectInfo.TargetFrameRate, token);
-                if (string.IsNullOrWhiteSpace(nextAudioPath) || !File.Exists(nextAudioPath))
-                {
-                    return;
-                }
-
-                playbackDone = false;
-                DynamicPreviewAudioProvider = new MediaElement
-                {
-                    Source = MediaSource.FromFile(nextAudioPath),
-                    ShouldAutoPlay = true,
-                    ShouldKeepScreenOn = false,
-                    ShouldLoopPlayback = false,
-                    ShouldShowPlaybackControls = false,
-                    WidthRequest = 10,
-                    HeightRequest = 10
-                };
-                DynamicPreviewAudioProvider.MediaEnded += (s, e) =>
-                {
-                    playbackDone = true;
-                    try
-                    {
-                        ComputeView.Children.Remove(DynamicPreviewAudioProvider);
-                    }
-                    catch { }
-
-                };
-                DynamicPreviewAudioProvider.MediaFailed += (s, e) =>
-                {
-                    playbackDone = true;
-                };
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    ComputeView.Add(DynamicPreviewAudioProvider);
-                });
-
-                while (!playbackDone && !token.IsCancellationRequested)
-                {
-                    await Task.Delay(60, token);
-                }
-
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(_lastRealtimeAudioPath) && File.Exists(_lastRealtimeAudioPath))
-                    {
-                        File.Delete(_lastRealtimeAudioPath);
-                    }
-                }
-                catch { }
-
-                _lastRealtimeAudioPath = nextAudioPath;
-                currentStartFrame += LiveVideoPreviewBufferLength;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // expected on pause/stop
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "RealtimeAudioPreview", this);
-        }
-    }
-
-
     private async Task PrepareLivePreview()
     {
         StopNonRealtimePlayheadSyncLoop();
+        Dispatcher.Dispatch(() => ClearSelectionInternal());
+        SetStateBusy(Localized._Processing);
         if (_playbackCts != null)
         {
             _playbackCts.Cancel();
@@ -7157,13 +7197,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (_fullContinuousAudioPath != null && File.Exists(_fullContinuousAudioPath))
                 {
                     _continuousAudioStartFrame = _currentFrame;
-                    _continuousAudioStopwatch = Stopwatch.StartNew();
                     await Dispatcher.DispatchAsync(() =>
                     {
                         DynamicPreviewAudioProvider = new MediaElement
                         {
                             Source = MediaSource.FromFile(_fullContinuousAudioPath),
-                            ShouldAutoPlay = true,
+                            ShouldAutoPlay = false,
                             ShouldKeepScreenOn = false,
                             ShouldLoopPlayback = false,
                             ShouldShowPlaybackControls = false,
@@ -7189,72 +7228,85 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
+                _continuousAudioStopwatch = Stopwatch.StartNew();
+                if (_fullContinuousAudioPath is not null)
+                {
+                    Dispatcher.Dispatch(() =>
+                    {
+                        DynamicPreviewAudioProvider.Play();
+                    });
+                }
+
                 await RenderSomeFramesDynamicSynced((int)_currentFrame, token);
                 return;
             }
-
-            await Dispatcher.DispatchAsync(() =>
+            else
             {
-                ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-                LivePreviewPlayer.IsVisible = true;
-                DynamicPreviewProvider.IsVisible = false;
-                LivePreviewPlayer.Opacity = 1;
-                LivePreviewPlayer.HeightRequest = -1;
-                LivePreviewPlayer.WidthRequest = -1;
-                LivePreviewPlayer.InputTransparent = false;
-                LivePreviewPlayer.ShouldShowPlaybackControls = false;
-                ClipEditor.SetStaticPreviewVisible(false);
-            });
-
-
-            var path = await RenderSomeFrames((int)_currentFrame, token, includeAudio: false);
-            var currentStartFrame = (int)_currentFrame;
-            Dispatcher.Dispatch(() =>
-            {
-                _nonRealtimePlaybackChunkStartFrame = currentStartFrame;
-                LivePreviewPlayer.Source = MediaSource.FromFile(path);
-                LivePreviewPlayer.Play();
-            });
-            StartContinuousPlayheadSyncLoop(currentStartFrame);
-
-            while (!token.IsCancellationRequested)
-            {
-                try
+                await Dispatcher.DispatchAsync(() =>
                 {
-                    var nextStart = currentStartFrame + LiveVideoPreviewBufferLength;
-                    if (nextStart > Math.Max(previewer.TotalDuration, ProjectDuration))
+                    ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
+                    LivePreviewPlayer.IsVisible = true;
+                    LivePreviewPlayer.Opacity = 1;
+                    LivePreviewPlayer.HeightRequest = -1;
+                    LivePreviewPlayer.WidthRequest = -1;
+                    LivePreviewPlayer.InputTransparent = false;
+                    LivePreviewPlayer.ShouldShowPlaybackControls = false;
+                    ClipEditor.SetStaticPreviewVisible(false);
+                });
+
+
+                var path = await RenderSomeFrames((int)_currentFrame, token, includeAudio: false);
+                var currentStartFrame = (int)_currentFrame;
+                Dispatcher.Dispatch(() =>
+                {
+                    _nonRealtimePlaybackChunkStartFrame = currentStartFrame;
+                    LivePreviewPlayer.Source = MediaSource.FromFile(path);
+                    LivePreviewPlayer.Play();
+                    _continuousAudioStopwatch = Stopwatch.StartNew();
+                    if (_fullContinuousAudioPath is not null)
+                        DynamicPreviewAudioProvider.Play();
+                });
+                StartContinuousPlayheadSyncLoop(currentStartFrame);
+
+                while (!token.IsCancellationRequested)
+                {
+                    try
                     {
-                        _playbackCts.Cancel();
-                        break;
+                        var nextStart = currentStartFrame + LiveVideoPreviewBufferLength;
+                        if (nextStart > Math.Max(previewer.TotalDuration, ProjectDuration))
+                        {
+                            _playbackCts.Cancel();
+                            break;
+                        }
+
+                        LogDiagnostic($"Start continue Render from {nextStart}...");
+
+                        _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token, includeAudio: false);
+                        LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
+                        while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
+                        LogDiagnostic("Previewer is ready!");
+                        playbackDone = false;
+                        Dispatcher.Dispatch(() =>
+                        {
+                            _nonRealtimePlaybackChunkStartFrame = nextStart;
+                            LivePreviewPlayer.Stop();
+                            LivePreviewPlayer.Source = null;
+                            LivePreviewPlayer.Source = MediaSource.FromFile(_nextPlaybackPath);
+                            _lastPlaybackPath = _nextPlaybackPath;
+                            LivePreviewPlayer.ShouldAutoPlay = true;
+                            LivePreviewPlayer.Play();
+                        });
+                        currentStartFrame += LiveVideoPreviewBufferLength;
                     }
-
-                    LogDiagnostic($"Start continue Render from {nextStart}...");
-
-                    _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token, includeAudio: false);
-                    LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
-                    while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
-                    LogDiagnostic("Previewer is ready!");
-                    playbackDone = false;
-                    Dispatcher.Dispatch(() =>
+                    catch (Exception ex)
                     {
-                        _nonRealtimePlaybackChunkStartFrame = nextStart;
-                        LivePreviewPlayer.Stop();
-                        LivePreviewPlayer.Source = null;
-                        LivePreviewPlayer.Source = MediaSource.FromFile(_nextPlaybackPath);
-                        _lastPlaybackPath = _nextPlaybackPath;
-                        LivePreviewPlayer.ShouldAutoPlay = true;
-                        LivePreviewPlayer.Play();
-                    });
-                    currentStartFrame += LiveVideoPreviewBufferLength;
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "PreRender", this);
-                }
-                finally
-                {
-                    _isPreRendering = false;
+                        Log(ex, "PreRender", this);
+                    }
+                    finally
+                    {
+                        _isPreRendering = false;
 
+                    }
                 }
             }
 
@@ -7269,7 +7321,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             isPlaying = false;
             await PauseLivePreview();
             await MainThread.InvokeOnMainThreadAsync(() => SetPlayPauseIconToPlay());
+#if DEBUG
+            if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
+#else
             await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
+#endif        
         }
     }
 
@@ -7303,7 +7359,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             LivePreviewPlayer.IsVisible = false;
             // Keep preview elements inside a single host to avoid WinUI re-parent exceptions.
             ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-            DynamicPreviewProvider.IsVisible = UseDynamicPreview;
             ClipEditor.SetStaticPreviewVisible(true);
             SetPlayPauseIconToPlay();
         });
@@ -7345,55 +7400,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (UseDynamicPreview)
         {
-            var fps = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
-            var targetInterval = TimeSpan.FromSeconds(1d / fps);
-            int frame = Math.Max(0, startPoint);
-            int frameStep = 1;
-            int maxFrameStep = Math.Max(2, fps / 2);
-            double avgLoopSeconds = targetInterval.TotalSeconds;
-            const double avgFactor = 0.2d;
-            const double slowThreshold = 1.08d;
-            const double fastThreshold = 0.65d;
-            int stepForThisIteration = frameStep;
-            var loopTimer = new Stopwatch();
-            while (!ct.IsCancellationRequested)
-            {
-                loopTimer.Restart();
-                if (frame > Math.Max(previewer.TotalDuration, ProjectDuration)) return "";
-                _currentFrame = frame;
-                SyncClipEditorCurrentFrame();
-                await RefreshDynamicPreviewOverlay();
-                await Dispatcher.DispatchAsync(async () =>
-                {
-                    UpdatePlayheadPosition();
-                    CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(frame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
-                });
-
-                loopTimer.Stop();
-                var workSeconds = loopTimer.Elapsed.TotalSeconds;
-                avgLoopSeconds = avgLoopSeconds * (1d - avgFactor) + (workSeconds * avgFactor);
-
-                var expectedSeconds = targetInterval.TotalSeconds * stepForThisIteration;
-                if (avgLoopSeconds > expectedSeconds * slowThreshold && frameStep < maxFrameStep)
-                {
-                    frameStep++;
-                }
-                else if (avgLoopSeconds < expectedSeconds * fastThreshold && frameStep > 1)
-                {
-                    frameStep--;
-                }
-
-                frame += stepForThisIteration;
-                var targetDuration = TimeSpan.FromTicks(targetInterval.Ticks * stepForThisIteration);
-                var remain = targetDuration - loopTimer.Elapsed;
-                if (remain > TimeSpan.Zero)
-                {
-                    await Task.Delay(remain, ct);
-                }
-            }
-            SetStateOK();
-            // modify the preview view directly, so no need on rendering to file and loading back
-            return "";
+            throw new InvalidOperationException("Use RenderSomeFramesDynamicSynced instead.");
         }
 
         previewer.OnProgressChanged += progChanged;
@@ -7416,12 +7423,20 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
-        int lastRenderedFrame = -1;
+        uint lastRenderedFrame = 0;
+        var targetWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var targetHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
+        int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
+        double fps = -1d;
+        DateTime fpsWindowStart = DateTime.UtcNow;
+        int fpsCount = 0;
+        Stopwatch prepareWatch = new(), applyWatch = new();
+        SetStateBusy(Localized._Processing);
 
         while (!ct.IsCancellationRequested)
         {
-            int targetFrame = GetContinuousAudioFrame();
-            int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
+            uint targetFrame = GetContinuousAudioFrame();
             if (targetFrame > maxFrame) break;
 
             if (targetFrame == lastRenderedFrame)
@@ -7433,14 +7448,85 @@ public partial class DraftPage : ContentPage, IDraftPage
             lastRenderedFrame = targetFrame;
             _currentFrame = targetFrame;
             SyncClipEditorCurrentFrame();
-            await RefreshDynamicPreviewOverlay();
-            await Dispatcher.DispatchAsync(() =>
+
+            IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews;
+            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            frameCts.CancelAfter(DynamicPreviewTimeout);
+
+            try
             {
-                UpdatePlayheadPosition();
-                CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
+                prepareWatch.Restart();
+                preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync(targetFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, frameCts.Token);
+                prepareWatch.Stop();
+                LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (OperationCanceledException)
+            {
+                continue;
+            }
+
+            if (preparedPreviews is null) continue;
+            if (preparedPreviews.Count == 0)
+            {
+                var sinceLast = DateTime.UtcNow - _lastDynamicPreviewUIUpdate;
+                if (sinceLast.TotalMilliseconds < 80)
+                {
+                    await Task.Delay(15, ct);
+                    continue;
+                }
+            }
+
+            // Throttle UI updates to the project's target frame rate
+            double minUiIntervalMs = ProjectInfo.TargetFrameRate > 0 ? 1000.0 / ProjectInfo.TargetFrameRate : 1000.0 / 30.0;
+            var timeSinceLastUi = DateTime.UtcNow - _lastDynamicPreviewUIUpdate;
+            if (timeSinceLastUi.TotalMilliseconds < minUiIntervalMs)
+            {
+                await Task.Delay((int)(minUiIntervalMs - timeSinceLastUi.TotalMilliseconds), ct);
+            }
+
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                try
+                {
+                    UpdatePlayheadPosition(TimelineScrollView.ScrollX);
+                    CurrentPlayheadLabel.Text =
+                    $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
+                    applyWatch.Restart();
+                    ClipEditor.ApplyPreparedPreviews(preparedPreviews);
+                    applyWatch.Stop();
+                    AlternativeStatusLabel.Text = $"{fps:F1} FPS ({prepareWatch.ElapsedMilliseconds:F1} ms prep + {applyWatch.ElapsedMilliseconds:F1} ms apply)";
+
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Apply prepared previews for frame {_currentFrame}", this);
+#if DEBUG
+                    if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
+#else
+                    await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
+#endif
+                    await PauseLivePreview();
+                    await MainThread.InvokeOnMainThreadAsync(() => SetPlayPauseIconToPlay());
+                }
             });
+            _lastDynamicPreviewUIUpdate = DateTime.UtcNow;
+            fpsCount++;
+            var elapsed = DateTime.UtcNow - fpsWindowStart;
+            if (elapsed.TotalMilliseconds >= 500)
+            {
+                fps = fpsCount / Math.Max(0.001, elapsed.TotalSeconds);
+                fpsCount = 0;
+                fpsWindowStart = DateTime.UtcNow;
+            }
+
         }
-        SetStateOK();
+
+        await PauseLivePreview();
+        SetStateOK(Localized.DraftPage_EverythingFine);
     }
 
     private static View CreatePropertiesPlaceholder(string text)
@@ -7627,24 +7713,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task SyncClipsToMultiClipEditorMode(uint currentFrame)
-    {
-        try
-        {
-            if (Clips == null || Clips.Count == 0)
-            {
-                return;
-            }
-
-            await ClipEditor.UpdateClips(Clips);
-            ClipEditor.SetCurrentFrame(currentFrame);
-        }
-        catch (Exception ex)
-        {
-            LogDiagnostic($"Failed to sync clips to ClipEditor: {ex.Message}");
-        }
-    }
-
     private void TimelineScrollView_Scrolled(object sender, ScrolledEventArgs e)
     {
         if (sender == TimelineScrollView)
@@ -7749,6 +7817,23 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         // 更新所有ext endToWholeDraft的clips，使其能延伸到整个项目
         UpdateAllExtendToWholeDraftClips();
+    }
+
+    private IClip? OnGetClipInstanceCallback(ClipElementUI element)
+    {
+        if (previewer?.Clips is not null && previewer.Clips.Length > 0)
+        {
+            if (previewer.Clips.FirstOrDefault(c => c.Id == element.Id, null) is IClip c) return c;
+        }
+        try
+        {
+            return PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, element)));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Create clip instance for {element.Id} failed", this);
+            return null;
+        }
     }
 
     #endregion
@@ -7872,6 +7957,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.Properties["InteractableEditor_EnableSnapping"] = ClipEditor.EnableSnapping.ToString();
             ProjectInfo.Properties["InteractableEditor_DisallowClipOutOfBounds"] = ClipEditor.DisallowClipOutOfBounds.ToString();
             ProjectInfo.Properties["InteractableEditor_ShowReferenceLines"] = ClipEditor.ShowReferenceLines.ToString();
+            ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
         }
 
         saveLocker.Enter();
@@ -8618,7 +8704,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
             LivePreviewPlayer.IsVisible = false;
-            DynamicPreviewProvider.IsVisible = UseDynamicPreview;
             if (!UseDynamicPreview)
             {
                 ClipEditor.SetStaticPreviewVisible(true);
@@ -8882,11 +8967,8 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void MyLoggerExtensions_OnExceptionLog(Exception obj)
     {
-        Dispatcher.Dispatch(() =>
-        {
-            StatusLabel.TextColor = Colors.Red;
-            StatusLabel.Text = Localized._ExceptionTemplate(obj);
-        });
+        Log($"MyLoggerExtensions_OnExceptionLog Received an exception:{obj}", "error");
+        SetStateFail(Localized._ExceptionTemplate(obj));
     }
 
 

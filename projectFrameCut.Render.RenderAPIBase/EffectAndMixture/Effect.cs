@@ -29,6 +29,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get which kind of effect is. 
         /// </summary>
+        /// <remarks>
+        /// Never set this in your effect's code, this property has been set when you implement the specific effect interface, such as <see cref="INormalEffect"/>, <see cref="IContinuousEffect"/> and so on.
+        /// </remarks>
         public EffectType TypeOfEffect { get; }
 
         /// <summary>
@@ -82,10 +85,18 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get the relative width of the effect.
         /// </summary>
+        /// <remarks>
+        /// -1 for some effects which do not care about the width and height of the output canvas, such as <see cref="IClipPositionProvider"/>. 
+        /// For effects that care about the output canvas size, it should be set to the width of the output canvas when creating the effect, and the effect will do scaling based on the relative width and height when rendering.
+        /// </remarks>
         public int RelativeWidth { get; set; }
         /// <summary>
         /// Get the relative height of the effect.
         /// </summary>
+        /// <remarks>
+        /// -1 for some effects which do not care about the width and height of the output canvas, such as <see cref="IClipPositionProvider"/>. 
+        /// For effects that care about the output canvas size, it should be set to the width of the output canvas when creating the effect, and the effect will do scaling based on the relative width and height when rendering.
+        /// </remarks>
         public int RelativeHeight { get; set; }
 
         /// <summary>

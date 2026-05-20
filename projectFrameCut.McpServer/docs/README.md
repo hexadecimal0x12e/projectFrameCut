@@ -19,6 +19,11 @@ dotnet run --project projectFrameCut.McpServer\projectFrameCut.McpServer.csproj 
 dotnet run --project projectFrameCut.McpServer\projectFrameCut.McpServer.csproj -- --project "path/to/project" --http --port 32123
 ```
 
+HTTP 模式下还会自动提供客户端链接通道：
+
+- MCP JSON-RPC: `http://127.0.0.1:32123/mcp`
+- 客户端 WebSocket: `ws://127.0.0.1:32123/client`
+
 ## 可用工具列表
 
 ### 查询工具（只读）
@@ -153,6 +158,54 @@ dotnet run --project projectFrameCut.McpServer\projectFrameCut.McpServer.csproj 
   "lastSnapshotId": "550e8400-e29b-41d4-a716-446655440000",
   "pluginsUsed": ["plugin_1"],
   "normallyExited": true
+}
+```
+
+#### 8. `list_connected_clients` - 列出已连接编辑器客户端
+**参数**：无
+
+#### 9. `get_client_environment` - 获取客户端环境能力（Effect/Mixture/插件）
+**参数**：
+```json
+{
+  "clientId": "pjfc-client-xxxx",
+  "timeoutMs": 10000
+}
+```
+
+#### 10. `render_client_preview` - 请求客户端渲染某一帧预览图
+**参数**：
+```json
+{
+  "clientId": "pjfc-client-xxxx",
+  "frame": 120,
+  "width": 1280,
+  "height": 720,
+  "timeoutMs": 15000
+}
+```
+
+#### 11. `apply_client_patch` - 对客户端当前草稿应用 Clip Patch 并同步 UI
+**参数**：
+```json
+{
+  "clientId": "pjfc-client-xxxx",
+  "clipId": "clip_001",
+  "patch": {
+    "name": "Updated by AI",
+    "targetWidth": 1280
+  }
+}
+```
+
+#### 12. `move_client_clip` - 移动客户端上的 Clip 并同步 UI
+**参数**：
+```json
+{
+  "clientId": "pjfc-client-xxxx",
+  "clipId": "clip_001",
+  "layerIndex": 1,
+  "startFrame": 200
 }
 ```
 
@@ -511,4 +564,3 @@ project_root/
 ## 支持
 
 遇到问题？提交 Issue 或查看项目文档。
-

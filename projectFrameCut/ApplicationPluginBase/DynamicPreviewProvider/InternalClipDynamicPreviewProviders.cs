@@ -56,7 +56,15 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
     private static readonly ConcurrentDictionary<string, ConcurrentDictionary<VideoFrameCacheKey, CachedVideoFrame>> _perClipCache = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<VideoPrefetchContextKey, VideoPrefetchContext> _prefetchContexts = new();
     private static readonly ConcurrentDictionary<string, long> _diskFrameAccess = new(StringComparer.Ordinal);
-    private static readonly string _diskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
+
+    public static string DiskCacheRoot
+    {
+        get;
+        set
+        {
+            if (Directory.Exists(value)) field = value;
+        }
+    } = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
 
     public override string TypeName => "VideoClip";
 
@@ -86,7 +94,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             return BuildImage(cachedSource);
         }
 
-        var decoded = RenderFrameAsImageSource(clip, canvasWidth, canvasHeight, targetFrame, contextKey, frameKey);
+        var decoded = RenderFrameAsImageSource(clip, canvasWidth, canvasHeight, targetFrame, contextKey, frameKey, persistToDisk: false);
         if (decoded is null)
         {
             return BuildFallbackLabel("Video source is unavailable.");
@@ -242,7 +250,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
                         continue;
                     }
 
-                    var decoded = RenderFrameAsImageSource(clip, contextKey.CanvasWidth, contextKey.CanvasHeight, frameIndex, contextKey, frameKey);
+                    var decoded = RenderFrameAsImageSource(clip, contextKey.CanvasWidth, contextKey.CanvasHeight, frameIndex, contextKey, frameKey, persistToDisk: true);
                     if (decoded is not null)
                     {
                         CacheFrame(frameKey, decoded.Value.Source, decoded.Value.DiskPath);
@@ -259,20 +267,19 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         });
     }
 
-    private static RenderedVideoFrame? RenderFrameAsImageSource(VideoClip clip, int canvasWidth, int canvasHeight, uint targetFrame, VideoPrefetchContextKey contextKey, VideoFrameCacheKey frameKey)
+    private static RenderedVideoFrame? RenderFrameAsImageSource(IClip clip, int canvasWidth, int canvasHeight, uint targetFrame, VideoPrefetchContextKey contextKey, VideoFrameCacheKey frameKey, bool persistToDisk)
     {
-        var context = _prefetchContexts.GetOrAdd(contextKey, static _ => new VideoPrefetchContext());
-        context.DecodeGate.Wait();
-
-        try
+        // Double-check cache before decoding (handles race between main thread and prefetch worker).
+        if (TryGetCachedFrame(frameKey, out var cached))
         {
-            if (TryGetCachedFrame(frameKey, out var cached))
-            {
-                var cachedPath = ResolveDiskCachePath(frameKey);
-                return new RenderedVideoFrame(cached, File.Exists(cachedPath) ? cachedPath : null);
-            }
+            var cachedPath = ResolveDiskCachePath(frameKey);
+            return new RenderedVideoFrame(cached, File.Exists(cachedPath) ? cachedPath : null);
+        }
 
-            using var frame = ((IClip)clip).GetFrame(targetFrame, canvasWidth, canvasHeight, true, 8);
+        using var frame = clip.GetFrameRelativeToStartPointOfSource(clip.TryGetRelativeFrameIndex(targetFrame, clip.StartFrame) ?? 0, canvasWidth, canvasHeight, true, 8);
+
+        if (persistToDisk)
+        {
             var diskPath = ResolveDiskCachePath(frameKey);
             if (TryPersistFrameToDisk(frame, diskPath))
             {
@@ -280,17 +287,9 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
                 TouchDiskEntry(diskPath);
                 return new RenderedVideoFrame(diskSource, diskPath);
             }
+        }
 
-            return new RenderedVideoFrame(frame.ToImageSource(), null);
-        }
-        catch
-        {
-            return null;
-        }
-        finally
-        {
-            context.DecodeGate.Release();
-        }
+        return new RenderedVideoFrame(frame.ToImageSource(), null);
     }
 
     private static bool IsFrameCached(VideoFrameCacheKey frameKey)
@@ -355,7 +354,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         var clipId = SanitizePathSegment(frameKey.ClipId);
         var dimension = $"{frameKey.CanvasWidth}x{frameKey.CanvasHeight}";
         var fingerprint = frameKey.SourceFingerprint.ToString("X16");
-        return Path.Combine(_diskCacheRoot, clipId, dimension, fingerprint, $"{frameKey.FrameIndex}.png");
+        return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{frameKey.FrameIndex}.png");
     }
 
     private static string SanitizePathSegment(string raw)
@@ -416,7 +415,6 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
     private sealed class VideoPrefetchContext
     {
-        public SemaphoreSlim DecodeGate { get; } = new(1, 1);
         public ConcurrentQueue<uint> Queue { get; } = new();
         public ConcurrentDictionary<uint, byte> PendingFrames { get; } = new();
         public int WorkerRunning;
@@ -1023,7 +1021,7 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
                     SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
                     _ => FontAttributes.None,
                 },
-                FontFamily = string.IsNullOrWhiteSpace(e.fontFamily) ? null : "UserFont_" + e.fontFamily,
+                //FontFamily = string.IsNullOrWhiteSpace(e.fontFa   mily) ? null : "UserFont_" + e.fontFamily,
                 FontSize = fontSize,
                 Margin = Thickness.Zero,
                 Padding = Thickness.Zero,
