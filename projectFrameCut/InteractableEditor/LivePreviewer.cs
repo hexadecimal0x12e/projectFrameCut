@@ -104,6 +104,7 @@ namespace projectFrameCut.LivePreview
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
             var clipsList = new List<IClip>();
+            var reinitTasks = new List<Task>();
 
             foreach (var clip in elements.Cast<JsonElement>())
             {
@@ -148,10 +149,11 @@ namespace projectFrameCut.LivePreview
                         }
                     }
                 }
-                await Task.Run(() => clipInstance.ReInit(8));
                 clipsList.Add(clipInstance);
-
+                reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
             }
+
+            await Task.WhenAll(reinitTasks);
 
             Clips = clipsList.ToArray();
             SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();

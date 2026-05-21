@@ -4060,21 +4060,24 @@ namespace projectFrameCut.InteractableEditor
             var bottomGap = _canvasHeight - (renderRect.Y + renderRect.Height);
             _autoHideBottomControls = bottomGap < 35d;
 
-            if (!_autoHideBottomControls)
+            Dispatcher.Dispatch(() =>
             {
-                CancelHideBottomControlsDebounce();
-                LayoutOptionsBar.IsVisible = true;
-                RefreshButton.IsVisible = true;
-                ManageRefLineButton.IsVisible = true;
-            }
-            else
-            {
-                // 默认隐藏，鼠标进入 BottomControlsHost 区域时才显示
-                LayoutOptionsBar.IsVisible = false;
-                RefreshButton.IsVisible = false;
-                ManageRefLineButton.IsVisible = false;
+                if (!_autoHideBottomControls)
+                {
+                    CancelHideBottomControlsDebounce();
+                    LayoutOptionsBar.IsVisible = true;
+                    RefreshButton.IsVisible = true;
+                    ManageRefLineButton.IsVisible = true;
+                }
+                else
+                {
+                    // 默认隐藏，鼠标进入 BottomControlsHost 区域时才显示
+                    LayoutOptionsBar.IsVisible = false;
+                    RefreshButton.IsVisible = false;
+                    ManageRefLineButton.IsVisible = false;
 
-            }
+                }
+            });
         }
 
         private void OnBottomControlsHostEntered(object? sender, PointerEventArgs e)

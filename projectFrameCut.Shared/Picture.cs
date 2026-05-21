@@ -1612,6 +1612,7 @@ namespace projectFrameCut.Shared
 
         public HDRPicture16bpp(int width, int height) : base(width, height)
         {
+            Brightness = new float[Pixels];
         }
 
         public float[] Brightness { get; set; } = Array.Empty<float>();

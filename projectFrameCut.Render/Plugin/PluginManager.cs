@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using System.Diagnostics;
 
 namespace projectFrameCut.Render.Plugin
 {
@@ -308,8 +309,9 @@ namespace projectFrameCut.Render.Plugin
                         return source;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    if (Debugger.IsAttached) Log(ex, $"Init decoder for {filePath}");
                     // Ignore and try next plugin
                 }
             }

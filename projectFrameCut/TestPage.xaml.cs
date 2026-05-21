@@ -1019,6 +1019,8 @@ public partial class TestPage : ContentPage
         .AddSwitch("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
         .AddButton("testButton", "Click me!")
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef","ghijklm"))
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef222","ghijklm111"))
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
@@ -1039,7 +1041,7 @@ public partial class TestPage : ContentPage
         })
         .ListenToChanges(async (s, e) =>
         {
-            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
+            await DisplayAlertAsync("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
         });
         PpbTestGrid.Content = ppb.Build();
 
@@ -1048,8 +1050,11 @@ public partial class TestPage : ContentPage
 
     private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
     {
-        ppb.DefaultPadding = e.NewValue;
-        PpbTestGrid.Content = ppb.Build();
+        Dispatcher.Dispatch(() =>
+        {
+            ppb.DefaultPadding = e.NewValue;
+            PpbTestGrid.Content = ppb.Build();
+        });
     }
 
     private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)

@@ -2612,7 +2612,7 @@ public class DraftSettingPage
         await parent.ClipEditor.UpdateClips(parent.Clips);
         parent.ClipEditor.SetCurrentFrame((uint)Math.Max(0, parent.CurrentFrame));
         await parent.previewer.UpdateDraft(draft);
-        await parent.DynamicPreviewProvider.UpdateDraft(draft);
+        parent.DynamicPreviewProvider.SetClips(parent.previewer.Clips);
         await parent.Save();
         parent.SetStateOK(successText);
     }
@@ -2668,7 +2668,7 @@ public class DraftSettingPage
                 await parent.ClipEditor.UpdateClips(parent.Clips);
                 parent.ClipEditor.SetCurrentFrame((uint)Math.Max(0, parent.CurrentFrame));
                 await parent.previewer.UpdateDraft(draft);
-                await parent.DynamicPreviewProvider.UpdateDraft(draft);
+                parent.DynamicPreviewProvider.SetClips(parent.previewer.Clips);
                 await parent.Save();
             }
 

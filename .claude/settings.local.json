@@ -2,21 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build *)",
-      "Bash(splc-edit list-locales *)",
-      "Bash(splc-edit list-items *)",
-      "Bash(splc-edit get-item *)",
+      "Bash(splc-edit *)",
       "Bash(dotnet tool *)",
       "Bash(xargs -I{} sh -c 'jq -r \"select\\(.message.role == \\\\\"assistant\\\\\"\\) | .message.content[]? | select\\(.type == \\\\\"tool_use\\\\\"\\) | \\\\\"\\\\\\(.name\\)\\\\t\\\\\\(if .name == \\\\\"Bash\\\\\" then .input.command else \\\\\"\\\\\" end\\)\\\\\"\" \"{}\" 2>/dev/null')",
-      "Bash(splc-edit generate-code *)",
-      "Bash(splc-edit add-item *)",
-      "Bash(splc-edit update-item *)",
       "Bash(xxd)",
       "Bash(findstr Value)",
       "Bash(dotnet restore *)",
-      "Bash(Select-Object -Last 20)",
+      "Bash(cd *)",
+      "PowerShell(cd *)",
       "PowerShell(dotnet build *)",
-      "Bash(Select-Object -Last 15)",
-      "Bash(splc-edit --help)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Select-String -Pattern \"error|Error|错误\")",
+      "Bash(Get-Content *)"
+    ],
+    "deny": [
+      "Bash(Select-Object *)",
+      "Bash(Get-Content *)",
       "Bash(Select-String -Pattern \"error|Error|错误\")"
     ]
   }

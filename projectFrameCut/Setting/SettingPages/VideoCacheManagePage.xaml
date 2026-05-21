@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.Setting.SettingPages.VideoCacheManagePage"
+             xmlns:l="clr-namespace:LocalizedResources"
+             Title="{l:Localized Key=VideoCacheManagePage_Tile}">
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="8">
+            <Button x:Name="SelectPathButton" Clicked="SelectPathButton_Clicked" Text="{l:Localized Key=VideoCacheManagePage_SelectPath}" />
+            <Label x:Name="CurrentPathLabel" FontSize="14" TextColor="Gray" />
+
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
+                <Label Text="{l:Localized Key=VideoCacheManagePage_MaxSize}" VerticalOptions="Center" FontSize="14" />
+                <Picker x:Name="MaxSizePicker" WidthRequest="150" SelectedIndexChanged="MaxSizePicker_SelectedIndexChanged">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <l:Localized Key="VideoCacheManagePage_MaxSize_None" />
+                            <x:String>1 GB</x:String>
+                            <x:String>5 GB</x:String>
+                            <x:String>10 GB</x:String>
+                            <x:String>20 GB</x:String>
+                            <x:String>50 GB</x:String>
+                            <x:String>75 GB</x:String>
+                            <x:String>100 GB</x:String>
+                            <l:Localized Key="DraftPage_PrevResultion_Custom" />
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+                <Label Text="{l:Localized Key=VideoCacheManagePage_EnableCompress}" VerticalOptions="Center" FontSize="14" />
+                <CheckBox x:Name="EnableCompressCheckBox" VerticalOptions="Center" CheckedChanged="EnableCompressCheckBox_CheckedChanged" />
+            </HorizontalStackLayout>
+
+            <Grid>
+                <HorizontalStackLayout Spacing="8">
+                    <Button x:Name="ClearSomeButton" Text="{l:Localized Key=VideoCacheManagePage_Clean}" BackgroundColor="#B00020" TextColor="White" Clicked="CleanUnusedButton_Clicked" />
+                    <Button x:Name="ClearAllButton" Text="{l:Localized Key=DraftSettingPage_Tab_History_CleanupAll}" BackgroundColor="#B00020" TextColor="White" Clicked="ClearAllButton_Clicked" />
+                </HorizontalStackLayout>
+                <Label x:Name="CurrentSizeLabel" Text="Unknown" FontSize="14" TextColor="Gray" HorizontalOptions="End"  />
+
+
+            </Grid>
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding CacheItems}" Spacing="6">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Border StrokeThickness="1" Stroke="#30222222" StrokeShape="RoundRectangle 8" Padding="8">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding DisplayName}" ToolTipProperties.Text="{Binding Path}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding SizeText}" FontSize="12"  />
+                                <HorizontalStackLayout>
+                                    <Label Text="MD5:" FontSize="12" TextColor="Gray" />
+                                    <Label Text="{Binding MD5}" FontSize="12" TextColor="Gray" LineBreakMode="MiddleTruncation"  Margin="2,0,0,0" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout>
+                                    <Label Text="{l:Localized Key=VideoCacheManagePage_LastAccessIn}" FontSize="12" TextColor="Gray" />
+                                    <Label Text="{Binding LastAccessText}" FontSize="12" TextColor="Gray" Margin="2,0,0,0" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}"  Clicked="OnDeleteCacheClicked" CommandParameter="{Binding MD5}" BackgroundColor="#B00020" TextColor="White" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Button x:Name="BuildCacheButton" Text="{l:Localized Key=VideoCacheManagePage_BuildCache}" Clicked="BuildCacheButton_Clicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

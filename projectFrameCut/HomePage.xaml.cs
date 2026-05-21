@@ -9,6 +9,7 @@ using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -31,6 +32,8 @@ using System.Windows.Input;
 using static System.Net.Mime.MediaTypeNames;
 using Application = Microsoft.Maui.Controls.Application;
 using IPicture = projectFrameCut.Shared.IPicture;
+using projectFrameCut.Render.RenderAPIBase.Sources;
+
 
 
 
@@ -1225,7 +1228,7 @@ public partial class HomePage : ContentPage
         try
         {
             haveDrafts = Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length != 0;
-        } 
+        }
         catch { }
         Task.Delay(5000).ContinueWith(async (_) =>
         {
@@ -1365,6 +1368,13 @@ public partial class HomePage : ContentPage
         PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
         PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
         PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
+        var vfdCahceDir = SettingsManager.GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
+        Directory.CreateDirectory(vfdCahceDir);
+        VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
+        VideoFrameDiskCache.EnableCompression = SettingsManager.IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
+        VideoFrameDiskCache.MaximumCacheSizeBytes = SettingsManager.GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
+        IVideoSource.EnableMemoryCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
+        IVideoSource.EnableDiskCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 

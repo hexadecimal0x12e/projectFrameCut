@@ -48,8 +48,6 @@ internal static class TransformClipDynamicPreviewRuntimeKeys
 
 internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPreviewProviderBase
 {
-    private const int MaxCachedVideoFrames = 240;
-    private const int MaxDiskCachedVideoFrames = 1500;
     private const int PrefetchForwardCount = 8;
     private const int PrefetchBackwardCount = 1;
 
@@ -152,42 +150,9 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         var clipCache = _perClipCache.GetOrAdd(frameKey.ClipId, static _ => new ConcurrentDictionary<VideoFrameCacheKey, CachedVideoFrame>());
         clipCache[frameKey] = new CachedVideoFrame(source, diskPath);
         TouchDiskEntry(diskPath);
-        TrimCacheIfNeeded();
-        TrimDiskCacheIfNeeded();
     }
 
-    private static void TrimCacheIfNeeded()
-    {
-        var totalCachedFrames = _perClipCache.Sum(entry => entry.Value.Count);
-        if (totalCachedFrames <= MaxCachedVideoFrames)
-        {
-            return;
-        }
-
-        var removeCount = totalCachedFrames - MaxCachedVideoFrames;
-        var staleFrames = _perClipCache
-            .SelectMany(clipEntry => clipEntry.Value.Select(frameEntry => new
-            {
-                ClipId = clipEntry.Key,
-                Key = frameEntry.Key,
-                Value = frameEntry.Value
-            }))
-            .OrderBy(x => x.Value.LastAccessTicks)
-            .Take(removeCount)
-            .ToArray();
-
-        foreach (var stale in staleFrames)
-        {
-            if (_perClipCache.TryGetValue(stale.ClipId, out var clipCache))
-            {
-                clipCache.TryRemove(stale.Key, out _);
-                if (clipCache.IsEmpty)
-                {
-                    _perClipCache.TryRemove(stale.ClipId, out _);
-                }
-            }
-        }
-    }
+   
 
     private static void EnqueuePrefetch(VideoClip clip, VideoPrefetchContextKey contextKey, uint targetFrame)
     {
@@ -385,32 +350,6 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         }
 
         _diskFrameAccess[diskPath] = DateTime.UtcNow.Ticks;
-    }
-
-    private static void TrimDiskCacheIfNeeded()
-    {
-        if (_diskFrameAccess.Count <= MaxDiskCachedVideoFrames)
-        {
-            return;
-        }
-
-        var removeCount = _diskFrameAccess.Count - MaxDiskCachedVideoFrames;
-        foreach (var stale in _diskFrameAccess.OrderBy(entry => entry.Value).Take(removeCount))
-        {
-            if (_diskFrameAccess.TryRemove(stale.Key, out _))
-            {
-                try
-                {
-                    if (File.Exists(stale.Key))
-                    {
-                        File.Delete(stale.Key);
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
     }
 
     private sealed class VideoPrefetchContext

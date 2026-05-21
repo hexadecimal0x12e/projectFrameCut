@@ -89,6 +89,9 @@ public partial class GeneralSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
+            .AddSwitch("codec_EnableMemoryCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableMemoryCache, SettingLocalizedResources.GeneralCodec_EnableMemoryCache_Desc), IsBoolSettingTrue("codec_EnableMemoryCache"))
+            .AddSwitch("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
+            .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
@@ -403,6 +406,10 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     needReboot = true;
                     goto done;
+                case "codec_EnableDiskCache":
+                case "codec_EnableMemoryCache":
+                    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    break;
             }
 
             if (args.Value != null)
@@ -418,7 +425,7 @@ public partial class GeneralSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            // 处理异常并通知用户
+            // 锟斤拷锟斤拷锟届常锟斤拷通知锟矫伙拷
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

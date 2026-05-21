@@ -29,7 +29,7 @@ namespace projectFrameCut.InteractableEditor;
 public sealed class DynamicPreview : IDisposable
 {
     private const double MinTextPreviewSize = 10d;
-    private const int ParallelPreparationThreshold = 4;
+    private const int ParallelPreparationThreshold = 2;
     private const int TextMeasureCacheLimit = 2048;
     private const int MaxCachedFallbackFrames = 120;
     private const int MaxDiskCachedFallbackFrames = 1500;
@@ -56,7 +56,6 @@ public sealed class DynamicPreview : IDisposable
 
     private IClip[]? _clips;
     private LivePreviewer? _previewer;
-    private uint _currentFrame;
     private long _renderVersion;
     private int _viewportWidth;
     private int _viewportHeight;
@@ -77,9 +76,7 @@ public sealed class DynamicPreview : IDisposable
 
     public IClip[]? Clips => _clips;
 
-    public uint CurrentFrame => _currentFrame;
-
-    public bool DisableEffectDynamicPreview { get; set; } = true;
+    public bool DisableEffectDynamicPreview { get; set; } = false;
 
     /// <summary>
     /// Divisor for preview resolution. 1 = full resolution, 2 = half, etc.
@@ -89,34 +86,43 @@ public sealed class DynamicPreview : IDisposable
 
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight, CancellationToken token)
     {
-        _currentFrame = frameIndex;
         var prepareVersion = Interlocked.Increment(ref _prepareVersion);
-        var clipsSnapshot = AcquireClipsSnapshot();
         try
         {
-            var requests = ResolveRequests(clipsSnapshot, frameIndex);
-            var canvasWidth = ResolveCanvasSize(CanvasWidth, _viewportWidth, targetWidth);
-            var canvasHeight = ResolveCanvasSize(CanvasHeight, _viewportHeight, targetHeight);
-            var divisor = Math.Max(1, PreviewResolutionDivisor);
-            if (divisor > 1)
-            {
-                canvasWidth = Math.Max(1, canvasWidth / divisor);
-                canvasHeight = Math.Max(1, canvasHeight / divisor);
-            }
-
-            var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, prepareVersion, token).ConfigureAwait(false);
-            if (prepared is not null)
-            {
-                CacheOverlayPreparedPreviews(prepared);
-                return prepared;
-            }
-            if (token.IsCancellationRequested) return null;
-            return GetCachedOverlayPreparedPreviews();
+            var dimensions = ResolveDimensions(targetWidth, targetHeight, CanvasWidth, CanvasHeight);
+            return await GetFinalRequests(frameIndex, targetWidth, targetHeight, prepareVersion, dimensions.canvasWidth, dimensions.canvasHeight, token).ConfigureAwait(false);
         }
         finally
         {
             ReleaseClipsSnapshot();
         }
+    }
+
+    public (int canvasWidth, int canvasHeight) ResolveDimensions(int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight)
+    {
+        var canvasWidth = ResolveCanvasSize(CanvasWidth, _viewportWidth, targetWidth);
+        var canvasHeight = ResolveCanvasSize(CanvasHeight, _viewportHeight, targetHeight);
+        var divisor = Math.Max(1, PreviewResolutionDivisor);
+        if (divisor > 1)
+        {
+            canvasWidth = Math.Max(1, canvasWidth / divisor);
+            canvasHeight = Math.Max(1, canvasHeight / divisor);
+        }
+
+        return (canvasWidth, canvasHeight);
+    }
+
+    public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int targetWidth, int targetHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token)
+    {
+        var clipsSnapshot = AcquireClipsSnapshot();
+        var requests = ResolveRequests(clipsSnapshot, frameIndex);
+        var prepared = await Task.Run(() => PrepareRequests(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, checkVersion: true, prepareVersion, token)).ConfigureAwait(false);
+        if (prepared is not null)
+        {
+            return prepared;
+        }
+        if (token.IsCancellationRequested) return null;
+        return GetCachedOverlayPreparedPreviews();
     }
 
     public async Task UpdateDraft(DraftStructureJSON json)
@@ -125,6 +131,7 @@ public sealed class DynamicPreview : IDisposable
         var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
         var clipsList = new List<IClip>();
+        var reinitTasks = new List<Task>();
 
         foreach (var clip in elements.Cast<JsonElement>())
         {
@@ -169,9 +176,11 @@ public sealed class DynamicPreview : IDisposable
                     }
                 }
             }
-            await Task.Run(() => clipInstance.ReInit(8));
             clipsList.Add(clipInstance);
+            reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
         }
+
+        await Task.WhenAll(reinitTasks);
 
         var newClips = clipsList.ToArray();
 
@@ -180,6 +189,40 @@ public sealed class DynamicPreview : IDisposable
         {
             var oldClips = _clips;
             _clips = newClips;
+            if (oldClips is not null)
+            {
+                if (_activePreviewOps > 0)
+                {
+                    _pendingDisposeClipBatches.Add(oldClips);
+                }
+                else
+                {
+                    batchToDispose = oldClips;
+                }
+            }
+        }
+
+        if (batchToDispose is not null)
+        {
+            DisposeClipBatch(batchToDispose);
+        }
+
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
+    }
+
+    public void SetClips(IClip[]? clips)
+    {
+        if (clips is null)
+        {
+            return;
+        }
+
+        IClip[]? batchToDispose = null;
+        lock (_clipsGate)
+        {
+            var oldClips = _clips;
+            _clips = clips;
             if (oldClips is not null)
             {
                 if (_activePreviewOps > 0)
@@ -229,16 +272,11 @@ public sealed class DynamicPreview : IDisposable
         CacheOverlayPreparedPreviews([]);
     }
 
-    private async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, long prepareVersion, CancellationToken token)
+    public IReadOnlyList<PreparedPreview> PrepareRequests(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
         if (requests.Count == 0)
         {
             return [];
-        }
-
-        if (prepareVersion != Interlocked.Read(ref _prepareVersion))
-        {
-            return null;
         }
 
         var orderedRequests = new PreviewRequest[requests.Count];
@@ -252,52 +290,37 @@ public sealed class DynamicPreview : IDisposable
         {
             for (var i = 0; i < orderedRequests.Length; i++)
             {
-                if (prepareVersion != Interlocked.Read(ref _prepareVersion))
-                {
-                    return null;
-                }
-
                 prepared[i] = GenerateClipPreviewPrepared(orderedRequests[i], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token);
             }
 
             return prepared;
         }
 
-        await Task.Run(() =>
+        var options = new ParallelOptions
         {
-            var options = new ParallelOptions
+            MaxDegreeOfParallelism = s_maxPreparationParallelism,
+            CancellationToken = token
+        };
+        Parallel.For(0, orderedRequests.Length, options, (index, state) =>
+        {
+            if (token.IsCancellationRequested) return;
+            if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
             {
-                MaxDegreeOfParallelism = s_maxPreparationParallelism,
-                CancellationToken = token
-            };
-            Parallel.For(0, orderedRequests.Length, options, (index, state) =>
-            {
-                if (token.IsCancellationRequested) return;
-                if (prepareVersion != Interlocked.Read(ref _prepareVersion))
-                {
-                    state.Stop();
-                    return;
-                }
+                state.Stop();
+                return;
+            }
 
-                prepared[index] = GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token);
-            });
-        }, token).ConfigureAwait(false);
+            prepared[index] = GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token);
+        });
 
-        if (prepareVersion != Interlocked.Read(ref _prepareVersion))
+
+        if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
         {
             return null;
         }
-
+        if (prepared.Length > 0) CacheOverlayPreparedPreviews(prepared);
         return prepared;
     }
-
-    private static Microsoft.Maui.Controls.Grid CreateCompositeHost()
-        => new()
-        {
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            InputTransparent = true
-        };
 
     private static int ResolveCanvasSize(double canvasSize, int cachedSize, int fallbackSize)
     {
@@ -312,48 +335,6 @@ public sealed class DynamicPreview : IDisposable
         }
 
         return Math.Max(1, fallbackSize);
-    }
-
-    private static View? BuildViewportAlignedView(View? view, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
-    {
-        if (view is null)
-        {
-            return null;
-        }
-
-        var logicalWidth = Math.Max(1, targetWidth);
-        var logicalHeight = Math.Max(1, targetHeight);
-        var viewportRect = CalculateAspectFitRect(Math.Max(1, viewportWidth), Math.Max(1, viewportHeight), logicalWidth, logicalHeight);
-        var scale = viewportRect.Width / logicalWidth;
-        if (double.IsNaN(scale) || double.IsInfinity(scale) || scale <= 0)
-        {
-            scale = 1d;
-        }
-
-        var logicalCanvas = new Grid
-        {
-            WidthRequest = logicalWidth,
-            HeightRequest = logicalHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true
-        };
-        logicalCanvas.Children.Add(view);
-
-        return new ContentView
-        {
-            Content = logicalCanvas,
-            WidthRequest = logicalWidth,
-            HeightRequest = logicalHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            AnchorX = 0,
-            AnchorY = 0,
-            Scale = scale,
-            TranslationX = viewportRect.X,
-            TranslationY = viewportRect.Y
-        };
     }
 
     private static bool TryUpdatePreviewTreeInPlace(View existing, View incoming)
@@ -440,7 +421,7 @@ public sealed class DynamicPreview : IDisposable
         target.AutomationId = source.AutomationId;
     }
 
-    private void CacheOverlayPreparedPreviews(IReadOnlyList<PreparedPreview> prepared)
+    public void CacheOverlayPreparedPreviews(IReadOnlyList<PreparedPreview> prepared)
     {
         lock (_preparedOverlayCacheGate)
         {
@@ -494,7 +475,7 @@ public sealed class DynamicPreview : IDisposable
         return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
     }
 
-    private IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
+    public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
     {
         if (clips is null || clips.Count == 0)
         {
@@ -576,6 +557,7 @@ public sealed class DynamicPreview : IDisposable
 
     private View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message, bool applyClipTargetLayout, CancellationToken token)
     {
+        Stopwatch diagSW = Stopwatch.StartNew();
         message = null;
         var clip = request.Clip;
         if (clip is null)
@@ -595,9 +577,16 @@ public sealed class DynamicPreview : IDisposable
             }
         }
         if (token.IsCancellationRequested) return null;
+
+        var willUseEffectFallback = DisableEffectDynamicPreview && enabledEffects.Length > 0;
+
         View? generatedView = null;
         var usedFullRenderFallback = false;
-        if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
+        if (willUseEffectFallback)
+        {
+            LogOnce(_effectFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
+        }
+        else if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
         {
             try
             {
@@ -622,9 +611,15 @@ public sealed class DynamicPreview : IDisposable
             generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, fullRender: false, sourceColorAdjustEffects, token);
             usedFullRenderFallback = false;
         }
+        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 1 - preview generation took {diagSW.ElapsedMilliseconds} ms.");
         if (token.IsCancellationRequested) return null;
 
-        if (generatedView is null)
+        if (willUseEffectFallback)
+        {
+            generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+            usedFullRenderFallback = true;
+        }
+        else if (generatedView is null)
         {
             try
             {
@@ -642,52 +637,45 @@ public sealed class DynamicPreview : IDisposable
             return null;
         }
 
-        if (enabledEffects.Length > 0 && !usedFullRenderFallback)
+        if (enabledEffects.Length > 0 && !usedFullRenderFallback && !DisableEffectDynamicPreview)
         {
-            if (DisableEffectDynamicPreview)
+            for (var i = 0; i < enabledEffects.Length; i++)
             {
-                generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
-                usedFullRenderFallback = true;
-            }
-            else
-            {
-                for (var i = 0; i < enabledEffects.Length; i++)
+                var effect = enabledEffects[i];
+                if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
                 {
-                    var effect = enabledEffects[i];
-                    if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
+                    continue;
+                }
+
+                var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
+                if (isLegacyLayoutEffect)
+                {
+                    if (!applyClipTargetLayout)
                     {
                         continue;
                     }
 
-                    var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
-                    if (isLegacyLayoutEffect)
+                    if (HasExplicitTargetRect(clip))
                     {
-                        if (!applyClipTargetLayout)
-                        {
-                            continue;
-                        }
-
-                        if (HasExplicitTargetRect(clip))
-                        {
-                            continue;
-                        }
+                        continue;
                     }
-                    var provider = ResolveEffectProvider(effect, generatedView.GetType());
-                    if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
-                    {
-                        generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex);
-                    }
-                    else
-                    {
-                        var effectKey = $"{clip.Id}:{effect.TypeName}:{effect.Name}";
-                        LogOnce(_effectFallbackLogKeys, effectKey, $"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using clip-local fallback.");
-                        generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
-                        usedFullRenderFallback = true;
-                        break;
-                    }
+                }
+                var provider = ResolveEffectProvider(effect, generatedView.GetType());
+                if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
+                {
+                    generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex);
+                }
+                else
+                {
+                    var effectKey = $"{clip.Id}:{effect.TypeName}:{effect.Name}";
+                    LogOnce(_effectFallbackLogKeys, effectKey, $"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using clip-local fallback.");
+                    generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+                    usedFullRenderFallback = true;
+                    break;
                 }
             }
         }
+        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 2 - process effect took {diagSW.ElapsedMilliseconds} ms.");
 
         if (generatedView is null)
         {
@@ -711,7 +699,11 @@ public sealed class DynamicPreview : IDisposable
             return generatedView;
         }
 
-        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
+        var layout = ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
+
+        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 3 - apply layout {diagSW.ElapsedMilliseconds} ms.");
+        return layout;
+
     }
 
     private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int canvasWidth, int canvasHeight, uint frameIndex)
@@ -1323,7 +1315,8 @@ public sealed class DynamicPreview : IDisposable
         if (!fullRender)
         {
             var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
-            if (!TryGetCachedFallbackFrame(cacheKey, out frame))
+            var needsDeepCopy = sourceColorAdjustEffects is { Count: > 0 };
+            if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: needsDeepCopy))
             {
                 frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
                 if (frame is not null)
@@ -1343,7 +1336,7 @@ public sealed class DynamicPreview : IDisposable
             {
                 // Full-render fallback needs LivePreviewer; when unavailable, degrade to clip-local frame fallback.
                 var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
-                if (!TryGetCachedFallbackFrame(cacheKey, out frame))
+                if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: false))
                 {
                     frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
                     if (frame is not null)
@@ -1680,12 +1673,12 @@ public sealed class DynamicPreview : IDisposable
         }
     }
 
-    private static bool TryGetCachedFallbackFrame(FallbackFrameCacheKey key, out IPicture frame)
+    private static bool TryGetCachedFallbackFrame(FallbackFrameCacheKey key, out IPicture frame, bool deepCopy = true)
     {
         if (s_fallbackFrameCache.TryGetValue(key, out var cached))
         {
             cached.Touch();
-            frame = cached.Frame.DeepCopy();
+            frame = deepCopy ? cached.Frame.DeepCopy() : cached.Frame;
             return true;
         }
 
@@ -1865,7 +1858,7 @@ public sealed class DynamicPreview : IDisposable
         double X,
         double Y);
 
-    private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
+    public sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 
     private sealed class CachedFallbackFrame
     {

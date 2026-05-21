@@ -105,6 +105,16 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// </remarks>
         public bool StrictMode { get; set; }
 
+        /// <summary>
+        /// Enable or disable in-memory frame caching. When enabled, decoded frames are kept in RAM for faster re-access within the session.
+        /// </summary>
+        public static bool EnableMemoryCache { get; set; }
+
+        /// <summary>
+        /// Enable or disable disk-based frame caching. When enabled, decoded frames are written to disk for faster re-access across sessions.
+        /// </summary>
+        public static bool EnableDiskCache { get; set; }
+
     }
 
     public interface IVideoSource<T> : IVideoSource 
