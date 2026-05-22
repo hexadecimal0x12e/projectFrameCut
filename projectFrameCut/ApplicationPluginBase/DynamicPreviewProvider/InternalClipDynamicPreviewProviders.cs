@@ -664,27 +664,32 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
             }
         }
 
-        try
+        // Multi-resolution: try resize from a cached frame at a different size (memory first, then disk)
+        if (!TryGetResizedFromCache(clipId, sourceFingerprint, frameIndex, targetWidth, targetHeight, out frame)
+            && !TryGetResizedFromDisk(clipId, sourceFingerprint, frameIndex, targetWidth, targetHeight, out frame))
         {
-            var resolved = frameResolver(frameIndex, state);
-            frame = resolved.bitPerPixel == IPicture.PicturePixelMode.BytePicture
-                ? resolved
-                : resolved.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
-
-            string? persistedDiskPath = null;
-            if (TryPersistFrameToDisk(frame, diskPath))
+            try
             {
-                persistedDiskPath = diskPath;
+                var resolved = frameResolver(frameIndex, state);
+                frame = resolved.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                    ? resolved
+                    : resolved.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
             }
+            catch
+            {
+                frame = null!;
+                return false;
+            }
+        }
 
-            CacheFrame(key, frame, persistedDiskPath);
-            return true;
-        }
-        catch
+        string? persistedDiskPath = null;
+        if (TryPersistFrameToDisk(frame, diskPath))
         {
-            frame = null!;
-            return false;
+            persistedDiskPath = diskPath;
         }
+
+        CacheFrame(key, frame, persistedDiskPath);
+        return true;
     }
 
     private static bool TryGetCachedFrame(TransformSourceFrameCacheKey key, out IPicture frame)
@@ -699,6 +704,152 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
 
         frame = null!;
         return false;
+    }
+
+    private static bool TryGetResizedFromCache(string clipId, long sourceFingerprint, uint frameIndex, int targetWidth, int targetHeight, out IPicture resizedFrame)
+    {
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        TransformSourceFrameCacheKey? bestKey = null;
+
+        foreach (var kvp in _sourceFrameCache)
+        {
+            var k = kvp.Key;
+            if (k.ClipId == clipId && k.SourceFingerprint == sourceFingerprint && k.FrameIndex == frameIndex)
+            {
+                if (k.CanvasWidth == targetWidth && k.CanvasHeight == targetHeight)
+                    continue;
+
+                int delta = Math.Abs(k.CanvasWidth - targetWidth) + Math.Abs(k.CanvasHeight - targetHeight);
+                int area = k.CanvasWidth * k.CanvasHeight;
+
+                if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+                {
+                    bestDelta = delta;
+                    bestArea = area;
+                    bestKey = k;
+                }
+            }
+        }
+
+        if (bestKey is null || !_sourceFrameCache.TryGetValue(bestKey.Value, out var cached))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        cached.Touch();
+        using var source = cached.Frame.DeepCopy();
+        var resized = source.Resize(targetWidth, targetHeight, preserveAspect: true);
+        if (ReferenceEquals(resized, source))
+        {
+            resizedFrame = source;
+        }
+        else
+        {
+            resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                ? resized
+                : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+        }
+        return true;
+    }
+
+    private static List<(int width, int height)> ResolveDiskCacheSizes(string clipId, long sourceFingerprint)
+    {
+        var sizes = new List<(int width, int height)>();
+        var baseDir = Path.Combine(_diskCacheRoot, SanitizePathSegment(clipId));
+        if (!Directory.Exists(baseDir))
+            return sizes;
+
+        var fingerprintStr = sourceFingerprint.ToString("X16");
+        try
+        {
+            foreach (var subDir in Directory.EnumerateDirectories(baseDir))
+            {
+                var name = Path.GetFileName(subDir);
+                var parts = name.Split('x');
+                if (parts.Length == 2
+                    && int.TryParse(parts[0], out var w)
+                    && int.TryParse(parts[1], out var h)
+                    && w > 0 && h > 0
+                    && Directory.Exists(Path.Combine(subDir, fingerprintStr)))
+                {
+                    sizes.Add((w, h));
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return sizes;
+    }
+
+    private static bool TryGetResizedFromDisk(string clipId, long sourceFingerprint, uint frameIndex, int targetWidth, int targetHeight, out IPicture resizedFrame)
+    {
+        var sizes = ResolveDiskCacheSizes(clipId, sourceFingerprint);
+        if (sizes.Count == 0)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        (int width, int height) bestSize = default;
+
+        foreach (var (w, h) in sizes)
+        {
+            if (w == targetWidth && h == targetHeight)
+                continue;
+
+            int delta = Math.Abs(w - targetWidth) + Math.Abs(h - targetHeight);
+            int area = w * h;
+
+            if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+            {
+                bestDelta = delta;
+                bestArea = area;
+                bestSize = (w, h);
+            }
+        }
+
+        if (bestDelta == int.MaxValue)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        var diskKey = new TransformSourceFrameCacheKey(clipId, bestSize.width, bestSize.height, frameIndex, sourceFingerprint);
+        var diskPath = ResolveDiskCachePath(diskKey);
+        if (!File.Exists(diskPath))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        try
+        {
+            using var loaded = new Picture8bpp(diskPath);
+            var resized = loaded.Resize(targetWidth, targetHeight, preserveAspect: true);
+            if (ReferenceEquals(resized, loaded))
+            {
+                resizedFrame = loaded;
+            }
+            else
+            {
+                resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                    ? resized
+                    : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+            }
+            TouchDiskEntry(diskPath);
+            return true;
+        }
+        catch
+        {
+            resizedFrame = null!;
+            return false;
+        }
     }
 
     private static void CacheFrame(TransformSourceFrameCacheKey key, IPicture frame, string? diskPath)

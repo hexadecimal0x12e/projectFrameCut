@@ -308,7 +308,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool MultiSelectEnabled { get; set; }
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
-    public int DynamicPreviewTimeout { get; set; } = 2048;
+    public int DynamicPreviewTimeout { get; set; } = 4096;
 
     /// <summary>
     /// Resolution divisor for dynamic preview. 1 = full, 2 = half, etc.
@@ -7469,6 +7469,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
                 }, frameCts.Token);
             }
+            catch (TaskCanceledException)
+            {
+                LogDiagnostic($"Frame {targetFrame} cancelled");
+            }
             catch (OperationCanceledException)
             {
                 LogDiagnostic($"Frame {targetFrame} cancelled");
@@ -7480,11 +7484,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             if (preparedPreviews is null) continue;
-            else if ((timeSinceLastUi = now - _lastDynamicPreviewUIUpdate).TotalMilliseconds < minUiIntervalMs)
-            {
-                await Task.Delay((int)(minUiIntervalMs - timeSinceLastUi.TotalMilliseconds), ct);
-            }
-            else if (preparedPreviews.Count == 0)
+
+            // Skip UI update if no previews to render
+            if (preparedPreviews.Count == 0)
             {
                 var sinceLast = now - _lastDynamicPreviewUIUpdate;
                 if (sinceLast.TotalMilliseconds < 30)
@@ -7494,8 +7496,15 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
             }
 
+            // Throttle UI updates based on target frame rate
+            timeSinceLastUi = now - _lastDynamicPreviewUIUpdate;
+            if (timeSinceLastUi.TotalMilliseconds < minUiIntervalMs)
+            {
+                await Task.Delay((int)(minUiIntervalMs - timeSinceLastUi.TotalMilliseconds), ct);
+            }
 
-            await Dispatcher.DispatchAsync(async () =>
+            // Fire-and-forget UI update to avoid blocking frame rendering
+            _ = Dispatcher.DispatchAsync(async () =>
             {
                 try
                 {

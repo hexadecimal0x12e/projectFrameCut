@@ -4,6 +4,7 @@ using System.Text;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Png;
 using IPicture = projectFrameCut.Shared.IPicture;
 
 
@@ -135,43 +136,64 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// Convert a <see cref="IPicture"/> to a <see cref="ImageSource"/>.
         /// </summary>
         /// <param name="picture"></param>
+        /// <param name="cache"></param>
         /// <returns></returns>
         public static ImageSource ToImageSource(this IPicture picture)
         {
             if (picture == null) return null;
+            //return new IPictureImageSource { Source = picture };
 
-            var imgId = picture.GetUniqueID();
-            var cachePath = Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache", $"{imgId}.png");
+            //var imgId = picture.GetUniqueID();
+            //var cachePath = Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache", $"{imgId}.png");
 
-            if (File.Exists(cachePath))
-            {
-                try
-                {
-                    return ImageSource.FromFile(cachePath);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Failed to load image from cache file path: {cachePath}. Will try to load from memory stream.");
-                }
-            }
+            //if (File.Exists(cachePath))
+            //{
+            //    try
+            //    {
+            //        return ImageSource.FromFile(cachePath);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Log(ex, $"Failed to load image from cache file path: {cachePath}. Will try to load from memory stream.");
+            //    }
+            //}
 
-            try
-            {
-                Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache"));
-                picture.SaveAsPng8bpp(cachePath);
-                return ImageSource.FromFile(cachePath);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, $"Failed to save image to cache file path: {cachePath}. Will try to load from memory stream.");
+            //try
+            //{
+            //    Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache"));
+            //    picture.SaveAsPng8bpp(cachePath);
+            //    return ImageSource.FromFile(cachePath);
+            //}
+            //catch (Exception ex)
+            //{
+            //    Log(ex, $"Failed to save image to cache file path: {cachePath}. Will try to load from memory stream.");
                 var ms = new MemoryStream();
                 using var img = picture.SaveToSixLaborsImage(8, true, false);
                 img.SaveAsPng(ms);
                 var bytes = ms.ToArray();
                 return ImageSource.FromStream(() => new MemoryStream(bytes));
-            }
+            //}
 
         }
 
+    }
+
+    public class IPictureImageSource : ImageSource, IStreamImageSource
+    {
+        public required IPicture Source;
+
+        public Task<Stream> GetStreamAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (Source.Disposed)
+                throw new ObjectDisposedException(nameof(IPictureImageSource));
+
+            var ms = new MemoryStream();
+            using var img = Source.SaveToSixLaborsImage(8, true, false);
+            img.SaveAsPng(ms);
+            ms.Position = 0;
+            return Task.FromResult<Stream>(ms);
+        }
     }
 }

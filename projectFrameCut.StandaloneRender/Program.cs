@@ -8,6 +8,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
@@ -68,7 +69,7 @@ namespace projectFrameCut.StandaloneRender
                     if (assembly is not null)
                     {
                         var ProgramConfig = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                        var ProgramCommit = new string((assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray());
+                        var ProgramCommit = new string((assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().ToArray());
                         var AssemblyName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut StandaloneRender";
                         Console.WriteLine($"{AssemblyName} v{assembly.GetName().Version} {ProgramConfig}@{ProgramCommit}");
                         Console.WriteLine("Copyright (c) hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
@@ -301,6 +302,8 @@ namespace projectFrameCut.StandaloneRender
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
                 ILGPUPlugin.accelerators = accelerators;
+
+                if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") IPicture.PictureResizer = new Render.Effect.HwAccelPictureResizer();
                 return 0;
 
             }
@@ -360,7 +363,7 @@ namespace projectFrameCut.StandaloneRender
                 Log("ERROR: No output path specified. Use -output=<output file> to specify the output path.");
                 return 1;
             }
-            var outputPath = switches["output"];
+            var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
             Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" : "8")}");
 
@@ -484,6 +487,20 @@ namespace projectFrameCut.StandaloneRender
 
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
+
+            if(switches.TryGetValue("VideoFrameDiskCacheRoot", out var vfdcRoot) && Directory.Exists(vfdcRoot))
+            {
+                IVideoSource.EnableDiskCache = true;
+                VideoFrameDiskCache.CacheBaseDir = vfdcRoot;
+            }
+            else
+            {
+                IVideoSource.EnableDiskCache = false;
+            }
+
+            IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
+
+            Log($"Video source decoding cache - Memory cache: {IVideoSource.EnableMemoryCache}, Disk cache: {IVideoSource.EnableDiskCache} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
 
             #endregion
 
@@ -718,12 +735,8 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("You hit Ctrl-C! try cancelling render...");
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
-                    new Thread(async () =>
-                    {
-                        await cts.CancelAsync();
-                        builder?.Interrupt();
-                        Environment.Exit(255);
-                    }).Start();
+                    cts.Cancel();
+                    builder?.Interrupt();
                 };
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
             }
@@ -761,7 +774,7 @@ namespace projectFrameCut.StandaloneRender
                     return 1;
             }
 
-            Log($"All done, result is in '{outputPath}'.\r\nExiting...");
+            Log($"All done! Your result file is here:{Environment.NewLine}{outputPath}");
             return 0;
         }
 

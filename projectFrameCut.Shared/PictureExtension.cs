@@ -354,24 +354,23 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgba64> memory))
             {
-                result[x, y] = new Rgba64
+                var span = memory.Span;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                    A = (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f)
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
+                    span[i] = new Rgba64(rr[i], gg[i], bb[i], (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
                 }
-                else
+            }
+            else
+            {
+                int x = 0, y = 0;
+                int w = image.Width;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    x++;
+                    result[x, y] = new Rgba64(rr[i], gg[i], bb[i], (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
+                    if (++x == w) { x = 0; y++; }
                 }
             }
             return result;
@@ -381,52 +380,23 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
-            int x = 0, y = 0;
-            IHDRPicture<ushort>? hdrImage = image as IHDRPicture<ushort>;
-            bool isHdrWithBrightness = hdrImage?.Brightness != null && hdrImage.Brightness.Length == image.Pixels;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgb48> memory))
             {
-                ushort outputR = rr[i];
-                ushort outputG = gg[i];
-                ushort outputB = bb[i];
-
-                if (isHdrWithBrightness)
+                var span = memory.Span;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    float pixelBrightness = hdrImage!.Brightness![i];
-                    switch (DefaultHDRImageDegradeToSDRMode)
-                    {
-                        case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
-                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], pixelBrightness, hdrImage.MaximumBrightness, out outputR, out outputG, out outputB);
-                            break;
-                        case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
-                            float brightnessMask = Math.Clamp(pixelBrightness, 0f, 1f);
-                            outputR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
-                            outputG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
-                            outputB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
-                            break;
-                        case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
-                            break;
-                        case HDRImageDegradeToSDRMode.DisallowDowngrade:
-                            throw new InvalidOperationException($"HDR to SDR degrade is disabled. Current mode: {nameof(HDRImageDegradeToSDRMode.DisallowDowngrade)}.");
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
-                    }
+                    span[i] = new Rgb48(rr[i], gg[i], bb[i]);
                 }
-
-                result[x, y] = new Rgb48
+            }
+            else
+            {
+                int x = 0, y = 0;
+                int w = image.Width;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = outputR,
-                    G = outputG,
-                    B = outputB,
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
+                    result[x, y] = new Rgb48(rr[i], gg[i], bb[i]);
+                    if (++x == w) { x = 0; y++; }
                 }
             }
             return result;
@@ -437,47 +407,72 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternalHDR16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            int w = image.Width;
+
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgba64> memory))
             {
-                ushort mappedR = rr[i];
-                ushort mappedG = gg[i];
-                ushort mappedB = bb[i];
+                var span = memory.Span;
                 switch (degradeMode)
                 {
                     case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
-                        _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out ushort mr, out ushort mg, out ushort mb);
+                            span[i] = new Rgba64(mr, mg, mb, (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
-                        float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
-                        mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
-                        mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
-                        mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            float mask = Math.Clamp(brightness[i], 0f, 1f);
+                            span[i] = new Rgba64(
+                                (ushort)Math.Clamp((int)Math.Round(rr[i] * mask), 0, 65535),
+                                (ushort)Math.Clamp((int)Math.Round(gg[i] * mask), 0, 65535),
+                                (ushort)Math.Clamp((int)Math.Round(bb[i] * mask), 0, 65535),
+                                (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            span[i] = new Rgba64(rr[i], gg[i], bb[i], (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.DisallowDowngrade:
                         throw new InvalidOperationException($"HDR to SDR degrade is disabled. Current mode: {nameof(HDRImageDegradeToSDRMode.DisallowDowngrade)}.");
                     default:
                         throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
                 }
-
-                result[x, y] = new Rgba64
+            }
+            else
+            {
+                int x = 0, y = 0;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = mappedR,
-                    G = mappedG,
-                    B = mappedB,
-                    A = (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f)
-                };
-
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
+                    ushort mappedR = rr[i];
+                    ushort mappedG = gg[i];
+                    ushort mappedB = bb[i];
+                    switch (degradeMode)
+                    {
+                        case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                            break;
+                        case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                            float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
+                            mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
+                            mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
+                            mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                            break;
+                        case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                            break;
+                        case HDRImageDegradeToSDRMode.DisallowDowngrade:
+                            throw new InvalidOperationException($"HDR to SDR degrade is disabled. Current mode: {nameof(HDRImageDegradeToSDRMode.DisallowDowngrade)}.");
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
+                    }
+                    result[x, y] = new Rgba64(mappedR, mappedG, mappedB, (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f));
+                    if (++x == w) { x = 0; y++; }
                 }
             }
             return result;
@@ -488,45 +483,71 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternalHDR16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            int w = image.Width;
+
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgb48> memory))
             {
-                ushort mappedR = rr[i];
-                ushort mappedG = gg[i];
-                ushort mappedB = bb[i];
+                var span = memory.Span;
                 switch (degradeMode)
                 {
                     case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
-                        _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out ushort mr, out ushort mg, out ushort mb);
+                            span[i] = new Rgb48(mr, mg, mb);
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
-                        float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
-                        mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
-                        mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
-                        mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            float mask = Math.Clamp(brightness[i], 0f, 1f);
+                            span[i] = new Rgb48(
+                                (ushort)Math.Clamp((int)Math.Round(rr[i] * mask), 0, 65535),
+                                (ushort)Math.Clamp((int)Math.Round(gg[i] * mask), 0, 65535),
+                                (ushort)Math.Clamp((int)Math.Round(bb[i] * mask), 0, 65535));
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                        for (int i = 0; i < pixelCount; i++)
+                        {
+                            span[i] = new Rgb48(rr[i], gg[i], bb[i]);
+                        }
                         break;
                     case HDRImageDegradeToSDRMode.DisallowDowngrade:
                         throw new InvalidOperationException($"HDR to SDR degrade is disabled. Mode: {degradeMode}(current)/{DefaultHDRImageDegradeToSDRMode}(global default).");
                     default:
                         throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
                 }
-                result[x, y] = new Rgb48
+            }
+            else
+            {
+                int x = 0, y = 0;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = mappedR,
-                    G = mappedG,
-                    B = mappedB,
-                };
-
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
+                    ushort mappedR = rr[i];
+                    ushort mappedG = gg[i];
+                    ushort mappedB = bb[i];
+                    switch (degradeMode)
+                    {
+                        case HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB:
+                            _MapHDRSignalPixelToDisplaySignal(rr[i], gg[i], bb[i], brightness[i], maximumBrightness, out mappedR, out mappedG, out mappedB);
+                            break;
+                        case HDRImageDegradeToSDRMode.OverlayMaskFromBrightness:
+                            float brightnessMask = Math.Clamp(brightness[i], 0f, 1f);
+                            mappedR = (ushort)Math.Clamp((int)Math.Round(rr[i] * brightnessMask), 0, 65535);
+                            mappedG = (ushort)Math.Clamp((int)Math.Round(gg[i] * brightnessMask), 0, 65535);
+                            mappedB = (ushort)Math.Clamp((int)Math.Round(bb[i] * brightnessMask), 0, 65535);
+                            break;
+                        case HDRImageDegradeToSDRMode.DiscardBrightnessChannel:
+                            break;
+                        case HDRImageDegradeToSDRMode.DisallowDowngrade:
+                            throw new InvalidOperationException($"HDR to SDR degrade is disabled. Mode: {degradeMode}(current)/{DefaultHDRImageDegradeToSDRMode}(global default).");
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(DefaultHDRImageDegradeToSDRMode), DefaultHDRImageDegradeToSDRMode, "Unknown HDR degrade mode.");
+                    }
+                    result[x, y] = new Rgb48(mappedR, mappedG, mappedB);
+                    if (++x == w) { x = 0; y++; }
                 }
             }
             return result;
@@ -581,24 +602,23 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba32>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgba32> memory))
             {
-                result[x, y] = new Rgba32
+                var span = memory.Span;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                    A = (byte)(Math.Clamp(aa[i], 0f, 1f) * 255f)
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
+                    span[i] = new Rgba32(rr[i], gg[i], bb[i], (byte)(Math.Clamp(aa[i], 0f, 1f) * 255f));
                 }
-                else
+            }
+            else
+            {
+                int x = 0, y = 0;
+                int w = image.Width;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    x++;
+                    result[x, y] = new Rgba32(rr[i], gg[i], bb[i], (byte)(Math.Clamp(aa[i], 0f, 1f) * 255f));
+                    if (++x == w) { x = 0; y++; }
                 }
             }
             return result;
@@ -608,24 +628,31 @@ namespace projectFrameCut.Shared
         private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
         {
             var result = new Image<Rgb24>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
+            int pixelCount = image.Pixels;
+            if (result.DangerousTryGetSinglePixelMemory(out Memory<Rgb24> memory))
             {
-                result[x, y] = new Rgb24
+                var span = memory.Span;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
+                    span[i] = new Rgb24(rr[i], gg[i], bb[i]);
                 }
-                else
+            }
+            else
+            {
+                int w = image.Width;
+                result.ProcessPixelRows(accessor =>
                 {
-                    x++;
-                }
+                    for (int y = 0; y < accessor.Height; y++)
+                    {
+                        var row = accessor.GetRowSpan(y);
+                        int baseIdx = y * w;
+                        for (int x = 0; x < w; x++)
+                        {
+                            int i = baseIdx + x;
+                            row[x] = new Rgb24(rr[i], gg[i], bb[i]);
+                        }
+                    }
+                });
             }
             return result;
         }

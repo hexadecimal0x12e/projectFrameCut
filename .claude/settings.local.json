@@ -14,7 +14,8 @@
       "PowerShell(Get-Content *)",
       "PowerShell(Select-Object *)",
       "PowerShell(Select-String -Pattern \"error|Error|错误\")",
-      "Bash(Get-Content *)"
+      "Bash(Get-Content *)",
+      "Bash(dir *)"
     ],
     "deny": [
       "Bash(Select-Object *)",

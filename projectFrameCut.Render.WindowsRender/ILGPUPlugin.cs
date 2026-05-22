@@ -1,4 +1,5 @@
-﻿using ILGPU.Runtime;
+﻿using ILGPU;
+using ILGPU.Runtime;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -87,6 +88,22 @@ namespace projectFrameCut.Render.WindowsRender
         public ISoundTrack SoundTrackCreator(JsonElement element)
         {
             throw new NotImplementedException();
+        }
+
+        bool IPluginBase.OnLoaded(out string FailedReason)
+        {
+            try
+            {
+                var ctx = Context.CreateDefault();
+                accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize default ILGPU accelerators: {ex.Message}");
+                accelerators = Array.Empty<Accelerator>();
+            }
+            FailedReason = "";
+            return true;
         }
     }
 }

@@ -2330,6 +2330,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u51C6\u5907\u9884\u89C8...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} \u79D2\u6BCF\u5E27",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_ManageReferenceLines_Defaults",
         "Value": "\u9ED8\u8BA4\u8BBE\u7F6E",
         "Mode": "ConstString",
@@ -6218,6 +6244,130 @@
         "DontTranslate": false
       },
       {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u624B\u52A8\u751F\u6210\u7F13\u5B58...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u6E05\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5220\u9664\u6240\u6709\u7F13\u5B58\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5220\u9664{duration}\u7684 {n} \u4E2A\u7F13\u5B58\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u5F53\u524D\u76EE\u5F55\uFF1A{path}\r\u78C1\u76D8\u7F13\u5B58\u53EF\u80FD\u4F1A\u82B1\u6389\u78C1\u76D8\u4E0A\u5927\u91CF\u7684\u7A7A\u95F4\uFF0C\u5E76\u4E14\u5BF9\u78C1\u76D8\u7684\u8BFB\u5199\u8981\u6C42\u8F83\u9AD8\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u538B\u7F29\u7F13\u5B58\u6587\u4EF6\u4EE5\u8282\u7701\u7A7A\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u4E0A\u4E00\u6B21\u4F7F\u7528:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u7F13\u5B58\u6700\u5927\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u8F93\u5165\u78C1\u76D8\u7F13\u5B58\u5927\u5C0F (GB) :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u65E0\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u9009\u62E9\u7F13\u5B58\u8DEF\u5F84",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u78C1\u76D8\u7F13\u5B58\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "WelcomeMessage",
         "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut!",
         "Mode": "ConstString",
@@ -6260,150 +6410,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "VideoCacheManagePage_Tile",
-        "Value": "\u78C1\u76D8\u7F13\u5B58\u7BA1\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_SelectPath",
-        "Value": "\u9009\u62E9\u7F13\u5B58\u8DEF\u5F84",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_MaxSize",
-        "Value": "\u7F13\u5B58\u6700\u5927\u5927\u5C0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_MaxSize_None",
-        "Value": "\u65E0\u9650",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_Clean",
-        "Value": "\u6E05\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_BuildCache",
-        "Value": "\u624B\u52A8\u751F\u6210\u7F13\u5B58...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_CurrentPath",
-        "Value": "\u5F53\u524D\u76EE\u5F55\uFF1A{path}\r\u78C1\u76D8\u7F13\u5B58\u53EF\u80FD\u4F1A\u82B1\u6389\u78C1\u76D8\u4E0A\u5927\u91CF\u7684\u7A7A\u95F4\uFF0C\u5E76\u4E14\u5BF9\u78C1\u76D8\u7684\u8BFB\u5199\u8981\u6C42\u8F83\u9AD8\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_EnableCompress",
-        "Value": "\u538B\u7F29\u7F13\u5B58\u6587\u4EF6\u4EE5\u8282\u7701\u7A7A\u95F4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
-        "Value": "\u8F93\u5165\u78C1\u76D8\u7F13\u5B58\u5927\u5C0F (GB) :",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_LastAccessIn",
-        "Value": "\u4E0A\u4E00\u6B21\u4F7F\u7528:",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_CleanupWarn",
-        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5220\u9664{duration}\u7684 {n} \u4E2A\u7F13\u5B58\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "duration"
-          },
-          {
-            "Key": "int",
-            "Value": "n"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "duration",
-            "Value": ""
-          },
-          {
-            "Key": "n",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "VideoCacheManagePage_CleanupAllWarn",
-        "Value": "\u6B64\u64CD\u4F5C\u5C06\u5220\u9664\u6240\u6709\u7F13\u5B58\uFF0C\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_LivePreview_SecondPerFrame",
-        "Value": "{n:f1} \u79D2\u6BCF\u5E27",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "double",
-            "Value": "n"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "n",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_LivePreview_Preparing",
-        "Value": "\u51C6\u5907\u9884\u89C8...",
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u5173\u952E\u5E27",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

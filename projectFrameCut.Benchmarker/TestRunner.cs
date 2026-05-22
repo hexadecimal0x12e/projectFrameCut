@@ -33,7 +33,7 @@ namespace projectFrameCut.Benchmarker
             }
         }
 
-        private static Picture8bpp MakeNoise(int width, int height)
+        public static Picture8bpp MakeNoise(int width, int height)
         {
             var pic = new Picture8bpp(width, height);
             var rnd = new Random();

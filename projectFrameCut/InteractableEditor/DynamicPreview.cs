@@ -1318,7 +1318,12 @@ public sealed class DynamicPreview : IDisposable
             var needsDeepCopy = sourceColorAdjustEffects is { Count: > 0 };
             if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: needsDeepCopy))
             {
-                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                    && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+                {
+                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                }
+
                 if (frame is not null)
                 {
                     CacheFallbackFrame(cacheKey, frame);
@@ -1338,7 +1343,12 @@ public sealed class DynamicPreview : IDisposable
                 var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
                 if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: false))
                 {
-                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                    if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                        && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+                    {
+                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                    }
+
                     if (frame is not null)
                     {
                         CacheFallbackFrame(cacheKey, frame);
@@ -1379,7 +1389,12 @@ public sealed class DynamicPreview : IDisposable
         var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
         if (!TryGetCachedFallbackFrame(cacheKey, out var frame))
         {
-            frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+            if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+            {
+                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+            }
+
             if (frame is not null)
             {
                 CacheFallbackFrame(cacheKey, frame);
@@ -1699,6 +1714,152 @@ public sealed class DynamicPreview : IDisposable
 
         frame = null!;
         return false;
+    }
+
+    private static bool TryGetResizedFallbackFrame(FallbackFrameCacheKey targetKey, out IPicture resizedFrame)
+    {
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        FallbackFrameCacheKey? bestKey = null;
+
+        foreach (var kvp in s_fallbackFrameCache)
+        {
+            var k = kvp.Key;
+            if (k.ClipId == targetKey.ClipId && k.SourceFingerprint == targetKey.SourceFingerprint && k.FrameIndex == targetKey.FrameIndex)
+            {
+                if (k.TargetWidth == targetKey.TargetWidth && k.TargetHeight == targetKey.TargetHeight)
+                    continue;
+
+                int delta = Math.Abs(k.TargetWidth - targetKey.TargetWidth) + Math.Abs(k.TargetHeight - targetKey.TargetHeight);
+                int area = k.TargetWidth * k.TargetHeight;
+
+                if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+                {
+                    bestDelta = delta;
+                    bestArea = area;
+                    bestKey = k;
+                }
+            }
+        }
+
+        if (bestKey is null || !s_fallbackFrameCache.TryGetValue(bestKey.Value, out var cached))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        cached.Touch();
+        using var source = cached.Frame.DeepCopy();
+        var resized = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+        if (ReferenceEquals(resized, source))
+        {
+            resizedFrame = source;
+        }
+        else
+        {
+            resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                ? resized
+                : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+        }
+        return true;
+    }
+
+    private static List<(int width, int height)> ResolveFallbackDiskCacheSizes(string clipId, long sourceFingerprint)
+    {
+        var sizes = new List<(int width, int height)>();
+        var baseDir = Path.Combine(DiskCacheRoot, SanitizePathSegment(clipId));
+        if (!Directory.Exists(baseDir))
+            return sizes;
+
+        var fingerprintStr = sourceFingerprint.ToString("X16");
+        try
+        {
+            foreach (var subDir in Directory.EnumerateDirectories(baseDir))
+            {
+                var name = Path.GetFileName(subDir);
+                var parts = name.Split('x');
+                if (parts.Length == 2
+                    && int.TryParse(parts[0], out var w)
+                    && int.TryParse(parts[1], out var h)
+                    && w > 0 && h > 0
+                    && Directory.Exists(Path.Combine(subDir, fingerprintStr)))
+                {
+                    sizes.Add((w, h));
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return sizes;
+    }
+
+    private static bool TryGetResizedFallbackFromDisk(FallbackFrameCacheKey targetKey, out IPicture resizedFrame)
+    {
+        var sizes = ResolveFallbackDiskCacheSizes(targetKey.ClipId, targetKey.SourceFingerprint);
+        if (sizes.Count == 0)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        (int width, int height) bestSize = default;
+
+        foreach (var (w, h) in sizes)
+        {
+            if (w == targetKey.TargetWidth && h == targetKey.TargetHeight)
+                continue;
+
+            int delta = Math.Abs(w - targetKey.TargetWidth) + Math.Abs(h - targetKey.TargetHeight);
+            int area = w * h;
+
+            if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+            {
+                bestDelta = delta;
+                bestArea = area;
+                bestSize = (w, h);
+            }
+        }
+
+        if (bestDelta == int.MaxValue)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        var diskKey = new FallbackFrameCacheKey(targetKey.ClipId, bestSize.width, bestSize.height, targetKey.FrameIndex, targetKey.SourceFingerprint);
+        var diskPath = ResolveFallbackDiskCachePath(diskKey);
+        if (!File.Exists(diskPath))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        try
+        {
+            using var loaded = new Picture8bpp(diskPath);
+            var resized = loaded.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+            if (ReferenceEquals(resized, loaded))
+            {
+                resizedFrame = loaded;
+            }
+            else
+            {
+                resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                    ? resized
+                    : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+            }
+            TouchFallbackDiskEntry(diskPath);
+            return true;
+        }
+        catch
+        {
+            resizedFrame = null!;
+            return false;
+        }
     }
 
     private static void CacheFallbackFrame(FallbackFrameCacheKey key, IPicture frame)

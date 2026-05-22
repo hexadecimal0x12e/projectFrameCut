@@ -44,6 +44,11 @@ namespace projectFrameCut.Shared
         /// </remarks>
         public static bool AllowPixelModeDowngrade = true;
         /// <summary>
+        /// The resizer used by all <see cref="IPicture"/> implementations for their <see cref="Resize"/> methods.
+        /// Set this property to replace the resize algorithm globally (e.g., nearest-neighbor, bicubic, or GPU-accelerated).
+        /// </summary>
+        public static IPictureResizer PictureResizer { get; set; } = new CPUBilinearPictureResizer();
+        /// <summary>
         /// Get how much bits in one pixel.
         /// Please refer to <see cref="PicturePixelMode"/> for more information.
         /// </summary>
@@ -325,16 +330,24 @@ namespace projectFrameCut.Shared
         /// </summary>
         /// <param name="width">The width of the picture, in pixels. Must be a non-negative integer.</param>
         /// <param name="height">The height of the picture, in pixels. Must be a non-negative integer.</param>
-        public Picture16bpp(int width, int height)
+        public Picture16bpp(int width, int height) : this(width, height, allocateArrays: true) { }
+
+        /// <summary>
+        /// Initializes a new instance with optional array allocation. When <paramref name="allocateArrays"/> is false,
+        /// r/g/b/a are left as the field-initializer defaults so subclasses can avoid double-allocation.
+        /// </summary>
+        protected Picture16bpp(int width, int height, bool allocateArrays)
         {
             Width = width;
             Height = height;
             Pixels = checked(width * height);
 
-            // allocate pixel buffers so the instance is safe to use immediately
-            r = new ushort[Pixels];
-            g = new ushort[Pixels];
-            b = new ushort[Pixels];
+            if (allocateArrays)
+            {
+                r = new ushort[Pixels];
+                g = new ushort[Pixels];
+                b = new ushort[Pixels];
+            }
             a = null;
             ProcessStack = [new PictureProcessStack
             {
@@ -545,133 +558,7 @@ namespace projectFrameCut.Shared
         /// <returns>A new Picture instance with the resized image data.</returns>
         [DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
-        {
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == Width && targetHeight == Height) return this;
-            lock (this)
-            {
-                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
-                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
-
-                int destW = targetWidth;
-                int destH = targetHeight;
-
-                if (preserveAspect)
-                {
-                    double sx = (double)targetWidth / Width;
-                    double sy = (double)targetHeight / Height;
-                    double s = Math.Min(sx, sy);
-                    destW = Math.Max(1, (int)Math.Round(Width * s));
-                    destH = Math.Max(1, (int)Math.Round(Height * s));
-                    if (destW == Width && destH == Height) return this;
-                }
-
-                var result = new Picture16bpp(destW, destH);
-                int dstPixels = checked(destW * destH);
-                result.r = new ushort[dstPixels];
-                result.g = new ushort[dstPixels];
-                result.b = new ushort[dstPixels];
-                result.a = hasAlphaChannel ? new float[dstPixels] : null;
-                result.hasAlphaChannel = hasAlphaChannel;
-
-                double xRatio = (double)Width / destW;
-                double yRatio = (double)Height / destH;
-                int srcArraySize = this.r.Length;
-
-                for (int y = 0; y < destH; y++)
-                {
-                    double srcY = (y + 0.5) * yRatio - 0.5;
-                    int y0 = (int)Math.Floor(srcY);
-                    int y1 = y0 + 1;
-                    double wy = srcY - y0;
-                    if (y0 < 0)
-                    {
-                        y0 = 0; y1 = 0; wy = 0;
-                    }
-                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
-                    if (y1 >= Height) { y1 = Height - 1; }
-
-                    for (int x = 0; x < destW; x++)
-                    {
-                        double srcX = (x + 0.5) * xRatio - 0.5;
-                        int x0 = (int)Math.Floor(srcX);
-                        int x1 = x0 + 1;
-                        double wx = srcX - x0;
-                        if (x0 < 0)
-                        {
-                            x0 = 0; x1 = 0; wx = 0;
-                        }
-                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
-                        if (x1 >= Width) { x1 = Width - 1; }
-
-                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
-                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
-                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
-                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
-
-                        double r00 = this.r[k00];
-                        double r10 = this.r[k10];
-                        double r01 = this.r[k01];
-                        double r11 = this.r[k11];
-
-                        double g00 = this.g[k00];
-                        double g10 = this.g[k10];
-                        double g01 = this.g[k01];
-                        double g11 = this.g[k11];
-
-                        double b00 = this.b[k00];
-                        double b10 = this.b[k10];
-                        double b01 = this.b[k01];
-                        double b11 = this.b[k11];
-
-                        double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
-                        double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
-                        double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
-
-                        int dstIdx = y * destW + x;
-                        int rr = (int)Math.Round(rInterp);
-                        int gg = (int)Math.Round(gInterp);
-                        int bb = (int)Math.Round(bInterp);
-                        if (rr < 0) rr = 0; if (rr > 65535) rr = 65535;
-                        if (gg < 0) gg = 0; if (gg > 65535) gg = 65535;
-                        if (bb < 0) bb = 0; if (bb > 65535) bb = 65535;
-
-                        result.r[dstIdx] = (ushort)rr;
-                        result.g[dstIdx] = (ushort)gg;
-                        result.b[dstIdx] = (ushort)bb;
-
-                        if (hasAlphaChannel && this.a != null)
-                        {
-                            double a00 = this.a[k00];
-                            double a10 = this.a[k10];
-                            double a01 = this.a[k01];
-                            double a11 = this.a[k11];
-                            double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
-                            if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp = 1.0;
-                            if (aInterp < 0) aInterp = 0; if (aInterp > 1) aInterp = 1;
-                            result.a![dstIdx] = (float)aInterp;
-                        }
-                    }
-                }
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (IPicture)",
-                    Operator = this.GetType(),
-                    ProcessingFuncStackTrace = new(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", Width },
-                        { "SourceHeight", Height },
-                        { "TargetWidth", targetWidth },
-                        { "TargetHeight", targetHeight },
-                        { "PreserveAspect", preserveAspect },
-                    },
-                    Elapsed = sw.Elapsed
-                });
-
-                return result;
-            }
-        }
+            => IPicture.PictureResizer.Resize(this, targetWidth, targetHeight, preserveAspect);
 
         public static Picture16bpp GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a)
         {
@@ -1152,133 +1039,7 @@ namespace projectFrameCut.Shared
         /// <returns>A new Picture8bpp instance with the resized image data.</returns>
         [DebuggerNonUserCode()]
         public Picture8bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
-        {
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == Width && targetHeight == Height) return this;
-            lock (this)
-            {
-                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
-                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
-
-                int destW = targetWidth;
-                int destH = targetHeight;
-
-                if (preserveAspect)
-                {
-                    double sx = (double)targetWidth / Width;
-                    double sy = (double)targetHeight / Height;
-                    double s = Math.Min(sx, sy);
-                    destW = Math.Max(1, (int)Math.Round(Width * s));
-                    destH = Math.Max(1, (int)Math.Round(Height * s));
-                    if (destW == Width && destH == Height) return this;
-                }
-
-
-                var result = new Picture8bpp(destW, destH);
-                int dstPixels = checked(destW * destH);
-                result.r = new byte[dstPixels];
-                result.g = new byte[dstPixels];
-                result.b = new byte[dstPixels];
-                result.a = hasAlphaChannel ? new float[dstPixels] : null;
-                result.hasAlphaChannel = hasAlphaChannel;
-
-                double xRatio = (double)Width / destW;
-                double yRatio = (double)Height / destH;
-                int srcArraySize = this.r.Length;
-
-                for (int y = 0; y < destH; y++)
-                {
-                    double srcY = (y + 0.5) * yRatio - 0.5;
-                    int y0 = (int)Math.Floor(srcY);
-                    int y1 = y0 + 1;
-                    double wy = srcY - y0;
-                    if (y0 < 0)
-                    {
-                        y0 = 0; y1 = 0; wy = 0;
-                    }
-                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
-                    if (y1 >= Height) { y1 = Height - 1; }
-
-                    for (int x = 0; x < destW; x++)
-                    {
-                        double srcX = (x + 0.5) * xRatio - 0.5;
-                        int x0 = (int)Math.Floor(srcX);
-                        int x1 = x0 + 1;
-                        double wx = srcX - x0;
-                        if (x0 < 0)
-                        {
-                            x0 = 0; x1 = 0; wx = 0;
-                        }
-                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
-                        if (x1 >= Width) { x1 = Width - 1; }
-
-                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
-                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
-                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
-                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
-
-                        double r00 = this.r[k00];
-                        double r10 = this.r[k10];
-                        double r01 = this.r[k01];
-                        double r11 = this.r[k11];
-
-                        double g00 = this.g[k00];
-                        double g10 = this.g[k10];
-                        double g01 = this.g[k01];
-                        double g11 = this.g[k11];
-
-                        double b00 = this.b[k00];
-                        double b10 = this.b[k10];
-                        double b01 = this.b[k01];
-                        double b11 = this.b[k11];
-
-                        double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
-                        double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
-                        double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
-
-                        int dstIdx = y * destW + x;
-                        int rr = (int)Math.Round(rInterp);
-                        int gg = (int)Math.Round(gInterp);
-                        int bb = (int)Math.Round(bInterp);
-                        if (rr < 0) rr = 0; if (rr > 255) rr = 255;
-                        if (gg < 0) gg = 0; if (gg > 255) gg = 255;
-                        if (bb < 0) bb = 0; if (bb > 255) bb = 255;
-
-                        result.r[dstIdx] = (byte)rr;
-                        result.g[dstIdx] = (byte)gg;
-                        result.b[dstIdx] = (byte)bb;
-
-                        if (hasAlphaChannel && this.a != null)
-                        {
-                            double a00 = this.a[k00];
-                            double a10 = this.a[k10];
-                            double a01 = this.a[k01];
-                            double a11 = this.a[k11];
-                            double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
-                            if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp = 1.0;
-                            if (aInterp < 0) aInterp = 0; if (aInterp > 1) aInterp = 1;
-                            result.a![dstIdx] = (float)aInterp;
-                        }
-                    }
-                }
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (IPicture)",
-                    Operator = this.GetType(),
-                    ProcessingFuncStackTrace = new(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", Width },
-                        { "SourceHeight", Height },
-                        { "TargetWidth", targetWidth },
-                        { "TargetHeight", targetHeight },
-                        { "PreserveAspect", preserveAspect },
-                    },
-                    Elapsed = sw.Elapsed
-                });
-                return result;
-            }
-        }
+            => IPicture.PictureResizer.Resize(this, targetWidth, targetHeight, preserveAspect);
 
         public static Picture8bpp GenerateSolidColor(int width, int height, byte r, byte g, byte b, float? a)
         {
@@ -1615,170 +1376,19 @@ namespace projectFrameCut.Shared
             Brightness = new float[Pixels];
         }
 
+        /// <summary>
+        /// Subclass constructor that can skip base-class array allocation to avoid double-allocation
+        /// when arrays will be set immediately after construction.
+        /// </summary>
+        internal HDRPicture16bpp(int width, int height, bool allocateArrays) : base(width, height, allocateArrays)
+        {
+        }
+
         public float[] Brightness { get; set; } = Array.Empty<float>();
         public float MaximumBrightness { get; set; } = DefaultHdrMaximumBrightness;
 
         public new HDRPicture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
-        {
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == Width && targetHeight == Height) return this;
-
-            lock (this)
-            {
-                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
-                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
-
-                int destW = targetWidth;
-                int destH = targetHeight;
-
-                if (preserveAspect)
-                {
-                    double sx = (double)targetWidth / Width;
-                    double sy = (double)targetHeight / Height;
-                    double s = Math.Min(sx, sy);
-                    destW = Math.Max(1, (int)Math.Round(Width * s));
-                    destH = Math.Max(1, (int)Math.Round(Height * s));
-                    if (destW == Width && destH == Height) return this;
-                }
-
-                int dstPixels = checked(destW * destH);
-                var result = new HDRPicture16bpp(destW, destH)
-                {
-                    r = new ushort[dstPixels],
-                    g = new ushort[dstPixels],
-                    b = new ushort[dstPixels],
-                    a = hasAlphaChannel ? new float[dstPixels] : null,
-                    hasAlphaChannel = hasAlphaChannel,
-                    Brightness = new float[dstPixels],
-                    MaximumBrightness = (MaximumBrightness > 0f && float.IsFinite(MaximumBrightness))
-                        ? MaximumBrightness
-                        : DefaultHdrMaximumBrightness,
-                };
-
-                float[]? sourceBrightness = (Brightness != null && Brightness.Length == Pixels) ? Brightness : null;
-                bool hasBrightness = sourceBrightness != null;
-
-                double xRatio = (double)Width / destW;
-                double yRatio = (double)Height / destH;
-                int srcArraySize = this.r.Length;
-
-                for (int y = 0; y < destH; y++)
-                {
-                    double srcY = (y + 0.5) * yRatio - 0.5;
-                    int y0 = (int)Math.Floor(srcY);
-                    int y1 = y0 + 1;
-                    double wy = srcY - y0;
-                    if (y0 < 0)
-                    {
-                        y0 = 0; y1 = 0; wy = 0;
-                    }
-                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
-                    if (y1 >= Height) { y1 = Height - 1; }
-
-                    for (int x = 0; x < destW; x++)
-                    {
-                        double srcX = (x + 0.5) * xRatio - 0.5;
-                        int x0 = (int)Math.Floor(srcX);
-                        int x1 = x0 + 1;
-                        double wx = srcX - x0;
-                        if (x0 < 0)
-                        {
-                            x0 = 0; x1 = 0; wx = 0;
-                        }
-                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
-                        if (x1 >= Width) { x1 = Width - 1; }
-
-                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
-                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
-                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
-                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
-
-                        double r00 = this.r[k00];
-                        double r10 = this.r[k10];
-                        double r01 = this.r[k01];
-                        double r11 = this.r[k11];
-
-                        double g00 = this.g[k00];
-                        double g10 = this.g[k10];
-                        double g01 = this.g[k01];
-                        double g11 = this.g[k11];
-
-                        double b00 = this.b[k00];
-                        double b10 = this.b[k10];
-                        double b01 = this.b[k01];
-                        double b11 = this.b[k11];
-
-                        double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
-                        double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
-                        double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
-
-                        int dstIdx = y * destW + x;
-                        int rr = (int)Math.Round(rInterp);
-                        int gg = (int)Math.Round(gInterp);
-                        int bb = (int)Math.Round(bInterp);
-                        if (rr < 0) rr = 0; if (rr > 65535) rr = 65535;
-                        if (gg < 0) gg = 0; if (gg > 65535) gg = 65535;
-                        if (bb < 0) bb = 0; if (bb > 65535) bb = 65535;
-
-                        result.r[dstIdx] = (ushort)rr;
-                        result.g[dstIdx] = (ushort)gg;
-                        result.b[dstIdx] = (ushort)bb;
-
-                        if (hasAlphaChannel && this.a != null)
-                        {
-                            double a00 = this.a[k00];
-                            double a10 = this.a[k10];
-                            double a01 = this.a[k01];
-                            double a11 = this.a[k11];
-                            double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
-                            if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp = 1.0;
-                            if (aInterp < 0) aInterp = 0; if (aInterp > 1) aInterp = 1;
-                            result.a![dstIdx] = (float)aInterp;
-                        }
-
-                        double br00, br10, br01, br11;
-                        if (sourceBrightness != null)
-                        {
-                            br00 = sourceBrightness[k00];
-                            br10 = sourceBrightness[k10];
-                            br01 = sourceBrightness[k01];
-                            br11 = sourceBrightness[k11];
-                        }
-                        else
-                        {
-                            br00 = Math.Clamp((0.2627 * this.r[k00] + 0.6780 * this.g[k00] + 0.0593 * this.b[k00]) / 65535.0, 0.0, 1.0);
-                            br10 = Math.Clamp((0.2627 * this.r[k10] + 0.6780 * this.g[k10] + 0.0593 * this.b[k10]) / 65535.0, 0.0, 1.0);
-                            br01 = Math.Clamp((0.2627 * this.r[k01] + 0.6780 * this.g[k01] + 0.0593 * this.b[k01]) / 65535.0, 0.0, 1.0);
-                            br11 = Math.Clamp((0.2627 * this.r[k11] + 0.6780 * this.g[k11] + 0.0593 * this.b[k11]) / 65535.0, 0.0, 1.0);
-                        }
-
-                        double brightnessInterp = br00 * (1 - wx) * (1 - wy) + br10 * wx * (1 - wy) + br01 * (1 - wx) * wy + br11 * wx * wy;
-                        if (double.IsNaN(brightnessInterp) || double.IsInfinity(brightnessInterp)) brightnessInterp = 0.0;
-                        result.Brightness[dstIdx] = (float)Math.Clamp(brightnessInterp, 0.0, 1.0);
-                    }
-                }
-
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (HDR IPicture)",
-                    Operator = this.GetType(),
-                    ProcessingFuncStackTrace = new(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", Width },
-                        { "SourceHeight", Height },
-                        { "TargetWidth", targetWidth },
-                        { "TargetHeight", targetHeight },
-                        { "PreserveAspect", preserveAspect },
-                        { "MaximumBrightness", result.MaximumBrightness },
-                        { "HasBrightnessChannel", hasBrightness },
-                    },
-                    Elapsed = sw.Elapsed
-                });
-
-                return result;
-            }
-        }
+            => IPicture.PictureResizer.Resize(this, targetWidth, targetHeight, preserveAspect);
 
         public HDRPicture16bpp SetBrightnessOffset(double offset)
         {

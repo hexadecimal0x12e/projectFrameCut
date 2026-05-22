@@ -30,14 +30,35 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _disposed;
         private readonly ConcurrentDictionary<uint, bool> _pendingWrites = new();
 
+        private ulong requireCount = 0, cacheHitCount = 0;
+
         private const int HeaderSize = 18; // Magic(4) + Type(1) + Width(4) + Height(4) + HasAlpha(1) + MaxBrightness(4)
 
         public VideoFrameDiskCache(string videoPath)
         {
             _sourceVideoPath = videoPath;
-            string hash = VideoFrameDiskCacheManager.TouchCache(videoPath).MD5;
-            _cacheDir = Path.Combine(CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), hash);
-            try { Directory.CreateDirectory(_cacheDir); } catch { }
+            VideoFrameDiskCacheManager.CacheMetadata info = null!;
+            try
+            {
+                info = VideoFrameDiskCacheManager.TouchCache(videoPath);
+                _cacheDir = Path.Combine(CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), info.MD5);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Create VideoFrameDiskCache for {videoPath}", this);
+                _disposed = true;
+                return;
+            }
+
+            long length = -1;
+            try
+            {
+                Directory.CreateDirectory(_cacheDir);
+                length = Directory.GetFiles(_cacheDir).Length;
+            }
+            catch { }
+            Log($"VideoFrameDiskCache initialized for '{videoPath}'({info?.MD5 ?? "?"}), already {length} entries files");
+
         }
 
         private static string ComputeShortHash(string path)
@@ -140,12 +161,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             picture = null;
             if (_disposed) return false;
             if (_pendingWrites.ContainsKey(frameNumber)) return false;
-
+            requireCount++;
             string path = GetPath(frameNumber);
             if (!File.Exists(path)) return false;
 
             try
             {
+                cacheHitCount++;
                 byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float _, out bool hasAlpha);
                 if (frameType != 0 || rawData == null) return false;
 
@@ -183,12 +205,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             picture = null;
             if (_disposed) return false;
             if (_pendingWrites.ContainsKey(frameNumber)) return false;
-
+            requireCount++;
             string path = GetPath(frameNumber);
             if (!File.Exists(path)) return false;
 
             try
             {
+                cacheHitCount++;
                 byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float _, out bool hasAlpha);
                 if (frameType != 1 || rawData == null) return false;
 
@@ -229,12 +252,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             picture = null;
             if (_disposed) return false;
             if (_pendingWrites.ContainsKey(frameNumber)) return false;
-
+            requireCount++;
             string path = GetPath(frameNumber);
             if (!File.Exists(path)) return false;
 
             try
             {
+                cacheHitCount++;
                 byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float maxBrightness, out bool hasAlpha);
                 if (frameType != 2 || rawData == null) return false;
 
@@ -294,6 +318,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private unsafe void Save8bppSync(uint frameNumber, IPicture<byte> picture)
         {
+            if (_disposed) return;
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
@@ -328,6 +353,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private unsafe void Save16bppSync(uint frameNumber, IPicture<ushort> picture)
         {
+            if (_disposed) return;
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
@@ -363,6 +389,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private unsafe void SaveHDRSync(uint frameNumber, HDRPicture16bpp picture)
         {
+            if (_disposed) return;
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
@@ -475,6 +502,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public void Dispose()
         {
+            Log($"VideoFrameDiskCache for '{_sourceVideoPath}' disposed. Cache hit rate: {(requireCount > 0 ? ((double)cacheHitCount / requireCount * 100).ToString("F2") : "N/A")}% ({cacheHitCount}/{requireCount})");
             if (_disposed) return;
             _disposed = true;
         }

@@ -92,6 +92,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-output=<output file/folder>`**  
   输出文件或文件夹路径。
+  可以在文件名中包含`{CurrentTime}`，程序会将其替换为当前时间，格式为 `yyyyMMdd_HHmmss`。
 
 - **`-output_options=<width>,<height>,<fps>,<pixel format>,<encoder>`**  
   输出选项，包含 5 个值，用逗号分隔：
@@ -158,6 +159,16 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-preferHwAccelDecoder=<true|false>`**
   是否优先使用硬件加速解码器。默认：`false`
+
+- **`-PictureResizer=<cpu|hwaccel>`**
+  选择要使用的硬件加速图片缩放器。默认：`hwaccel`
+
+- **`-VideoFrameDiskCacheRoot=<path to video frame disk cache root>`**
+  指定磁盘缓存的根目录。默认位于projectFrameCut用户数据目录下的`VideoFrameDiskCache`文件夹中。
+  不定义此参数代表禁用磁盘缓存。
+
+- **`-VideoFrameMemoryCache=<true|false>`**
+  是否启用内存缓存。默认：`false`
 
 ### 模式 'bench' 的参数
 

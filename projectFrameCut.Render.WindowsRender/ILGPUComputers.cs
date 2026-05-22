@@ -468,6 +468,10 @@ namespace projectFrameCut.Render.WindowsRender
             float dstW = (float)args[6];
             float dstH = (float)args[7];
 
+            // Optional pixel type hint (args[8]): 8=byte, 16=ushort, omit=float (backward compat)
+            bool wantByte = args.Length > 8 && args[8] is int pixelType && pixelType == 8;
+            bool wantUShort = args.Length > 8 && args[8] is int pixelType2 && pixelType2 == 16;
+
             int iDstW = (int)dstW;
             int iDstH = (int)dstH;
             int iSrcW = (int)srcW;
@@ -479,18 +483,132 @@ namespace projectFrameCut.Render.WindowsRender
             int dstLength = iDstW * iDstH;
             int srcLength = iSrcW * iSrcH;
 
-            // Allocate buffers
+            // Allocate input buffers
             using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
             using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
             using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
             using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
 
-            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+            float rX = (float)srcW / dstW;
+            float rY = (float)srcH / dstH;
 
-            var kernel = accelerator.LoadAutoGroupedStreamKernel((
+            // --- 8-bit output path ---
+            if (wantByte)
+            {
+                using var rBufOut = accelerator.Allocate1D<byte>(dstLength);
+                using var gBufOut = accelerator.Allocate1D<byte>(dstLength);
+                using var bBufOut = accelerator.Allocate1D<byte>(dstLength);
+                using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+
+                var kernel = accelerator.LoadAutoGroupedStreamKernel((
+                    Index1D i,
+                    ArrayView<byte> rOut, ArrayView<byte> gOut, ArrayView<byte> bOut, ArrayView<float> aOut,
+                    ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
+                    int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
+                {
+                    int x = i % dstW;
+                    int y = i / dstW;
+                    int srcX = (int)(x * ratioX);
+                    int srcY = (int)(y * ratioY);
+                    if (srcX >= srcW) srcX = srcW - 1;
+                    if (srcY >= srcH) srcY = srcH - 1;
+                    if (srcX < 0) srcX = 0;
+                    if (srcY < 0) srcY = 0;
+                    int srcIdx = srcY * srcW + srcX;
+                    float v = rIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
+                    rOut[i] = (byte)v;
+                    v = gIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
+                    gOut[i] = (byte)v;
+                    v = bIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
+                    bOut[i] = (byte)v;
+                    aOut[i] = aIn[srcIdx];
+                });
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                               rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                               iDstW, iSrcW, iSrcH, rX, rY);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                           rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                           iDstW, iSrcW, iSrcH, rX, rY);
+                }
+
+                return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            }
+
+            // --- 16-bit output path ---
+            if (wantUShort)
+            {
+                using var rBufOut = accelerator.Allocate1D<ushort>(dstLength);
+                using var gBufOut = accelerator.Allocate1D<ushort>(dstLength);
+                using var bBufOut = accelerator.Allocate1D<ushort>(dstLength);
+                using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+
+                var kernel = accelerator.LoadAutoGroupedStreamKernel((
+                    Index1D i,
+                    ArrayView<ushort> rOut, ArrayView<ushort> gOut, ArrayView<ushort> bOut, ArrayView<float> aOut,
+                    ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
+                    int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
+                {
+                    int x = i % dstW;
+                    int y = i / dstW;
+                    int srcX = (int)(x * ratioX);
+                    int srcY = (int)(y * ratioY);
+                    if (srcX >= srcW) srcX = srcW - 1;
+                    if (srcY >= srcH) srcY = srcH - 1;
+                    if (srcX < 0) srcX = 0;
+                    if (srcY < 0) srcY = 0;
+                    int srcIdx = srcY * srcW + srcX;
+                    float v = rIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
+                    rOut[i] = (ushort)v;
+                    v = gIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
+                    gOut[i] = (ushort)v;
+                    v = bIn[srcIdx];
+                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
+                    bOut[i] = (ushort)v;
+                    aOut[i] = aIn[srcIdx];
+                });
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                               rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                               iDstW, iSrcW, iSrcH, rX, rY);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                           rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                           iDstW, iSrcW, iSrcH, rX, rY);
+                }
+
+                return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            }
+
+            // --- Default float output path (backward compatible) ---
+            using var rBufOutF = accelerator.Allocate1D<float>(dstLength);
+            using var gBufOutF = accelerator.Allocate1D<float>(dstLength);
+            using var bBufOutF = accelerator.Allocate1D<float>(dstLength);
+            using var aBufOutF = accelerator.Allocate1D<float>(dstLength);
+
+            var kernelF = accelerator.LoadAutoGroupedStreamKernel((
                 Index1D i,
                 ArrayView<float> rOut, ArrayView<float> gOut, ArrayView<float> bOut, ArrayView<float> aOut,
                 ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
@@ -498,52 +616,37 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 int x = i % dstW;
                 int y = i / dstW;
-
-                // Nearest neighbor
                 int srcX = (int)(x * ratioX);
                 int srcY = (int)(y * ratioY);
-
                 if (srcX >= srcW) srcX = srcW - 1;
                 if (srcY >= srcH) srcY = srcH - 1;
                 if (srcX < 0) srcX = 0;
                 if (srcY < 0) srcY = 0;
-
                 int srcIdx = srcY * srcW + srcX;
-
                 rOut[i] = rIn[srcIdx];
                 gOut[i] = gIn[srcIdx];
                 bOut[i] = bIn[srcIdx];
                 aOut[i] = aIn[srcIdx];
             });
 
-            // Ensure we use float division for ratios
-            float rX = (float)srcW / dstW;
-            float rY = (float)srcH / dstH;
-
             if (Sync)
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
-                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                           rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                           iDstW, iSrcW, iSrcH, rX, rY);
+                    kernelF(dstLength, rBufOutF.View, gBufOutF.View, bBufOutF.View, aBufOutF.View,
+                            rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                            iDstW, iSrcW, iSrcH, rX, rY);
                     accelerator.Synchronize();
                 }
             }
             else
             {
-                kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                       rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                       iDstW, iSrcW, iSrcH, rX, rY);
+                kernelF(dstLength, rBufOutF.View, gBufOutF.View, bBufOutF.View, aBufOutF.View,
+                        rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
+                        iDstW, iSrcW, iSrcH, rX, rY);
             }
 
-            var rRes = rBufOut.GetAsArray1D();
-            var gRes = gBufOut.GetAsArray1D();
-            var bRes = bBufOut.GetAsArray1D();
-            var aRes = aBufOut.GetAsArray1D();
-
-            // Buffers disposed by using
-            return [rRes, gRes, bRes, aRes];
+            return [rBufOutF.GetAsArray1D(), gBufOutF.GetAsArray1D(), bBufOutF.GetAsArray1D(), aBufOutF.GetAsArray1D()];
         }
     }
 
