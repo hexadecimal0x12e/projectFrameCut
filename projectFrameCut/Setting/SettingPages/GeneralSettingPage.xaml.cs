@@ -89,7 +89,6 @@ public partial class GeneralSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
-            .AddPicker("codec_defaultResizeProvider", SettingLocalizedResources.GeneralCodec_DefaultResizeProvider, new[] { "cpu", "hwaccel" }, GetSetting("codec_defaultResizeProvider", "hwaccel"))
             .AddSwitch("codec_EnableMemoryCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableMemoryCache, SettingLocalizedResources.GeneralCodec_EnableMemoryCache_Desc), IsBoolSettingTrue("codec_EnableMemoryCache"))
             .AddSwitch("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
             .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))

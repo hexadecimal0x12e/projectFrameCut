@@ -97,16 +97,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public float FrameTime { get; init; }
 
         /// <summary>
-        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V6.</b>
-        /// The actual frame time's ratio.
-        /// </summary>
-        /// <remarks>
-        /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
-        /// </remarks>
-        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V6.", false)]
-        public float SecondPerFrameRatio { get; init; }
-
-        /// <summary>
         /// The ISpeedVarianceProvider for this clip. If this property is not null, the system will use it to get the actual speed ratio for each frame instead of using the SecondPerFrameRatio property. This allows more flexible speed variance effect, such as variable speed or speed ramping.
         /// </summary>
         [JsonIgnore]
@@ -447,20 +437,24 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
     internal static class SpeedVarianceMapCache
     {
         private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
+        private static readonly object CacheLock = new();
 
         public static SpeedVarianceProfile GetOrBuild(IClip clip)
         {
-            if (Cache.TryGetValue(clip, out var cached)
-                && cached.Duration == clip.Duration
-                && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+            lock (CacheLock)
             {
-                return cached;
-            }
+                if (Cache.TryGetValue(clip, out var cached)
+                    && cached.Duration == clip.Duration
+                    && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+                {
+                    return cached;
+                }
 
-            Cache.Remove(clip);
-            var rebuilt = Build(clip);
-            Cache.Add(clip, rebuilt);
-            return rebuilt;
+                Cache.Remove(clip);
+                var rebuilt = Build(clip);
+                Cache.Add(clip, rebuilt);
+                return rebuilt;
+            }
         }
 
         private static SpeedVarianceProfile Build(IClip clip)

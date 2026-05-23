@@ -33,6 +33,7 @@ using static System.Net.Mime.MediaTypeNames;
 using Application = Microsoft.Maui.Controls.Application;
 using IPicture = projectFrameCut.Shared.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.Compose;
 
 
 
@@ -1375,7 +1376,8 @@ public partial class HomePage : ContentPage
         VideoFrameDiskCache.MaximumCacheSizeBytes = SettingsManager.GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
         IVideoSource.EnableMemoryCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
         IVideoSource.EnableDiskCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-        IPicture.PictureResizer = SettingsManager.GetSetting("codec_defaultResizeProvider", "hwaccel") switch { "cpu" => new CPUBilinearPictureResizer(), "hwaccel" => new Render.Effect.HwAccelPictureResizer(), _ => new CPUBilinearPictureResizer() };
+        IPicture.PictureResizer = SettingsManager.IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true) ? new Render.Effect.HwAccelPictureResizer() : new CPUBilinearPictureResizer();
+        ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 

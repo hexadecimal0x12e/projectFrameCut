@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
+using Microsoft.DiagnosticsHub;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -105,20 +106,25 @@ namespace projectFrameCut.StandaloneRender
                     Arguments:
                     Mode 'render':
                         -project=<project dir>
-                        -output=<output file/folder>
+                        -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                         [-target=<video|audio|all>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
-                        [-Use16bpp=<true|false>]
-                        [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
-                        [-renderByLayer=<true|false>]
+                        [-maxParallelThreads=<number>]
+                        [-oneByOneRender=<true|false> or -renderByLayer=<true|false> or -prepareInWorker=<true|false>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]
                         [-outputIntermediatePath=<intermediate output path>]
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                         [-diagReportPath=<path diag report output directory>]
+                        [-preferHwAccelDecoder=<true|false>]
+                        [-PictureResizer=<cpu|hwaccel>]
+                        [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
+                        [-VideoFrameMemoryCache=<true|false>]
+                        [-ApproximateMixture=<true|false>]
+
 
 
                     Mode 'bench':
@@ -346,16 +352,21 @@ namespace projectFrameCut.StandaloneRender
             width = int.Parse(outputOptions[0]);
             height = int.Parse(outputOptions[1]);
             fps = int.Parse(outputOptions[2]);
-
+            outputEncoder = outputOptions[4];
             if (!Enum.TryParse(outputOptions[3], out outputFormat) || outputFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
                 return 1;
             }
+            var fmpBPP = FFmpegHelper.GetAVPixelFormatBitsPerPixel(outputFormat);
+            var use16Bit = fmpBPP > 8;
 
-            outputEncoder = outputOptions[4];
+            if (fmpBPP <= 0)
+            {
+                Log($"Cannot auto determine bits per pixel for pixel format {outputOptions[3]}, auto-fallback to 16bpp rendering mode.", "warn");
+                use16Bit = trace;
+            }
 
-            var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
 
             if (!switches.ContainsKey("output"))
@@ -365,7 +376,7 @@ namespace projectFrameCut.StandaloneRender
             }
             var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
-            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" : "8")}");
+            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output)");
 
             #endregion
 
@@ -470,17 +481,19 @@ namespace projectFrameCut.StandaloneRender
             }
 
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
-            bool blockWrite = false, renderByLayer = false;
-            if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
-            {
-                maxParallelThreads = 1;
-                blockWrite = true;
-            }
-            else
-            {
-                blockWrite = false;
-            }
+            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false;
+            if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
             if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+            if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
+            if (prepareInWorker && renderByLayer)
+            {
+                Log($"Both prepareInWorker and renderByLayer are set to true, this is not supported.", "error");
+                return 1;
+            }
+            if (!oneByOneRender)
+            {
+                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{renderByLayer}, Prepare in worker:{prepareInWorker}");
+            }
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
@@ -488,7 +501,7 @@ namespace projectFrameCut.StandaloneRender
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 
-            if(switches.TryGetValue("VideoFrameDiskCacheRoot", out var vfdcRoot) && Directory.Exists(vfdcRoot))
+            if (switches.TryGetValue("VideoFrameDiskCacheRoot", out var vfdcRoot) && Directory.Exists(vfdcRoot))
             {
                 IVideoSource.EnableDiskCache = true;
                 VideoFrameDiskCache.CacheBaseDir = vfdcRoot;
@@ -501,6 +514,10 @@ namespace projectFrameCut.StandaloneRender
             IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
 
             Log($"Video source decoding cache - Memory cache: {IVideoSource.EnableMemoryCache}, Disk cache: {IVideoSource.EnableDiskCache} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
+
+            ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
+
+            Log($"ClassicOverlayMixture approximate path: {(ClassicOverlayMixture.EnableApproximatePath ? "enabled" : "disabled")}");
 
             #endregion
 
@@ -565,7 +582,7 @@ namespace projectFrameCut.StandaloneRender
                     DoGCAfterEachWrite = GCOption > 0,
                     DisposeFrameAfterEachWrite = true,
                     Duration = timeline.Duration,
-                    BlockWrite = blockWrite,
+                    BlockWrite = oneByOneRender,
                 };
 
                 Renderer renderer = new Renderer
@@ -573,7 +590,6 @@ namespace projectFrameCut.StandaloneRender
                     builder = builder,
                     Clips = clips,
                     Duration = timeline.Duration,
-                    MaxThreads = blockWrite ? 1 : maxParallelThreads,
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
                     LogStaticsData = true,
@@ -581,13 +597,24 @@ namespace projectFrameCut.StandaloneRender
                     Use16Bit = use16Bit,
                     EnableRenderWatchdogForceStart = false,
                     MaxRenderScheduleTimeout = 0,
-                    MinSchedulePreparedFrames = 1
+                    MinSchedulePreparedFrames = 1,
+                    MaxThreads = maxParallelThreads,
+                    RenderByLayers = renderByLayer,
+                    PrepareInWorkerThreads = prepareInWorker,
+                    OneByOneRender = oneByOneRender
                 };
+
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                var FrameDoneMark = new UserMarks("ProgressMark");
+#endif
 
                 if (!Environment.GetCommandLineArgs().Contains("--nolog"))
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                        FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
+#endif
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
                             Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
@@ -606,18 +633,7 @@ namespace projectFrameCut.StandaloneRender
                 sw1.Restart();
                 try
                 {
-                    if (blockWrite)
-                    {
-                        await renderer.GoRenderSync(cts.Token);
-                    }
-                    else if (renderByLayer)
-                    {
-                        await renderer.GoRenderByLayer(cts.Token);
-                    }
-                    else
-                    {
-                        await renderer.GoRender(cts.Token);
-                    }
+                    await renderer.GoRender(cts.Token);
                     Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
@@ -629,8 +645,6 @@ namespace projectFrameCut.StandaloneRender
                     Log(ex, "Render error");
                     throw;
                 }
-
-
 
                 if (!string.IsNullOrWhiteSpace(diagReportPath))
                 {
@@ -775,6 +789,8 @@ namespace projectFrameCut.StandaloneRender
             }
 
             Log($"All done! Your result file is here:{Environment.NewLine}{outputPath}");
+            Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
             return 0;
         }
 

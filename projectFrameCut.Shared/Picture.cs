@@ -336,7 +336,7 @@ namespace projectFrameCut.Shared
         /// Initializes a new instance with optional array allocation. When <paramref name="allocateArrays"/> is false,
         /// r/g/b/a are left as the field-initializer defaults so subclasses can avoid double-allocation.
         /// </summary>
-        protected Picture16bpp(int width, int height, bool allocateArrays)
+        protected internal Picture16bpp(int width, int height, bool allocateArrays)
         {
             Width = width;
             Height = height;
@@ -382,23 +382,28 @@ namespace projectFrameCut.Shared
                 Width = width;
                 Height = height;
 
-                r = new ushort[total];
-                g = new ushort[total];
-                b = new ushort[total];
-                a = new float[total];
+                r = GC.AllocateUninitializedArray<ushort>(total);
+                g = GC.AllocateUninitializedArray<ushort>(total);
+                b = GC.AllocateUninitializedArray<ushort>(total);
+                a = GC.AllocateUninitializedArray<float>(total);
 
-                for (int y = 0; y < height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * width + x;
-                        Rgba64 px = img[x, y];
-                        r[k] = px.R;
-                        g[k] = px.G;
-                        b[k] = px.B;
-                        a[k] = px.A / 65535f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * width;
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            int k = rowOffset + x;
+                            Rgba64 px = row[x];
+                            r[k] = px.R;
+                            g[k] = px.G;
+                            b[k] = px.B;
+                            a[k] = px.A / 65535f;
+                        }
                     }
-                }
+                });
             }
 
             Pixels = checked(Width * Height);
@@ -433,61 +438,60 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
-            r = new ushort[Pixels];
-            g = new ushort[Pixels];
-            b = new ushort[Pixels];
+            r = GC.AllocateUninitializedArray<ushort>(Pixels);
+            g = GC.AllocateUninitializedArray<ushort>(Pixels);
+            b = GC.AllocateUninitializedArray<ushort>(Pixels);
             if (source.PixelType.BitsPerPixel == 64) //Rgba32
             {
                 hasAlphaChannel = true;
-                a = new float[Pixels];
+                a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba64>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgba64 px = img[x, y];
-                        r[k] = px.R;
-                        g[k] = px.G;
-                        b[k] = px.B;
-                        a[k] = px.A / 65535f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        PictureBufferUtilities.CopyRgba64RowToUShortChannels(row, r.AsSpan(rowOffset, row.Length), g.AsSpan(rowOffset, row.Length), b.AsSpan(rowOffset, row.Length), a.AsSpan(rowOffset, row.Length), true);
                     }
-                }
+                });
             }
             else if (source.PixelType.BitsPerPixel == 32) //Rgba32
             {
                 hasAlphaChannel = true;
-                a = new float[Pixels];
+                a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba32>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgba32 px = img[x, y];
-                        r[k] = (ushort)(px.R * 257);
-                        g[k] = (ushort)(px.G * 257);
-                        b[k] = (ushort)(px.B * 257);
-                        a[k] = px.A / 255f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        PictureBufferUtilities.CopyRgba32RowToUShortChannels(row, r.AsSpan(rowOffset, row.Length), g.AsSpan(rowOffset, row.Length), b.AsSpan(rowOffset, row.Length), a);
                     }
-                }
+                });
             }
             else //Rgb24
             {
                 hasAlphaChannel = false;
                 a = null;
                 var img = source.CloneAs<Rgb24>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgb24 px = img[x, y];
-                        r[k] = (ushort)(px.R * 257);
-                        g[k] = (ushort)(px.G * 257);
-                        b[k] = (ushort)(px.B * 257);
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            int k = rowOffset + x;
+                            Rgb24 px = row[x];
+                            r[k] = (ushort)(px.R * 257);
+                            g[k] = (ushort)(px.G * 257);
+                            b[k] = (ushort)(px.B * 257);
+                        }
                     }
-                }
+                });
             }
             ProcessStack = new List<PictureProcessStack>
             {
@@ -519,7 +523,7 @@ namespace projectFrameCut.Shared
                 }
                 else
                 {
-                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                    a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
                 }
                 return this;
             }
@@ -531,7 +535,7 @@ namespace projectFrameCut.Shared
             {
                 if (!hasAlphaChannel || a == null || a.Length != Pixels)
                 {
-                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                    a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
                     hasAlphaChannel = true;
                 }
             }
@@ -562,7 +566,7 @@ namespace projectFrameCut.Shared
 
         public static Picture16bpp GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a)
         {
-            var pic = new Picture16bpp(width, height)
+            var pic = new Picture16bpp(width, height, allocateArrays: false)
             {
                 ProcessStack = new List<PictureProcessStack>
                 {
@@ -583,12 +587,12 @@ namespace projectFrameCut.Shared
                     }
                 }
             };
-            pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
-            pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
-            pic.b = Enumerable.Repeat(b, pic.Pixels).ToArray();
+            pic.r = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, r);
+            pic.g = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, g);
+            pic.b = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, b);
             if (a != null)
             {
-                pic.a = Enumerable.Repeat(a.Value, pic.Pixels).ToArray();
+                pic.a = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, a.Value);
                 pic.hasAlphaChannel = true;
             }
             else
@@ -643,7 +647,7 @@ namespace projectFrameCut.Shared
             {
                 if (!AllowPixelModeDowngrade) throw new InvalidOperationException($"AllowPixelModeDowngrade is false, so you can't convert a Picture16bpp to Picture8bpp.") { Data = { { "ProcessStack", ProcessStack } } };
                 var sw = Stopwatch.StartNew();
-                var pic = new Picture8bpp(Width, Height)
+                var pic = new Picture8bpp(Width, Height, allocateArrays: false)
                 {
                     frameIndex = this.frameIndex,
                     filePath = this.filePath,
@@ -653,7 +657,7 @@ namespace projectFrameCut.Shared
 
                 if (hasAlphaChannel && a != null)
                 {
-                    pic.a = new float[Pixels];
+                    pic.a = GC.AllocateUninitializedArray<float>(Pixels);
                     Array.Copy(a, pic.a, Pixels);
                 }
                 else
@@ -661,12 +665,12 @@ namespace projectFrameCut.Shared
                     pic.a = null;
                 }
 
-                for (int i = 0; i < Pixels; i++)
-                {
-                    pic.r[i] = (byte)(r[i] / 257);
-                    pic.g[i] = (byte)(g[i] / 257);
-                    pic.b[i] = (byte)(b[i] / 257);
-                }
+                pic.r = GC.AllocateUninitializedArray<byte>(Pixels);
+                pic.g = GC.AllocateUninitializedArray<byte>(Pixels);
+                pic.b = GC.AllocateUninitializedArray<byte>(Pixels);
+                PictureBufferUtilities.ConvertUShortToByte(r, pic.r);
+                PictureBufferUtilities.ConvertUShortToByte(g, pic.g);
+                PictureBufferUtilities.ConvertUShortToByte(b, pic.b);
                 pic.ProcessStack.Add(new PictureProcessStack
                 {
                     OperationDisplayName = "Converted from 16bpp to 8bpp",
@@ -814,15 +818,22 @@ namespace projectFrameCut.Shared
         /// <param name="width">The width of the picture, in pixels. Must be a non-negative integer.</param>
         /// <param name="height">The height of the picture, in pixels. Must be a non-negative integer.</param>
         public Picture8bpp(int width, int height)
+            : this(width, height, allocateArrays: true)
+        {
+        }
+
+        internal Picture8bpp(int width, int height, bool allocateArrays)
         {
             Width = width;
             Height = height;
             Pixels = checked(width * height);
 
-            // allocate pixel buffers so the instance is safe to use immediately
-            r = new byte[Pixels];
-            g = new byte[Pixels];
-            b = new byte[Pixels];
+            if (allocateArrays)
+            {
+                r = new byte[Pixels];
+                g = new byte[Pixels];
+                b = new byte[Pixels];
+            }
             a = null;
             ProcessStack = new List<PictureProcessStack>
             {
@@ -860,23 +871,28 @@ namespace projectFrameCut.Shared
                 Width = width;
                 Height = height;
 
-                r = new byte[total];
-                g = new byte[total];
-                b = new byte[total];
-                a = new float[total];
+                r = GC.AllocateUninitializedArray<byte>(total);
+                g = GC.AllocateUninitializedArray<byte>(total);
+                b = GC.AllocateUninitializedArray<byte>(total);
+                a = GC.AllocateUninitializedArray<float>(total);
 
-                for (int y = 0; y < height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * width + x;
-                        Rgba32 px = img[x, y];
-                        r[k] = px.R;
-                        g[k] = px.G;
-                        b[k] = px.B;
-                        a[k] = px.A / 255f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * width;
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            int k = rowOffset + x;
+                            Rgba32 px = row[x];
+                            r[k] = px.R;
+                            g[k] = px.G;
+                            b[k] = px.B;
+                            a[k] = px.A / 255f;
+                        }
                     }
-                }
+                });
             }
 
             Pixels = checked(Width * Height);
@@ -909,61 +925,68 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
-            r = new byte[Pixels];
-            g = new byte[Pixels];
-            b = new byte[Pixels];
+            r = GC.AllocateUninitializedArray<byte>(Pixels);
+            g = GC.AllocateUninitializedArray<byte>(Pixels);
+            b = GC.AllocateUninitializedArray<byte>(Pixels);
             if (source.PixelType.BitsPerPixel == 64) //Rgba64
             {
                 hasAlphaChannel = true;
-                a = new float[Pixels];
+                a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba64>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgba64 px = img[x, y];
-                        r[k] = (byte)(px.R / 257);
-                        g[k] = (byte)(px.G / 257);
-                        b[k] = (byte)(px.B / 257);
-                        a[k] = px.A / 65535f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            int k = rowOffset + x;
+                            Rgba64 px = row[x];
+                            r[k] = (byte)(px.R / 257);
+                            g[k] = (byte)(px.G / 257);
+                            b[k] = (byte)(px.B / 257);
+                            a[k] = px.A / 65535f;
+                        }
                     }
-                }
+                });
             }
             else if (source.PixelType.BitsPerPixel == 32) //Rgba32
             {
                 hasAlphaChannel = true;
-                a = new float[Pixels];
+                a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba32>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgba32 px = img[x, y];
-                        r[k] = px.R;
-                        g[k] = px.G;
-                        b[k] = px.B;
-                        a[k] = px.A / 255f;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        PictureBufferUtilities.CopyRgba32RowToByteChannels(row, r.AsSpan(rowOffset, row.Length), g.AsSpan(rowOffset, row.Length), b.AsSpan(rowOffset, row.Length), a.AsSpan(rowOffset, row.Length), true);
                     }
-                }
+                });
             }
             else //Rgb24
             {
                 hasAlphaChannel = false;
                 a = null;
                 var img = source.CloneAs<Rgb24>();
-                for (int y = 0; y < Height; y++)
+                img.ProcessPixelRows(accessor =>
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        int k = y * Width + x;
-                        Rgb24 px = img[x, y];
-                        r[k] = px.R;
-                        g[k] = px.G;
-                        b[k] = px.B;
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * Width;
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            int k = rowOffset + x;
+                            Rgb24 px = row[x];
+                            r[k] = px.R;
+                            g[k] = px.G;
+                            b[k] = px.B;
+                        }
                     }
-                }
+                });
             }
             ProcessStack = new List<PictureProcessStack>
             {
@@ -1000,7 +1023,7 @@ namespace projectFrameCut.Shared
                 }
                 else
                 {
-                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                    a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
                 }
                 return this;
             }
@@ -1012,7 +1035,7 @@ namespace projectFrameCut.Shared
             {
                 if (!hasAlphaChannel || a == null || a.Length != Pixels)
                 {
-                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                    a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
                     hasAlphaChannel = true;
                 }
             }
@@ -1043,7 +1066,7 @@ namespace projectFrameCut.Shared
 
         public static Picture8bpp GenerateSolidColor(int width, int height, byte r, byte g, byte b, float? a)
         {
-            var pic = new Picture8bpp(width, height)
+            var pic = new Picture8bpp(width, height, allocateArrays: false)
             {
                 ProcessStack = new List<PictureProcessStack>
                 {
@@ -1064,12 +1087,12 @@ namespace projectFrameCut.Shared
                     }
                 }
             };
-            pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
-            pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
-            pic.b = Enumerable.Repeat(b, pic.Pixels).ToArray();
+            pic.r = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, r);
+            pic.g = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, g);
+            pic.b = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, b);
             if (a != null)
             {
-                pic.a = Enumerable.Repeat(a.Value, pic.Pixels).ToArray();
+                pic.a = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, a.Value);
                 pic.hasAlphaChannel = true;
             }
             else
@@ -1121,7 +1144,7 @@ namespace projectFrameCut.Shared
             else if (bitPerPixel == PicturePixelMode.UShortPicture)
             {
                 var sw = Stopwatch.StartNew();
-                var pic = new Picture16bpp(Width, Height)
+                var pic = new Picture16bpp(Width, Height, allocateArrays: false)
                 {
                     frameIndex = this.frameIndex,
                     filePath = this.filePath,
@@ -1132,7 +1155,7 @@ namespace projectFrameCut.Shared
 
                 if (hasAlphaChannel && a != null)
                 {
-                    pic.a = new float[Pixels];
+                    pic.a = GC.AllocateUninitializedArray<float>(Pixels);
                     Array.Copy(a, pic.a, Pixels);
                 }
                 else
@@ -1140,12 +1163,12 @@ namespace projectFrameCut.Shared
                     pic.a = null;
                 }
 
-                for (int i = 0; i < Pixels; i++)
-                {
-                    pic.r[i] = (ushort)(r[i] * 257);
-                    pic.g[i] = (ushort)(g[i] * 257);
-                    pic.b[i] = (ushort)(b[i] * 257);
-                }
+                pic.r = GC.AllocateUninitializedArray<ushort>(Pixels);
+                pic.g = GC.AllocateUninitializedArray<ushort>(Pixels);
+                pic.b = GC.AllocateUninitializedArray<ushort>(Pixels);
+                PictureBufferUtilities.ConvertByteToUShort(r, pic.r);
+                PictureBufferUtilities.ConvertByteToUShort(g, pic.g);
+                PictureBufferUtilities.ConvertByteToUShort(b, pic.b);
                 pic.ProcessStack.Add(new PictureProcessStack
                 {
                     OperationDisplayName = "Converted from 8bpp to 16bpp",
@@ -1273,11 +1296,8 @@ namespace projectFrameCut.Shared
 
         public Picture8bpp ToNormalPicture()
         {
-            return new Picture8bpp(Width, Height)
+            var result = new Picture8bpp(Width, Height, allocateArrays: false)
             {
-                r = r.Select(v => v ? (byte)255 : (byte)0).ToArray(),
-                g = g.Select(v => v ? (byte)255 : (byte)0).ToArray(),
-                b = b.Select(v => v ? (byte)255 : (byte)0).ToArray(),
                 a = null,
                 hasAlphaChannel = false,
                 Width = Width,
@@ -1291,6 +1311,13 @@ namespace projectFrameCut.Shared
                 }).ToList()
 
             };
+            result.r = GC.AllocateUninitializedArray<byte>(Pixels);
+            result.g = GC.AllocateUninitializedArray<byte>(Pixels);
+            result.b = GC.AllocateUninitializedArray<byte>(Pixels);
+            PictureBufferUtilities.ConvertBoolMaskToBytes(r, result.r);
+            PictureBufferUtilities.ConvertBoolMaskToBytes(g, result.g);
+            PictureBufferUtilities.ConvertBoolMaskToBytes(b, result.b);
+            return result;
         }
 
         IPicture IPicture.Resize(int targetWidth, int targetHeight, bool preserveAspect)
@@ -1392,7 +1419,9 @@ namespace projectFrameCut.Shared
 
         public HDRPicture16bpp SetBrightnessOffset(double offset)
         {
-            Brightness = Brightness.Select(br => (float)Math.Clamp(br + offset, 0.0, 1.0)).ToArray();
+            float[] brightness = GC.AllocateUninitializedArray<float>(Brightness.Length);
+            PictureBufferUtilities.ClampBrightness(Brightness, brightness, offset);
+            Brightness = brightness;
             return this;
         }
 
@@ -1405,7 +1434,7 @@ namespace projectFrameCut.Shared
                 ? maximumBrightness
                 : DefaultHdrMaximumBrightness;
 
-            var pic = new HDRPicture16bpp(width, height)
+            var pic = new HDRPicture16bpp(width, height, allocateArrays: false)
             {
                 ProcessStack = new List<PictureProcessStack>
                 {
@@ -1428,16 +1457,16 @@ namespace projectFrameCut.Shared
                     }
                 },
                 MaximumBrightness = validMaximumBrightness,
-                Brightness = Enumerable.Repeat(validBrightness, pixels).ToArray(),
+                Brightness = PictureBufferUtilities.AllocateFilledArray(pixels, validBrightness),
             };
 
-            pic.r = Enumerable.Repeat(r, pixels).ToArray();
-            pic.g = Enumerable.Repeat(g, pixels).ToArray();
-            pic.b = Enumerable.Repeat(b, pixels).ToArray();
+            pic.r = PictureBufferUtilities.AllocateFilledArray(pixels, r);
+            pic.g = PictureBufferUtilities.AllocateFilledArray(pixels, g);
+            pic.b = PictureBufferUtilities.AllocateFilledArray(pixels, b);
 
             if (a != null)
             {
-                pic.a = Enumerable.Repeat(Math.Clamp(a.Value, 0f, 1f), pixels).ToArray();
+                pic.a = PictureBufferUtilities.AllocateFilledArray(pixels, Math.Clamp(a.Value, 0f, 1f));
                 pic.hasAlphaChannel = true;
             }
             else
@@ -1486,15 +1515,19 @@ namespace projectFrameCut.Shared
             if (mode == HDRImageDegradeToSDRMode.DisallowDowngrade)
                 throw new InvalidOperationException($"HDR to SDR degrade is disabled. Mode: {mode}.");
 
-            var result = new Picture16bpp(Width, Height)
+            var result = new Picture16bpp(Width, Height, allocateArrays: false)
             {
                 frameIndex = frameIndex,
                 filePath = filePath,
             };
 
+            result.r = GC.AllocateUninitializedArray<ushort>(Pixels);
+            result.g = GC.AllocateUninitializedArray<ushort>(Pixels);
+            result.b = GC.AllocateUninitializedArray<ushort>(Pixels);
+
             if (hasAlphaChannel && a != null)
             {
-                result.a = new float[Pixels];
+                result.a = GC.AllocateUninitializedArray<float>(Pixels);
                 Array.Copy(a, result.a, Pixels);
                 result.hasAlphaChannel = true;
             }

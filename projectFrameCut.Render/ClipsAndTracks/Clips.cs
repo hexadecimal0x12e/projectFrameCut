@@ -21,6 +21,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class VideoClip : IClip
     {
+        private const int MaxDecoderPoolSize = 128;
+
+        private static readonly object DecoderPoolRegistryLock = new();
+        private static readonly Dictionary<string, VideoDecoderPool> DecoderPools = new(StringComparer.OrdinalIgnoreCase);
+
+        private VideoDecoderPool? _decoderPool;
+        private string? _decoderPoolKey;
+
         public required string Id { get; init; }
         public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
         public required string Name { get; init; }
@@ -69,26 +77,31 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
-            if(Decoder is null)
+            if (_decoderPool is null)
             {
                 throw new NullReferenceException("Decoder is null. Please init it.");
             }
-            targetFrame = ClampFrameToDecoderRange(targetFrame);
-            if(Decoder is HDRDecoderContext h)
+
+            using var decoderLease = _decoderPool.Rent(targetFrame);
+            var decoder = decoderLease.Decoder;
+            targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
+
+            if (decoder is HDRDecoderContext h)
             {
                 return h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
             }
-            return (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+
+            return decoder.GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
         }
 
-        private uint ClampFrameToDecoderRange(uint targetFrame)
+        private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
         {
-            if (Decoder is null)
+            if (decoder is null)
             {
                 return targetFrame;
             }
 
-            long totalFrames = Decoder.TotalFrames;
+            long totalFrames = decoder.TotalFrames;
             if (totalFrames <= 0)
             {
                 return targetFrame;
@@ -101,13 +114,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
-            if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+
+            var poolKey = BuildDecoderPoolKey(FilePath, TargetDecoder);
+            if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
             {
-                var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
-                Decoder = supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+                Decoder = _decoderPool.RepresentativeDecoder;
+                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
                 return;
             }
-            Decoder = PluginManager.CreateVideoSource(FilePath);
+
+            ReleaseDecoderPool();
+
+            var pool = AcquireDecoderPool(poolKey, CreateDecoderInstance);
+            _decoderPoolKey = poolKey;
+            _decoderPool = pool;
+            Decoder = pool.RepresentativeDecoder;
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
@@ -115,10 +136,307 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IDisposable.Dispose()
         {
-            Decoder?.Dispose();
+            ReleaseDecoderPool();
         }
 
-        public uint? GetClipLength() => null;
+        private IVideoSource CreateDecoderInstance()
+        {
+            if (string.IsNullOrWhiteSpace(FilePath))
+            {
+                throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+            {
+                var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
+                return supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+            }
+
+            return PluginManager.CreateVideoSource(FilePath);
+        }
+
+        private void ReleaseDecoderPool()
+        {
+            var pool = _decoderPool;
+            var poolKey = _decoderPoolKey;
+            _decoderPool = null;
+            _decoderPoolKey = null;
+            Decoder = null;
+
+            if (pool is null || string.IsNullOrWhiteSpace(poolKey))
+            {
+                return;
+            }
+
+            lock (DecoderPoolRegistryLock)
+            {
+                if (!DecoderPools.TryGetValue(poolKey, out var existing) || !ReferenceEquals(existing, pool))
+                {
+                    return;
+                }
+
+                if (existing.ReleaseOwner())
+                {
+                    DecoderPools.Remove(poolKey);
+                }
+            }
+        }
+
+        private static VideoDecoderPool AcquireDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
+        {
+            lock (DecoderPoolRegistryLock)
+            {
+                if (!DecoderPools.TryGetValue(poolKey, out var pool))
+                {
+                    pool = new VideoDecoderPool(poolKey, decoderFactory);
+                    DecoderPools[poolKey] = pool;
+                }
+
+                pool.AddOwner();
+                return pool;
+            }
+        }
+
+        private static string BuildDecoderPoolKey(string filePath, string targetDecoder)
+        {
+            var normalizedPath = Path.GetFullPath(filePath);
+            var normalizedDecoder = string.IsNullOrWhiteSpace(targetDecoder) ? "auto" : targetDecoder.Trim();
+            return $"{normalizedPath}::{normalizedDecoder}";
+        }
+
+        private sealed class VideoDecoderPool : IDisposable
+        {
+            private readonly string _poolKey;
+            private readonly Func<IVideoSource> _decoderFactory;
+            private readonly List<PooledDecoderEntry> _decoders = [];
+            private readonly object _sync = new();
+            private int _ownerCount;
+            private bool _disposed;
+
+            public VideoDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
+            {
+                _poolKey = poolKey;
+                _decoderFactory = decoderFactory;
+
+                var representative = CreateDecoder();
+                _decoders.Add(new PooledDecoderEntry(representative));
+            }
+
+            public IVideoSource RepresentativeDecoder
+            {
+                get
+                {
+                    lock (_sync)
+                    {
+                        return _decoders[0].Decoder;
+                    }
+                }
+            }
+
+            public bool Disposed
+            {
+                get
+                {
+                    lock (_sync)
+                    {
+                        return _disposed;
+                    }
+                }
+            }
+
+            public void AddOwner()
+            {
+                lock (_sync)
+                {
+                    if (_disposed)
+                    {
+                        throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
+                    }
+
+                    _ownerCount++;
+                }
+            }
+
+            public bool ReleaseOwner()
+            {
+                lock (_sync)
+                {
+                    if (_ownerCount > 0)
+                    {
+                        _ownerCount--;
+                    }
+
+                    if (_ownerCount > 0)
+                    {
+                        return false;
+                    }
+
+                    _disposed = true;
+                    foreach (var entry in _decoders)
+                    {
+                        if (!entry.InUse)
+                        {
+                            entry.Dispose();
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            public DecoderLease Rent(uint targetFrame)
+            {
+                lock (_sync)
+                {
+                    if (_disposed)
+                    {
+                        throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
+                    }
+
+                    var bestEntry = GetBestFreeEntry(targetFrame);
+                    if (bestEntry is not null)
+                    {
+                        bestEntry.InUse = true;
+                        return new DecoderLease(this, bestEntry);
+                    }
+
+                    if (_decoders.Count < MaxDecoderPoolSize)
+                    {
+                        var decoder = CreateDecoder();
+                        var entry = new PooledDecoderEntry(decoder)
+                        {
+                            InUse = true
+                        };
+                        _decoders.Add(entry);
+                        return new DecoderLease(this, entry);
+                    }
+                }
+
+                return new DecoderLease(CreateDecoder());
+            }
+
+            private PooledDecoderEntry? GetBestFreeEntry(uint targetFrame)
+            {
+                PooledDecoderEntry? bestEntry = null;
+                long bestDistance = long.MaxValue;
+
+                foreach (var entry in _decoders)
+                {
+                    if (entry.InUse || entry.Decoder.Disposed)
+                    {
+                        continue;
+                    }
+
+                    long distance = Math.Abs((long)entry.Decoder.Index - targetFrame);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestEntry = entry;
+                    }
+                }
+
+                return bestEntry;
+            }
+
+            private IVideoSource CreateDecoder()
+            {
+                var decoder = _decoderFactory();
+                decoder.EnableLock = true;
+                return decoder;
+            }
+
+            internal void Return(PooledDecoderEntry entry)
+            {
+                lock (_sync)
+                {
+                    if (_disposed)
+                    {
+                        entry.InUse = false;
+                        entry.Dispose();
+                        return;
+                    }
+
+                    entry.InUse = false;
+                }
+            }
+
+            public void Dispose()
+            {
+                lock (_sync)
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    _disposed = true;
+                    foreach (var entry in _decoders)
+                    {
+                        if (!entry.InUse)
+                        {
+                            entry.Dispose();
+                        }
+                    }
+                }
+            }
+
+            internal sealed class PooledDecoderEntry
+            {
+                public PooledDecoderEntry(IVideoSource decoder)
+                {
+                    Decoder = decoder;
+                }
+
+                public IVideoSource Decoder { get; }
+                public bool InUse { get; set; }
+
+                public void Dispose()
+                {
+                    Decoder.Dispose();
+                }
+            }
+
+            internal sealed class DecoderLease : IDisposable
+            {
+                private readonly VideoDecoderPool? _pool;
+                private readonly PooledDecoderEntry? _entry;
+                private readonly IVideoSource? _temporaryDecoder;
+                private bool _disposed;
+
+                internal DecoderLease(VideoDecoderPool pool, PooledDecoderEntry entry)
+                {
+                    _pool = pool;
+                    _entry = entry;
+                    Decoder = entry.Decoder;
+                }
+
+                internal DecoderLease(IVideoSource temporaryDecoder)
+                {
+                    _temporaryDecoder = temporaryDecoder;
+                    Decoder = temporaryDecoder;
+                }
+
+                public IVideoSource Decoder { get; }
+
+                public void Dispose()
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    _disposed = true;
+
+                    if (_entry is not null && _pool is not null)
+                    {
+                        _pool.Return(_entry);
+                        return;
+                    }
+
+                    _temporaryDecoder?.Dispose();
+                }
+            }
+        }
     }
 
     public class PhotoClip : IClip

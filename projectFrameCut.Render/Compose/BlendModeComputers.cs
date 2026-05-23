@@ -3,6 +3,152 @@ using System;
 
 namespace projectFrameCut.Render.Compose
 {
+    public class OverlayComputer : IComputer
+    {
+        public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
+        public string SupportedEffectOrMixture => "Overlay";
+
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0];
+            var b = (float[])args[1];
+            var aAlpha = (float[])args[2];
+            var bAlpha = (float[])args[3];
+            int bitDepth = Convert.ToInt32(args[4]);
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+
+            if (bitDepth == 8)
+            {
+                var outC = new byte[pixelCount];
+                var outA = new float[pixelCount];
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outAlpha = aA + bA * (1f - aA);
+
+                    if (outAlpha < 1e-6f)
+                    {
+                        outC[i] = 0;
+                        outA[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outAlpha;
+                        float bC = b[i] * bA * (1f - aA) / outAlpha;
+                        float outColor = aC + bC;
+                        outC[i] = (byte)Math.Clamp(outColor, 0f, 255f);
+                        outA[i] = outAlpha;
+                    }
+                }
+
+                return [outC, outA];
+            }
+            else // 16-bit
+            {
+                var outC = new ushort[pixelCount];
+                var outA = new float[pixelCount];
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outAlpha = aA + bA * (1f - aA);
+
+                    if (outAlpha < 1e-6f)
+                    {
+                        outC[i] = 0;
+                        outA[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outAlpha;
+                        float bC = b[i] * bA * (1f - aA) / outAlpha;
+                        float outColor = aC + bC;
+                        outC[i] = (ushort)Math.Clamp(outColor, 0f, 65535f);
+                        outA[i] = outAlpha;
+                    }
+                }
+
+                return [outC, outA];
+            }
+        }
+    }
+
+    public class ApproximateComputer : IComputer
+    {
+        public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
+        public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0];
+            var b = (float[])args[1];
+            var aAlpha = (float[])args[2];
+            var bAlpha = (float[])args[3];
+            int bitDepth = Convert.ToInt32(args[4]);
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+
+            if (bitDepth == 8)
+            {
+                var outC = new byte[pixelCount];
+                var outA = new float[pixelCount];
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outAlpha = aA + bA * (1f - aA);
+
+                    if (outAlpha < 1e-6f)
+                    {
+                        outC[i] = 0;
+                        outA[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outAlpha;
+                        float bC = b[i] * bA * (1f - aA) / outAlpha;
+                        float outColor = aC + bC;
+                        outC[i] = (byte)Math.Clamp(outColor, 0f, 255f);
+                        outA[i] = outAlpha;
+                    }
+                }
+
+                return [outC, outA];
+            }
+            else // 16-bit
+            {
+                var outC = new ushort[pixelCount];
+                var outA = new float[pixelCount];
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outAlpha = aA + bA * (1f - aA);
+
+                    if (outAlpha < 1e-6f)
+                    {
+                        outC[i] = 0;
+                        outA[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outAlpha;
+                        float bC = b[i] * bA * (1f - aA) / outAlpha;
+                        float outColor = aC + bC;
+                        outC[i] = (ushort)Math.Clamp(outColor, 0f, 65535f);
+                        outA[i] = outAlpha;
+                    }
+                }
+
+                return [outC, outA];
+            }
+        }
+    }
+
     public class AddComputer : IComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;

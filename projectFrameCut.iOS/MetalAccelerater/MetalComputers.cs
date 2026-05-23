@@ -227,6 +227,194 @@ kernel void overlay_color_compute(
 ";
     }
 
+    public class ApproximateOverlayComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.iOS.MetalAccelerater.MetalComputers";
+        public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        private IMTLComputePipelineState? _alphaPipelineState;
+        private IMTLComputePipelineState? _colorPipelineState;
+
+        private void InitializePipeline()
+        {
+            if (_alphaPipelineState != null && _colorPipelineState != null) return;
+
+            var device = MetalComputerHelper.Device;
+            var library = device.CreateLibrary(ShaderSource, new MTLCompileOptions(), out NSError error);
+            if (library == null) throw new Exception($"Failed to compile shader: {error?.LocalizedDescription}");
+
+            var alphaFunction = library.CreateFunction("overlay_alpha_compute");
+            _alphaPipelineState = device.CreateComputePipelineState(alphaFunction, out error);
+            if (_alphaPipelineState == null) throw new Exception($"Failed to create alpha pipeline state: {error?.LocalizedDescription}");
+
+            var colorFunction = library.CreateFunction("overlay_color_compute");
+            _colorPipelineState = device.CreateComputePipelineState(colorFunction, out error);
+            if (_colorPipelineState == null) throw new Exception($"Failed to create color pipeline state: {error?.LocalizedDescription}");
+        }
+
+        public object[] Compute(object[] args)
+        {
+            InitializePipeline();
+
+            // args: [A, B, aAlpha, bAlpha, outputBpp]
+            var A = (float[])args[0];
+            var B = (float[])args[1];
+            var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+
+            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+
+            int count = A.Length;
+            int bufferSize = count * sizeof(float);
+
+            var device = MetalComputerHelper.Device;
+            var commandQueue = MetalComputerHelper.CommandQueue;
+            var commandBuffer = commandQueue.CommandBuffer();
+            if (commandBuffer == null) throw new Exception("Failed to create command buffer");
+
+            var encoder = commandBuffer.ComputeCommandEncoder;
+            if (encoder == null) throw new Exception("Failed to create compute encoder");
+
+            var aBuffer = CreateBuffer(device, A);
+            var bBuffer = CreateBuffer(device, B);
+            var aAlphaBuffer = CreateBuffer(device, aAlpha);
+            var bAlphaBuffer = CreateBuffer(device, bAlpha);
+            var cAlphaBuffer = device.CreateBuffer((nuint)bufferSize, MTLResourceOptions.StorageModeShared) ?? throw new Exception("Failed to create buffer");
+            var cBuffer = device.CreateBuffer((nuint)bufferSize, MTLResourceOptions.StorageModeShared) ?? throw new Exception("Failed to create buffer");
+
+            // 1. Compute Alpha
+            encoder.SetComputePipelineState(_alphaPipelineState!);
+            encoder.SetBuffer(aAlphaBuffer, 0, 0);
+            encoder.SetBuffer(bAlphaBuffer, 0, 1);
+            encoder.SetBuffer(cAlphaBuffer, 0, 2);
+
+            var threadGroupSize = new MTLSize(Math.Min(count, (int)_alphaPipelineState!.MaxTotalThreadsPerThreadgroup), 1, 1);
+            var threadGroups = new MTLSize((count + threadGroupSize.Width - 1) / threadGroupSize.Width, 1, 1);
+            
+            encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
+
+            // 2. Compute Color
+            encoder.SetComputePipelineState(_colorPipelineState!);
+            encoder.SetBuffer(aAlphaBuffer, 0, 0);
+            encoder.SetBuffer(aBuffer, 0, 1);
+            encoder.SetBuffer(bAlphaBuffer, 0, 2);
+            encoder.SetBuffer(bBuffer, 0, 3);
+            encoder.SetBuffer(cBuffer, 0, 4);
+            
+            encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
+
+            encoder.EndEncoding();
+            commandBuffer.Commit();
+            commandBuffer.WaitUntilCompleted();
+
+            float[] resultAlpha = new float[count];
+            Marshal.Copy(cAlphaBuffer.Contents, resultAlpha, 0, count);
+
+            if (outputBpp == 8)
+            {
+                float[] temp = new float[count];
+                Marshal.Copy(cBuffer.Contents, temp, 0, count);
+                var resultColor = new byte[count];
+                for (int i = 0; i < count; i++)
+                {
+                    float v = temp[i] / 257.0f;
+                    if (v < 0) v = 0;
+                    if (v > 255) v = 255;
+                    resultColor[i] = (byte)v;
+                }
+                return new object[] { resultColor, resultAlpha };
+            }
+            if (outputBpp == 16)
+            {
+                float[] temp = new float[count];
+                Marshal.Copy(cBuffer.Contents, temp, 0, count);
+                var resultColor = new ushort[count];
+                for (int i = 0; i < count; i++)
+                {
+                    float v = temp[i];
+                    if (v < 0) v = 0;
+                    if (v > 65535) v = 65535;
+                    resultColor[i] = (ushort)v;
+                }
+                return new object[] { resultColor, resultAlpha };
+            }
+
+            float[] resultColorF = new float[count];
+            Marshal.Copy(cBuffer.Contents, resultColorF, 0, count);
+            return new object[] { resultColorF, resultAlpha };
+        }
+
+        private IMTLBuffer CreateBuffer(IMTLDevice device, float[] data)
+        {
+            unsafe
+            {
+                fixed (float* ptr = data)
+                {
+                    return device.CreateBuffer((IntPtr)ptr, (nuint)(data.Length * sizeof(float)), MTLResourceOptions.StorageModeShared) ?? throw new Exception("Failed to create buffer");
+                }
+            }
+        }
+
+        private const string ShaderSource = @"
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void overlay_alpha_compute(
+    device const float* aAlpha [[ buffer(0) ]],
+    device const float* bAlpha [[ buffer(1) ]],
+    device float* cAlpha [[ buffer(2) ]],
+    uint id [[ thread_position_in_grid ]])
+{
+    float aA = aAlpha[id];
+    float bA = bAlpha[id];
+
+    if (aA == 1.0) {
+        cAlpha[id] = 1.0;
+    } else if (aA <= 0.05) {
+        cAlpha[id] = bA;
+    } else {
+        float outA = aA + bA * (1.0 - aA);
+        if (outA < 1e-6)
+        {
+            cAlpha[id] = 0.0;
+        }
+        else
+        {
+            cAlpha[id] = outA;
+        }
+    }
+}
+
+kernel void overlay_color_compute(
+    device const float* aAlpha [[ buffer(0) ]],
+    device const float* aVal [[ buffer(1) ]],
+    device const float* bAlpha [[ buffer(2) ]],
+    device const float* bVal [[ buffer(3) ]],
+    device float* c [[ buffer(4) ]],
+    uint id [[ thread_position_in_grid ]])
+{
+    float aA = aAlpha[id];
+    float bA = bAlpha[id];
+    float outA = aA + bA * (1.0 - aA);
+
+    if (outA < 1e-6)
+    {
+        c[id] = 0.0;
+    }
+    else
+    {
+        float aC = aVal[id] * aA / outA;
+        float bC = bVal[id] * bA * (1.0 - aA) / outA;
+        float outC = aC + bC;
+        outC = clamp(outC, 0.0, 65535.0);
+        c[id] = outC;
+    }
+}
+";
+    }
+
     public class RemoveColorComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.iOS.MetalAccelerater.MetalComputers";

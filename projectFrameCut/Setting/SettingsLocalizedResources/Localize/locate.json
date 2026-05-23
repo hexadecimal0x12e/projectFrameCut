@@ -1302,6 +1302,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_PreferHwAccelResizeProvider",
+        "Value": "\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "GeneralCodec_EnableDiskCache",
         "Value": "\u542F\u7528\u78C1\u76D8\u89E3\u7801\u7F13\u5B58",
         "Mode": "ConstString",
@@ -2359,8 +2367,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_DefaultResizeProvider",
-        "Value": "IPicture \u7F29\u653E\u5B9E\u73B0\u65B9\u5F0F",
+        "Id": "Render_PreferApproximateMixture",
+        "Value": "\u4F7F\u7528\u66F4\u5FEB\u901F\u7684\u6DF7\u5408\u5668\uFF08\u53EF\u80FD\u5BFC\u81F4\u7CBE\u5EA6\u95EE\u9898\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

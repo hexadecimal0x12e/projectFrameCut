@@ -301,6 +301,248 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
+    public class ApproximateOverlayComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        [SetsRequiredMembers]
+        public ApproximateOverlayComputer(Accelerator[] accel, bool? sync)
+        {
+            this.accelerators = accel;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
+        }
+
+        public required Accelerator[] accelerators { get; init; }
+        public bool Sync { get; set; } = false;
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, float[]> OnesCache = new();
+        private static float[] GetOnes(int length)
+        {
+            if (length <= 0) return Array.Empty<float>();
+            return OnesCache.GetOrAdd(length, static len =>
+            {
+                var arr = new float[len];
+                Array.Fill(arr, 1f);
+                return arr;
+            });
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelFloatCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernelFloat(Accelerator accelerator)
+        {
+            return KernelFloatCache.GetOrAdd(accelerator, static acc =>
+            {
+                return acc.LoadAutoGroupedStreamKernel((Index1D i,
+                    ArrayView<float> a,
+                    ArrayView<float> b,
+                    ArrayView<float> aAlpha,
+                    ArrayView<float> bAlpha,
+                    ArrayView<float> c,
+                    ArrayView<float> cAlpha) =>
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outA = aA + bA * (1 - aA);
+                    if (outA < 1e-6f)
+                    {
+                        c[i] = 0;
+                        cAlpha[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outA;
+                        float bC = b[i] * bA * (1 - aA) / outA;
+                        float outC = aC + bC;
+                        if (outC < 0f) outC = 0f;
+                        if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                        c[i] = (ushort)outC;
+                        cAlpha[i] = outA;
+                    }
+                });
+            });
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<ushort>, ArrayView<float>>> KernelUShortCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<ushort>, ArrayView<float>> GetKernelUShort(Accelerator accelerator)
+        {
+            return KernelUShortCache.GetOrAdd(accelerator, static acc =>
+            {
+                return acc.LoadAutoGroupedStreamKernel((Index1D i,
+                    ArrayView<float> a,
+                    ArrayView<float> b,
+                    ArrayView<float> aAlpha,
+                    ArrayView<float> bAlpha,
+                    ArrayView<ushort> c,
+                    ArrayView<float> cAlpha) =>
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outA = aA + bA * (1 - aA);
+                    if (outA < 1e-6f)
+                    {
+                        c[i] = 0;
+                        cAlpha[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outA;
+                        float bC = b[i] * bA * (1 - aA) / outA;
+                        float outC = aC + bC;
+                        if (outC < 0f) outC = 0f;
+                        if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                        c[i] = (ushort)outC;
+                        cAlpha[i] = outA;
+                    }
+                });
+            });
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<byte>, ArrayView<float>>> KernelByteCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<byte>, ArrayView<float>> GetKernelByte(Accelerator accelerator)
+        {
+            return KernelByteCache.GetOrAdd(accelerator, static acc =>
+            {
+                return acc.LoadAutoGroupedStreamKernel((Index1D i,
+                    ArrayView<float> a,
+                    ArrayView<float> b,
+                    ArrayView<float> aAlpha,
+                    ArrayView<float> bAlpha,
+                    ArrayView<byte> c,
+                    ArrayView<float> cAlpha) =>
+                {
+                    float aA = aAlpha[i];
+                    float bA = bAlpha[i];
+                    float outA = aA + bA * (1 - aA);
+                    if (outA < 1e-6f)
+                    {
+                        c[i] = 0;
+                        cAlpha[i] = 0f;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outA;
+                        float bC = b[i] * bA * (1 - aA) / outA;
+                        float outC = aC + bC;
+                        if (outC < 0f) outC = 0f;
+                        if (outC > byte.MaxValue) outC = byte.MaxValue;
+                        c[i] = (byte)outC;
+                        cAlpha[i] = outA;
+                    }
+                });
+            });
+        }
+
+        public object[] Compute(object[] args)
+        {
+            int accelIdx = 0;
+            Accelerator accelerator;
+
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
+            var A = args[0] as float[] ?? throw new InvalidDataException("Invalid argument for A");
+            var B = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for B");
+            var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            var pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : A.Length;
+            aAlpha ??= GetOnes(pixelCount);
+            bAlpha ??= GetOnes(pixelCount);
+
+            using var a = accelerator.Allocate1D(A.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(B.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(aAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bAlpha.Take(pixelCount).ToArray());
+
+            if (outputBpp == 8)
+            {
+                var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+                var krnl = GetKernelByte(accelerator);
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                }
+
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
+            }
+            else if (outputBpp == 16)
+            {
+                var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+                var krnl = GetKernelUShort(accelerator);
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                }
+
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
+            }
+            else
+            {
+                var outBuffer = accelerator.Allocate1D<float>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+                var krnl = GetKernelFloat(accelerator);
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                }
+
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
+            }
+        }
+    }
+
     public class RemoveColorComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";

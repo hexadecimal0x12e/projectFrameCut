@@ -57,7 +57,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 length = Directory.GetFiles(_cacheDir).Length;
             }
             catch { }
-            Log($"VideoFrameDiskCache initialized for '{videoPath}'({info?.MD5 ?? "?"}), already {length} entries files");
+            LogDiagnostic($"VideoFrameDiskCache initialized for '{videoPath}'({info?.MD5 ?? "?"}), already {length} entries files");
 
         }
 

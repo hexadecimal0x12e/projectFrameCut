@@ -7509,14 +7509,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                 try
                 {
                     UpdatePlayheadPosition(TimelineScrollView.ScrollX);
-                    CurrentPlayheadLabel.Text =
-                    $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
+                    CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
                     applyWatch.Restart();
                     ClipEditor.ApplyPreparedPreviews(preparedPreviews);
                     applyWatch.Stop();
                     if (developerMode)
                     {
-                        AlternativeStatusLabel.Text = $"{fps:F1} FPS ({prepareWatch.ElapsedMilliseconds:F1} ms prep + {applyWatch.ElapsedMilliseconds:F1} ms apply)";
+                        AlternativeStatusLabel.Text = $"{(fps < 1.5 ? Localized.DraftPage_LivePreview_SecondPerFrame(1 / fps) : $"{fps} FPS")} ({prepareWatch.ElapsedMilliseconds:F1} ms prep + {applyWatch.ElapsedMilliseconds:F1} ms apply)";
                     }
                     else
                     {

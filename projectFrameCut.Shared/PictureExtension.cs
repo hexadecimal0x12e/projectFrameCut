@@ -14,6 +14,9 @@ using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -774,6 +777,240 @@ namespace projectFrameCut.Shared
             public T g;
             public T b;
             public float a;
+        }
+    }
+
+    internal static class PictureBufferUtilities
+    {
+        private static readonly Vector128<byte> Rgba32RMask = Vector128.Create((byte)0, 4, 8, 12, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba32GMask = Vector128.Create((byte)1, 5, 9, 13, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba32BMask = Vector128.Create((byte)2, 6, 10, 14, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba32AMask = Vector128.Create((byte)3, 7, 11, 15, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba64RMask = Vector128.Create((byte)0, 1, 8, 9, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba64GMask = Vector128.Create((byte)2, 3, 10, 11, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+        private static readonly Vector128<byte> Rgba64BMask = Vector128.Create((byte)4, 5, 12, 13, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T[] AllocateFilledArray<T>(int length, T value)
+        {
+            T[] array = GC.AllocateUninitializedArray<T>(length);
+            array.AsSpan().Fill(value);
+            return array;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConvertUShortToByte(ReadOnlySpan<ushort> source, Span<byte> destination)
+        {
+            if (source.Length != destination.Length)
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                destination[i] = (byte)(source[i] / 257);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConvertByteToUShort(ReadOnlySpan<byte> source, Span<ushort> destination)
+        {
+            if (source.Length != destination.Length)
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                destination[i] = (ushort)(source[i] * 257);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConvertBoolMaskToBytes(ReadOnlySpan<bool> source, Span<byte> destination)
+        {
+            if (source.Length != destination.Length)
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                destination[i] = source[i] ? byte.MaxValue : byte.MinValue;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ClampBrightness(ReadOnlySpan<float> source, Span<float> destination, double offset)
+        {
+            if (source.Length != destination.Length)
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                destination[i] = (float)Math.Clamp(source[i] + offset, 0.0, 1.0);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CopyRgba32RowToByteChannels(ReadOnlySpan<Rgba32> row, Span<byte> r, Span<byte> g, Span<byte> b, Span<float> alpha, bool hasAlpha)
+        {
+            if (row.Length != r.Length || row.Length != g.Length || row.Length != b.Length || (hasAlpha && row.Length != alpha.Length))
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            int i = 0;
+            if (Ssse3.IsSupported)
+            {
+                ReadOnlySpan<byte> rowBytes = MemoryMarshal.AsBytes(row);
+                ref byte srcBase = ref MemoryMarshal.GetReference(rowBytes);
+                ref byte rBase = ref MemoryMarshal.GetReference(r);
+                ref byte gBase = ref MemoryMarshal.GetReference(g);
+                ref byte bBase = ref MemoryMarshal.GetReference(b);
+                int simdLimit = row.Length & ~3;
+                for (; i < simdLimit; i += 4)
+                {
+                    int byteOffset = i * 4;
+                    Vector128<byte> src = Unsafe.ReadUnaligned<Vector128<byte>>(ref Unsafe.Add(ref srcBase, byteOffset));
+                    uint packedR = Ssse3.Shuffle(src, Rgba32RMask).AsUInt32().GetElement(0);
+                    uint packedG = Ssse3.Shuffle(src, Rgba32GMask).AsUInt32().GetElement(0);
+                    uint packedB = Ssse3.Shuffle(src, Rgba32BMask).AsUInt32().GetElement(0);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref rBase, i), packedR);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref gBase, i), packedG);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref bBase, i), packedB);
+
+                    if (hasAlpha)
+                    {
+                        Vector128<byte> alphaVec = Ssse3.Shuffle(src, Rgba32AMask);
+                        alpha[i] = alphaVec.GetElement(0) / 255f;
+                        alpha[i + 1] = alphaVec.GetElement(1) / 255f;
+                        alpha[i + 2] = alphaVec.GetElement(2) / 255f;
+                        alpha[i + 3] = alphaVec.GetElement(3) / 255f;
+                    }
+                }
+            }
+
+            for (; i < row.Length; i++)
+            {
+                Rgba32 px = row[i];
+                r[i] = px.R;
+                g[i] = px.G;
+                b[i] = px.B;
+                if (hasAlpha)
+                {
+                    alpha[i] = px.A / 255f;
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CopyRgba32RowToUShortChannels(ReadOnlySpan<Rgba32> row, Span<ushort> r, Span<ushort> g, Span<ushort> b, float[]? a = null)
+        {
+            if (row.Length != r.Length || row.Length != g.Length || row.Length != b.Length || (a is not null && row.Length != a.Length))
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            Span<float> alpha = a is null ? default : a.AsSpan();
+            bool hasAlpha = a is not null;
+            int i = 0;
+            if (Ssse3.IsSupported)
+            {
+                ReadOnlySpan<byte> rowBytes = MemoryMarshal.AsBytes(row);
+                ref byte srcBase = ref MemoryMarshal.GetReference(rowBytes);
+                ref byte rBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(r));
+                ref byte gBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(g));
+                ref byte bBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(b));
+                int simdLimit = row.Length & ~3;
+                var scale = Vector128.Create((ushort)257);
+                for (; i < simdLimit; i += 4)
+                {
+                    int byteOffset = i * 4;
+                    Vector128<byte> src = Unsafe.ReadUnaligned<Vector128<byte>>(ref Unsafe.Add(ref srcBase, byteOffset));
+                    Vector128<ushort> rWords = Sse2.UnpackLow(Ssse3.Shuffle(src, Rgba32RMask), Vector128<byte>.Zero).AsUInt16();
+                    Vector128<ushort> gWords = Sse2.UnpackLow(Ssse3.Shuffle(src, Rgba32GMask), Vector128<byte>.Zero).AsUInt16();
+                    Vector128<ushort> bWords = Sse2.UnpackLow(Ssse3.Shuffle(src, Rgba32BMask), Vector128<byte>.Zero).AsUInt16();
+                    Vector128<ushort> scaledR = Sse2.MultiplyLow(rWords, scale);
+                    Vector128<ushort> scaledG = Sse2.MultiplyLow(gWords, scale);
+                    Vector128<ushort> scaledB = Sse2.MultiplyLow(bWords, scale);
+
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref rBase, i * 2), scaledR.AsUInt64().GetElement(0));
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref gBase, i * 2), scaledG.AsUInt64().GetElement(0));
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref bBase, i * 2), scaledB.AsUInt64().GetElement(0));
+
+                    if (hasAlpha)
+                    {
+                        alpha[i] = row[i].A / 255f;
+                        alpha[i + 1] = row[i + 1].A / 255f;
+                        alpha[i + 2] = row[i + 2].A / 255f;
+                        alpha[i + 3] = row[i + 3].A / 255f;
+                    }
+                }
+            }
+
+            for (; i < row.Length; i++)
+            {
+                Rgba32 px = row[i];
+                r[i] = (ushort)(px.R * 257);
+                g[i] = (ushort)(px.G * 257);
+                b[i] = (ushort)(px.B * 257);
+                if (hasAlpha)
+                {
+                    alpha[i] = px.A / 255f;
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CopyRgba64RowToUShortChannels(ReadOnlySpan<Rgba64> row, Span<ushort> r, Span<ushort> g, Span<ushort> b, Span<float> alpha, bool hasAlpha)
+        {
+            if (row.Length != r.Length || row.Length != g.Length || row.Length != b.Length || (hasAlpha && row.Length != alpha.Length))
+            {
+                throw new ArgumentException("Source and destination lengths must match.");
+            }
+
+            int i = 0;
+            if (Ssse3.IsSupported)
+            {
+                ReadOnlySpan<byte> rowBytes = MemoryMarshal.AsBytes(row);
+                ref byte srcBase = ref MemoryMarshal.GetReference(rowBytes);
+                ref byte rBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(r));
+                ref byte gBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(g));
+                ref byte bBase = ref Unsafe.As<ushort, byte>(ref MemoryMarshal.GetReference(b));
+                int simdLimit = row.Length & ~1;
+                for (; i < simdLimit; i += 2)
+                {
+                    int byteOffset = i * 8;
+                    Vector128<byte> src = Unsafe.ReadUnaligned<Vector128<byte>>(ref Unsafe.Add(ref srcBase, byteOffset));
+                    uint packedR = Ssse3.Shuffle(src, Rgba64RMask).AsUInt32().GetElement(0);
+                    uint packedG = Ssse3.Shuffle(src, Rgba64GMask).AsUInt32().GetElement(0);
+                    uint packedB = Ssse3.Shuffle(src, Rgba64BMask).AsUInt32().GetElement(0);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref rBase, i * 2), packedR);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref gBase, i * 2), packedG);
+                    Unsafe.WriteUnaligned(ref Unsafe.Add(ref bBase, i * 2), packedB);
+
+                    if (hasAlpha)
+                    {
+                        alpha[i] = row[i].A / 65535f;
+                        alpha[i + 1] = row[i + 1].A / 65535f;
+                    }
+                }
+            }
+
+            for (; i < row.Length; i++)
+            {
+                Rgba64 px = row[i];
+                r[i] = px.R;
+                g[i] = px.G;
+                b[i] = px.B;
+                if (hasAlpha)
+                {
+                    alpha[i] = px.A / 65535f;
+                }
+            }
         }
     }
 

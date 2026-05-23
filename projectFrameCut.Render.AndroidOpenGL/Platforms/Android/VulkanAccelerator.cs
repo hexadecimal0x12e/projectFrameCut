@@ -713,6 +713,101 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         }
     }
 
+    public class VulkanApproximateOverlayComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        public object[] Compute(object[] args)
+        {
+            var a = args[0] as float[];
+            var b = args[1] as float[];
+            var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            var actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : a?.Length ?? 0;
+
+            float[] trimmedA = new float[actualPixels];
+            float[] trimmedB = new float[actualPixels];
+            Array.Copy(a!, 0, trimmedA, 0, actualPixels);
+            Array.Copy(b!, 0, trimmedB, 0, actualPixels);
+
+            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+
+            if (aAlpha.Length != actualPixels || bAlpha.Length != actualPixels)
+            {
+                float[] trimmedAAlpha = new float[actualPixels];
+                float[] trimmedBAlpha = new float[actualPixels];
+                Array.Copy(aAlpha, 0, trimmedAAlpha, 0, Math.Min(aAlpha.Length, actualPixels));
+                Array.Copy(bAlpha, 0, trimmedBAlpha, 0, Math.Min(bAlpha.Length, actualPixels));
+                aAlpha = trimmedAAlpha;
+                bAlpha = trimmedBAlpha;
+            }
+
+            return VulkanComputerRunner.EnqueueCompute(async () =>
+            {
+                var (accelerator, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(
+                    VulkanShaderLibrary.Alpha,
+                    new float[][] { aAlpha, bAlpha },
+                    OutputElementType.Float32);
+
+                var alphaResult = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
+
+                if (outputBpp == 8)
+                {
+                    accelerator.ShaderSource = VulkanShaderLibrary.ShaderColorSrcU8;
+                    accelerator.OutputElementType = OutputElementType.UInt32;
+                }
+                else if (outputBpp == 16)
+                {
+                    accelerator.ShaderSource = VulkanShaderLibrary.ShaderColorSrcU16;
+                    accelerator.OutputElementType = OutputElementType.UInt32;
+                }
+                else
+                {
+                    accelerator.ShaderSource = VulkanShaderLibrary.ShaderColorSrc;
+                    accelerator.OutputElementType = OutputElementType.Float32;
+                }
+
+                accelerator.Inputs = new float[][] { aAlpha, trimmedA, bAlpha, trimmedB };
+                NativeVulkanSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                var colorResult = await vkView.RunComputeAsync(accelerator.OutputElementType);
+
+                if (outputBpp == 8)
+                {
+                    var colorU32 = (uint[])colorResult;
+                    var outputU8 = new byte[colorU32.Length];
+                    for (int i = 0; i < colorU32.Length; i++)
+                    {
+                        uint v = colorU32[i];
+                        if (v > 255u) v = 255u;
+                        outputU8[i] = (byte)v;
+                    }
+
+                    return new object[] { outputU8, alphaResult };
+                }
+
+                if (outputBpp == 16)
+                {
+                    var colorU32 = (uint[])colorResult;
+                    var outputU16 = new ushort[colorU32.Length];
+                    for (int i = 0; i < colorU32.Length; i++)
+                    {
+                        uint v = colorU32[i];
+                        if (v > 65535u) v = 65535u;
+                        outputU16[i] = (ushort)v;
+                    }
+
+                    return new object[] { outputU16, alphaResult };
+                }
+
+                return new object[] { (float[])colorResult, alphaResult };
+            }, "VulkanApproximateComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion.");
+        }
+    }
+
     public class VulkanResizeComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";

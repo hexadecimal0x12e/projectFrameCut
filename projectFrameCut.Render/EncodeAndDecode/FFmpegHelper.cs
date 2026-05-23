@@ -309,6 +309,23 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public static int GetAVPixelFormatBitsPerPixel(AVPixelFormat pixFmt)
+        {
+            try
+            {
+                AVPixFmtDescriptor* desc = ffmpeg.av_pix_fmt_desc_get(pixFmt);
+                if (desc != null && desc->nb_components > 0)
+                {
+                    return desc->comp[0].depth;
+                }
+            }
+            catch (EntryPointNotFoundException)
+            {
+                // av_pix_fmt_desc_get not exported by this FFmpeg build.
+            }
+            return -1; // Unknown or unsupported pixel format
+        }
+
         public static int DetectVideoBitDepth(string path)
         {
             if (string.IsNullOrWhiteSpace(path))

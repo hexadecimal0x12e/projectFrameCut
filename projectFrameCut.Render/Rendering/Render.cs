@@ -36,7 +36,9 @@ namespace projectFrameCut.Render.Rendering
         public bool LogProcessStack = false;
         public bool AutoCenterImplicitClip { get; set; } = false;
 
+        public bool OneByOneRender { get; set; } = false;
         public bool RenderByLayers { get; set; } = false;
+        public bool PrepareInWorkerThreads { get; set; } = false;
         public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
         public int GCOption = 0;
 
@@ -75,6 +77,8 @@ namespace projectFrameCut.Render.Rendering
 
         public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
         public double CurrentSecondPerFrame => 1 / CurrentFps;
+        public double CurrentFinishedPercentage => Duration > 0 ? (double)Volatile.Read(ref Finished) / Duration : 0;
+        public int CurrentFinished => Finished;
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
@@ -308,12 +312,17 @@ namespace projectFrameCut.Render.Rendering
             _renderTotalStopwatch.Restart();
 
 
-            if (builder.BlockWrite)
+            if (OneByOneRender || MaxThreads == 1)
             {
                 await GoRenderSync(token);
                 return;
             }
 
+            if (PrepareInWorkerThreads)
+            {
+                await GoRenderWithWorkerDecode(token);
+                return;
+            }
             if (RenderByLayers)
             {
                 await GoRenderByLayer(token);
@@ -579,13 +588,156 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
+        public async Task GoRenderWithWorkerDecode(CancellationToken token)
+        {
+            Log("Starting worker-decoded render...");
+            _renderTotalStopwatch.Restart();
+
+            _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
+            ConcurrentQueue<Exception> exceptions = new();
+
+            InitializeRenderCaches();
+            if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
+            {
+                PrepareRender(token);
+                if (token.IsCancellationRequested)
+                {
+                    ReleaseResources();
+                    return;
+                }
+            }
+
+            running = true;
+
+            // Build frame queue (all frames scheduled). Workers will decode per-frame on demand.
+            var frameQueue = new ConcurrentQueue<uint>();
+            for (uint idx = StartFrame; idx < StartFrame + Duration; idx++) frameQueue.Enqueue(idx);
+
+            // Start worker tasks equal to MaxThreads
+            var workerTasks = new List<Task>();
+            for (int i = 0; i < Math.Max(1, MaxThreads); i++)
+            {
+                workerTasks.Add(Task.Run(() =>
+                {
+                    try
+                    {
+                        while (!token.IsCancellationRequested && frameQueue.TryDequeue(out var targetFrame))
+                        {
+                            try
+                            {
+                                Thread.CurrentThread.Name = $"WorkerDecode #{targetFrame}";
+
+                                // If no clips at this frame -> blank frame handling
+                                if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clips) || clips == null || clips.Length == 0)
+                                {
+                                    builder!.Append(targetFrame, BlankFrame);
+                                    EachElapsed.Add(TimeSpan.Zero);
+                                    FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
+                                    FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
+                                    Interlocked.Increment(ref Finished);
+                                    InvokeProgress();
+                                    continue;
+                                }
+
+                                // Prepare source frames for this targetFrame (decode in-worker)
+                                var sw = Stopwatch.StartNew();
+                                var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+                                foreach (var item in clips)
+                                {
+                                    if (token.IsCancellationRequested) break;
+                                    try
+                                    {
+                                        IPicture frame = null!;
+                                        int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth, ProjectRelativeWidth);
+                                        int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight, ProjectRelativeHeight);
+                                        if (item.ClipType == ClipMode.TransformClip && item is TransformContainer c)
+                                        {
+                                            if (c.Transform is not ITransform t) throw new NullReferenceException($"Transform for clip {c.Id} is null");
+                                            IClip? rightClip = null;
+                                            if (t.TransformType != TransformType.OneInputSingleFrameTransform)
+                                                if (!IndexedClipList.TryGetValue(t.BindedRightClip, out rightClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+                                            if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+
+                                            frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
+                                        }
+                                        else
+                                        {
+                                            frame = item.GetFrame(targetFrame, clipTargetWidth, clipTargetHeight, true, ppb);
+                                        }
+                                        if (frame != null)
+                                        {
+                                            if (IsClipGeneratedByAI.TryGetValue(item.IdAsGUID, out var aiMark) && aiMark)
+                                            {
+                                                frame = EffectProcessing.ProcessAIWatermark(frame, null);
+                                            }
+                                            FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(targetFrame, frame);
+                                        }
+                                    }
+                                    catch (Exception exInner)
+                                    {
+                                        Log($"Error preparing source for frame {targetFrame}, clip {item.Id}: {exInner}", "error");
+                                        throw;
+                                    }
+                                }
+                                sw.Stop();
+                                EachElapsedForPreparing.Add(sw.Elapsed);
+                                FramePrepareElapsed[targetFrame] = sw.Elapsed;
+
+                                // Render the frame now
+                                if (FramePrepareToRenderTimer.TryGetValue(targetFrame, out var timer))
+                                {
+                                    timer.Stop();
+#if DEBUG
+                                    LogDiagnostic($"Frame {targetFrame} took {timer.Elapsed} between prepared and render start.");
+#endif
+                                    FrameQueuedTime[targetFrame] = timer.Elapsed;
+                                }
+
+                                Interlocked.Increment(ref ThreadWorking);
+                                try
+                                {
+                                    RenderAFrame(targetFrame, token);
+                                }
+                                finally
+                                {
+                                    Interlocked.Decrement(ref ThreadWorking);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, $"worker decoding/rendering frame {targetFrame}", this);
+                                ex.Data["OrigStacktrace"] = ex.StackTrace;
+                                exceptions.Enqueue(ex);
+                            }
+                        }
+                    }
+                    catch (Exception exOuter)
+                    {
+                        exceptions.Enqueue(exOuter);
+                    }
+                }, token));
+            }
+
+            await Task.WhenAll(workerTasks);
+
+            if (!exceptions.IsEmpty)
+            {
+                var list = new List<Exception>();
+                while (exceptions.TryDequeue(out var ex)) list.Add(ex);
+                if (list.Count == 1) throw list[0];
+                throw new AggregateException("Multiple exceptions occurred during worker-decoded rendering.", list);
+            }
+
+            ReleaseResources();
+        }
+
         public async Task GoRenderSync(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
 
             _renderTotalStopwatch.Restart();
-            Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
+            Log("[Renderer] OneByOne enabled/MaxThread is 1: switching to single-threaded, synchronous render.", "info");
 
            
 

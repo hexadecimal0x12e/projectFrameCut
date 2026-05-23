@@ -15,4 +15,12 @@
     <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
   </ItemGroup>
 
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="18.7.37220.1" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<DefineConstants>$(DefineConstants);TRACE;DIAGHUB_ENABLE_TRACE_SYSTEM</DefineConstants>
+	</PropertyGroup>
+	
 </Project>

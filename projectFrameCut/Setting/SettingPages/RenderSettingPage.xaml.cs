@@ -126,6 +126,8 @@ public partial class RenderSettingPage : ContentPage
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null))
             .AddSeparator()
             .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
+            .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider,  IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
+            .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture,  IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
             .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
@@ -375,13 +377,16 @@ public partial class RenderSettingPage : ContentPage
                         }
                         return;
                     }
+                default:
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
+                    break;
 
             }
 
-            //if (args.Value != null)
-            //{
-            //    WriteSetting(args.Id, args.Value?.ToString() ?? "");
-            //}
+
         }
         catch (Exception ex)
         {

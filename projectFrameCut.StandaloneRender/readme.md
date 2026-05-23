@@ -164,11 +164,14 @@ projectFrameCut.StandaloneRender <mode> [<args>]
   选择要使用的硬件加速图片缩放器。默认：`hwaccel`
 
 - **`-VideoFrameDiskCacheRoot=<path to video frame disk cache root>`**
-  指定磁盘缓存的根目录。默认位于projectFrameCut用户数据目录下的`VideoFrameDiskCache`文件夹中。
+  指定磁盘缓存的根目录。默认位于projectFrameCut缓存目录下的`VideoFrameDiskCache`文件夹中。
   不定义此参数代表禁用磁盘缓存。
 
 - **`-VideoFrameMemoryCache=<true|false>`**
   是否启用内存缓存。默认：`false`
+
+- **`-ApproximateMixture=<true|false>`**
+  是否允许近似混合模式。这会提高性能，但可能会降低某些效果的质量。默认：`false`
 
 ### 模式 'bench' 的参数
 
@@ -190,7 +193,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 返回2表示找不到加速器。
 返回255表示渲染被取消。
 返回负数通常表示出现了没有被处理的异常，可能是你的参数问题，或者是程序的bug。如果是程序的bug，请将错误信息反馈给我们。
-
+当渲染正常完成时，环境变量`projectFrameCut_RenderFinished`将会被赋值为1，并且环境变量`projectFrameCut_LastOutput`将被设置为输出文件的路径。
 
 ## 使用示例
 

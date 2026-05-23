@@ -71,6 +71,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 return new Dictionary<string, Func<IComputer>>
                 {
                     {"OverlayComputer", new(() => new VulkanOverlayComputer()) },
+                    {"ApproximateOverlayComputer", new(() => new VulkanApproximateOverlayComputer()) },
                     {"RemoveColorComputer", new(() => new VulkanRemoveColorComputer()) },
                     {"ResizeComputer", new(() => new VulkanResizeComputer()) },
                     {"CropComputer", new(() => new VulkanCropComputer()) },
@@ -90,7 +91,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 return new Dictionary<string, Func<IComputer>>
                 {
                     {"OverlayComputer", new(() => new OverlayComputer()) },
-                    {"RemoveColorComputer", new(() => new RemoveColorComputer()) },
+                    {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer()) },
                     {"ResizeComputer", new(() => new ResizeComputer()) },
                     {"CropComputer", new(() => new CropComputer()) },
                     {"PlaceComputer", new(() => new PlaceComputer()) },
