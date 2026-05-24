@@ -302,7 +302,7 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        private static PlaceEffect_IPicture Placer = new()
+        private static PlaceEffect_HwAccel Placer = new()
         {
             StartX = 0,
             StartY = 0

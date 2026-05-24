@@ -62,7 +62,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
+            throw new NotImplementedException();
         }
 
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)

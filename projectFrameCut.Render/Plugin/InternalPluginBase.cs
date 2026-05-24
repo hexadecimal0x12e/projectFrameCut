@@ -58,7 +58,7 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
-        {"Place",  new(() => new PlaceEffect_IPicture())},
+        {"Place",  new(() => new PlaceEffect_HwAccel())},
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},

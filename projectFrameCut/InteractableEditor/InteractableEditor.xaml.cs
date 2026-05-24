@@ -1791,7 +1791,7 @@ namespace projectFrameCut.InteractableEditor
                 UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
 
                 //LogDiagnostic($"[UpdateVisuals] clip {clipId} debug overlay updated in {sw.ElapsedMilliseconds}ms");
-                LogDiagnostic($"[UpdateVisuals] clip {clipId} total update time {sw.ElapsedMilliseconds}ms");
+                //LogDiagnostic($"[UpdateVisuals] clip {clipId} total update time {sw.ElapsedMilliseconds}ms");
             }
 
             ReorderClipStateRootsByZIndex();
@@ -2248,7 +2248,7 @@ namespace projectFrameCut.InteractableEditor
 
                     UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
-                    LogDiagnostic($"[UpdateVisuals] clip {clip.DisplayName} total update time {sw.ElapsedMilliseconds}ms");
+                    //LogDiagnostic($"[UpdateVisuals ] clip {clip.DisplayName} total update time {sw.ElapsedMilliseconds}ms");
 
                 });
 
@@ -2348,7 +2348,7 @@ namespace projectFrameCut.InteractableEditor
                         Log(ex, "reorder the clips overlay state", this);
                     }
                 }
-                LogDiagnostic($"[UpdateVisuals] Render clip overlay for frame {_currentFrame} reordered {orderedRoots.Count} states by ZIndex in {sw.ElapsedMilliseconds} ms");
+                //LogDiagnostic($"[UpdateVisuals] Render clip overlay for frame {_currentFrame} reordered {orderedRoots.Count} states by ZIndex in {sw.ElapsedMilliseconds} ms");
             });
         }
 

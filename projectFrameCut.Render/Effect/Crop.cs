@@ -99,7 +99,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Crop(IPicture source, int startX, int startY, int width, int height, int targetWidth, int targetHeight)
         {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
+            throw new NotImplementedException();
         }
 
         public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()

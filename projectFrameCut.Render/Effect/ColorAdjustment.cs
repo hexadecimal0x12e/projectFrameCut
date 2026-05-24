@@ -107,7 +107,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Process(IPicture source, IComputer? computer)
         {
-            return GetStep(source).Process(source);
+            throw new NotImplementedException();
         }
 
         public IPictureProcessStep GetStep(IPicture source)

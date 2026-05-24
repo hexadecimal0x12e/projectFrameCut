@@ -125,9 +125,13 @@ public partial class RenderSettingPage : ContentPage
             .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null))
             .AddSeparator()
+            .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider, IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
+            .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
+            .AddSeparator()
             .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
-            .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider,  IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
-            .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture,  IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
+            .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
+            .AppendWhen(!IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true), p => p.AddSlider("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, 1, 64, (int)GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8)))
+            .AddCheckbox("render_prepareInWorkerThreads", SettingLocalizedResources.Render_PrepareInWorkerThreads, IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
             .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
@@ -189,7 +193,8 @@ public partial class RenderSettingPage : ContentPage
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
-                .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric);
+                .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric)
+                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride",""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc);
 
         }
         else
@@ -377,6 +382,13 @@ public partial class RenderSettingPage : ContentPage
                         }
                         return;
                     }
+                case "render_enableThreadAffinity":
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
+                    BuildPPB();
+                    break;
                 default:
                     if (args.Value != null)
                     {

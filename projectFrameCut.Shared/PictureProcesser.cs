@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Linq;
 
 namespace projectFrameCut.Shared
 {
@@ -19,22 +20,12 @@ namespace projectFrameCut.Shared
         /// The properties for this step.
         /// </summary>
         public Dictionary<string, object?> Properties { get; set; }
-        /// <summary>
-        /// Process this picture.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        [Obsolete("Implement GetSixLaborsImageSharpProcess if possible for better performance, or Implement INormalEffect.Process if the step cannot be represented as a SixLabors.ImageSharp process. This method will be removed in API v5.", false)]
-        public IPicture Process(IPicture source);
 
         /// <summary>
-        /// Get the SixLabors.ImageSharp processing function for this step. If this step cannot be represented as a SixLabors.ImageSharp process, return null.
+        /// Get the SixLabors.ImageSharp processing function for this step.
         /// </summary>
         /// <returns></returns>
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return null;
-        }
+        public Func<IImageProcessingContext, IImageProcessingContext> GetSixLaborsImageSharpProcess();
 
         /// <summary>
         /// Get the process stack information of this step. This is used for generating <see cref="IPicture.ProcessStack"/>.
@@ -351,72 +342,17 @@ namespace projectFrameCut.Shared
         {
             Guid SessionId = Guid.NewGuid();
             if (SaveDiagResult) source.SaveAsPng(Path.Combine(DiagResultPath, $"diag-before-{SessionId}.png"));
-            var swTotal = Stopwatch.StartNew();
             List<PictureProcessStack> procStack = new(steps.Count);
-            List<(Func<IImageProcessingContext, IImageProcessingContext> processer, IPictureProcessStep step)> processingContexts = new(steps.Count);
             var convertedSource = source.ToBitPerPixel(targetPPB);
             try
             {
                 var img = convertedSource.SaveToSixLaborsImage(targetPPB, true, false);
                 try
                 {
-                    foreach (var item in steps)
-                    {
-                        var step = item.GetSixLaborsImageSharpProcess();
-                        if (step is not null)
-                        {
-                            var stack = item.GetProcessStack();
-                            processingContexts.Add((step, item));
-                        }
-                        else
-                        {
-                            if (processingContexts.Count > 0)
-                            {
-                                img = ProcessSixLaborsProcessingContexts(img, processingContexts, ref procStack, SessionId);
-                                processingContexts.Clear();
-                            }
-                            using var inputPicture = img.ToPJFCPicture(targetPPB);
-                            var sw = Stopwatch.StartNew();
-                            var outputPicture = item.Process(inputPicture);
-                            sw.Stop();
-                            try
-                            {
-                                img.Dispose();
-                                img = outputPicture.SaveToSixLaborsImage(targetPPB, true, false);
-                            }
-                            finally
-                            {
-                                if (!ReferenceEquals(outputPicture, inputPicture))
-                                {
-                                    outputPicture.Dispose();
-                                }
-                            }
-                            if (EnableLogProcessStack)
-                            {
-                                var stack = item.GetProcessStack();
-                                stack.Elapsed = sw.Elapsed;
-                                procStack.Add(stack);
-                            }
-                        }
-                    }
-
-                    if (processingContexts.Count > 0)
-                    {
-                        img = ProcessSixLaborsProcessingContexts(img, processingContexts, ref procStack, SessionId);
-                    }
+                    ProcessSixLaborsProcessingContexts(ref img, steps, ref procStack, SessionId);
                     var result = img.ToPJFCPicture(targetPPB);
                     if (EnableLogProcessStack)
                     {
-                        swTotal.Stop();
-                        var dirtyTime = swTotal.Elapsed - procStack.Where(s => s.Elapsed.HasValue).Aggregate(TimeSpan.Zero, (a, b) => a + b.Elapsed!.Value);
-                        procStack.Add(new PictureProcessStack
-                        {
-                            OperationDisplayName = "Dirty time spent on PictureProcesser",
-                            ProcessingFuncStackTrace = null,
-                            Operator = null,
-                            Elapsed = dirtyTime,
-                            StepUsed = null,
-                        });
                         result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
                         if (SaveDiagResult) result.SaveAsPng(Path.Combine(DiagResultPath, $"diag-after-{SessionId}.png"));
                     }
@@ -437,24 +373,24 @@ namespace projectFrameCut.Shared
             }
         }
 
-        private static Image ProcessSixLaborsProcessingContexts(Image img, List<(Func<IImageProcessingContext, IImageProcessingContext> processer, IPictureProcessStep step)> processingContexts, ref List<PictureProcessStack> stacks, Guid SessionId)
+        private static void ProcessSixLaborsProcessingContexts(ref Image img, List<IPictureProcessStep> steps, ref List<PictureProcessStack> procStack, Guid sessionId)
         {
-            foreach (var process in processingContexts)
+            foreach (var process in steps)
             {
-                var stack = process.step.GetProcessStack();
+                var stack = process.GetProcessStack();
                 var sw = Stopwatch.StartNew();
-                img.Mutate((c) => process.processer(c));
+                img.Mutate((c) => process.GetSixLaborsImageSharpProcess()(c));
                 sw.Stop();
                 stack.Elapsed = sw.Elapsed;
-                stacks.Add(stack);
+                procStack.Add(stack);
                 if (SaveDiagResult)
                 {
                     var swSaveDiag = Stopwatch.StartNew();
                     var opId = Guid.NewGuid();
                     img.SaveAsPng(Path.Combine(DiagResultPath, $"diag-{stack.OperationDisplayName}-{opId}.png"));
-                    File.WriteAllText(Path.Combine(DiagResultPath, $"diag-{SessionId}-{stack.OperationDisplayName}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(stacks, 50));
+                    File.WriteAllText(Path.Combine(DiagResultPath, $"diag-{sessionId}-{stack.OperationDisplayName}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(procStack, 50));
                     swSaveDiag.Stop();
-                    stacks.Add(new PictureProcessStack
+                    procStack.Add(new PictureProcessStack
                     {
                         OperationDisplayName = $"Save diag result for {stack.OperationDisplayName}",
                         ProcessingFuncStackTrace = null,
@@ -464,8 +400,6 @@ namespace projectFrameCut.Shared
                     });
                 }
             }
-
-            return img;
         }
     }
 }

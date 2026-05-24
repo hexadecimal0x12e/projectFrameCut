@@ -1162,29 +1162,8 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
 
     private static (double width, double height) MeasureLabelSizeWithFallback(Label label, TextClipEntry entry, double fontSize)
     {
-        var measureWidth = entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0
-            ? entry.wrappingWidth.Value
-            : double.PositiveInfinity;
-
-        double measuredWidth = 0d;
-        double measuredHeight = 0d;
-
-        try
-        {
-            var measuredSize = label.Measure(measureWidth, double.PositiveInfinity);
-            measuredWidth = measuredSize.Width;
-            measuredHeight = measuredSize.Height;
-        }
-        catch
-        {
-        }
-
-        if (measuredWidth <= 1d || measuredHeight <= 1d)
-        {
-            EstimateTextSize(entry, fontSize, out measuredWidth, out measuredHeight);
-        }
-
-        return (Math.Max(1d, measuredWidth), Math.Max(1d, measuredHeight));
+        EstimateTextSize(entry, fontSize, out var width, out var height);
+        return (Math.Max(1d, width), Math.Max(1d, height));
     }
 
     private static void EstimateTextSize(TextClipEntry entry, double fontSize, out double width, out double height)

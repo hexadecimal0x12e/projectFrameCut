@@ -32,7 +32,7 @@ namespace projectFrameCut.Render.Effect
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer =>null;
+        public string? NeedComputer => null;
         public bool YieldProcessStep => true;
         public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
 
@@ -51,6 +51,13 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Resize";
+
+
+        void IEffect.Initialize()
+        {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+        }
+
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -78,7 +85,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
+            throw new NotImplementedException();
         }
 
 
@@ -225,6 +232,12 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Resize";
+
+        void IEffect.Initialize()
+        {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+        }
+
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -412,6 +425,12 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "Resize";
 
 
+        void IEffect.Initialize()
+        {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+        }
+
+
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);
@@ -486,6 +505,8 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+
             if (implementType == EffectImplementType.NotSpecified)
             {
                 return BuildWithDefaultType(parameters);
@@ -502,6 +523,8 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
         {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+
             return ResizeEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
     }

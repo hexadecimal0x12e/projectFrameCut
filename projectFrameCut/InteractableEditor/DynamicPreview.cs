@@ -52,7 +52,34 @@ public sealed class DynamicPreview : IDisposable
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
 
 
-    public sealed record PreparedPreview(string ClipId, View? View, string? ErrorMessage, IClip? Source);
+    public sealed class PreparedPreview
+    {
+        private readonly Func<View>? _viewFactory;
+        private View? _materializedView;
+
+        public PreparedPreview(string clipId, Func<View>? viewFactory, string? errorMessage, IClip? source)
+        {
+            ClipId = clipId;
+            _viewFactory = viewFactory;
+            ErrorMessage = errorMessage;
+            Source = source;
+        }
+
+        public string ClipId { get; }
+        public string? ErrorMessage { get; }
+        public IClip? Source { get; }
+
+        public View? View
+        {
+            get
+            {
+                if (_viewFactory is null) return null;
+                if (_materializedView is null)
+                    _materializedView = _viewFactory();
+                return _materializedView;
+            }
+        }
+    }
 
     private IClip[]? _clips;
     private LivePreviewer? _previewer;
@@ -116,12 +143,12 @@ public sealed class DynamicPreview : IDisposable
     {
         var clipsSnapshot = AcquireClipsSnapshot();
         var requests = ResolveRequests(clipsSnapshot, frameIndex);
-        var prepared = await Task.Run(() => PrepareRequests(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, checkVersion: true, prepareVersion, token)).ConfigureAwait(false);
+        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
         if (prepared is not null)
         {
             return prepared;
         }
-        if (token.IsCancellationRequested) return null;
+        if (token.IsCancellationRequested) return null!;
         return GetCachedOverlayPreparedPreviews();
     }
 
@@ -272,7 +299,7 @@ public sealed class DynamicPreview : IDisposable
         CacheOverlayPreparedPreviews([]);
     }
 
-    public IReadOnlyList<PreparedPreview> PrepareRequests(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
+    public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
         if (requests.Count == 0)
         {
@@ -296,23 +323,16 @@ public sealed class DynamicPreview : IDisposable
             return prepared;
         }
 
-        var options = new ParallelOptions
-        {
-            MaxDegreeOfParallelism = s_maxPreparationParallelism,
-            CancellationToken = token
-        };
-        Parallel.For(0, orderedRequests.Length, options, (index, state) =>
-        {
-            if (token.IsCancellationRequested) return;
-            if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
-            {
-                state.Stop();
-                return;
-            }
+        using var semaphore = new SemaphoreSlim(s_maxPreparationParallelism);
+        var tasks = new Task[orderedRequests.Length];
 
-            prepared[index] = GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token);
-        });
+        for (var i = 0; i < orderedRequests.Length; i++)
+        {
+            var index = i;
+            tasks[i] = ThrottledPrepareAsync(index);
+        }
 
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
         {
@@ -320,6 +340,33 @@ public sealed class DynamicPreview : IDisposable
         }
         if (prepared.Length > 0) CacheOverlayPreparedPreviews(prepared);
         return prepared;
+
+        async Task ThrottledPrepareAsync(int index)
+        {
+            await semaphore.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (token.IsCancellationRequested) return;
+                if (checkVersion && prepareVersion != Volatile.Read(ref _prepareVersion)) return;
+
+                prepared[index] = await Task.Run(() =>
+                    GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
+                    token).ConfigureAwait(false);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Synchronous overload for backward compatibility. Prefer <see cref="PrepareRequestsAsync"/>.
+    /// </summary>
+    public IReadOnlyList<PreparedPreview> PrepareRequests(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
+    {
+        return PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, checkVersion, prepareVersion, token)
+            .GetAwaiter().GetResult();
     }
 
     private static int ResolveCanvasSize(double canvasSize, int cachedSize, int fallbackSize)
@@ -472,7 +519,8 @@ public sealed class DynamicPreview : IDisposable
     private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, CancellationToken token)
     {
         var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message, applyClipTargetLayout, token);
-        return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
+        Func<View>? viewFactory = generatedView is not null ? () => generatedView : null;
+        return new PreparedPreview(request.Clip.Id, viewFactory, message, request.Clip);
     }
 
     public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
@@ -611,7 +659,7 @@ public sealed class DynamicPreview : IDisposable
             generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, fullRender: false, sourceColorAdjustEffects, token);
             usedFullRenderFallback = false;
         }
-        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 1 - preview generation took {diagSW.ElapsedMilliseconds} ms.");
+        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 1 - preview generation took {diagSW.ElapsedMilliseconds} ms.");
         if (token.IsCancellationRequested) return null;
 
         if (willUseEffectFallback)
@@ -675,7 +723,7 @@ public sealed class DynamicPreview : IDisposable
                 }
             }
         }
-        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 2 - process effect took {diagSW.ElapsedMilliseconds} ms.");
+        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 2 - process effect took {diagSW.ElapsedMilliseconds} ms.");
 
         if (generatedView is null)
         {
@@ -701,7 +749,7 @@ public sealed class DynamicPreview : IDisposable
 
         var layout = ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
 
-        LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 3 - apply layout {diagSW.ElapsedMilliseconds} ms.");
+        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 3 - apply layout {diagSW.ElapsedMilliseconds} ms.");
         return layout;
 
     }
@@ -1030,56 +1078,7 @@ public sealed class DynamicPreview : IDisposable
         }
         else
         {
-            var measurementLabel = new Label();
-            try
-            {
-                measurementLabel.Text = textForMeasure;
-                measurementLabel.FontSize = fontSize;
-                measurementLabel.FontFamily = string.IsNullOrWhiteSpace(entry.fontFamily) ? null : entry.fontFamily;
-                measurementLabel.FontAttributes = entry.fontStyle switch
-                {
-                    SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
-                    SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
-                    SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
-                    _ => FontAttributes.None
-                };
-
-                var wrappingWidth = entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0
-                    ? entry.wrappingWidth.Value
-                    : 0f;
-
-                if (wrappingWidth > 0)
-                {
-                    measurementLabel.WidthRequest = wrappingWidth;
-                    measurementLabel.LineBreakMode = LineBreakMode.WordWrap;
-                    var wrappedSize = measurementLabel.Measure(wrappingWidth, double.PositiveInfinity);
-                    w = wrappedSize.Width;
-                    h = wrappedSize.Height;
-                }
-                else
-                {
-                    measurementLabel.WidthRequest = -1;
-                    measurementLabel.LineBreakMode = LineBreakMode.NoWrap;
-                    var size = measurementLabel.Measure(double.PositiveInfinity, double.PositiveInfinity);
-                    w = size.Width;
-                    h = size.Height;
-                }
-            }
-            catch
-            {
-                var fallbackWidth = Math.Max(1, textForMeasure.Length) * fontSize * 0.6d;
-                var fallbackHeight = fontSize * 1.2d;
-                w = fallbackWidth;
-                h = fallbackHeight;
-            }
-
-            if (w <= 1d || h <= 1d)
-            {
-                EstimateTextEntryRectSize(entry, textForMeasure, fontSize, out var fallbackW, out var fallbackH);
-                w = fallbackW;
-                h = fallbackH;
-            }
-
+            EstimateTextEntryRectSize(entry, textForMeasure, fontSize, out w, out h);
             w = Math.Max(MinTextPreviewSize, w + strokeExtra);
             h = Math.Max(MinTextPreviewSize, h + strokeExtra);
         }

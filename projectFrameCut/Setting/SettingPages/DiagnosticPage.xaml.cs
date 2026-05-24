@@ -572,6 +572,20 @@ public partial class DiagnosticSettingPage : ContentPage
 #else
         builder.AppendLine("Device info: platform not recognized or unsupported for detailed info.");
 #endif
+        try
+        {
+            builder.AppendLine();
+            builder.AppendLine("CPU Core group from ThreadAffinityHelper:");
+            foreach (var group in ThreadAffinityHelper.GetCpuCoreGroups())
+            {
+                builder.AppendLine($"- Group ({string.Join(", ", group.CpuIndexes)}): {group}");
+            }
+        }
+        catch (Exception ex)
+        {
+            builder.AppendLine($"Exception reading CPU core groups: {ex.Message}");
+        }
+
         return builder.ToString();
     }
 }

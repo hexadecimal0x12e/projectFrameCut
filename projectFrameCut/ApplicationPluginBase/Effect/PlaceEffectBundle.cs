@@ -22,8 +22,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "StartY", 0 },
         };
 
-        public List<string> ParametersNeeded => PlaceEffect_IPicture.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => PlaceEffect_IPicture.ParametersType;
+        public List<string> ParametersNeeded => PlaceEffect_HwAccel.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => PlaceEffect_HwAccel.ParametersType;
 
         public string TypeName => "Place";
         public bool IsNormalEffect => true;

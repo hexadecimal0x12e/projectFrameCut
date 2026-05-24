@@ -7438,11 +7438,52 @@ public partial class DraftPage : ContentPage, IDraftPage
         IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews = null!;
         var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height);
 
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                int[] CPUAffinityOverride = Array.Empty<int>();
+                if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableLivePreviewThreadAffinity", true))
+                {
+                    try
+                    {
+                        if (SettingsManager.IsSettingExists("render_coreAffinityOverride") && !string.IsNullOrWhiteSpace(SettingsManager.GetSetting("render_coreAffinityOverride", "")))
+                        {
+                            CPUAffinityOverride = SettingsManager.GetSetting("render_coreAffinityOverride", "0").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(c => uint.TryParse(c, out _)).Select(int.Parse).ToArray();
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                                var bigGroup = group.OrderBy(c => c.MaxFrequencyKHz ?? 0 + c.Capacity ?? 0 + c.EfficiencyClass ?? 0).Last();
+                                CPUAffinityOverride = bigGroup.CpuIndexes.ToArray();
+
+                            }
+                            catch { }
+                        }
+
+                        if (CPUAffinityOverride.Length > 0)
+                        {
+#if WINDOWS || LINUX || (Avalonia && !(ANDROID || IOS || MACOS))
+                            Process.GetCurrentProcess().ProcessorAffinity = (IntPtr)CPUAffinityOverride.Aggregate((a, b) => a | b);
+#else
+                            ThreadAffinityHelper.SetCurrentThreadAffinity(CPUAffinityOverride);
+#endif
+                            LogDiagnostic($"Set live preview thread affinity to cores {string.Join(", ", CPUAffinityOverride)}");
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        });
+
         SetStateBusy(Localized._Processing);
 
         while (!ct.IsCancellationRequested)
         {
-            now = DateTime.Now;
+            preparedPreviews = null!;
             targetFrame = GetContinuousAudioFrame();
             if (targetFrame > maxFrame) break;
 
@@ -7454,20 +7495,17 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             try
             {
-                await Task.Run(() =>
-                {
-                    prepareWatch.Restart();
-                    preparedPreviews = DynamicPreviewProvider.PrepareRequests(
-                        DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame),
-                        canvasWidth, canvasHeight,
-                        targetWidth, targetHeight,
-                        targetFrame,
-                        false, false,
-                        0,
-                        frameCts.Token);
-                    prepareWatch.Stop();
-                    LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
-                }, frameCts.Token);
+                prepareWatch.Restart();
+                preparedPreviews = await DynamicPreviewProvider.PrepareRequestsAsync(
+                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame),
+                    canvasWidth, canvasHeight,
+                    targetWidth, targetHeight,
+                    targetFrame,
+                    false, false,
+                    0,
+                    frameCts.Token).ConfigureAwait(false);
+                prepareWatch.Stop();
+                LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
             }
             catch (TaskCanceledException)
             {
@@ -7482,6 +7520,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Log(ex, $"Prepare requests for frame {targetFrame}", this);
                 throw;
             }
+
+            now = DateTime.UtcNow;
 
             if (preparedPreviews is null) continue;
 
@@ -7504,6 +7544,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             // Fire-and-forget UI update to avoid blocking frame rendering
+            var previewsForThisFrame = preparedPreviews;
             _ = Dispatcher.DispatchAsync(async () =>
             {
                 try
@@ -7511,15 +7552,15 @@ public partial class DraftPage : ContentPage, IDraftPage
                     UpdatePlayheadPosition(TimelineScrollView.ScrollX);
                     CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
                     applyWatch.Restart();
-                    ClipEditor.ApplyPreparedPreviews(preparedPreviews);
+                    ClipEditor.ApplyPreparedPreviews(previewsForThisFrame);
                     applyWatch.Stop();
                     if (developerMode)
                     {
-                        AlternativeStatusLabel.Text = $"{(fps < 1.5 ? Localized.DraftPage_LivePreview_SecondPerFrame(1 / fps) : $"{fps} FPS")} ({prepareWatch.ElapsedMilliseconds:F1} ms prep + {applyWatch.ElapsedMilliseconds:F1} ms apply)";
+                        AlternativeStatusLabel.Text = $"{(fps < 1.5 ? Localized.DraftPage_LivePreview_SecondPerFrame(1 / fps) : $"{fps:F1} FPS")} ({prepareWatch.ElapsedMilliseconds:F1} ms prep + {applyWatch.ElapsedMilliseconds:F1} ms apply)";
                     }
                     else
                     {
-                        AlternativeStatusLabel.Text = fps < 1.5 ? Localized.DraftPage_LivePreview_SecondPerFrame(1 / fps) : $"{fps} FPS";
+                        AlternativeStatusLabel.Text = fps < 1.5 ? Localized.DraftPage_LivePreview_SecondPerFrame(1 / fps) : $"{fps:F1} FPS";
                     }
 
                 }
@@ -7549,6 +7590,21 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await PauseLivePreview();
         SetStateOK(Localized.DraftPage_EverythingFine);
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableLivePreviewThreadAffinity", true))
+                {
+#if WINDOWS || LINUX || (Avalonia && !(ANDROID || IOS || MACOS))
+                    Process.GetCurrentProcess().ProcessorAffinity = (IntPtr)Enumerable.Range(0, Environment.ProcessorCount).Aggregate((a, b) => a | b);
+#else
+                    ThreadAffinityHelper.SetCurrentThreadAffinity(Enumerable.Range(0, Environment.ProcessorCount).ToArray());
+#endif
+                }
+            }
+            catch { }
+        });
     }
 
     private static View CreatePropertiesPlaceholder(string text)
@@ -7561,7 +7617,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Opacity = 0.85,
         Margin = new Thickness(12)
     };
-    #endregion
+#endregion
 
     #region handle changes
     private void TryMoveToInitialPreviewFrame(DraftStructureJSON draft)

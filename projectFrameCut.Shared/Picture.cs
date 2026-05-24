@@ -612,6 +612,13 @@ namespace projectFrameCut.Shared
             {
                 if (!disposedValue)
                 {
+                    ProcessStack.Add(new PictureProcessStack
+                    {
+                        OperationDisplayName = "Disposed",
+                        Operator = typeof(Picture8bpp),
+                        ProcessingFuncStackTrace = new StackTrace(true),
+                        Properties = new Dictionary<string, object> { { "Force", force } }
+                    });
                     if (disposing)
                     {
                         r = null!;
@@ -628,7 +635,7 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose() => Dispose(force: true);
+        public void Dispose() => Dispose(force: false);
 
 
         public void Dispose(bool force = false)
@@ -1085,7 +1092,7 @@ namespace projectFrameCut.Shared
                             { "A", a ?? 1.0f }
                         },
                     }
-                }
+                },
             };
             pic.r = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, r);
             pic.g = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, g);
@@ -1107,11 +1114,18 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || CanBeDisposed)) return;
+            if (!force && (disposedValue || !CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
                 {
+                    ProcessStack.Add(new PictureProcessStack
+                    {
+                        OperationDisplayName = "Disposed",
+                        Operator = typeof(Picture8bpp),
+                        ProcessingFuncStackTrace = new StackTrace(true),
+                        Properties = new Dictionary<string, object> { { "Force", force } }
+                    });
                     if (disposing)
                     {
                         r = null!;
@@ -1127,7 +1141,7 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose() => Dispose(force: true);
+        public void Dispose() => Dispose(force: false);
 
         public void Dispose(bool force = false)
         {
@@ -1349,7 +1363,7 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose() => Dispose(force: true);
+        public void Dispose() => Dispose(force: false);
 
         public void Dispose(bool force = false)
         {

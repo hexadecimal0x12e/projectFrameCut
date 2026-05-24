@@ -1,6 +1,7 @@
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -108,6 +109,11 @@ namespace projectFrameCut.Render.Effect
                 { "MaskHeight", _mask.Height }
             }
         };
+
+        public Func<IImageProcessingContext, IImageProcessingContext> GetSixLaborsImageSharpProcess()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MaskApplierFactory : IBindableEffectFactory

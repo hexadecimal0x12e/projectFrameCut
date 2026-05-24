@@ -151,11 +151,20 @@ public partial class RenderPage : ContentPage
                 };
                 vm.BitDepth = "10bit";
             }
+            if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
+            {
+                MaxParallelThreadsCountLabel.IsVisible = false;
+                MaxParallelThreadsCount.IsVisible = false;
+                MaxParallelThreadsCount.Value = Environment.ProcessorCount;//fallback
+            }
+            else
+            {
+                MaxParallelThreadsCount.Value = (int)SettingsManager.GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8);
+            }
         }
         catch { }
         BindingContext = vm;
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
-        MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
@@ -168,13 +177,6 @@ public partial class RenderPage : ContentPage
         InitializeLogPanel();
         InitializeScreenSaverTimer();
 
-#if ANDROID
-        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount;
-        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount / 2, 6);
-#else
-        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount * 8;
-        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount * 2, 16);
-#endif
     }
     private void InitializeLogTimer()
     {
@@ -691,7 +693,34 @@ public partial class RenderPage : ContentPage
             var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
 
-            int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
+            int[] CPUAffinityOverride = Array.Empty<int>();
+            bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
+            if (EnableThreadAffinity)
+            {
+                try
+                {
+                    if (SettingsManager.IsSettingExists("render_coreAffinityOverride") && !string.IsNullOrWhiteSpace(SettingsManager.GetSetting("render_coreAffinityOverride", "")))
+                    {
+                        CPUAffinityOverride = SettingsManager.GetSetting("render_coreAffinityOverride", "0").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(c => uint.TryParse(c, out _)).Select(int.Parse).ToArray();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                            var bigGroup = group.OrderBy(c => c.MaxFrequencyKHz ?? 0 + c.Capacity ?? 0 + c.EfficiencyClass ?? 0).Last();
+                            CPUAffinityOverride = bigGroup.CpuIndexes.ToArray();
+
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+            int parallelThreadCount = CPUAffinityOverride.Length > 0 ? CPUAffinityOverride.Length : (int)MaxParallelThreadsCount.Value;
+            if (CPUAffinityOverride.Length > 0 && (DeviceInfo.Idiom == DeviceIdiom.Desktop || OperatingSystem.IsIOS())) parallelThreadCount = (int)(parallelThreadCount * 1.5);
+
+            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Prepare in worker: {SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true)}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
 
 #if ANDROID
             ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
@@ -793,6 +822,10 @@ public partial class RenderPage : ContentPage
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
+                EnableThreadAffinity = EnableThreadAffinity,
+                WorkerCPUCoreIndexs = CPUAffinityOverride,
+                OneByOneRender = blockwrite,
+                PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
                 //MinRemainingFramesForPreparedWait = DeviceInfo.Idiom switch
                 //{

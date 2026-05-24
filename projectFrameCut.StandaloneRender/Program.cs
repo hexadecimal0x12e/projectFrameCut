@@ -1,7 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
-using Microsoft.DiagnosticsHub;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -22,8 +21,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using static ILGPU.IR.BasicBlock;
 using static projectFrameCut.Shared.Logger;
+
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+using Microsoft.DiagnosticsHub;
+#endif
 
 namespace projectFrameCut.StandaloneRender
 {
@@ -112,7 +114,8 @@ namespace projectFrameCut.StandaloneRender
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
-                        [-oneByOneRender=<true|false> or -renderByLayer=<true|false> or -prepareInWorker=<true|false>]
+                        [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]
@@ -230,6 +233,64 @@ namespace projectFrameCut.StandaloneRender
 
             }
 
+        }
+
+        private static bool TryParseCpuIndexList(string value, out int[] cpuIndexes, out string error)
+        {
+            var result = new SortedSet<int>();
+            foreach (var token in value.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (token.Contains('-', StringComparison.Ordinal))
+                {
+                    var parts = token.Split('-', 2, StringSplitOptions.TrimEntries);
+                    if (parts.Length != 2
+                        || !int.TryParse(parts[0], out int start)
+                        || !int.TryParse(parts[1], out int end))
+                    {
+                        cpuIndexes = [];
+                        error = $"Invalid CPU range '{token}'.";
+                        return false;
+                    }
+
+                    if (start > end)
+                    {
+                        (start, end) = (end, start);
+                    }
+
+                    if (start < 0)
+                    {
+                        cpuIndexes = [];
+                        error = $"CPU index cannot be negative in range '{token}'.";
+                        return false;
+                    }
+
+                    for (int i = start; i <= end; i++)
+                    {
+                        result.Add(i);
+                    }
+                    continue;
+                }
+
+                if (!int.TryParse(token, out int cpuIndex) || cpuIndex < 0)
+                {
+                    cpuIndexes = [];
+                    error = $"Invalid CPU index '{token}'.";
+                    return false;
+                }
+
+                result.Add(cpuIndex);
+            }
+
+            if (result.Count == 0)
+            {
+                cpuIndexes = [];
+                error = "No CPU indexes were provided.";
+                return false;
+            }
+
+            cpuIndexes = result.ToArray();
+            error = string.Empty;
+            return true;
         }
 
         private static int InitAccel(ConcurrentDictionary<string, string> switches)
@@ -435,13 +496,13 @@ namespace projectFrameCut.StandaloneRender
             #region read args
             if (!switches.ContainsKey("project"))
             {
-                Log("ERROR: No project file specified. Use -project=<project root dir> to specify the project file.");
+                Log("No project file specified. Use -project=<project root dir> to specify the project file.", "error");
                 return 1;
             }
             var workingPath = switches["project"];
             if (string.IsNullOrWhiteSpace(workingPath) || !Directory.Exists(workingPath))
             {
-                Log("ERROR: Invalid project path.");
+                Log("Invalid project path.", "error");
                 return 1;
             }
 
@@ -457,7 +518,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 if (!int.TryParse(gcopt, out GCOption) || (GCOption < 0 || GCOption > 2))
                 {
-                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.");
+                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.", "warn");
                     GCOption = 0;
                 }
             }
@@ -480,20 +541,75 @@ namespace projectFrameCut.StandaloneRender
                 Log($"Read {assets.Count} assets from asset database.");
             }
 
-            int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
-            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false;
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            int maxParallelThreads = Environment.ProcessorCount;
+            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
+            int[]? renderWorkerAffinityCpuIndexes = null;
             if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
             if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
             if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
-            if (prepareInWorker && renderByLayer)
+            if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
+            if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
-                Log($"Both prepareInWorker and renderByLayer are set to true, this is not supported.", "error");
-                return 1;
+                if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {renderWorkerAffinityError}", "error");
+                    return 1;
+                }
+
+                try
+                {
+                    ThreadAffinityHelper.BuildAffinityMask(renderWorkerAffinityCpuIndexes);
+                }
+                catch (Exception ex)
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {ex.Message}", "error");
+                    return 1;
+                }
+
+                Log($"Manual render worker CPU affinity: {string.Join(", ", renderWorkerAffinityCpuIndexes)}");
             }
+
             if (!oneByOneRender)
             {
-                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{renderByLayer}, Prepare in worker:{prepareInWorker}");
+                if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
+                {
+                    try
+                    {
+                        var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                        foreach (var item in group)
+                        {
+                            Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
+                        }
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                                ? renderWorkerAffinityCpuIndexes!.Length
+                                : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
+
+                    }
+                    catch
+                    {
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
+                    }
+                }
+                else
+                {
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
+                }
+
+                var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                    ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
+                    : (enableThreadAffinity ? "auto" : "disabled");
+                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{YesNo(renderByLayer)}, Prepare in worker:{YesNo(prepareInWorker)}, Preparer affinity:{YesNo(enableThreadAffinity)}, Worker affinity:{workerAffinityLabel}");
+
             }
+            else
+            {
+                Log("Working in serial mode.");
+            }
+
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
@@ -513,11 +629,11 @@ namespace projectFrameCut.StandaloneRender
 
             IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
 
-            Log($"Video source decoding cache - Memory cache: {IVideoSource.EnableMemoryCache}, Disk cache: {IVideoSource.EnableDiskCache} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
+            Log($"Video decoding: Prefer HWAccel: {YesNo(hwAccelDecode)}, Memory cache: {YesNo(IVideoSource.EnableMemoryCache)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
 
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
 
-            Log($"ClassicOverlayMixture approximate path: {(ClassicOverlayMixture.EnableApproximatePath ? "enabled" : "disabled")}");
+            Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
 
             #endregion
 
@@ -565,7 +681,9 @@ namespace projectFrameCut.StandaloneRender
 
             CancellationTokenSource cts = new();
             VideoBuilder builder = null!;
+            Renderer renderer = null!;
             var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
+            var keyboardInterrupt = !Environment.GetCommandLineArgs().Contains("--keyboardInterrupt");
             async Task composeVideo(string resultPath)
             {
                 var clips = JSONToIClips(timeline, assets, bpp);
@@ -585,7 +703,7 @@ namespace projectFrameCut.StandaloneRender
                     BlockWrite = oneByOneRender,
                 };
 
-                Renderer renderer = new Renderer
+                renderer = new Renderer
                 {
                     builder = builder,
                     Clips = clips,
@@ -601,7 +719,9 @@ namespace projectFrameCut.StandaloneRender
                     MaxThreads = maxParallelThreads,
                     RenderByLayers = renderByLayer,
                     PrepareInWorkerThreads = prepareInWorker,
-                    OneByOneRender = oneByOneRender
+                    OneByOneRender = oneByOneRender,
+                    EnableThreadAffinity = enableThreadAffinity,
+                    WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
                 };
 
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
@@ -722,15 +842,17 @@ namespace projectFrameCut.StandaloneRender
                 }
                 return;
             }
+            Task? keyboardTask = null;
+            int KeyQPressCount = 0;
 
             if (switches.TryGetValue("stopAfter", out var stopAfterStr) && int.TryParse(stopAfterStr, out var stopAfter)) //for Instrument testing, to avoid long time cause a lot huge log.
             {
                 Log($"stopAfter is set, render will stop after {stopAfter}s.");
 
-                Timer t = new((c) =>
+                Timer t = new(async (c) =>
                 {
                     Log($"Time's up! stopAfter's {stopAfter}s timeout reached, exiting...");
-                    cts.Cancel();
+                    await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
                     builder?.Interrupt();
                     Environment.Exit(255);
                 });
@@ -738,10 +860,65 @@ namespace projectFrameCut.StandaloneRender
                 t.Change(stopAfter * 1000, Timeout.Infinite);
 
             }
-            if (!noSigInt)
+            if (keyboardInterrupt)
+            {
+                if (!Console.IsInputRedirected)
+                {
+                    keyboardTask = Task.Run(async () =>
+                    {
+                        while (!cts.IsCancellationRequested)
+                        {
+                            if (Console.KeyAvailable)
+                            {
+                                var key = Console.ReadKey(intercept: true);
+
+                                switch (key.Key)
+                                {
+                                    case ConsoleKey.Escape:
+                                    case ConsoleKey.Q:
+                                        KeyQPressCount++;
+                                        if (KeyQPressCount > 5)
+                                        {
+                                            Console.WriteLine("Cancel signal receive! try cancelling render...");
+                                            await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                                            builder?.Interrupt();
+                                            Environment.Exit(255);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"Hit Escape/Q again to cancel render.");
+                                        }
+                                        break;
+
+                                    case ConsoleKey.S:
+                                        if (renderer is null)
+                                        {
+                                            Log("Render is not initialized yet.");
+                                        }
+                                        else
+                                        {
+                                            Log(renderer.GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
+                                        }
+                                        break;
+                                    case ConsoleKey.P:
+
+                                        break;
+                                }
+                            }
+
+                            await Task.Delay(50);
+                        }
+                    });
+
+                    Console.WriteLine($"Render job starts. Hit Escape/Q to cancel, or S to show status.");
+                }
+
+
+            }
+            else if (!noSigInt)
             {
                 var cancelled = false;
-                Console.CancelKeyPress += (s, e) =>
+                Console.CancelKeyPress += async (s, e) =>
                 {
                     e.Cancel = true;
                     if (cancelled) Process.GetCurrentProcess().Kill();
@@ -749,8 +926,9 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("You hit Ctrl-C! try cancelling render...");
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
-                    cts.Cancel();
+                    await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
                     builder?.Interrupt();
+                    Environment.Exit(255);
                 };
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
             }

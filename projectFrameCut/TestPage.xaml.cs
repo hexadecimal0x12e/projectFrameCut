@@ -787,7 +787,7 @@ public partial class TestPage : ContentPage
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 50,
             StartY = 120
@@ -808,7 +808,7 @@ public partial class TestPage : ContentPage
     private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 250,
             StartY = 180
@@ -897,7 +897,7 @@ public partial class TestPage : ContentPage
     private void TestMixtureButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 50,
             StartY = 120

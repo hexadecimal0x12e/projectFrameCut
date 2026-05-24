@@ -6,7 +6,7 @@
 ## 系统要求
 独立渲染器支持Windows和Linux操作系统。最低系统要求如下：
 - .NET 10 运行时
-- **8.x**的FFmpeg 库
+- **8.1.x**的FFmpeg 库
 - CUDA 或 OpenCL 支持的 GPU，用于硬件加速
 
 独立渲染器**不支持MacOS**，因为没有很好的方法在命令行程序里调用Metal API。你可以考虑使用主程序的自动渲染功能。
@@ -83,6 +83,10 @@ projectFrameCut.StandaloneRender <mode> [<args>]
   禁止将 `SIGINT` 信号（通常由 Ctrl+C 产生）注册为中断渲染的信号。这对于某些环境（如Docker容器）可能有用。
   如果没有定义此参数，程序会默认注册 `SIGINT` 信号处理程序，这意味着你可以通过按 Ctrl+C 来优雅地停止渲染过程。
 
+- **`--keyboardInterrupt`**
+  在渲染过程中，监听键盘输入。
+  当启用此选项时，你可以通过按5次Esc/Q键来取消渲染，或者按S来显示当前进度。
+
 ### 模式 'render' 的参数
 
 #### 必需参数
@@ -122,6 +126,9 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-maxParallelThreads=<number>`**  
   最大并行渲染线程数。默认：`8`
+
+- **`-enableThreadAffinity=<true|false>`**  
+  是否启用线程亲和性，以减少线程切换带来的性能损失。默认：`true`
 
 - **`-oneByOneRender=<true|false>`**  
   是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
