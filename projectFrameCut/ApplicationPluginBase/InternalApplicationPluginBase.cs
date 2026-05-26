@@ -1,6 +1,8 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
@@ -32,6 +34,13 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
             { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
+        };
+
+        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>
+        {
+            { "Basic", () => new BasicTextStyleProvider() },
+            { "Title", () => new TitleTextStyleProvider() },
+            { "Pinyin", () => new PinyinTextStyleProvider() },
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

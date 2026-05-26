@@ -50,8 +50,6 @@
                     ZIndex="110"
                     AbsoluteLayout.LayoutFlags="None" />
 
-            <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start" />
-
 
         </AbsoluteLayout>
         <Grid x:Name="BottomControlsHost"

@@ -29,7 +29,7 @@ namespace projectFrameCut.Shared
     public static class PictureExtensions
     {
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static IPicture DeepCopy(this IPicture source)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
@@ -256,6 +256,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false) 
         {
             if (image is IHDRPicture<ushort> hdrImage)
@@ -312,6 +313,7 @@ namespace projectFrameCut.Shared
             }
         }
         [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static Image SaveToSixLaborsImage(this IHDRPicture<ushort> image, int resultPPB = 16, bool? saveAlpha = null, HDRImageDegradeToSDRMode? degradeToSDRMode = null)
         {
             var mode = degradeToSDRMode ??= DefaultHDRImageDegradeToSDRMode;
@@ -353,7 +355,7 @@ namespace projectFrameCut.Shared
         private const float HdrLumaEpsilon = 1e-6f;
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
@@ -379,7 +381,7 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
@@ -406,7 +408,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternalHDR16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
@@ -482,7 +484,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternalHDR16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> brightness, float maximumBrightness, HDRImageDegradeToSDRMode degradeMode)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
@@ -557,7 +559,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static void _MapHDRSignalPixelToDisplaySignal(ushort sourceR, ushort sourceG, ushort sourceB, float brightness, float maximumBrightness, out ushort mappedR, out ushort mappedG, out ushort mappedB)
         {
             if (!float.IsFinite(brightness))
@@ -601,7 +603,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba32>(image.Width, image.Height);
@@ -627,7 +629,7 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
         {
             var result = new Image<Rgb24>(image.Width, image.Height);
@@ -661,7 +663,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static IPicture ToPJFCPicture(this Image source, int targetPPB)
         {
             return targetPPB switch
@@ -673,7 +675,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static HDRPicture16bpp ToHDRPicture(this IPicture source, float brightness, int maximumBrightness = 5000)
         {
             var s = source.ToBitPerPixel(16) as IPicture<ushort>;
@@ -698,7 +700,7 @@ namespace projectFrameCut.Shared
         }
 
         [DebuggerStepThrough()]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static HDRPicture16bpp ToHDRPictureBySignal(this IPicture source, int maximumBrightness = 203)
         {
             var s = source.ToBitPerPixel(16) as IPicture<ushort>;

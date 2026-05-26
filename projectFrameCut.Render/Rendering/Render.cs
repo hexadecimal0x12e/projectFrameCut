@@ -1620,7 +1620,7 @@ namespace projectFrameCut.Render.Rendering
                     else
                     {
                         var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                        var computer = GetOrCreateComputer(mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId);
+                        var computer = GetOrCreateComputer(mixer.NeedComputer);
                         var mixResult = mixer.Mix(BlankFrame, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
                         if (usedFrames is null)
                             try { frame.Dispose(); } catch { }
@@ -1630,7 +1630,7 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                    var computer = GetOrCreateComputer(mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId);
+                    var computer = GetOrCreateComputer(mixer.NeedComputer);
                     var temp = mixer.Mix(currentResult, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
                     currentResult.Dispose();
                     if (usedFrames is null)
@@ -2348,7 +2348,7 @@ namespace projectFrameCut.Render.Rendering
 
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                Thread.CurrentThread.Name ??= threadName;
+                Thread.CurrentThread.Name = threadName;
                 worker();
             }, null);
         }

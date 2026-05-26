@@ -29,9 +29,7 @@ public partial class GeneralSettingPage : ContentPage
             new Dictionary<string, string>
             {
                 { SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" },
-#if WINDOWS
-                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" } 
-#endif
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" }
             }
             .Concat(
                 PluginManager.LoadedPlugins
@@ -367,6 +365,7 @@ public partial class GeneralSettingPage : ContentPage
                     else if (id == "external")
                     {
                         await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
+#if WINDOWS
                         var libsDir = await FileSystemService.PickFolderAsync();
                         if (!string.IsNullOrWhiteSpace(libsDir))
                         {
@@ -379,6 +378,17 @@ public partial class GeneralSettingPage : ContentPage
                             WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
                             WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
                         }
+#else
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
+                            if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
+                            Directory.CreateDirectory(internalLibPath);
+                            var ffmpegPath = Path.Combine(MauiProgram.DataPath, "FFmpeg");
+                            foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
+                            {
+                                File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
+                            }
+#endif
                     }
                     else
                     {

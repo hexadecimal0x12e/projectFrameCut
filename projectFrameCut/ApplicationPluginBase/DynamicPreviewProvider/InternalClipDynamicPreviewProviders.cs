@@ -1054,24 +1054,163 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
     private readonly record struct TransformSourceFrameCacheKey(string ClipId, int CanvasWidth, int CanvasHeight, uint FrameIndex, long SourceFingerprint);
 }
 
+internal static class TextClipMeasureHelper
+{
+    public static Rect MeasureBounds(TextClip clip)
+    {
+        var entries = ResolveEntries(clip);
+        if (entries.Count == 0)
+        {
+            return new Rect(0, 0, 1, 1);
+        }
+
+        return MeasureBounds(entries);
+    }
+
+    public static Rect MeasureBounds(IEnumerable<TextClipEntry> entries)
+    {
+        var fontCollection = TextClip.GetFont();
+        bool hasBounds = false;
+        double minX = 0, minY = 0, maxX = 0, maxY = 0;
+
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrEmpty(entry.text))
+                continue;
+
+            if (!fontCollection.TryGet(entry.fontFamily, out var family)
+                && !fontCollection.TryGet("HarmonyOS_Sans_SC_Regular", out family))
+            {
+                family = fontCollection.Families.FirstOrDefault();
+                if (family == default)
+                    continue;
+            }
+
+            var font = family.CreateFont(entry.fontSize, entry.fontStyle);
+            var dpi = entry.dpi ?? 72f;
+            var strokeExtra = (entry.strokeWidth ?? 0f) * 2f;
+
+            double w, h;
+            if (entry.UseVerticalLayout)
+            {
+                var glyphCount = entry.text.Count(c => c is not '\n' and not '\r');
+                if (glyphCount <= 0) glyphCount = 1;
+                var emSize = entry.fontSize * (dpi / 72f);
+                w = emSize + strokeExtra;
+                h = glyphCount * emSize * entry.lineSpacing + strokeExtra;
+            }
+            else
+            {
+                var textOpts = new SixLabors.Fonts.TextOptions(font)
+                {
+                    Dpi = dpi,
+                    KerningMode = entry.applyKerning ? SixLabors.Fonts.KerningMode.Standard : SixLabors.Fonts.KerningMode.None,
+                };
+                var measured = SixLabors.Fonts.TextMeasurer.MeasureSize(entry.text, textOpts);
+                w = measured.Width + strokeExtra;
+                h = measured.Height + strokeExtra;
+            }
+
+            double originX = entry.x;
+            double originY = entry.y;
+
+            switch (entry.horizontalAlignment)
+            {
+                case SixLabors.Fonts.HorizontalAlignment.Center: originX -= w / 2d; break;
+                case SixLabors.Fonts.HorizontalAlignment.Right: originX -= w; break;
+            }
+            switch (entry.verticalAlignment)
+            {
+                case SixLabors.Fonts.VerticalAlignment.Center: originY -= h / 2d; break;
+                case SixLabors.Fonts.VerticalAlignment.Bottom: originY -= h; break;
+            }
+
+            double left = originX, top = originY;
+            double right = originX + w, bottom = originY + h;
+
+            if (Math.Abs(entry.rotation) > 0.0001f)
+            {
+                var radians = entry.rotation * Math.PI / 180d;
+                var cos = Math.Cos(radians);
+                var sin = Math.Sin(radians);
+                static (double rx, double ry) Rot(double px, double py, double c, double s)
+                    => (px * c - py * s, px * s + py * c);
+
+                var centerX = (double)entry.x;
+                var centerY = (double)entry.y;
+
+                var p0 = Rot(left - centerX, top - centerY, cos, sin);
+                var p1 = Rot(right - centerX, top - centerY, cos, sin);
+                var p2 = Rot(left - centerX, bottom - centerY, cos, sin);
+                var p3 = Rot(right - centerX, bottom - centerY, cos, sin);
+
+                var rMinX = Math.Min(Math.Min(p0.rx, p1.rx), Math.Min(p2.rx, p3.rx));
+                var rMinY = Math.Min(Math.Min(p0.ry, p1.ry), Math.Min(p2.ry, p3.ry));
+                var rMaxX = Math.Max(Math.Max(p0.rx, p1.rx), Math.Max(p2.rx, p3.rx));
+                var rMaxY = Math.Max(Math.Max(p0.ry, p1.ry), Math.Max(p2.ry, p3.ry));
+
+                left = centerX + rMinX;
+                top = centerY + rMinY;
+                right = centerX + rMaxX;
+                bottom = centerY + rMaxY;
+            }
+
+            if (!hasBounds)
+            {
+                minX = left; minY = top; maxX = right; maxY = bottom;
+                hasBounds = true;
+            }
+            else
+            {
+                minX = Math.Min(minX, left);
+                minY = Math.Min(minY, top);
+                maxX = Math.Max(maxX, right);
+                maxY = Math.Max(maxY, bottom);
+            }
+        }
+
+        if (!hasBounds)
+            return new Rect(0, 0, 1, 1);
+
+        return new Rect(minX, minY, Math.Max(1d, maxX - minX) + 15, Math.Max(1d, maxY - minY) + 15);
+    }
+
+    internal static IReadOnlyList<TextClipEntry> ResolveEntries(TextClip clip)
+    {
+        if (clip.ExtraData?.TryGetValue("TextEntries", out var raw) == true)
+        {
+            if (raw is List<TextClipEntry> list && list.Count > 0) return list;
+            if (raw is JsonElement je)
+            {
+                try
+                {
+                    var parsed = je.Deserialize<List<TextClipEntry>>();
+                    if (parsed is { Count: > 0 }) { clip.ExtraData["TextEntries"] = parsed; return parsed; }
+                }
+                catch { }
+            }
+            if (raw is string json && !string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
+                    if (parsed is { Count: > 0 }) { clip.ExtraData["TextEntries"] = parsed; return parsed; }
+                }
+                catch { }
+            }
+        }
+        return clip.TextEntries;
+    }
+}
+
 internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPreviewProviderBase
 {
     public override string TypeName => "TextClip";
 
     public override bool IsAvailable(IClip target)
     {
-        if (target is not TextClip t || target.FromPlugin != InternalPluginBase.InternalPluginBaseID)
-        {
-            return false;
-        }
-
-        var entries = ResolveTextEntriesForPreview(t);
-        if (entries.Count == 0)
-        {
-            return false;
-        }
-
-        return !entries.Any(c => c.UseVerticalLayout || (c.strokeWidth.HasValue && c.strokeWidth.Value > 0f));
+        return target is TextClip
+            && target.FromPlugin == InternalPluginBase.InternalPluginBaseID;
     }
 
     public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
@@ -1081,253 +1220,24 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
             return BuildFallbackLabel("Text clip is unavailable.");
         }
 
-        var root = new AbsoluteLayout
+        var renderW = targetWidth > 0 ? targetWidth : canvasWidth;
+        var renderH = targetHeight > 0 ? targetHeight : canvasHeight;
+
+        var clipW = target.TargetWidth > 0 ? target.TargetWidth : renderW;
+        var clipH = target.TargetHeight > 0 ? target.TargetHeight : renderH;
+        if (clipW <= 0) clipW = Math.Max(1, renderW);
+        if (clipH <= 0) clipH = Math.Max(1, renderH);
+
+        var frame = clip.GetFrameRelativeToStartPointOfSource(0, clipW, clipH, true, IPicture.PicturePixelMode.BytePicture);
+
+        LogDiagnostic($"TextClip {clip.Name}: target {clip.TargetWidth}*{clip.TargetHeight}, resolved: {renderW}*{renderH}, text: {TextClipMeasureHelper.MeasureBounds(clip)}");
+
+        return new Image
         {
-            WidthRequest = Math.Max(1, targetWidth),
-            HeightRequest = Math.Max(1, targetHeight),
+            Source = frame.ToImageSource(),
+            Aspect = Aspect.Fill,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
-            BackgroundColor = Colors.Transparent,
         };
-
-        var entries = ResolveTextEntriesForPreview(clip);
-        foreach (var e in entries)
-        {
-            var fontSize = Math.Max(1f, e.fontSize * ((e.dpi ?? 72f) / 72f));
-            var label = new Label
-            {
-                Text = e.text,
-                TextColor = Color.FromRgba(e.r / 257, e.g / 257, e.b / 257, (double)(e.a ?? 1d)),
-                HorizontalTextAlignment = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => TextAlignment.Start, SixLabors.Fonts.HorizontalAlignment.Right => TextAlignment.End, SixLabors.Fonts.HorizontalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Start },
-                VerticalTextAlignment = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => TextAlignment.Start, SixLabors.Fonts.VerticalAlignment.Bottom => TextAlignment.End, SixLabors.Fonts.VerticalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Start },
-                HorizontalOptions = LayoutOptions.Start,
-                VerticalOptions = LayoutOptions.Start,
-                LineBreakMode = e.wrappingWidth.HasValue && e.wrappingWidth.Value > 0 ? LineBreakMode.WordWrap : LineBreakMode.NoWrap,
-                FontAttributes = e.fontStyle switch
-                {
-                    SixLabors.Fonts.FontStyle.Regular => FontAttributes.None,
-                    SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
-                    SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
-                    SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
-                    _ => FontAttributes.None,
-                },
-                //FontFamily = string.IsNullOrWhiteSpace(e.fontFa   mily) ? null : "UserFont_" + e.fontFamily,
-                FontSize = fontSize,
-                Margin = Thickness.Zero,
-                Padding = Thickness.Zero,
-                Rotation = e.rotation,
-            };
-
-            if (e.lineSpacing > 0)
-            {
-                label.LineHeight = e.lineSpacing;
-            }
-
-            if (e.wrappingWidth.HasValue && e.wrappingWidth.Value > 0)
-            {
-                label.WidthRequest = e.wrappingWidth.Value;
-            }
-
-            var (labelWidth, labelHeight) = MeasureLabelSizeWithFallback(label, e, fontSize);
-
-            var x = e.x;
-            var y = e.y;
-
-            switch (e.horizontalAlignment)
-            {
-                case SixLabors.Fonts.HorizontalAlignment.Center:
-                    x -= (int)(labelWidth / 2d);
-                    break;
-                case SixLabors.Fonts.HorizontalAlignment.Right:
-                    x -= (int)labelWidth;
-                    break;
-            }
-
-            switch (e.verticalAlignment)
-            {
-                case SixLabors.Fonts.VerticalAlignment.Center:
-                    y -= (int)(labelHeight / 2d);
-                    break;
-                case SixLabors.Fonts.VerticalAlignment.Bottom:
-                    y -= (int)labelHeight;
-                    break;
-            }
-
-            AbsoluteLayout.SetLayoutBounds(label, new Rect(x, y, labelWidth, labelHeight));
-            root.Children.Add(label);
-        }
-
-        return root;
-    }
-
-    private static (double width, double height) MeasureLabelSizeWithFallback(Label label, TextClipEntry entry, double fontSize)
-    {
-        EstimateTextSize(entry, fontSize, out var width, out var height);
-        return (Math.Max(1d, width), Math.Max(1d, height));
-    }
-
-    private static void EstimateTextSize(TextClipEntry entry, double fontSize, out double width, out double height)
-    {
-        var text = string.IsNullOrEmpty(entry.text) ? " " : entry.text;
-        var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
-        var lineHeight = Math.Max(1d, fontSize * Math.Max(0.8d, entry.lineSpacing));
-
-        var lineCount = 1;
-        foreach (var c in text)
-        {
-            if (c == '\n')
-            {
-                lineCount++;
-            }
-        }
-
-        if (entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0)
-        {
-            width = Math.Max(1d, entry.wrappingWidth.Value);
-
-            var approxCharWidth = Math.Max(1d, fontSize * 0.56d);
-            var maxCharsPerLine = Math.Max(1, (int)Math.Floor(width / approxCharWidth));
-            var visualLines = 0;
-            var charsInLine = 0;
-
-            foreach (var c in text)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
-
-                if (c == '\n')
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                    continue;
-                }
-
-                charsInLine++;
-                if (charsInLine >= maxCharsPerLine)
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                }
-            }
-
-            if (charsInLine > 0 || visualLines == 0)
-            {
-                visualLines++;
-            }
-
-            height = Math.Max(lineCount, visualLines) * lineHeight;
-        }
-        else
-        {
-            var maxCharsInLine = 0;
-            var charsInLine = 0;
-
-            foreach (var c in text)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
-
-                if (c == '\n')
-                {
-                    if (charsInLine > maxCharsInLine)
-                    {
-                        maxCharsInLine = charsInLine;
-                    }
-
-                    charsInLine = 0;
-                    continue;
-                }
-
-                charsInLine++;
-            }
-
-            if (charsInLine > maxCharsInLine)
-            {
-                maxCharsInLine = charsInLine;
-            }
-
-            if (maxCharsInLine <= 0)
-            {
-                maxCharsInLine = 1;
-            }
-
-            width = maxCharsInLine * fontSize * 0.56d;
-            height = lineCount * lineHeight;
-        }
-
-        width = Math.Max(1d, width + strokeExtra);
-        height = Math.Max(1d, height + strokeExtra);
-    }
-
-    private static IReadOnlyList<TextClipEntry> ResolveTextEntriesForPreview(TextClip clip)
-    {
-        List<TextClipEntry>? extraEntries = null;
-
-        if (clip.ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
-        {
-            if (rawEntries is List<TextClipEntry> list && list.Count > 0)
-            {
-                extraEntries = list;
-            }
-
-            else if (rawEntries is JsonElement je)
-            {
-                try
-                {
-                    var parsed = je.Deserialize<List<TextClipEntry>>();
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-
-            else if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
-            {
-                try
-                {
-                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        return PickBetterTextEntries(extraEntries, clip.TextEntries);
-    }
-
-    private static IReadOnlyList<TextClipEntry> PickBetterTextEntries(IReadOnlyList<TextClipEntry>? primary, IReadOnlyList<TextClipEntry>? fallback)
-    {
-        var p = primary ?? Array.Empty<TextClipEntry>();
-        var f = fallback ?? Array.Empty<TextClipEntry>();
-
-        var pHasVisibleText = p.Any(e => !string.IsNullOrWhiteSpace(e.text));
-        var fHasVisibleText = f.Any(e => !string.IsNullOrWhiteSpace(e.text));
-
-        if (pHasVisibleText && !fHasVisibleText)
-        {
-            return p;
-        }
-
-        if (fHasVisibleText && !pHasVisibleText)
-        {
-            return f;
-        }
-
-        return p.Count >= f.Count ? p : f;
     }
 }

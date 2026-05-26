@@ -3,6 +3,7 @@ using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
@@ -556,6 +557,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
+    public ObservableCollection<TextStyleProviderItemViewModel> AvailableTextStyleProviders { get; } = new();
 
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
@@ -563,6 +565,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
+    public ObservableCollection<TextStyleProviderItemViewModel> FilteredAvailableTextStyleProviders { get; } = new();
     #endregion
 
     #region command
@@ -1585,6 +1588,66 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         TextToAdd = "";
     }
 
+    public async Task AddTextClipWithStyleProvider(TextStyleProviderItemViewModel? providerOverride = null)
+    {
+        var providerItem = providerOverride;
+        if (providerItem is null) return;
+        var text = TextToAdd;
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.Id, providerItem.Parameters)
+            ?? providerItem.Provider;
+        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        provider.BasicText = text;
+
+        var entries = provider.BuildEntries();
+        var textLang = DetectTextLanguage(text);
+        if (textLang != TextLanguage.English)
+        {
+            var fontOverride = textLang switch
+            {
+                TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
+                TextLanguage.Japanese => "Noto Sans JP",
+                TextLanguage.Korean => "Noto Sans KR",
+                TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
+                _ => "Noto Sans"
+            };
+            entries = entries
+                .Select(e => e.fontFamily == "Arial" ? e with { fontFamily = fontOverride } : e)
+                .ToArray();
+        }
+
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(300),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
+            element.ExtraData["TextEntries"] = entries.ToList();
+            element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
+            element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
+            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+
+            return element;
+        }, TextClipInSubTrack, name: "Text");
+
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+        TextToAdd = "";
+    }
+
     public void InitializeTextStyles(string? previewText = null)
     {
 
@@ -1670,6 +1733,50 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 s.SampleText.ToLower().Contains(searchLower))
             {
                 FilteredAvailableTextStyles.Add(s);
+            }
+        }
+
+        InitializeTextStyleProviders(previewText);
+    }
+
+    public void InitializeTextStyleProviders(string? previewText = null)
+    {
+        AvailableTextStyleProviders.Clear();
+        try
+        {
+            foreach (var kvp in TextStyleServices.GetAvailableTextStyleProviders())
+            {
+                var provider = kvp.Value();
+                if (!string.IsNullOrWhiteSpace(previewText))
+                {
+                    provider.BasicText = previewText;
+                }
+
+                AvailableTextStyleProviders.Add(new TextStyleProviderItemViewModel(this)
+                {
+                    Id = provider.TypeName,
+                    Name = provider.TypeName,
+                    Provider = provider,
+                    FromPlugin = provider.FromPlugin,
+                    Parameters = new Dictionary<string, string>(provider.Parameters),
+                    BasicText = provider.BasicText
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Load text style providers", this);
+        }
+
+        FilteredAvailableTextStyleProviders.Clear();
+        var searchLower = SearchText?.ToLower() ?? "";
+        foreach (var s in AvailableTextStyleProviders)
+        {
+            if (string.IsNullOrWhiteSpace(searchLower) ||
+                s.Name.ToLower().Contains(searchLower) ||
+                s.BasicText.ToLower().Contains(searchLower))
+            {
+                FilteredAvailableTextStyleProviders.Add(s);
             }
         }
     }
@@ -1960,6 +2067,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 s.SampleText.ToLower().Contains(styleSearch))
             {
                 FilteredAvailableTextStyles.Add(s);
+            }
+        }
+
+        FilteredAvailableTextStyleProviders.Clear();
+        var providerSearch = SearchText?.ToLower() ?? "";
+        foreach (var p in AvailableTextStyleProviders)
+        {
+            if (string.IsNullOrWhiteSpace(providerSearch) ||
+                p.Name.ToLower().Contains(providerSearch) ||
+                p.BasicText.ToLower().Contains(providerSearch))
+            {
+                FilteredAvailableTextStyleProviders.Add(p);
             }
         }
     }
@@ -3286,6 +3405,62 @@ public class TextStyleItemViewModel
     }
 }
 
+public class TextStyleProviderItemViewModel
+{
+    public required string Id { get; set; } = string.Empty;
+    public required string Name { get; set; } = string.Empty;
+    public required ITextClipStyleProvider Provider { get; set; } = default!;
+    public required string FromPlugin { get; set; } = string.Empty;
+    public required Dictionary<string, string> Parameters { get; set; } = new();
+    public required string BasicText { get; set; } = string.Empty;
+
+    public ImageSource PreviewSource
+    {
+        get
+        {
+            var entries = Provider.BuildEntries();
+            if (entries.Length == 0)
+            {
+                entries = new[]
+                {
+                    new TextClipEntry
+                    {
+                        text = BasicText ?? "AaBbYyZz",
+                        x = 0,
+                        y = 0,
+                        fontFamily = "Arial",
+                        fontSize = 36,
+                        r = 65535,
+                        g = 65535,
+                        b = 65535,
+                        a = 1f
+                    }
+                };
+            }
+
+            TextClip t = new TextClip
+            {
+                Id = Id,
+                Name = Id,
+                TextEntries = entries.ToList()
+            };
+
+            var maxFontSize = entries.Max(e => e.fontSize > 0 ? e.fontSize : 36f);
+            var sample = entries.OrderByDescending(e => e.text?.Length ?? 0).FirstOrDefault()?.text ?? BasicText ?? "AaBbYyZz";
+            var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
+            var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
+
+            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+            return img.ToImageSource();
+        }
+    }
+
+    public Command AddTextClipWithStyleProviderCommand { get; set; }
+
+    public TextStyleProviderItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddTextClipWithStyleProviderCommand = new Command(async () => await parent.AddTextClipWithStyleProvider(this));
+    }
+}
+
 #endregion
-
-

@@ -8,6 +8,7 @@ using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -175,6 +176,14 @@ namespace projectFrameCut.DraftStuff
                         Header = PPLocalizedResources.Tabs_Effect_Classic,
                         Content = BuildClassicEffectTab(clip, handler)
                     });
+                    if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
+                    {
+                        t.TabItems.Add(new TabbedViewItem
+                        {
+                            Header = PPLocalizedResources.TextOption_TabTitle_Classic,
+                            Content = BuildTextOptionClassicTab(clip, handler)
+                        });
+                    }
                 }
 
 
@@ -1623,17 +1632,126 @@ namespace projectFrameCut.DraftStuff
 
         private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            // Ensure ExtraData exists
             clip.ExtraData ??= new Dictionary<string, object>();
 
-            // Load or normalize TextEntries from ExtraData
+            const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
+            const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
+            const string TextStyleProviderParamsKey = "TextStyleProvider_Parameters";
+
+            if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj) && entriesObj is JsonElement je)
+            {
+                try
+                {
+                    var deserialized = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
+                    if (deserialized != null)
+                        clip.ExtraData["TextEntries"] = deserialized;
+                }
+                catch { }
+            }
+
+            string? ReadStringValue(object? raw)
+            {
+                if (raw is string s) return s;
+                if (raw is JsonElement elem && elem.ValueKind == JsonValueKind.String) return elem.GetString();
+                return raw?.ToString();
+            }
+
+            Dictionary<string, string>? ReadParameters(object? raw)
+            {
+                if (raw is Dictionary<string, string> dict) return new Dictionary<string, string>(dict);
+                if (raw is Dictionary<string, object> objDict)
+                    return objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty);
+                if (raw is JsonElement elem)
+                {
+                    try { return JsonSerializer.Deserialize<Dictionary<string, string>>(elem); }
+                    catch { return null; }
+                }
+                if (raw is string json && !string.IsNullOrWhiteSpace(json))
+                {
+                    try { return JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
+                    catch { return null; }
+                }
+                return null;
+            }
+
+            var providerFrom = clip.ExtraData.TryGetValue(TextStyleProviderFromKey, out var providerFromObj) ? ReadStringValue(providerFromObj) : null;
+            var providerType = clip.ExtraData.TryGetValue(TextStyleProviderTypeKey, out var providerTypeObj) ? ReadStringValue(providerTypeObj) : null;
+            var providerParameters = clip.ExtraData.TryGetValue(TextStyleProviderParamsKey, out var providerParamsObj) ? ReadParameters(providerParamsObj) : null;
+
+            ITextClipStyleProvider? styleProvider = null;
+            if (!string.IsNullOrWhiteSpace(providerFrom) && !string.IsNullOrWhiteSpace(providerType))
+            {
+                styleProvider = TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, providerParameters);
+                if (styleProvider != null && providerParameters != null)
+                {
+                    styleProvider.Parameters = new Dictionary<string, string>(providerParameters);
+                }
+
+                var rebuiltEntries = styleProvider?.BuildEntries();
+                if (rebuiltEntries is { Length: > 0 })
+                {
+                    clip.ExtraData["TextEntries"] = rebuiltEntries.ToList();
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", rebuiltEntries, rebuiltEntries));
+                }
+            }
+
+            if (styleProvider == null)
+            {
+                return new VerticalStackLayout
+                {
+                    Padding = 16,
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Spacing = 8,
+                    Children =
+                    {
+                        new Label
+                        {
+                            Text = PPLocalizedResources.TextOption_StyleProvider_NotFound(providerFrom ?? "?"),
+                            FontSize = 14,
+                            TextColor = Colors.Gray,
+                            HorizontalOptions = LayoutOptions.Center
+                        }
+                    }
+                };
+            }
+
+            var providerPpb = styleProvider.BuildPropertyPanel();
+            var providerHost = new PropertyPanelBuilder();
+            providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
+            providerHost.AddSeparator();
+            providerHost.AddFromAnother(providerPpb, styleProvider);
+            providerHost.PropertyChanged += (s, e) =>
+            {
+                if (s is not ITextClipStyleProvider provider) return;
+                (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
+                if (updated != null)
+                {
+                    provider.Parameters = updated;
+                    clip.ExtraData[TextStyleProviderParamsKey] = updated;
+                }
+                clip.TargetWidth = newW > 0 ? newW : clip.TargetWidth;
+                clip.TargetHeight = newH > 0 ? newH : clip.TargetHeight;
+                var updatedEntries = provider.BuildEntries();
+                if (updatedEntries.Length > 0)
+                {
+                    clip.ExtraData["TextEntries"] = updatedEntries.ToList();
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
+                }
+            };
+
+            return providerHost.BuildWithScrollView();
+        }
+
+        private View BuildTextOptionClassicTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.ExtraData ??= new Dictionary<string, object>();
+
             List<TextClipEntry>? entries = null;
             if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
             {
                 if (entriesObj is List<TextClipEntry> list)
-                {
                     entries = list;
-                }
                 else if (entriesObj is JsonElement je)
                 {
                     try { entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je); }
@@ -1662,7 +1780,6 @@ namespace projectFrameCut.DraftStuff
             }
 
             var fonts = TextServices.LoadedFonts.Select(c => c.Value);
-
             var entriesContainer = new VerticalStackLayout { Spacing = 8 };
 
             void UpdateStoredEntries()
@@ -1703,7 +1820,6 @@ namespace projectFrameCut.DraftStuff
 
             RebuildEntriesUI();
 
-            // Add/Insert controls
             var addBtn = new Button
             {
                 Text = PPLocalizedResources.TextOption_AddAEntry,
@@ -1757,7 +1873,7 @@ namespace projectFrameCut.DraftStuff
             };
             grid.Add(scroll, 0, 1);
 
-            return grid;
+            return new ScrollView { Content = grid };
         }
         #endregion
 

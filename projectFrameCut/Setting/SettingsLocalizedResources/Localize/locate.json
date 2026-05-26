@@ -2125,6 +2125,39 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_ComposeOption",
+        "Value": "\u6027\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u914D\u7F6E\u63D0\u9AD8\u6E32\u67D3\u6027\u80FD\u7684\u529F\u80FD\uFF0C\u5EFA\u8BAE\u5168\u90E8\u542F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_CoreAffinityOverride",
+        "Value": "\u624B\u52A8\u914D\u7F6E Worker \u7EBF\u7A0B\u4EB2\u548C\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_CoreAffinityOverride_Desc",
+        "Value": "\u4F7F\u7528(\u534A\u89D2)\u9017\u53F7\u5206\u5272\uFF0C\u4F8B\u5982 0,1,2,3,4,5 \u7559\u7A7A\u5C06\u81EA\u52A8\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u53EA\u6709\u5728\u7FFB\u8BD1\u5230\u4E2D\u65E5\u97E9\u7B49\u5B58\u5728\u5168\u89D2\u548C\u534A\u89D2\u7B26\u53F7\u7684\u8BED\u8A00\u65F6\u52A0\u4E0A\u534A\u89D2\u7684\u6CE8\u91CA",
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_DefaultExportOpts",
         "Value": "\u9ED8\u8BA4\u5BFC\u51FA\u914D\u7F6E",
         "Mode": "ConstString",
@@ -2151,6 +2184,14 @@
       {
         "Id": "Render_DumpDiagData",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u65F6\u7684\u8BE6\u7EC6\u8BCA\u65AD\u62A5\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity",
+        "Value": "\u5141\u8BB8\u81EA\u52A8\u5206\u914D\u6E32\u67D3\u5668\uFF08\u63A8\u8350\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2222,8 +2263,16 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_MaxParallelWorkers",
+        "Value": "\u9ED8\u8BA4\u6700\u5927\u5E76\u53D1\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u4F7F\u7528\u66F4\u5FEB\u901F\u7684\u6DF7\u5408\u5668\uFF08\u53EF\u80FD\u5BFC\u81F4\u7CBE\u5EA6\u95EE\u9898\uFF09",
+        "Value": "\u786C\u4EF6\u52A0\u901F\u5FEB\u901F\u6DF7\u5408",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2231,7 +2280,23 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
+        "Value": "\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads",
+        "Value": "\u5141\u8BB8\u5E76\u884C\u89E3\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u9009\u9879\u53EF\u80FD\u5BFC\u81F4\u7531\u7B2C\u4E09\u65B9\u63D2\u4EF6\u63D0\u4F9B\u7684\u7247\u6BB5\u6216\u8005\u89E3\u7801\u5668\u4EA7\u751F\u517C\u5BB9\u6027\u95EE\u9898\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2239,7 +2304,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u6309\u5C42\u6E32\u67D3\uFF08\u53EF\u80FD\u66F4\u5FEB\uFF09",
+        "Value": "\u5141\u8BB8\u6309\u5C42\u6E32\u67D3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2271,7 +2336,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
+        "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\uFF0C\u7528\u4E8E\u786C\u4EF6\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2372,47 +2437,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u542F\u7528\u52A8\u6001\u4F18\u5316\u5E76\u53D1\uFF08\u63A8\u8350\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u5141\u8BB8\u5E76\u884C\u89E3\u7801\uFF08\u53EF\u80FD\u5BFC\u81F4\u7B2C\u4E09\u65B9\u63D2\u4EF6\u7684Clip\u4EA7\u751F\u517C\u5BB9\u6027\u95EE\u9898\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_MaxParallelWorkers",
-        "Value": "\u9ED8\u8BA4\u6700\u5927\u5E76\u53D1\u6570",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_CoreAffinityOverride",
-        "Value": "\u624B\u52A8\u914D\u7F6E Worker \u7EBF\u7A0B\u4EB2\u548C\u6027",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u4F7F\u7528(\u534A\u89D2)\u9017\u53F7\u5206\u5272\uFF0C\u4F8B\u5982 0,1,2,3,4,5\uFF0C\u7559\u7A7A\u5C06\u81EA\u52A8\u914D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u53EA\u6709\u5728\u7FFB\u8BD1\u5230\u4E2D\u65E5\u97E9\u7B49\u5B58\u5728\u5168\u89D2\u548C\u534A\u89D2\u7B26\u53F7\u7684\u8BED\u8A00\u65F6\u52A0\u4E0A\u534A\u89D2\u7684\u6CE8\u91CA",
         "DontTranslate": false
       }
     ],

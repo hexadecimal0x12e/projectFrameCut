@@ -1716,6 +1716,32 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_StyleProvider_NotFound",
+        "Value": "\u6837\u5F0F\u4E0D\u53EF\u7528\uFF0C\u8BF7\u68C0\u67E5\u63D2\u4EF6\u300C{id}\u300D\u662F\u5426\u5DF2\u542F\u7528\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic",
+        "Value": "\u6587\u672C\uFF08\u7ECF\u5178\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

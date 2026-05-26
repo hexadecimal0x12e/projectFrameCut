@@ -1,6 +1,7 @@
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -10,7 +11,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
-using Microsoft.Maui.Controls.Shapes;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -28,11 +28,12 @@ namespace projectFrameCut.InteractableEditor;
 
 public sealed class DynamicPreview : IDisposable
 {
-    private const double MinTextPreviewSize = 10d;
     private const int ParallelPreparationThreshold = 2;
-    private const int TextMeasureCacheLimit = 2048;
     private const int MaxCachedFallbackFrames = 120;
     private const int MaxDiskCachedFallbackFrames = 1500;
+    private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
+    private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
+    private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
     private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
     private static readonly IComparer<IClip> s_clipLayerComparer = Comparer<IClip>.Create(static (left, right) =>
     {
@@ -46,9 +47,6 @@ public sealed class DynamicPreview : IDisposable
     });
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
-    private static readonly Dictionary<TextMeasureCacheKey, Rect> s_textMeasureCache = new();
-    private static readonly object s_textMeasureCacheGate = new();
-
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
 
 
@@ -142,7 +140,7 @@ public sealed class DynamicPreview : IDisposable
     public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int targetWidth, int targetHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token)
     {
         var clipsSnapshot = AcquireClipsSnapshot();
-        var requests = ResolveRequests(clipsSnapshot, frameIndex);
+        var requests = ResolveRequests(clipsSnapshot, frameIndex, canvasWidth, canvasHeight);
         var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
         if (prepared is not null)
         {
@@ -523,7 +521,7 @@ public sealed class DynamicPreview : IDisposable
         return new PreparedPreview(request.Clip.Id, viewFactory, message, request.Clip);
     }
 
-    public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
+    public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex, int canvasWidth = 0, int canvasHeight = 0)
     {
         if (clips is null || clips.Count == 0)
         {
@@ -571,6 +569,74 @@ public sealed class DynamicPreview : IDisposable
             {
                 BindTransformRuntimeSources(transformClip, clipIndex);
             }
+
+            if (clip is TextClip textClip)
+            {
+                var styleProvider = ResolveTextClipStyleProvider(clip);
+                if (styleProvider is not null)
+                {
+                    var savedParams = ReadTextStyleParameters(clip.ExtraData);
+                    if (savedParams is not null)
+                    {
+                        styleProvider.Parameters = savedParams;
+                    }
+
+                    var isManualSize = savedParams is not null
+                        && savedParams.TryGetValue("TextStyleManualSize", out var manualVal)
+                        && manualVal == "true";
+
+                    if (!isManualSize)
+                    {
+                        var resizeParams = styleProvider.HandleClipResize(
+                            isInRatio: false,
+                            TargetX: textClip.TargetX,
+                            TargetY: textClip.TargetY,
+                            TargetWidth: Math.Max(1, textClip.TargetWidth),
+                            TargetHeight: Math.Max(1, textClip.TargetHeight));
+
+                        if (resizeParams is { Count: > 0 })
+                        {
+                            styleProvider.Parameters ??= new Dictionary<string, string>(StringComparer.Ordinal);
+                            foreach (var kvp in resizeParams)
+                            {
+                                styleProvider.Parameters[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+
+                    clip.ExtraData ??= new Dictionary<string, object>(StringComparer.Ordinal);
+                    clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
+                    clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
+
+                    var entries = styleProvider.BuildEntries();
+                    clip.ExtraData["TextEntries"] = new List<TextClipEntry>(entries);
+
+                    if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0
+                        && canvasWidth > 0 && canvasHeight > 0)
+                    {
+                        var rect = styleProvider.GetViewRect(canvasWidth, canvasHeight);
+                        if (!rect.IsDelta)
+                        {
+                            textClip.TargetX = rect.TargetX;
+                            textClip.TargetY = rect.TargetY;
+                            textClip.TargetWidth = Math.Max(1, rect.TargetWidth);
+                            textClip.TargetHeight = Math.Max(1, rect.TargetHeight);
+                        }
+                    }
+                }
+                else if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0)
+                {
+                    var bounds = TextClipMeasureHelper.MeasureBounds(textClip);
+                    if (bounds.Width > 0 && bounds.Height > 0)
+                    {
+                        textClip.TargetX = (int)bounds.X;
+                        textClip.TargetY = (int)bounds.Y;
+                        textClip.TargetWidth = (int)bounds.Width;
+                        textClip.TargetHeight = (int)bounds.Height;
+                    }
+                }
+            }
+
             requests[i] = new PreviewRequest(clip, ResolveProvider(clip));
         }
 
@@ -734,11 +800,6 @@ public sealed class DynamicPreview : IDisposable
 
         if (!applyClipTargetLayout)
         {
-            if (clip.ClipType == ClipMode.TextClip)
-            {
-                return NormalizeTextPreparedPreviewToClipLocal(generatedView, clip, targetWidth, targetHeight);
-            }
-
             return generatedView;
         }
 
@@ -855,372 +916,6 @@ public sealed class DynamicPreview : IDisposable
         return input;
     }
 
-    private static View NormalizeTextPreparedPreviewToClipLocal(View input, IClip clip, int targetWidth, int targetHeight)
-    {
-        var viewportWidth = Math.Max(1d, targetWidth);
-        var viewportHeight = Math.Max(1d, targetHeight);
-        var hasMeasuredClipRect = TryResolveTextClipRectForPreparedPreview(clip, out var clipRect);
-
-        if (!hasMeasuredClipRect)
-        {
-            clipRect = new Rect(0, 0, viewportWidth, viewportHeight);
-        }
-
-        // Keep clamp behavior identical to InteractableEditor: preserve size, shift origin in-bounds.
-        var clippedW = Math.Clamp(clipRect.Width, MinTextPreviewSize, viewportWidth);
-        var clippedH = Math.Clamp(clipRect.Height, MinTextPreviewSize, viewportHeight);
-        var clippedX = Math.Clamp(clipRect.X, 0, viewportWidth - clippedW);
-        var clippedY = Math.Clamp(clipRect.Y, 0, viewportHeight - clippedH);
-        var clippedRect = new Rect(clippedX, clippedY, clippedW, clippedH);
-
-        var worldHost = new Grid
-        {
-            WidthRequest = viewportWidth,
-            HeightRequest = viewportHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            TranslationX = -clippedRect.X,
-            TranslationY = -clippedRect.Y
-        };
-        worldHost.Children.Add(input);
-
-        var debugTag = $"txtLocal src={(hasMeasuredClipRect ? "measured" : "fallback")},crop={Math.Round(clippedRect.X)},{Math.Round(clippedRect.Y)},{Math.Round(clippedRect.Width)}x{Math.Round(clippedRect.Height)}";
-        return new ContentView
-        {
-            Content = worldHost,
-            WidthRequest = clippedRect.Width,
-            HeightRequest = clippedRect.Height,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            AutomationId = debugTag,
-            Clip = new RectangleGeometry
-            {
-                Rect = new Rect(0, 0, clippedRect.Width, clippedRect.Height)
-            }
-        };
-    }
-
-    private static bool TryResolveTextClipRectForPreparedPreview(IClip clip, out Rect rect)
-    {
-        rect = default;
-        if (clip is not TextClip textClip)
-        {
-            return false;
-        }
-
-        if (!TryResolveTextEntriesForPreparedPreview(textClip, out var entries))
-        {
-            return false;
-        }
-
-        var hasBounds = false;
-        double minX = 0;
-        double minY = 0;
-        double maxX = 0;
-        double maxY = 0;
-
-        foreach (var entry in entries)
-        {
-            if (!TryMeasureTextEntryRectForPreparedPreview(entry, out var x, out var y, out var w, out var h))
-            {
-                continue;
-            }
-
-            var left = x;
-            var top = y;
-            var right = x + w;
-            var bottom = y + h;
-
-            if (!hasBounds)
-            {
-                minX = left;
-                minY = top;
-                maxX = right;
-                maxY = bottom;
-                hasBounds = true;
-            }
-            else
-            {
-                minX = Math.Min(minX, left);
-                minY = Math.Min(minY, top);
-                maxX = Math.Max(maxX, right);
-                maxY = Math.Max(maxY, bottom);
-            }
-        }
-
-        if (!hasBounds)
-        {
-            return false;
-        }
-
-        rect = new Rect(
-            minX,
-            minY,
-            Math.Max(MinTextPreviewSize, maxX - minX),
-            Math.Max(MinTextPreviewSize, maxY - minY));
-        return true;
-    }
-
-    private static bool TryResolveTextEntriesForPreparedPreview(TextClip clip, out List<TextClipEntry> entries)
-    {
-        entries = null!;
-
-        List<TextClipEntry>? extraEntries = null;
-
-        if (clip.ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
-        {
-            if (rawEntries is List<TextClipEntry> list && list.Count > 0)
-            {
-                extraEntries = list;
-            }
-
-            else if (rawEntries is JsonElement element)
-            {
-                try
-                {
-                    var parsed = element.Deserialize<List<TextClipEntry>>();
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-
-            else if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
-            {
-                try
-                {
-                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        var selected = PickBetterTextEntries(extraEntries, clip.TextEntries);
-        if (selected.Count > 0)
-        {
-            entries = selected is List<TextClipEntry> selectedList
-                ? selectedList
-                : selected.ToList();
-            return true;
-        }
-
-        return false;
-    }
-
-    private static IReadOnlyList<TextClipEntry> PickBetterTextEntries(IReadOnlyList<TextClipEntry>? primary, IReadOnlyList<TextClipEntry>? fallback)
-    {
-        var p = primary ?? Array.Empty<TextClipEntry>();
-        var f = fallback ?? Array.Empty<TextClipEntry>();
-
-        var pHasVisibleText = p.Any(e => !string.IsNullOrWhiteSpace(e.text));
-        var fHasVisibleText = f.Any(e => !string.IsNullOrWhiteSpace(e.text));
-
-        if (pHasVisibleText && !fHasVisibleText)
-        {
-            return p;
-        }
-
-        if (fHasVisibleText && !pHasVisibleText)
-        {
-            return f;
-        }
-
-        return p.Count >= f.Count ? p : f;
-    }
-
-    private static bool TryMeasureTextEntryRectForPreparedPreview(TextClipEntry entry, out double x, out double y, out double w, out double h)
-    {
-        if (TryGetCachedTextMeasureRect(entry, out var cachedRect))
-        {
-            x = cachedRect.X;
-            y = cachedRect.Y;
-            w = cachedRect.Width;
-            h = cachedRect.Height;
-            return true;
-        }
-
-        x = entry.x;
-        y = entry.y;
-        w = MinTextPreviewSize;
-        h = MinTextPreviewSize;
-
-        var rawText = entry.text ?? string.Empty;
-        var textForMeasure = string.IsNullOrEmpty(rawText) ? " " : rawText;
-        var dpi = entry.dpi ?? 72d;
-        var fontSize = Math.Max(1d, entry.fontSize * (dpi / 72d));
-        var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
-
-        if (entry.UseVerticalLayout)
-        {
-            var glyphCount = rawText.Count(c => c != '\n' && c != '\r');
-            if (glyphCount <= 0)
-            {
-                glyphCount = 1;
-            }
-
-            var lineAdvance = fontSize * Math.Max(0.1d, entry.lineSpacing);
-            w = Math.Max(MinTextPreviewSize, fontSize + strokeExtra);
-            h = Math.Max(MinTextPreviewSize, glyphCount * lineAdvance + strokeExtra);
-        }
-        else
-        {
-            EstimateTextEntryRectSize(entry, textForMeasure, fontSize, out w, out h);
-            w = Math.Max(MinTextPreviewSize, w + strokeExtra);
-            h = Math.Max(MinTextPreviewSize, h + strokeExtra);
-        }
-
-        switch (entry.horizontalAlignment)
-        {
-            case SixLabors.Fonts.HorizontalAlignment.Center:
-                x -= w / 2d;
-                break;
-            case SixLabors.Fonts.HorizontalAlignment.Right:
-                x -= w;
-                break;
-        }
-
-        switch (entry.verticalAlignment)
-        {
-            case SixLabors.Fonts.VerticalAlignment.Center:
-                y -= h / 2d;
-                break;
-            case SixLabors.Fonts.VerticalAlignment.Bottom:
-                y -= h;
-                break;
-        }
-
-        if (Math.Abs(entry.rotation) > 0.0001f)
-        {
-            var radians = entry.rotation * Math.PI / 180d;
-            var cos = Math.Cos(radians);
-            var sin = Math.Sin(radians);
-
-            static (double rx, double ry) Rotate(double px, double py, double cosV, double sinV)
-                => (px * cosV - py * sinV, px * sinV + py * cosV);
-
-            var p0 = Rotate(0, 0, cos, sin);
-            var p1 = Rotate(w, 0, cos, sin);
-            var p2 = Rotate(0, h, cos, sin);
-            var p3 = Rotate(w, h, cos, sin);
-
-            var minRx = Math.Min(Math.Min(p0.rx, p1.rx), Math.Min(p2.rx, p3.rx));
-            var minRy = Math.Min(Math.Min(p0.ry, p1.ry), Math.Min(p2.ry, p3.ry));
-            var maxRx = Math.Max(Math.Max(p0.rx, p1.rx), Math.Max(p2.rx, p3.rx));
-            var maxRy = Math.Max(Math.Max(p0.ry, p1.ry), Math.Max(p2.ry, p3.ry));
-
-            x = entry.x + minRx;
-            y = entry.y + minRy;
-            w = Math.Max(MinTextPreviewSize, maxRx - minRx);
-            h = Math.Max(MinTextPreviewSize, maxRy - minRy);
-        }
-
-        SetCachedTextMeasureRect(entry, new Rect(x, y, w, h));
-        return true;
-    }
-
-    private static void EstimateTextEntryRectSize(TextClipEntry entry, string textForMeasure, double fontSize, out double width, out double height)
-    {
-        var lineHeight = Math.Max(1d, fontSize * Math.Max(0.8d, entry.lineSpacing));
-        var lineCount = 1;
-        foreach (var c in textForMeasure)
-        {
-            if (c == '\n')
-            {
-                lineCount++;
-            }
-        }
-
-        if (entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0)
-        {
-            width = Math.Max(1d, entry.wrappingWidth.Value);
-
-            var approxCharWidth = Math.Max(1d, fontSize * 0.56d);
-            var maxCharsPerLine = Math.Max(1, (int)Math.Floor(width / approxCharWidth));
-            var visualLines = 0;
-            var charsInLine = 0;
-
-            foreach (var c in textForMeasure)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
-
-                if (c == '\n')
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                    continue;
-                }
-
-                charsInLine++;
-                if (charsInLine >= maxCharsPerLine)
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                }
-            }
-
-            if (charsInLine > 0 || visualLines == 0)
-            {
-                visualLines++;
-            }
-
-            height = Math.Max(lineCount, visualLines) * lineHeight;
-            return;
-        }
-
-        var maxCharsInLine = 0;
-        var currentChars = 0;
-        foreach (var c in textForMeasure)
-        {
-            if (c == '\r')
-            {
-                continue;
-            }
-
-            if (c == '\n')
-            {
-                if (currentChars > maxCharsInLine)
-                {
-                    maxCharsInLine = currentChars;
-                }
-
-                currentChars = 0;
-                continue;
-            }
-
-            currentChars++;
-        }
-
-        if (currentChars > maxCharsInLine)
-        {
-            maxCharsInLine = currentChars;
-        }
-
-        if (maxCharsInLine <= 0)
-        {
-            maxCharsInLine = 1;
-        }
-
-        width = maxCharsInLine * fontSize * 0.56d;
-        height = lineCount * lineHeight;
-    }
-
     private static bool HasExplicitTargetRect(IClip clip)
         => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
 
@@ -1270,6 +965,128 @@ public sealed class DynamicPreview : IDisposable
         }
 
         return null;
+    }
+
+    [DebuggerStepThrough()]
+    private static ITextClipStyleProvider? ResolveTextClipStyleProvider(IClip clip)
+    {
+        var providerFrom = ReadExtraDataString(clip.ExtraData, TextStyleProviderFromKey);
+        var providerType = ReadExtraDataString(clip.ExtraData, TextStyleProviderTypeKey);
+        if (!string.IsNullOrWhiteSpace(providerFrom)
+            && !string.IsNullOrWhiteSpace(providerType)
+            && PluginManager.LoadedPlugins.TryGetValue(providerFrom, out var ownerPlugin)
+            && ownerPlugin is IApplicationPluginBase appPlugin
+            && appPlugin.TextClipStyleProvider.TryGetValue(providerType, out var factory))
+        {
+            return factory();
+        }
+
+        if (PluginManager.LoadedPlugins.TryGetValue(clip.FromPlugin, out var clipOwner)
+            && clipOwner is IApplicationPluginBase clipPlugin)
+        {
+            return ResolveTextClipStyleProviderFromDictionary(clipPlugin.TextClipStyleProvider, clip);
+        }
+
+        return null;
+    }
+
+    private static ITextClipStyleProvider? ResolveTextClipStyleProviderFromDictionary(
+        IReadOnlyDictionary<string, Func<ITextClipStyleProvider>> providers, IClip clip)
+    {
+        if (providers.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(clip.TypeName)
+            && providers.TryGetValue(clip.TypeName, out var typedProvider))
+        {
+            return typedProvider();
+        }
+
+        var clipModeName = clip.ClipType.ToString();
+        if (providers.TryGetValue(clipModeName, out var modeProvider))
+        {
+            return modeProvider();
+        }
+
+        var fallback = providers.Values.FirstOrDefault();
+        return fallback is null ? null : fallback();
+    }
+
+    private static string? ReadExtraDataString(Dictionary<string, object>? data, string key)
+    {
+        if (data == null || !data.TryGetValue(key, out var raw) || raw is null)
+        {
+            return null;
+        }
+
+        if (raw is string s)
+        {
+            return s;
+        }
+
+        if (raw is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.String)
+            {
+                return je.GetString();
+            }
+            return je.ToString();
+        }
+
+        return raw.ToString();
+    }
+
+    private static Dictionary<string, string>? ReadTextStyleParameters(Dictionary<string, object>? data)
+    {
+        if (TryReadStringDictionary(data, TextStyleParametersKey, out var parameters))
+        {
+            return parameters;
+        }
+
+        if (TryReadStringDictionary(data, TextStyleParametersKey, out var providerParameters))
+        {
+            return providerParameters;
+        }
+
+        return null;
+    }
+
+    private static bool TryReadStringDictionary(Dictionary<string, object>? data, string key, out Dictionary<string, string> values)
+    {
+        values = null!;
+        if (data == null || !data.TryGetValue(key, out var raw) || raw is null)
+        {
+            return false;
+        }
+
+        if (raw is Dictionary<string, string> stringDict)
+        {
+            values = new Dictionary<string, string>(stringDict);
+            return true;
+        }
+
+        if (raw is Dictionary<string, object> objDict)
+        {
+            values = objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty, StringComparer.Ordinal);
+            return true;
+        }
+
+        if (raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var prop in je.EnumerateObject())
+            {
+                dict[prop.Name] = prop.Value.ValueKind == JsonValueKind.String
+                    ? (prop.Value.GetString() ?? string.Empty)
+                    : prop.Value.ToString();
+            }
+            values = dict;
+            return true;
+        }
+
+        return false;
     }
 
     private static IClipDynamicPreviewProvider? ResolveProviderFromDictionary(IReadOnlyDictionary<string, IClipDynamicPreviewProvider> providers, IClip clip)
@@ -1530,56 +1347,6 @@ public sealed class DynamicPreview : IDisposable
 
         enabledEffects.Sort(static (left, right) => left.Index.CompareTo(right.Index));
         return enabledEffects.ToArray();
-    }
-
-    private static bool TryGetCachedTextMeasureRect(TextClipEntry entry, out Rect rect)
-    {
-        var key = BuildTextMeasureCacheKey(entry);
-        lock (s_textMeasureCacheGate)
-        {
-            return s_textMeasureCache.TryGetValue(key, out rect);
-        }
-    }
-
-    private static void SetCachedTextMeasureRect(TextClipEntry entry, Rect rect)
-    {
-        var key = BuildTextMeasureCacheKey(entry);
-        lock (s_textMeasureCacheGate)
-        {
-            if (s_textMeasureCache.Count >= TextMeasureCacheLimit)
-            {
-                s_textMeasureCache.Clear();
-            }
-
-            s_textMeasureCache[key] = rect;
-        }
-    }
-
-    private static TextMeasureCacheKey BuildTextMeasureCacheKey(TextClipEntry entry)
-        => new(
-            entry.text ?? string.Empty,
-            entry.fontFamily ?? string.Empty,
-            NormalizeCacheNumber(entry.fontSize),
-            NormalizeCacheNumber(entry.dpi ?? 72d),
-            NormalizeCacheNumber(entry.strokeWidth ?? 0f),
-            NormalizeCacheNumber(entry.lineSpacing),
-            NormalizeCacheNumber(entry.wrappingWidth ?? 0f),
-            entry.UseVerticalLayout,
-            (int)entry.fontStyle,
-            (int)entry.horizontalAlignment,
-            (int)entry.verticalAlignment,
-            NormalizeCacheNumber(entry.rotation),
-            NormalizeCacheNumber(entry.x),
-            NormalizeCacheNumber(entry.y));
-
-    private static double NormalizeCacheNumber(double value)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value))
-        {
-            return 0d;
-        }
-
-        return Math.Round(value, 4, MidpointRounding.AwayFromZero);
     }
 
     private static void LogOnce(ConcurrentDictionary<string, byte> gate, string key, string message)
@@ -2001,22 +1768,6 @@ public sealed class DynamicPreview : IDisposable
             }
         }
     }
-
-    private readonly record struct TextMeasureCacheKey(
-        string Text,
-        string FontFamily,
-        double FontSize,
-        double Dpi,
-        double StrokeWidth,
-        double LineSpacing,
-        double WrappingWidth,
-        bool UseVerticalLayout,
-        int FontStyle,
-        int HorizontalAlignment,
-        int VerticalAlignment,
-        double Rotation,
-        double X,
-        double Y);
 
     public sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 

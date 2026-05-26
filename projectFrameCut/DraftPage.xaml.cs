@@ -4503,6 +4503,14 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await ReRenderUI();
 
+        if (e.Id == "TextEntries" && UseDynamicPreview)
+        {
+            var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            await previewer.UpdateDraft(d);
+            DynamicPreviewProvider.SetClips(previewer.Clips);
+            _ = RefreshDynamicPreviewOverlay();
+        }
+
         SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.DisplayName));
 
 
@@ -7331,6 +7339,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task PauseLivePreview()
     {
+        isPlaying = false;
         StopNonRealtimePlayheadSyncLoop();
         try
         {
@@ -7386,6 +7395,23 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch { }
         _fullContinuousAudioPath = null;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableLivePreviewThreadAffinity", true))
+                {
+#if WINDOWS || LINUX || (Avalonia && !(ANDROID || IOS || MACOS))
+                    Process.GetCurrentProcess().Refresh();
+                    Process.GetCurrentProcess().ProcessorAffinity = (nint)(Math.Pow(2, Environment.ProcessorCount) - 1);
+#else
+                    ThreadAffinityHelper.SetCurrentThreadAffinity(Enumerable.Range(0, Environment.ProcessorCount).ToArray());
+#endif
+                }
+            }
+            catch { }
+        });
     }
 
     private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct, bool includeAudio = true)
@@ -7435,7 +7461,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         TimeSpan timeSinceLastUi = TimeSpan.MinValue, elapsed = TimeSpan.MinValue;
         int fpsCount = 0;
         Stopwatch prepareWatch = new(), applyWatch = new();
-        IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews = null!;
+        Task? pendingUiUpdate = null;
+        IReadOnlyList<DynamicPreview.PreparedPreview>? preparedPreviews = null!;
         var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height);
 
         MainThread.BeginInvokeOnMainThread(() =>
@@ -7466,7 +7493,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                         if (CPUAffinityOverride.Length > 0)
                         {
 #if WINDOWS || LINUX || (Avalonia && !(ANDROID || IOS || MACOS))
-                            Process.GetCurrentProcess().ProcessorAffinity = (IntPtr)CPUAffinityOverride.Aggregate((a, b) => a | b);
+                            Process.GetCurrentProcess().Refresh();
+                            Process.GetCurrentProcess().ProcessorAffinity = (IntPtr)CPUAffinityOverride.Aggregate<int, nint>(0, (mask, c) => mask | (1 << c));
 #else
                             ThreadAffinityHelper.SetCurrentThreadAffinity(CPUAffinityOverride);
 #endif
@@ -7497,7 +7525,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 prepareWatch.Restart();
                 preparedPreviews = await DynamicPreviewProvider.PrepareRequestsAsync(
-                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame),
+                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, canvasWidth, canvasHeight),
                     canvasWidth, canvasHeight,
                     targetWidth, targetHeight,
                     targetFrame,
@@ -7505,7 +7533,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     0,
                     frameCts.Token).ConfigureAwait(false);
                 prepareWatch.Stop();
-                LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
+                //LogDiagnostic($"Frame {targetFrame} successfully took {prepareWatch.Elapsed} to render");
             }
             catch (TaskCanceledException)
             {
@@ -7543,9 +7571,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await Task.Delay((int)(minUiIntervalMs - timeSinceLastUi.TotalMilliseconds), ct);
             }
 
-            // Fire-and-forget UI update to avoid blocking frame rendering
+            // Backpressure: if the previous UI update hasn't been applied yet, skip this frame
+            // to prevent the dispatcher queue from growing unboundedly.
+            if (pendingUiUpdate is { IsCompleted: false })
+            {
+                //LogDiagnostic($"Frame {targetFrame} skipped — UI still applying previous frame");
+                continue;
+            }
+
+            // Dispatch UI update and track it for backpressure
             var previewsForThisFrame = preparedPreviews;
-            _ = Dispatcher.DispatchAsync(async () =>
+            pendingUiUpdate = Dispatcher.DispatchAsync(async () =>
             {
                 try
                 {
@@ -7575,8 +7611,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                     await PauseLivePreview();
                     await MainThread.InvokeOnMainThreadAsync(() => SetPlayPauseIconToPlay());
                 }
+                finally
+                {
+                    _lastDynamicPreviewUIUpdate = DateTime.UtcNow;
+                }
             });
-            _lastDynamicPreviewUIUpdate = DateTime.UtcNow;
             fpsCount++;
             elapsed = DateTime.UtcNow - fpsWindowStart;
             if (elapsed.TotalMilliseconds >= 500)
@@ -7590,21 +7629,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await PauseLivePreview();
         SetStateOK(Localized.DraftPage_EverythingFine);
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            try
-            {
-                if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableLivePreviewThreadAffinity", true))
-                {
-#if WINDOWS || LINUX || (Avalonia && !(ANDROID || IOS || MACOS))
-                    Process.GetCurrentProcess().ProcessorAffinity = (IntPtr)Enumerable.Range(0, Environment.ProcessorCount).Aggregate((a, b) => a | b);
-#else
-                    ThreadAffinityHelper.SetCurrentThreadAffinity(Enumerable.Range(0, Environment.ProcessorCount).ToArray());
-#endif
-                }
-            }
-            catch { }
-        });
+
     }
 
     private static View CreatePropertiesPlaceholder(string text)
@@ -7617,7 +7642,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Opacity = 0.85,
         Margin = new Thickness(12)
     };
-#endregion
+    #endregion
 
     #region handle changes
     private void TryMoveToInitialPreviewFrame(DraftStructureJSON draft)

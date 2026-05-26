@@ -14,13 +14,15 @@
       "PowerShell(Get-Content *)",
       "PowerShell(Select-Object *)",
       "PowerShell(Select-String -Pattern \"error|Error|错误\")",
-      "Bash(Get-Content *)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "WebFetch(domain:www.nuget.org)"
     ],
     "deny": [
-      "Bash(Select-Object *)",
-      "Bash(Get-Content *)",
-      "Bash(Select-String -Pattern \"error|Error|错误\")"
+      "Bash(Select-*)",
+      "Bash(Get-*)",
+      "Bash(Set-*)",
+      "Bash(git commit *)",
+      "Powershell(git commit *)"
     ]
   }
 }
