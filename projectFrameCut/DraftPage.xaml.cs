@@ -177,6 +177,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     Lock saveLocker = new();
 
+    private CancellationTokenSource? _autoSaveCts;
+    private const int AutoSaveDelayMs = 3000;
+
     bool AlreadyDisappeared = false;
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
@@ -4518,9 +4521,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public async void RefreshPropertyPanel(ClipElementUI clip)
     {
-        var popupPanel = await BuildPropertyPanel(clip);
-        Popup.Content = WrapPropertyPanelContent(clip, popupPanel);
-        RightContentBorder.Content = await BuildPropertyPanel(clip);
+        var panel = await BuildPropertyPanel(clip);
+        Popup.Content = WrapPropertyPanelContent(clip, panel);
+        RightContentBorder.Content = panel;
     }
 
     private static View WrapPropertyPanelContent(ClipElementUI clip, View panel)
@@ -5023,19 +5026,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var snapshot = Clips.ToList();
 
-            foreach (var kv in snapshot)
+            await Dispatcher.DispatchAsync(() =>
             {
-                var key = kv.Key;
-                var clip = kv.Value;
-                if (string.IsNullOrEmpty(key)) continue;
-                if (key.StartsWith("ghost_") || key.StartsWith("shadow_")) continue;
-                if (clip == null) continue;
-
-                var border = clip.Clip;
-                if (border == null) continue;
-
-                await Dispatcher.DispatchAsync(() =>
+                foreach (var kv in snapshot)
                 {
+                    var key = kv.Key;
+                    var clip = kv.Value;
+                    if (string.IsNullOrEmpty(key)) continue;
+                    if (key.StartsWith("ghost_") || key.StartsWith("shadow_")) continue;
+                    if (clip == null) continue;
+
+                    var border = clip.Clip;
+                    if (border == null) continue;
+
                     try
                     {
                         border.BindingContext = clip;
@@ -5253,8 +5256,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     {
                         Log(ex, "ReRenderUI update clip", this);
                     }
-                });
-            }
+                }
+            });
 
             // 更新所有已启用ExtendToWholeDraft的clips，使其宽度能随着其他clips的变化而调整
             UpdateAllExtendToWholeDraftClips();
@@ -6932,9 +6935,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            // Keep dynamic preview generation in project coordinate space so overlay rects stay aligned.
-            var targetWidth = Math.Max(1, ProjectInfo.RelativeWidth);
-            var targetHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+            var targetWidth = Math.Max(1, previewWidth);
+            var targetHeight = Math.Max(1, previewHeight);
             var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, CancellationToken.None);
             return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
         }
@@ -7450,8 +7452,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
-        var targetWidth = Math.Max(1, ProjectInfo.RelativeWidth);
-        var targetHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var targetWidth = Math.Max(1, previewWidth);
+        var targetHeight = Math.Max(1, previewHeight);
         var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
         var developerMode = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -7747,8 +7749,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (AlreadyDisappeared) return;
 
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.ClipPositionMoved, SourceId = _selected?.Id ?? Guid.NewGuid().ToString(), SourceName = _selected?.DisplayName ?? "Clip", DetailInfo = "Size and position", NoSave = false });
-
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         await previewer.UpdateDraft(d);
         DynamicPreviewProvider.SetClips(previewer.Clips);
@@ -7767,6 +7767,29 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             await RenderOneFrame(duration);
         }
+
+        ScheduleAutoSave();
+    }
+
+    private void ScheduleAutoSave()
+    {
+        _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
+        _autoSaveCts = new CancellationTokenSource();
+        var cts = _autoSaveCts;
+
+        _ = Task.Delay(AutoSaveDelayMs, cts.Token).ContinueWith(async _ =>
+        {
+            if (cts.Token.IsCancellationRequested) return;
+            try
+            {
+                await Save(noSlot: true);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "auto-save failed", this);
+            }
+        }, TaskContinuationOptions.RunContinuationsAsynchronously);
     }
 
 
@@ -8009,7 +8032,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 PruneOldestSaveSlots();
             }
 
-            saveLocker.Enter();
+            if (!saveLocker.TryEnter(1500))
+            {
+                Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
+                return;
+            }
             try
             {
                 if (args is not null)

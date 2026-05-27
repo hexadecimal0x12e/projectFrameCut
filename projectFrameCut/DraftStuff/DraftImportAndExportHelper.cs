@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -231,6 +232,35 @@ namespace projectFrameCut.DraftStuff
 
             var normalizedMeta2 = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
+            // For TextClips without explicit dimensions, compute the text bounds from TextEntries
+            int exportTargetWidth = elem.TargetWidth;
+            int exportTargetHeight = elem.TargetHeight;
+            if (elem.ClipType == ClipMode.TextClip
+                && exportTargetWidth <= 0
+                && elem.ExtraData is not null
+                && elem.ExtraData.TryGetValue("TextEntries", out var rawEntries))
+            {
+                try
+                {
+                    IReadOnlyList<TextClipEntry>? entries = rawEntries as IReadOnlyList<TextClipEntry>;
+                    if (entries is null && rawEntries is JsonElement je)
+                        entries = je.Deserialize<IReadOnlyList<TextClipEntry>>();
+                    if (entries is { Count: > 0 })
+                    {
+                        var bounds = TextClipMeasureHelper.MeasureBounds(entries);
+                        if (bounds.Width > 0 && bounds.Height > 0)
+                        {
+                            exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
+                            exportTargetHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+                        }
+                    }
+                }
+                catch
+                {
+                    // fall through to use elem.TargetWidth (0 or user-set)
+                }
+            }
+
             return new ClipDraftDTO
             {
                 Id = elem.Id,
@@ -249,8 +279,8 @@ namespace projectFrameCut.DraftStuff
                 IsInfiniteLength = elem.isInfiniteLength,
                 ShouldDisplayInUI = elem.ShouldDisplayInUI,
                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                TargetWidth = elem.TargetWidth,
-                TargetHeight = elem.TargetHeight,
+                TargetWidth = exportTargetWidth,
+                TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
                 MetaData = normalizedMeta2,

@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using SixLabors.Fonts;
+using Font = SixLabors.Fonts.Font;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -67,7 +69,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (string.IsNullOrWhiteSpace(text))
                 return Array.Empty<TextClipEntry>();
 
-            var fontFamily = GetOrDefault(FontKey, "Arial");
+            var fontFamily = GetOrDefault(FontKey, "HarmonyOS Sans SC");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
             var pinyinRatio = ParseFloat(GetOrDefault(PinyinFontSizeRatioKey, DefaultPinyinFontSizeRatio.ToString(CultureInfo.InvariantCulture)), DefaultPinyinFontSizeRatio);
             var pinyinFontSize = fontSize * pinyinRatio;
@@ -77,7 +79,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var color = ParseColorOrFallback(colorText, Colors.White);
             var pinyinColor = ParseColorOrFallback(pinyinColorText, color);
 
-            var baseLineY = (int)(pinyinFontSize * 1.3f + 2);
+            var font = ResolveFont(fontFamily, fontSize);
+            var pinyinFont = ResolveFont(fontFamily, pinyinFontSize);
+            var pinyinBlockHeight = MeasureTextHeight(pinyinFont, "Ag");
+            var hasHanCharacters = text.Any(IsHanCharacter);
+            var baseLineY = hasHanCharacters
+                ? (int)Math.Ceiling(pinyinBlockHeight + Math.Max(8f, pinyinFontSize * 0.18f))
+                : 0;
             var entries = new List<TextClipEntry>();
             var currentX = 0;
             var sentenceLanguage = TextHelper.DetectTextLanguage(text);
@@ -86,13 +94,16 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 var isCJK = IsCJKCharacter(c);
                 if (isCJK)
                 {
-                    var rawPinyin = TaskHelper.SyncWait(() => TextServices.GetHowToPronuce(c.ToString(), sentenceLanguage), cancellationToken: CancellationToken.None);
+                    var pronunciationLanguage = IsHanCharacter(c) && sentenceLanguage != TextLanguage.Chinese && sentenceLanguage != TextLanguage.Japanese
+                        ? TextLanguage.Chinese
+                        : sentenceLanguage;
+                    var rawPinyin = TaskHelper.SyncWait(() => TextServices.GetHowToPronuce(c.ToString(), pronunciationLanguage), cancellationToken: CancellationToken.None);
                     var isKnown = rawPinyin.Length > 0 && rawPinyin != c.ToString();
                     if (isKnown)
                     {
-                        var estCharWidth = (int)(fontSize * 0.7f);
-                        var estPinyinWidth = (int)(rawPinyin.Length * pinyinFontSize * 0.6f);
-                        var columnWidth = Math.Max(estCharWidth, estPinyinWidth) + charSpacing;
+                        var estCharWidth = MeasureTextWidth(font, c.ToString());
+                        var estPinyinWidth = MeasureTextWidth(pinyinFont, rawPinyin);
+                        var columnWidth = (int)Math.Ceiling(Math.Max(estCharWidth, estPinyinWidth)) + charSpacing;
                         var centerX = currentX + columnWidth / 2;
 
                         entries.Add(new TextClipEntry
@@ -127,7 +138,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     }
                     else
                     {
-                        var estWidth = (int)(fontSize * 0.7f) + charSpacing;
+                        var estWidth = (int)Math.Ceiling(MeasureTextWidth(font, c.ToString())) + charSpacing;
                         entries.Add(new TextClipEntry
                         {
                             text = c.ToString(),
@@ -146,8 +157,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 else
                 {
                     var estWidth = c == ' '
-                        ? (int)(fontSize * 0.3f) + charSpacing
-                        : (int)(fontSize * 0.5f) + charSpacing;
+                        ? (int)Math.Ceiling(fontSize * 0.35f) + charSpacing
+                        : (int)Math.Ceiling(MeasureTextWidth(font, c.ToString())) + charSpacing;
 
                     entries.Add(new TextClipEntry
                     {
@@ -290,11 +301,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             foreach (var entry in entries)
             {
-                var (w, h) = EstimateEntrySize(entry);
-                var left = entry.x;
-                var top = entry.y;
-                var right = entry.x + w;
-                var bottom = entry.y + h;
+                var (left, top, right, bottom) = GetEntryBounds(entry);
 
                 minX = Math.Min(minX, left);
                 minY = Math.Min(minY, top);
@@ -305,8 +312,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (double.IsInfinity(minX) || double.IsInfinity(minY))
                 return new ClipPositionTuple(0, 0, Math.Max(1, canvasWidth), Math.Max(1, canvasHeight), false);
 
-            int width = Math.Max(1, (int)Math.Round(maxX - minX));
-            int height = Math.Max(1, (int)Math.Round(maxY - minY));
+            int width = Math.Max(1, (int)Math.Ceiling(maxX - minX));
+            int height = Math.Max(1, (int)Math.Ceiling(maxY - minY));
             return new ClipPositionTuple((int)Math.Round(minX), (int)Math.Round(minY), width, height, false);
         }
 
@@ -321,12 +328,34 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (!_parameters.ContainsKey(SpacingKey)) _parameters[SpacingKey] = DefaultSpacing.ToString(CultureInfo.InvariantCulture);
         }
 
+        private static (float left, float top, float right, float bottom) GetEntryBounds(TextClipEntry entry)
+        {
+            var (width, height) = EstimateEntrySize(entry);
+            var left = entry.horizontalAlignment switch
+            {
+                SixLabors.Fonts.HorizontalAlignment.Center => entry.x - width / 2f,
+                SixLabors.Fonts.HorizontalAlignment.Right => entry.x - width,
+                _ => entry.x
+            };
+
+            var top = entry.verticalAlignment switch
+            {
+                SixLabors.Fonts.VerticalAlignment.Center => entry.y - height / 2f,
+                SixLabors.Fonts.VerticalAlignment.Bottom => entry.y - height,
+                _ => entry.y
+            };
+
+            return (left, top, left + width, top + height);
+        }
+
         private static (int width, int height) EstimateEntrySize(TextClipEntry entry)
         {
             var text = entry.text ?? string.Empty;
             var fontSize = entry.fontSize > 0 ? entry.fontSize : 24f;
-            var width = Math.Max(1, (int)Math.Round(text.Length * fontSize * 0.6f));
-            var height = Math.Max(1, (int)Math.Round(fontSize * 1.2f));
+            var font = ResolveFont(entry.fontFamily ?? "Arial", fontSize);
+            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
+            var width = Math.Max(1, (int)Math.Ceiling(rect.Width));
+            var height = Math.Max(1, (int)Math.Ceiling(rect.Height));
             return (width, height);
         }
 
@@ -339,9 +368,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             foreach (var entry in entries)
             {
                 if (string.IsNullOrEmpty(entry.text)) continue;
-                var (w, h) = EstimateEntrySize(entry);
-                float left = entry.x, top = entry.y;
-                float right = left + w, bottom = top + h;
+                var (left, top, right, bottom) = GetEntryBounds(entry);
 
                 if (!hasBounds)
                 {
@@ -368,6 +395,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return c >= 0x4E00 && c <= 0x9FFF || c >= 0x3400 && c <= 0x4DBF
                 || c >= 0x2F800 && c <= 0x2FA1F || c >= 0x3000 && c <= 0x303F
                 || c >= 0xFF00 && c <= 0xFFEF;
+        }
+
+        private static bool IsHanCharacter(char c)
+        {
+            return c >= 0x4E00 && c <= 0x9FFF
+                || c >= 0x3400 && c <= 0x4DBF
+                || c >= 0x2F800 && c <= 0x2FA1F;
         }
 
         private string GetOrDefault(string key, string fallback)
@@ -409,6 +443,57 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return false;
         }
 
+        private static Font ResolveFont(string fontFamily, float fontSize)
+        {
+            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && fontItem.InnerFont is not null)
+            {
+                var family = fontItem.InnerFont.Families.FirstOrDefault();
+                if (family != default)
+                {
+                    return family.CreateFont(fontSize);
+                }
+            }
+
+            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && fallbackItem.InnerFont is not null)
+            {
+                var fallbackFamily = fallbackItem.InnerFont.Families.FirstOrDefault();
+                if (fallbackFamily != default)
+                {
+                    return fallbackFamily.CreateFont(fontSize);
+                }
+            }
+
+            var systemFamily = SystemFonts.Families.FirstOrDefault();
+            if (systemFamily != default)
+            {
+                return systemFamily.CreateFont(fontSize);
+            }
+
+            return SystemFonts.CreateFont("Arial", fontSize);
+        }
+
+        private static float MeasureTextWidth(Font font, string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return Math.Max(1f, font.Size);
+            }
+
+            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
+            return Math.Max(1f, rect.Width);
+        }
+
+        private static float MeasureTextHeight(Font font, string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return Math.Max(1f, font.Size);
+            }
+
+            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
+            return Math.Max(1f, rect.Height);
+        }
+
         private static Color ParseColorOrFallback(string? value, Color fallback)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -423,5 +508,6 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 return fallback;
             }
         }
+
     }
 }

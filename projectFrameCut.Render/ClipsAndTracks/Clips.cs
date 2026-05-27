@@ -727,7 +727,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             var entriesToRender = ResolveTextEntriesForRender();
-            string serializedEntries = JsonSerializer.Serialize(entriesToRender, JsonSerializerOptions.Web);
+            var entriesForTarget = BuildEntriesForTargetSize(entriesToRender, targetWidth, targetHeight);
+            string serializedEntries = JsonSerializer.Serialize(entriesForTarget, JsonSerializerOptions.Web);
             string cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, serializedEntries);
 
             if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
@@ -737,7 +738,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             using Image<Rgba64> canvas = new(targetWidth, targetHeight);
 
-            foreach (var entry in entriesToRender)
+            foreach (var entry in entriesForTarget)
             {
                 if (string.IsNullOrEmpty(entry.text))
                     continue;
@@ -1014,6 +1015,48 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
 
             return TextEntries;
+        }
+
+        private IReadOnlyList<TextClipEntry> BuildEntriesForTargetSize(IReadOnlyList<TextClipEntry> entries, int targetWidth, int targetHeight)
+        {
+            if (entries.Count == 0 || targetWidth <= 0 || targetHeight <= 0)
+            {
+                return entries;
+            }
+
+            var sourceWidth = TargetWidth > 0 ? TargetWidth : targetWidth;
+            var sourceHeight = TargetHeight > 0 ? TargetHeight : targetHeight;
+            if (sourceWidth <= 0 || sourceHeight <= 0)
+            {
+                return entries;
+            }
+
+            var scaleX = (float)targetWidth / sourceWidth;
+            var scaleY = (float)targetHeight / sourceHeight;
+            if (Math.Abs(scaleX - 1f) < 0.0001f && Math.Abs(scaleY - 1f) < 0.0001f)
+            {
+                return entries;
+            }
+
+            var textScale = MathF.Max(0.0001f, MathF.Min(scaleX, scaleY));
+            var scaled = new List<TextClipEntry>(entries.Count);
+            foreach (var entry in entries)
+            {
+                scaled.Add(entry with
+                {
+                    x = (int)Math.Round(entry.x * scaleX, MidpointRounding.AwayFromZero),
+                    y = (int)Math.Round(entry.y * scaleY, MidpointRounding.AwayFromZero),
+                    fontSize = Math.Max(0.1f, entry.fontSize * textScale),
+                    wrappingWidth = entry.wrappingWidth.HasValue
+                        ? Math.Max(0.1f, entry.wrappingWidth.Value * scaleX)
+                        : null,
+                    strokeWidth = entry.strokeWidth.HasValue
+                        ? Math.Max(0.01f, entry.strokeWidth.Value * textScale)
+                        : null
+                });
+            }
+
+            return scaled;
         }
 
         /// <summary>

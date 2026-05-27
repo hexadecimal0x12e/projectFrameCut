@@ -80,7 +80,22 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         public PropertyPanelBuilder BuildPropertyPanel()
         {
             var panel = new PropertyPanelBuilder();
-            panel.AddEntry(TextKey, "Text", BasicText, "Text");
+            panel.AddCustomChild(
+                (c) =>
+                {
+                    var e = new Editor
+                    {
+                        MinimumHeightRequest = 150,
+                        Background = Colors.Gray,
+                        Text = GetOrDefault(TextKey, DefaultText),
+                        IsSpellCheckEnabled = true,
+                        IsTextPredictionEnabled = true,
+                        Placeholder = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.TextOption_Content_Placeholder
+                    };
+                    e.TextChanged += (s, e) => c(e.NewTextValue);
+                    return e;
+                },
+                TextKey, GetOrDefault(TextKey, DefaultText));
 
             var fontOptions = TextServices.LoadedFonts.Keys.OrderBy(c => c).ToArray();
             var currentFont = GetOrDefault(FontKey, "Arial");
@@ -200,8 +215,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 return new ClipPositionTuple(0, 0, Math.Max(1, canvasWidth), Math.Max(1, canvasHeight), false);
             }
 
-            int width = Math.Max(1, (int)Math.Round(maxX - minX));
-            int height = Math.Max(1, (int)Math.Round(maxY - minY));
+            int width = Math.Max(1, (int)Math.Ceiling(maxX - minX));
+            int height = Math.Max(1, (int)Math.Ceiling(maxY - minY));
             return new ClipPositionTuple((int)Math.Round(minX), (int)Math.Round(minY), width, height, false);
         }
 
@@ -280,6 +295,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 return fallback;
             }
         }
+
     }
 
     public sealed class TitleTextStyleProvider : BasicTextStyleProvider

@@ -581,46 +581,41 @@ public sealed class DynamicPreview : IDisposable
                         styleProvider.Parameters = savedParams;
                     }
 
-                    var isManualSize = savedParams is not null
-                        && savedParams.TryGetValue("TextStyleManualSize", out var manualVal)
-                        && manualVal == "true";
-
-                    if (!isManualSize)
-                    {
-                        var resizeParams = styleProvider.HandleClipResize(
-                            isInRatio: false,
-                            TargetX: textClip.TargetX,
-                            TargetY: textClip.TargetY,
-                            TargetWidth: Math.Max(1, textClip.TargetWidth),
-                            TargetHeight: Math.Max(1, textClip.TargetHeight));
-
-                        if (resizeParams is { Count: > 0 })
-                        {
-                            styleProvider.Parameters ??= new Dictionary<string, string>(StringComparer.Ordinal);
-                            foreach (var kvp in resizeParams)
-                            {
-                                styleProvider.Parameters[kvp.Key] = kvp.Value;
-                            }
-                        }
-                    }
-
                     clip.ExtraData ??= new Dictionary<string, object>(StringComparer.Ordinal);
                     clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
-                    clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
-
-                    var entries = styleProvider.BuildEntries();
-                    clip.ExtraData["TextEntries"] = new List<TextClipEntry>(entries);
+                    var resolvedEntries = TextClipMeasureHelper.ResolveEntries(textClip);
+                    if (resolvedEntries.Count == 0)
+                    {
+                        var entries = styleProvider.BuildEntries();
+                        if (entries.Length > 0)
+                        {
+                            var rebuiltEntries = new List<TextClipEntry>(entries);
+                            clip.ExtraData["TextEntries"] = rebuiltEntries;
+                            resolvedEntries = rebuiltEntries;
+                        }
+                    }
 
                     if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0
                         && canvasWidth > 0 && canvasHeight > 0)
                     {
-                        var rect = styleProvider.GetViewRect(canvasWidth, canvasHeight);
-                        if (!rect.IsDelta)
+                        if (resolvedEntries.Count > 0)
                         {
-                            textClip.TargetX = rect.TargetX;
-                            textClip.TargetY = rect.TargetY;
-                            textClip.TargetWidth = Math.Max(1, rect.TargetWidth);
-                            textClip.TargetHeight = Math.Max(1, rect.TargetHeight);
+                            var bounds = TextClipMeasureHelper.MeasureBounds(resolvedEntries);
+                            textClip.TargetX = (int)Math.Round(bounds.X);
+                            textClip.TargetY = (int)Math.Round(bounds.Y);
+                            textClip.TargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
+                            textClip.TargetHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+                        }
+                        else
+                        {
+                            var rect = styleProvider.GetViewRect(canvasWidth, canvasHeight);
+                            if (!rect.IsDelta)
+                            {
+                                textClip.TargetX = rect.TargetX;
+                                textClip.TargetY = rect.TargetY;
+                                textClip.TargetWidth = Math.Max(1, rect.TargetWidth);
+                                textClip.TargetHeight = Math.Max(1, rect.TargetHeight);
+                            }
                         }
                     }
                 }
@@ -631,8 +626,8 @@ public sealed class DynamicPreview : IDisposable
                     {
                         textClip.TargetX = (int)bounds.X;
                         textClip.TargetY = (int)bounds.Y;
-                        textClip.TargetWidth = (int)bounds.Width;
-                        textClip.TargetHeight = (int)bounds.Height;
+                        textClip.TargetWidth = (int)Math.Ceiling(bounds.Width);
+                        textClip.TargetHeight = (int)Math.Ceiling(bounds.Height);
                     }
                 }
             }
@@ -704,11 +699,22 @@ public sealed class DynamicPreview : IDisposable
         {
             try
             {
+                var projectRelativeWidth = _previewer?.ProjectRelativeWidth > 0 ? _previewer.ProjectRelativeWidth : canvasWidth;
+                var projectRelativeHeight = _previewer?.ProjectRelativeHeight > 0 ? _previewer.ProjectRelativeHeight : canvasHeight;
+                DynamicPreviewRenderContext.Set(new DynamicPreviewRenderContext.State(
+                    Math.Max(1, projectRelativeWidth),
+                    Math.Max(1, projectRelativeHeight),
+                    Math.Max(1, targetWidth),
+                    Math.Max(1, targetHeight)));
                 generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
             }
             catch (Exception ex)
             {
                 message = $"Failed to generate dynamic preview: {ex.Message}";
+            }
+            finally
+            {
+                DynamicPreviewRenderContext.Set(null);
             }
         }
         else

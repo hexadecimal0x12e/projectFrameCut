@@ -55,7 +55,7 @@ namespace projectFrameCut.InteractableEditor
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
         private const string TextClipStyleAllowFreeResizeKey = "TextClipStyleAllowFreeResize";
-        private const string TextStyleParametersKey = "TextStyleParameters";
+        private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
         private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
         private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
         private const string TextStyleProviderParametersKey = "TextStyleProvider_Parameters";

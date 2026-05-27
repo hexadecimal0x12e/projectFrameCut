@@ -101,12 +101,13 @@ namespace projectFrameCut.LivePreview
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            if (json.Clips is null) throw new NullReferenceException("Failed to get ClipDraftDTOs.");
+            var elements = json.Clips.Select(c => JsonSerializer.SerializeToElement(c)).ToList();
 
             var clipsList = new List<IClip>();
             var reinitTasks = new List<Task>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in elements)
             {
                 if (clip.TryGetProperty("ClipType", out var clipTypeProp)
                     && clipTypeProp.ValueKind == JsonValueKind.Number

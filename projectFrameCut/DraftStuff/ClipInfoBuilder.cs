@@ -74,6 +74,9 @@ namespace projectFrameCut.DraftStuff
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
+        private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
+        private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
+        private const string TextStyleProviderParamsKey = "TextStyleProvider_Parameters";
         #endregion
 
         #region init
@@ -121,7 +124,7 @@ namespace projectFrameCut.DraftStuff
                 t.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.TextOption_TabTitle,
-                    Content = await BuildTextOptionTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler)
                 });
             }
             if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true))
@@ -129,7 +132,7 @@ namespace projectFrameCut.DraftStuff
                 t.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Timing,
-                    Content = BuildTimingTab(clip, handler)
+                    LazyContentFactory = () => BuildTimingTab(clip, handler)
                 });
             }
             if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
@@ -137,7 +140,7 @@ namespace projectFrameCut.DraftStuff
                 t.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
-                    Content = BuildSizeAndPositionTab(clip, handler)
+                    LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler)
                 });
 
             }
@@ -146,19 +149,19 @@ namespace projectFrameCut.DraftStuff
                 t.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Effect,
-                    Content = await BuildEffectTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildEffectTab(clip, handler)
                 });
                 t.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Mixture,
-                    Content = BuildMixtureTab(clip, handler)
+                    LazyContentFactory = () => BuildMixtureTab(clip, handler)
                 });
                 if (clip.ClipType != ClipMode.AudioClip)
                 {
                     t.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_ColorAdjust,
-                        Content = BuildColorAdjustmentTab(clip, handler)
+                        LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler)
                     });
                 }
                 if (!clip.isInfiniteLength)
@@ -166,7 +169,7 @@ namespace projectFrameCut.DraftStuff
                     t.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_SpeedRatio,
-                        Content = BuildSpeedAndRatioTab(clip, handler)
+                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler)
                     });
                 }
                 if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
@@ -174,14 +177,14 @@ namespace projectFrameCut.DraftStuff
                     t.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_Effect_Classic,
-                        Content = BuildClassicEffectTab(clip, handler)
+                        LazyContentFactory = () => BuildClassicEffectTab(clip, handler)
                     });
                     if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
                     {
                         t.TabItems.Add(new TabbedViewItem
                         {
                             Header = PPLocalizedResources.TextOption_TabTitle_Classic,
-                            Content = BuildTextOptionClassicTab(clip, handler)
+                            LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler)
                         });
                     }
                 }
@@ -1632,11 +1635,146 @@ namespace projectFrameCut.DraftStuff
 
         private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            string providerFrom = "";
+            ITextClipStyleProvider? styleProvider;
+            GetAndUpdateTextClipEntries(clip, out providerFrom, out styleProvider);
+
+            if (styleProvider == null)
+            {
+                // Fallback to OldTextClipEntry provider which reads/writes TextEntries from ExtraData
+                var fallback = new projectFrameCut.ApplicationPluginBase.Text.OldTextClipEntryTextStyleProvider();
+                // If clip has TextEntries in ExtraData, pass them to provider.Parameters
+                if (clip.ExtraData != null && clip.ExtraData.TryGetValue("TextEntries", out var teObj))
+                {
+                    try
+                    {
+                        if (teObj is System.Text.Json.JsonElement je)
+                        {
+                            fallback.Parameters["TextEntriesJson"] = je.GetRawText();
+                        }
+                        else
+                        {
+                            // serialize known list types
+                            fallback.Parameters["TextEntriesJson"] = System.Text.Json.JsonSerializer.Serialize(teObj);
+                        }
+                    }
+                    catch { }
+                }
+
+                styleProvider = fallback;
+            }
+
+            var providerPpb = styleProvider.BuildPropertyPanel();
+            TryUseDialogFontPicker(providerPpb, styleProvider);
+            var providerHost = new PropertyPanelBuilder();
+            providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
+            providerHost.AddSeparator();
+            providerHost.AddFromAnother(providerPpb, styleProvider);
+            providerHost.PropertyChanged += (s, e) =>
+            {
+                if (s is not ITextClipStyleProvider provider) return;
+                (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
+                if (updated != null)
+                {
+                    provider.Parameters = updated;
+                    clip.ExtraData[TextStyleProviderParamsKey] = updated;
+                }
+                clip.TargetWidth = newW > 0 ? newW : clip.TargetWidth;
+                clip.TargetHeight = newH > 0 ? newH : clip.TargetHeight;
+                var updatedEntries = provider.BuildEntries();
+                if (updatedEntries.Length > 0)
+                {
+                    clip.ExtraData["TextEntries"] = updatedEntries.ToList();
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
+                }
+            };
+
+            return providerHost.BuildWithScrollView();
+
+            void TryUseDialogFontPicker(PropertyPanelBuilder providerPanel, ITextClipStyleProvider provider)
+            {
+                const string fontFamilyKey = "FontFamily";
+                if (!providerPanel.Components.TryGetValue(fontFamilyKey, out var rawComponent) || rawComponent is not Picker fontPicker)
+                    return;
+                if (fontPicker.Parent is not Grid parentGrid)
+                    return;
+
+                var pickerOptions = (fontPicker.ItemsSource as IEnumerable<object>)?
+                    .Select(x => x?.ToString())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+                if (pickerOptions.Count == 0 || !pickerOptions.All(TextServices.LoadedFonts.ContainsKey))
+                    return;
+
+                var fontItems = TextServices.LoadedFonts
+                    .Select(x => x.Value)
+                    .GroupBy(c => TextHelper.DetectTextLanguage(c.DisplayName))
+                    .OrderByDescending(g => g.Count())
+                    .SelectMany(g => g)
+                    .ToList();
+                if (fontItems.Count == 0)
+                    return;
+
+                var currentFontName = provider.Parameters.TryGetValue(fontFamilyKey, out var fromParams) && !string.IsNullOrWhiteSpace(fromParams)
+                    ? fromParams
+                    : (fontPicker.SelectedItem as string) ?? fontItems.First().FontName;
+                var currentFont = fontItems.FirstOrDefault(x => x.FontName == currentFontName);
+
+                var selectFontButton = new Button
+                {
+                    Text = currentFont?.DisplayName ?? currentFontName,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    BackgroundColor = Color.FromArgb("#1AFFFFFF"),
+                    TextColor = Colors.White,
+                    FontSize = 13,
+                    Padding = new Thickness(8, 4),
+                    CornerRadius = 6
+                };
+
+                var dialogPicker = new FontPicker
+                {
+                    FontsSource = fontItems,
+                    PreviewRenderer = TextServices.RenderFontPreviewAsync,
+                    Title = PPLocalizedResources.TextOption_Font,
+                    SelectedFont = currentFont
+                };
+
+                dialogPicker.SelectedFontChanged += (_, font) =>
+                {
+                    if (font == null) return;
+
+                    selectFontButton.Text = font.DisplayName;
+                    PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(providerPanel, fontFamilyKey, font.FontName);
+                    page.Dispatcher.Dispatch(async () => await page.HidePopup());
+                };
+
+                selectFontButton.Clicked += (_, _) =>
+                {
+                    page.Dispatcher.Dispatch(async () =>
+                    {
+                        await page.ShowAPopup(dialogPicker, mode: "dialog");
+                    });
+                };
+
+                var row = Grid.GetRow(fontPicker);
+                var column = Grid.GetColumn(fontPicker);
+                var rowSpan = Grid.GetRowSpan(fontPicker);
+                var columnSpan = Grid.GetColumnSpan(fontPicker);
+
+                parentGrid.Remove(fontPicker);
+                parentGrid.Add(selectFontButton);
+                Grid.SetRow(selectFontButton, row);
+                Grid.SetColumn(selectFontButton, column);
+                Grid.SetRowSpan(selectFontButton, rowSpan);
+                Grid.SetColumnSpan(selectFontButton, columnSpan);
+                providerPanel.Components[fontFamilyKey] = selectFontButton;
+            }
+        }
+
+        private static void GetAndUpdateTextClipEntries(ClipElementUI clip, out string? providerFrom, out ITextClipStyleProvider? styleProvider)
+        {
             clip.ExtraData ??= new Dictionary<string, object>();
 
-            const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
-            const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
-            const string TextStyleProviderParamsKey = "TextStyleProvider_Parameters";
 
             if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj) && entriesObj is JsonElement je)
             {
@@ -1674,11 +1812,11 @@ namespace projectFrameCut.DraftStuff
                 return null;
             }
 
-            var providerFrom = clip.ExtraData.TryGetValue(TextStyleProviderFromKey, out var providerFromObj) ? ReadStringValue(providerFromObj) : null;
+            providerFrom = clip.ExtraData.TryGetValue(TextStyleProviderFromKey, out var providerFromObj) ? ReadStringValue(providerFromObj) : null;
             var providerType = clip.ExtraData.TryGetValue(TextStyleProviderTypeKey, out var providerTypeObj) ? ReadStringValue(providerTypeObj) : null;
             var providerParameters = clip.ExtraData.TryGetValue(TextStyleProviderParamsKey, out var providerParamsObj) ? ReadParameters(providerParamsObj) : null;
 
-            ITextClipStyleProvider? styleProvider = null;
+            styleProvider = null;
             if (!string.IsNullOrWhiteSpace(providerFrom) && !string.IsNullOrWhiteSpace(providerType))
             {
                 styleProvider = TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, providerParameters);
@@ -1691,56 +1829,9 @@ namespace projectFrameCut.DraftStuff
                 if (rebuiltEntries is { Length: > 0 })
                 {
                     clip.ExtraData["TextEntries"] = rebuiltEntries.ToList();
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", rebuiltEntries, rebuiltEntries));
+                    //handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", rebuiltEntries, rebuiltEntries));
                 }
             }
-
-            if (styleProvider == null)
-            {
-                return new VerticalStackLayout
-                {
-                    Padding = 16,
-                    VerticalOptions = LayoutOptions.Center,
-                    HorizontalOptions = LayoutOptions.Center,
-                    Spacing = 8,
-                    Children =
-                    {
-                        new Label
-                        {
-                            Text = PPLocalizedResources.TextOption_StyleProvider_NotFound(providerFrom ?? "?"),
-                            FontSize = 14,
-                            TextColor = Colors.Gray,
-                            HorizontalOptions = LayoutOptions.Center
-                        }
-                    }
-                };
-            }
-
-            var providerPpb = styleProvider.BuildPropertyPanel();
-            var providerHost = new PropertyPanelBuilder();
-            providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
-            providerHost.AddSeparator();
-            providerHost.AddFromAnother(providerPpb, styleProvider);
-            providerHost.PropertyChanged += (s, e) =>
-            {
-                if (s is not ITextClipStyleProvider provider) return;
-                (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
-                if (updated != null)
-                {
-                    provider.Parameters = updated;
-                    clip.ExtraData[TextStyleProviderParamsKey] = updated;
-                }
-                clip.TargetWidth = newW > 0 ? newW : clip.TargetWidth;
-                clip.TargetHeight = newH > 0 ? newH : clip.TargetHeight;
-                var updatedEntries = provider.BuildEntries();
-                if (updatedEntries.Length > 0)
-                {
-                    clip.ExtraData["TextEntries"] = updatedEntries.ToList();
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
-                }
-            };
-
-            return providerHost.BuildWithScrollView();
         }
 
         private View BuildTextOptionClassicTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)

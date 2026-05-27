@@ -1085,48 +1085,65 @@ internal static class TextClipMeasureHelper
                 if (family == default)
                     continue;
             }
-
             var font = family.CreateFont(entry.fontSize, entry.fontStyle);
             var dpi = entry.dpi ?? 72f;
-            var strokeExtra = (entry.strokeWidth ?? 0f) * 2f;
+            var strokePadding = entry.strokeWidth ?? 0f;
 
-            double w, h;
+            double left, top, right, bottom;
             if (entry.UseVerticalLayout)
             {
                 var glyphCount = entry.text.Count(c => c is not '\n' and not '\r');
                 if (glyphCount <= 0) glyphCount = 1;
                 var emSize = entry.fontSize * (dpi / 72f);
-                w = emSize + strokeExtra;
-                h = glyphCount * emSize * entry.lineSpacing + strokeExtra;
+                var strokeExtra = strokePadding * 2f;
+                var w = emSize + strokeExtra;
+                var h = glyphCount * emSize * entry.lineSpacing + strokeExtra;
+
+                double originX = entry.x;
+                double originY = entry.y;
+
+                switch (entry.horizontalAlignment)
+                {
+                    case SixLabors.Fonts.HorizontalAlignment.Center: originX -= w / 2d; break;
+                    case SixLabors.Fonts.HorizontalAlignment.Right: originX -= w; break;
+                }
+                switch (entry.verticalAlignment)
+                {
+                    case SixLabors.Fonts.VerticalAlignment.Center: originY -= h / 2d; break;
+                    case SixLabors.Fonts.VerticalAlignment.Bottom: originY -= h; break;
+                }
+
+                left = originX;
+                top = originY;
+                right = originX + w;
+                bottom = originY + h;
             }
             else
             {
-                var textOpts = new SixLabors.Fonts.TextOptions(font)
+                var textOpts = new SixLabors.ImageSharp.Drawing.Processing.RichTextOptions(font)
                 {
                     Dpi = dpi,
                     KerningMode = entry.applyKerning ? SixLabors.Fonts.KerningMode.Standard : SixLabors.Fonts.KerningMode.None,
+                    LineSpacing = entry.lineSpacing,
+                    HorizontalAlignment = entry.horizontalAlignment,
+                    VerticalAlignment = entry.verticalAlignment,
+                    Origin = new SixLabors.ImageSharp.PointF(entry.x, entry.y),
                 };
-                var measured = SixLabors.Fonts.TextMeasurer.MeasureSize(entry.text, textOpts);
-                w = measured.Width + strokeExtra;
-                h = measured.Height + strokeExtra;
+                if (entry.wrappingWidth.HasValue)
+                {
+                    textOpts.WrappingLength = entry.wrappingWidth.Value;
+                }
+
+                var measured = SixLabors.Fonts.TextMeasurer.MeasureBounds(entry.text, textOpts);
+                var strokeInflate = Math.Max(0f, strokePadding) * 0.5f;
+                left = measured.X - strokeInflate;
+                top = measured.Y - strokeInflate;
+                right = measured.X + measured.Width + strokeInflate;
+                bottom = measured.Y + measured.Height + strokeInflate;
             }
 
-            double originX = entry.x;
-            double originY = entry.y;
-
-            switch (entry.horizontalAlignment)
-            {
-                case SixLabors.Fonts.HorizontalAlignment.Center: originX -= w / 2d; break;
-                case SixLabors.Fonts.HorizontalAlignment.Right: originX -= w; break;
-            }
-            switch (entry.verticalAlignment)
-            {
-                case SixLabors.Fonts.VerticalAlignment.Center: originY -= h / 2d; break;
-                case SixLabors.Fonts.VerticalAlignment.Bottom: originY -= h; break;
-            }
-
-            double left = originX, top = originY;
-            double right = originX + w, bottom = originY + h;
+            if (right <= left) right = left + 1d;
+            if (bottom <= top) bottom = top + 1d;
 
             if (Math.Abs(entry.rotation) > 0.0001f)
             {
@@ -1172,7 +1189,7 @@ internal static class TextClipMeasureHelper
         if (!hasBounds)
             return new Rect(0, 0, 1, 1);
 
-        return new Rect(minX, minY, Math.Max(1d, maxX - minX) + 15, Math.Max(1d, maxY - minY) + 15);
+        return new Rect(minX, minY, Math.Max(1d, maxX - minX), Math.Max(1d, maxY - minY));
     }
 
     internal static IReadOnlyList<TextClipEntry> ResolveEntries(TextClip clip)
@@ -1201,6 +1218,7 @@ internal static class TextClipMeasureHelper
         }
         return clip.TextEntries;
     }
+
 }
 
 internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPreviewProviderBase
@@ -1222,11 +1240,13 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
 
         var renderW = targetWidth > 0 ? targetWidth : canvasWidth;
         var renderH = targetHeight > 0 ? targetHeight : canvasHeight;
-
-        var clipW = target.TargetWidth > 0 ? target.TargetWidth : renderW;
-        var clipH = target.TargetHeight > 0 ? target.TargetHeight : renderH;
-        if (clipW <= 0) clipW = Math.Max(1, renderW);
-        if (clipH <= 0) clipH = Math.Max(1, renderH);
+        var context = DynamicPreviewRenderContext.Current;
+        var projectW = context is { ProjectRelativeWidth: > 0 } ? context.Value.ProjectRelativeWidth : renderW;
+        var projectH = context is { ProjectRelativeHeight: > 0 } ? context.Value.ProjectRelativeHeight : renderH;
+        // Text entries (x/y/fontSize/wrappingWidth) are stored in project coordinate space.
+        // Keep text rasterization in that same space to avoid geometry drifting with preview resolution.
+        var clipW = target.TargetWidth > 0 ? Math.Max(1, target.TargetWidth) : Math.Max(1, projectW);
+        var clipH = target.TargetHeight > 0 ? Math.Max(1, target.TargetHeight) : Math.Max(1, projectH);
 
         var frame = clip.GetFrameRelativeToStartPointOfSource(0, clipW, clipH, true, IPicture.PicturePixelMode.BytePicture);
 
