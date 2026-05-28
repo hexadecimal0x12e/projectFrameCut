@@ -94,11 +94,11 @@
                     <Button Text="export ppb properties" x:Name="ExportPPBDataButton" Clicked="ExportPPBDataButton_Clicked"/>
                     <HorizontalStackLayout>
                         <Label Margin="4,5,0,0">PPB's padding</Label>
-                        <Slider x:Name="PPBPaddingSlider" Minimum="4" Maximum="20" Value="8" WidthRequest="250" DragCompleted="PPBPaddingSlider_ValueChanged" ></Slider>
+                        <Slider x:Name="PPBPaddingSlider" Minimum="4" Maximum="20" Value="8" WidthRequest="250" DragCompleted="PPBPaddingSlider_DragCompleted" ></Slider>
                     </HorizontalStackLayout>
                     <HorizontalStackLayout>
                         <Label Margin="4,5,0,0">PPB's size ratio</Label>
-                        <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" DragCompleted="PPBPaddingSlider_ValueChanged" ></Slider>
+                        <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" DragCompleted="PPBPaddingSlider_DragCompleted" ></Slider>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
                 

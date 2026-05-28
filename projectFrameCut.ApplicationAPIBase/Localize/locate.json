@@ -5,8 +5,11 @@
   "ClassNameSpaceOfLocalizerInstance": "APIBaseLocalizedResources",
   "NameOfLocalizerInstance": "Localized",
   "NameOfBaseInterface": "ApplicationAPIBaseLocalizerBase",
-  "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
+  "EnablePseudoLocalization": false,
+  "EnableDynamicGenerate": false,
+  "PseudoLocalizationCondition": "DEBUG",
+  "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
     "zh-CN": [
       {
@@ -15,7 +18,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "_OK",
@@ -23,7 +27,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_Close",
@@ -31,7 +36,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_Dock",
@@ -39,7 +45,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_DockPrompt",
@@ -47,7 +54,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
@@ -55,7 +63,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_GoBack",
@@ -63,7 +72,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_GoForward",
@@ -71,7 +81,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_Maximize",
@@ -79,7 +90,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_Minimize",
@@ -87,7 +99,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_PopOut",
@@ -95,7 +108,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_StageManagerUnsupportedWarn",
@@ -103,7 +117,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_DockPrompt_iPadOS",
@@ -111,7 +126,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_DockPrompt_Android",
@@ -119,7 +135,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "MultiWindowView_PopOut_NotSupport",
@@ -127,7 +144,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "_Error",
@@ -135,7 +153,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Canceled",
@@ -143,7 +162,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Cancelling",
@@ -151,7 +171,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Completed",
@@ -159,7 +180,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Fail",
@@ -167,7 +189,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Running",
@@ -175,7 +198,8 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Unknown",
@@ -183,7 +207,26 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u6536\u85CF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u53D6\u6D88\u6536\u85CF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ]
   }

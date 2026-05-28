@@ -126,7 +126,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// <param name="character">要检测的字符（Unicode 码点 ≤ U+FFFF）</param>
         /// <returns>字体包含该字符的字形时返回 <c>true</c>，否则返回 <c>false</c></returns>
         public static bool FontContainsGlyph(Font font, char character)
-            => font.TryGetGlyphs(new SixLabors.Fonts.Unicode.CodePoint(character), out _);
+            => HasRenderableGlyph(font, new SixLabors.Fonts.Unicode.CodePoint(character));
 
         /// <summary>
         /// 检测 <see cref="Font"/> 中是否存在指定 Unicode 码点的字形（支持辅助平面字符，如 Emoji）。
@@ -135,7 +135,18 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// <param name="codePoint">Unicode 码点（如 0x1F600 表示 😀）</param>
         /// <returns>字体包含该码点的字形时返回 <c>true</c>，否则返回 <c>false</c></returns>
         public static bool FontContainsGlyph(Font font, int codePoint)
-            => font.TryGetGlyphs(new SixLabors.Fonts.Unicode.CodePoint(codePoint), out _);
+            => HasRenderableGlyph(font, new SixLabors.Fonts.Unicode.CodePoint(codePoint));
+
+        private static bool HasRenderableGlyph(Font font, SixLabors.Fonts.Unicode.CodePoint codePoint)
+        {
+            if (!font.TryGetGlyphs(codePoint, out var glyphs) || glyphs is null || glyphs.Count == 0)
+            {
+                return false;
+            }
+
+            // TryGetGlyphs 在缺字时仍可能返回 true，但 glyphId=0 表示 .notdef（缺失字形占位）
+            return glyphs.All(g => g.GlyphMetrics.GlyphId != 0);
+        }
 
         /// <summary>
         /// 检测 <see cref="Font"/> 中是否包含 <paramref name="text"/> 内所有字符的字形。
@@ -148,7 +159,12 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             if (string.IsNullOrEmpty(text)) return true;
             foreach (System.Text.Rune rune in text.EnumerateRunes())
             {
-                if (!font.TryGetGlyphs(new SixLabors.Fonts.Unicode.CodePoint(rune.Value), out _))
+                if (rune.Value is '\r' or '\n' or '\t')
+                {
+                    continue;
+                }
+
+                if (!HasRenderableGlyph(font, new SixLabors.Fonts.Unicode.CodePoint(rune.Value)))
                     return false;
             }
             return true;
@@ -166,7 +182,12 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             var missing = new List<int>();
             foreach (System.Text.Rune rune in text.EnumerateRunes())
             {
-                if (!font.TryGetGlyphs(new SixLabors.Fonts.Unicode.CodePoint(rune.Value), out _))
+                if (rune.Value is '\r' or '\n' or '\t')
+                {
+                    continue;
+                }
+
+                if (!HasRenderableGlyph(font, new SixLabors.Fonts.Unicode.CodePoint(rune.Value)))
                     missing.Add(rune.Value);
             }
             return missing;

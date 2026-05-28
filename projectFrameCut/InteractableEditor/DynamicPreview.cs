@@ -583,7 +583,7 @@ public sealed class DynamicPreview : IDisposable
 
                     clip.ExtraData ??= new Dictionary<string, object>(StringComparer.Ordinal);
                     clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
-                    var resolvedEntries = TextClipMeasureHelper.ResolveEntries(textClip);
+                    var resolvedEntries = TextMeasureHelper.ResolveEntries(textClip);
                     if (resolvedEntries.Count == 0)
                     {
                         var entries = styleProvider.BuildEntries();
@@ -600,7 +600,7 @@ public sealed class DynamicPreview : IDisposable
                     {
                         if (resolvedEntries.Count > 0)
                         {
-                            var bounds = TextClipMeasureHelper.MeasureBounds(resolvedEntries);
+                            var bounds = TextMeasureHelper.MeasureBounds(resolvedEntries);
                             textClip.TargetX = (int)Math.Round(bounds.X);
                             textClip.TargetY = (int)Math.Round(bounds.Y);
                             textClip.TargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
@@ -621,7 +621,7 @@ public sealed class DynamicPreview : IDisposable
                 }
                 else if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0)
                 {
-                    var bounds = TextClipMeasureHelper.MeasureBounds(textClip);
+                    var bounds = TextMeasureHelper.MeasureBounds(textClip);
                     if (bounds.Width > 0 && bounds.Height > 0)
                     {
                         textClip.TargetX = (int)bounds.X;
@@ -1148,6 +1148,7 @@ public sealed class DynamicPreview : IDisposable
 
                 if (frame is not null)
                 {
+                    if (frame.Disposed) Debugger.Break();
                     CacheFallbackFrame(cacheKey, frame);
                     EnqueueFallbackDiskPersist(cacheKey, frame);
                 }
@@ -1173,6 +1174,7 @@ public sealed class DynamicPreview : IDisposable
 
                     if (frame is not null)
                     {
+                        if (frame.Disposed) Debugger.Break();
                         CacheFallbackFrame(cacheKey, frame);
                         EnqueueFallbackDiskPersist(cacheKey, frame);
                     }
@@ -1219,6 +1221,7 @@ public sealed class DynamicPreview : IDisposable
 
             if (frame is not null)
             {
+                if (frame.Disposed) Debugger.Break();
                 CacheFallbackFrame(cacheKey, frame);
                 EnqueueFallbackDiskPersist(cacheKey, frame);
             }
@@ -1521,7 +1524,7 @@ public sealed class DynamicPreview : IDisposable
         }
 
         cached.Touch();
-        using var source = cached.Frame.DeepCopy();
+        var source = cached.Frame.DeepCopy();
         var resized = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
         if (ReferenceEquals(resized, source))
         {
@@ -1612,18 +1615,7 @@ public sealed class DynamicPreview : IDisposable
 
         try
         {
-            using var loaded = new Picture8bpp(diskPath);
-            var resized = loaded.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
-            if (ReferenceEquals(resized, loaded))
-            {
-                resizedFrame = loaded;
-            }
-            else
-            {
-                resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
-                    ? resized
-                    : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
-            }
+            resizedFrame = new Picture8bpp(diskPath).Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
             TouchFallbackDiskEntry(diskPath);
             return true;
         }
@@ -1636,7 +1628,7 @@ public sealed class DynamicPreview : IDisposable
 
     private static void CacheFallbackFrame(FallbackFrameCacheKey key, IPicture frame)
     {
-        s_fallbackFrameCache[key] = new CachedFallbackFrame(frame.DeepCopy());
+        s_fallbackFrameCache[key] = new CachedFallbackFrame(frame);
         TrimFallbackCacheIfNeeded();
     }
 
@@ -1721,6 +1713,7 @@ public sealed class DynamicPreview : IDisposable
         return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{key.FrameIndex}.png");
     }
 
+    [DebuggerStepThrough()]
     private static string SanitizePathSegment(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -1781,7 +1774,8 @@ public sealed class DynamicPreview : IDisposable
     {
         public CachedFallbackFrame(IPicture frame)
         {
-            Frame = frame;
+            Frame = frame.DeepCopy();
+            Frame.CanBeDisposed = false;
             Touch();
         }
 

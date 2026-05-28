@@ -28,6 +28,7 @@ namespace projectFrameCut.Shared
 {
     public static class PictureExtensions
     {
+        #region general
         [DebuggerStepThrough()]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static IPicture DeepCopy(this IPicture source)
@@ -251,9 +252,667 @@ namespace projectFrameCut.Shared
         public static void SaveAsPng(this IPicture image, string path, int resultPPB = 16, bool? saveAlpha = null, IImageEncoder? imageEncoder = null)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
-            imageEncoder ??= DefaultEncoder;
-            image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(path, imageEncoder);
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            image.SaveAsPng(stream, resultPPB, saveAlpha, imageEncoder);
         }
+
+        [DebuggerStepThrough()]
+        public static void SaveAsPng(this IPicture image, Stream stream, int resultPPB = 16, bool? saveAlpha = null, IImageEncoder? imageEncoder = null)
+        {
+            ArgumentNullException.ThrowIfNull(image);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (imageEncoder is not null && !ReferenceEquals(imageEncoder, DefaultEncoder))
+            {
+                image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(stream, imageEncoder);
+                return;
+            }
+
+            if (image is IHDRPicture<ushort> hdrImage)
+            {
+                hdrImage.SaveToSixLaborsImage(resultPPB, saveAlpha, DefaultHDRImageDegradeToSDRMode).Save(stream, DefaultEncoder);
+                return;
+            }
+
+            if (resultPPB != 8 && resultPPB != 16)
+            {
+                throw new ArgumentOutOfRangeException(nameof(resultPPB), "Only 8 or 16 bpp PNG output is supported.");
+            }
+
+            IPicture? workingPicture = null;
+            bool disposeWorkingPicture = false;
+            try
+            {
+                workingPicture = image.bitPerPixel == resultPPB ? image : image.ToBitPerPixel(resultPPB);
+                disposeWorkingPicture = !ReferenceEquals(workingPicture, image);
+                SaveAsPngDirect(workingPicture, stream, saveAlpha);
+            }
+            finally
+            {
+                if (disposeWorkingPicture)
+                {
+                    workingPicture?.Dispose();
+                }
+            }
+        }
+
+        #endregion
+
+        #region png
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static void SaveAsPngDirect(IPicture image, Stream stream, bool? saveAlpha)
+        {
+            lock (image)
+            {
+                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+
+                switch (image.bitPerPixel.Value)
+                {
+                    case 8:
+                        WritePng8(stream, image.Width, image.Height,
+                            image.GetSpecificChannel(IPicture.ChannelId.Red) as byte[] ?? throw new InvalidOperationException("Red channel missing for 8bpp picture."),
+                            image.GetSpecificChannel(IPicture.ChannelId.Green) as byte[] ?? throw new InvalidOperationException("Green channel missing for 8bpp picture."),
+                            image.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[] ?? throw new InvalidOperationException("Blue channel missing for 8bpp picture."),
+                            alpha,
+                            aa);
+                        return;
+                    case 16:
+                        WritePng16(stream, image.Width, image.Height,
+                            image.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[] ?? throw new InvalidOperationException("Red channel missing for 16bpp picture."),
+                            image.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[] ?? throw new InvalidOperationException("Green channel missing for 16bpp picture."),
+                            image.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[] ?? throw new InvalidOperationException("Blue channel missing for 16bpp picture."),
+                            alpha,
+                            aa);
+                        return;
+                    default:
+                        throw new NotSupportedException("Only 8bpp and 16bpp images are supported.");
+                }
+            }
+        }
+
+        private static void WritePng8(Stream stream, int width, int height, byte[] rr, byte[] gg, byte[] bb, bool writeAlpha, float[]? aa)
+        {
+            int pixelCount = checked(width * height);
+            bool hasAlpha = writeAlpha;
+            int bytesPerPixel = hasAlpha ? 4 : 3;
+            int rowLength = checked(width * bytesPerPixel);
+
+            WritePngHeader(stream, width, height, bitDepth: (byte)8, colorType: (byte)(hasAlpha ? 6 : 2));
+
+            using var compressed = new MemoryStream(Math.Max(1024, pixelCount * bytesPerPixel / 2));
+            using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                byte[] row = new byte[rowLength + 1];
+                for (int y = 0; y < height; y++)
+                {
+                    int rowPixelOffset = checked(y * width);
+                    row[0] = 0;
+                    int offset = 1;
+                    for (int x = 0; x < width; x++)
+                    {
+                        int i = rowPixelOffset + x;
+                        row[offset++] = rr[i];
+                        row[offset++] = gg[i];
+                        row[offset++] = bb[i];
+                        if (hasAlpha)
+                        {
+                            row[offset++] = (byte)(Math.Clamp(aa is null ? 1f : aa[i], 0f, 1f) * 255f);
+                        }
+                    }
+                    zlib.Write(row, 0, row.Length);
+                }
+            }
+
+            WritePngChunk(stream, "IDAT"u8, compressed.ToArray());
+            WritePngChunk(stream, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        }
+
+        private static void WritePng16(Stream stream, int width, int height, ushort[] rr, ushort[] gg, ushort[] bb, bool writeAlpha, float[]? aa)
+        {
+            int pixelCount = checked(width * height);
+            bool hasAlpha = writeAlpha;
+            int bytesPerPixel = hasAlpha ? 8 : 6;
+            int rowLength = checked(width * bytesPerPixel);
+
+            WritePngHeader(stream, width, height, bitDepth: (byte)16, colorType: (byte)(hasAlpha ? 6 : 2));
+
+            using var compressed = new MemoryStream(Math.Max(1024, pixelCount * bytesPerPixel / 2));
+            using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                byte[] row = new byte[rowLength + 1];
+                for (int y = 0; y < height; y++)
+                {
+                    int rowPixelOffset = checked(y * width);
+                    row[0] = 0;
+                    int offset = 1;
+                    for (int x = 0; x < width; x++)
+                    {
+                        int i = rowPixelOffset + x;
+                        BinaryPrimitives.WriteUInt16BigEndian(row.AsSpan(offset, 2), rr[i]);
+                        offset += 2;
+                        BinaryPrimitives.WriteUInt16BigEndian(row.AsSpan(offset, 2), gg[i]);
+                        offset += 2;
+                        BinaryPrimitives.WriteUInt16BigEndian(row.AsSpan(offset, 2), bb[i]);
+                        offset += 2;
+                        if (hasAlpha)
+                        {
+                            BinaryPrimitives.WriteUInt16BigEndian(row.AsSpan(offset, 2), (ushort)(Math.Clamp(aa is null ? 1f : aa[i], 0f, 1f) * 65535f));
+                            offset += 2;
+                        }
+                    }
+                    zlib.Write(row, 0, row.Length);
+                }
+            }
+
+            WritePngChunk(stream, "IDAT"u8, compressed.ToArray());
+            WritePngChunk(stream, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        }
+
+        private static void WritePngHeader(Stream stream, int width, int height, byte bitDepth, byte colorType)
+        {
+            stream.Write(PngSignature);
+
+            Span<byte> ihdr = stackalloc byte[13];
+            BinaryPrimitives.WriteUInt32BigEndian(ihdr[..4], (uint)width);
+            BinaryPrimitives.WriteUInt32BigEndian(ihdr.Slice(4, 4), (uint)height);
+            ihdr[8] = bitDepth;
+            ihdr[9] = colorType;
+            ihdr[10] = 0;
+            ihdr[11] = 0;
+            ihdr[12] = 0;
+            WritePngChunk(stream, "IHDR"u8, ihdr);
+        }
+
+        private static void WritePngChunk(Stream stream, ReadOnlySpan<byte> chunkType, ReadOnlySpan<byte> data)
+        {
+            Span<byte> lengthBuffer = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(lengthBuffer, (uint)data.Length);
+            stream.Write(lengthBuffer);
+            stream.Write(chunkType);
+            if (!data.IsEmpty)
+            {
+                stream.Write(data);
+            }
+
+            uint crc = ComputePngCrc32(chunkType, data);
+            BinaryPrimitives.WriteUInt32BigEndian(lengthBuffer, crc);
+            stream.Write(lengthBuffer);
+        }
+
+        private static uint ComputePngCrc32(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
+        {
+            uint crc = 0xFFFFFFFFu;
+            for (int i = 0; i < first.Length; i++)
+            {
+                crc = Crc32Table[(crc ^ first[i]) & 0xFF] ^ (crc >> 8);
+            }
+            for (int i = 0; i < second.Length; i++)
+            {
+                crc = Crc32Table[(crc ^ second[i]) & 0xFF] ^ (crc >> 8);
+            }
+            return crc ^ 0xFFFFFFFFu;
+        }
+
+        private static readonly uint[] Crc32Table = CreateCrc32Table();
+        private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+
+        private static uint[] CreateCrc32Table()
+        {
+            uint[] table = new uint[256];
+            for (uint i = 0; i < table.Length; i++)
+            {
+                uint value = i;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    value = (value & 1) != 0 ? 0xEDB88320u ^ (value >> 1) : value >> 1;
+                }
+                table[i] = value;
+            }
+            return table;
+        }
+
+        #endregion
+
+        #region raw vfd
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SaveAsVfd(this IPicture image, string path, bool compress = true)
+        {
+            ArgumentNullException.ThrowIfNull(image);
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            image.SaveAsVfd(stream, compress);
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SaveAsVfd(this IPicture image, Stream stream, bool compress = true)
+        {
+            ArgumentNullException.ThrowIfNull(image);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (image is HDRPicture16bpp hdrPicture)
+            {
+                hdrPicture.SaveAsVfd(stream, compress);
+                return;
+            }
+
+            if (image is IPicture<byte> bytePicture)
+            {
+                bytePicture.SaveAsVfd(stream, compress);
+                return;
+            }
+
+            if (image is IPicture<ushort> ushortPicture)
+            {
+                ushortPicture.SaveAsVfd(stream, compress);
+                return;
+            }
+
+            throw new NotSupportedException($"VFD serialization only supports 8bpp, 16bpp, and HDR pictures. Actual type: {image.GetType().FullName}.");
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void SaveAsVfd(this IPicture<byte> picture, Stream stream, bool compress = true)
+        {
+            ArgumentNullException.ThrowIfNull(picture);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            lock (picture)
+            {
+                WriteVfdHeader(stream, frameType: 0, picture.Width, picture.Height, picture.hasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
+                Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
+                try
+                {
+                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.hasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
+                }
+                finally
+                {
+                    if (!ReferenceEquals(payload, stream))
+                    {
+                        payload.Dispose();
+                    }
+                }
+            }
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void SaveAsVfd(this IPicture<ushort> picture, Stream stream, bool compress = true)
+        {
+            ArgumentNullException.ThrowIfNull(picture);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (picture is HDRPicture16bpp hdrPicture)
+            {
+                hdrPicture.SaveAsVfd(stream, compress);
+                return;
+            }
+
+            lock (picture)
+            {
+                WriteVfdHeader(stream, frameType: 1, picture.Width, picture.Height, picture.hasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
+                Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
+                try
+                {
+                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.hasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
+                }
+                finally
+                {
+                    if (!ReferenceEquals(payload, stream))
+                    {
+                        payload.Dispose();
+                    }
+                }
+            }
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void SaveAsVfd(this HDRPicture16bpp picture, Stream stream, bool compress = true)
+        {
+            ArgumentNullException.ThrowIfNull(picture);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            lock (picture)
+            {
+                bool hasAlpha = picture.hasAlphaChannel && picture.a is not null;
+                WriteVfdHeader(stream, frameType: 2, picture.Width, picture.Height, hasAlpha, picture.MaximumBrightness, compress);
+                Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
+                try
+                {
+                    WriteVfdHdrPicture(payload, picture.r, picture.g, picture.b, picture.Brightness, hasAlpha, picture.a is null ? default : picture.a);
+                }
+                finally
+                {
+                    if (!ReferenceEquals(payload, stream))
+                    {
+                        payload.Dispose();
+                    }
+                }
+            }
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryLoadVfd(this Stream stream, [MaybeNullWhen(false)] out Picture8bpp picture)
+        {
+            picture = null;
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (!TryReadVfdHeader(stream, out var header) || header.FrameType != 0)
+            {
+                return false;
+            }
+
+            Stream payload = header.Compressed ? new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true) : stream;
+            try
+            {
+                picture = ReadVfdPicture8bpp(payload, header.Width, header.Height, header.HasAlpha);
+                return true;
+            }
+            finally
+            {
+                if (!ReferenceEquals(payload, stream))
+                {
+                    payload.Dispose();
+                }
+            }
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryLoadVfd(this Stream stream, [MaybeNullWhen(false)] out Picture16bpp picture)
+        {
+            picture = null;
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (!TryReadVfdHeader(stream, out var header) || header.FrameType != 1)
+            {
+                return false;
+            }
+
+            Stream payload = header.Compressed ? new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true) : stream;
+            try
+            {
+                picture = ReadVfdPicture16bpp(payload, header.Width, header.Height, header.HasAlpha);
+                return true;
+            }
+            finally
+            {
+                if (!ReferenceEquals(payload, stream))
+                {
+                    payload.Dispose();
+                }
+            }
+        }
+
+        [DebuggerStepThrough()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryLoadVfd(this Stream stream, [MaybeNullWhen(false)] out HDRPicture16bpp picture)
+        {
+            picture = null;
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (!TryReadVfdHeader(stream, out var header) || header.FrameType != 2)
+            {
+                return false;
+            }
+
+            Stream payload = header.Compressed ? new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true) : stream;
+            try
+            {
+                picture = ReadVfdPictureHdr(payload, header.Width, header.Height, header.HasAlpha, header.MaximumBrightness);
+                return true;
+            }
+            finally
+            {
+                if (!ReferenceEquals(payload, stream))
+                {
+                    payload.Dispose();
+                }
+            }
+        }
+
+        private static void WriteVfdHeader(Stream stream, int frameType, int width, int height, bool hasAlpha, float maxBrightness, bool compress)
+        {
+            Span<byte> header = stackalloc byte[VfdHeaderSize];
+            header[0] = (byte)'V';
+            header[1] = (byte)'F';
+            header[2] = (byte)'C';
+            header[3] = (byte)'D';
+            header[4] = (byte)frameType;
+            BinaryPrimitives.WriteInt32LittleEndian(header.Slice(5, 4), width);
+            BinaryPrimitives.WriteInt32LittleEndian(header.Slice(9, 4), height);
+            byte flags = hasAlpha ? (byte)1 : (byte)0;
+            if (!compress)
+            {
+                flags |= 2;
+            }
+            header[13] = flags;
+            MemoryMarshal.Write(header.Slice(14, 4), in maxBrightness);
+            stream.Write(header);
+        }
+
+        private static bool TryReadVfdHeader(Stream stream, out VfdFrameHeader header)
+        {
+            Span<byte> buffer = stackalloc byte[VfdHeaderSize];
+            if (!TryReadExactly(stream, buffer))
+            {
+                header = default;
+                return false;
+            }
+
+            if (buffer[0] != (byte)'V' || buffer[1] != (byte)'F' || buffer[2] != (byte)'C' || buffer[3] != (byte)'D')
+            {
+                header = default;
+                return false;
+            }
+
+            int frameType = buffer[4];
+            if (frameType < 0 || frameType > 2)
+            {
+                header = default;
+                return false;
+            }
+
+            int width = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(5, 4));
+            int height = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(9, 4));
+            bool hasAlpha = (buffer[13] & 1) != 0;
+            bool compressed = (buffer[13] & 2) == 0;
+            float maxBrightness = MemoryMarshal.Read<float>(buffer.Slice(14, 4));
+
+            if (width <= 0 || height <= 0)
+            {
+                header = default;
+                return false;
+            }
+
+            header = new VfdFrameHeader(frameType, width, height, hasAlpha, compressed, maxBrightness);
+            return true;
+        }
+
+        private static void WriteVfdPicture<T>(Stream stream, ReadOnlySpan<T> r, ReadOnlySpan<T> g, ReadOnlySpan<T> b, bool hasAlpha, ReadOnlySpan<float> alpha = default)
+            where T : unmanaged
+        {
+            WriteRawBytes(stream, r);
+            WriteRawBytes(stream, g);
+            WriteRawBytes(stream, b);
+
+            if (hasAlpha)
+            {
+                WriteRawBytes(stream, alpha);
+            }
+        }
+
+        private static void WriteVfdHdrPicture(Stream stream, ReadOnlySpan<ushort> r, ReadOnlySpan<ushort> g, ReadOnlySpan<ushort> b, ReadOnlySpan<float> brightness, bool hasAlpha, ReadOnlySpan<float> alpha = default)
+        {
+            WriteRawBytes(stream, r);
+            WriteRawBytes(stream, g);
+            WriteRawBytes(stream, b);
+            WriteRawBytes(stream, brightness);
+
+            if (hasAlpha)
+            {
+                WriteRawBytes(stream, alpha);
+            }
+        }
+
+        private static Picture8bpp ReadVfdPicture8bpp(Stream stream, int width, int height, bool hasAlpha)
+        {
+            int pixels = checked(width * height);
+            var picture = new Picture8bpp(width, height, allocateArrays: false)
+            {
+                r = GC.AllocateUninitializedArray<byte>(pixels),
+                g = GC.AllocateUninitializedArray<byte>(pixels),
+                b = GC.AllocateUninitializedArray<byte>(pixels),
+                a = null,
+                hasAlphaChannel = hasAlpha,
+            };
+
+            ReadRawBytes(stream, picture.r);
+            ReadRawBytes(stream, picture.g);
+            ReadRawBytes(stream, picture.b);
+
+            if (hasAlpha)
+            {
+                picture.a = GC.AllocateUninitializedArray<float>(pixels);
+                ReadRawBytes(stream, picture.a);
+            }
+
+            picture.ProcessStack = [new PictureProcessStack
+            {
+                OperationDisplayName = "Loaded from VFD cache",
+                Operator = typeof(PictureExtensions),
+                ProcessingFuncStackTrace = new StackTrace(true),
+            }];
+
+            return picture;
+        }
+
+        private static Picture16bpp ReadVfdPicture16bpp(Stream stream, int width, int height, bool hasAlpha)
+        {
+            int pixels = checked(width * height);
+            var picture = new Picture16bpp(width, height, allocateArrays: false)
+            {
+                r = GC.AllocateUninitializedArray<ushort>(pixels),
+                g = GC.AllocateUninitializedArray<ushort>(pixels),
+                b = GC.AllocateUninitializedArray<ushort>(pixels),
+                a = null,
+                hasAlphaChannel = hasAlpha,
+            };
+
+            ReadRawBytes(stream, picture.r);
+            ReadRawBytes(stream, picture.g);
+            ReadRawBytes(stream, picture.b);
+
+            if (hasAlpha)
+            {
+                picture.a = GC.AllocateUninitializedArray<float>(pixels);
+                ReadRawBytes(stream, picture.a);
+            }
+
+            picture.ProcessStack = [new PictureProcessStack
+            {
+                OperationDisplayName = "Loaded from VFD cache",
+                Operator = typeof(PictureExtensions),
+                ProcessingFuncStackTrace = new StackTrace(true),
+            }];
+
+            return picture;
+        }
+
+        private static HDRPicture16bpp ReadVfdPictureHdr(Stream stream, int width, int height, bool hasAlpha, float maximumBrightness)
+        {
+            int pixels = checked(width * height);
+            var picture = new HDRPicture16bpp(width, height, allocateArrays: false)
+            {
+                r = GC.AllocateUninitializedArray<ushort>(pixels),
+                g = GC.AllocateUninitializedArray<ushort>(pixels),
+                b = GC.AllocateUninitializedArray<ushort>(pixels),
+                a = null,
+                hasAlphaChannel = hasAlpha,
+                Brightness = GC.AllocateUninitializedArray<float>(pixels),
+                MaximumBrightness = maximumBrightness > 0f && float.IsFinite(maximumBrightness) ? maximumBrightness : 1000f,
+            };
+
+            ReadRawBytes(stream, picture.r);
+            ReadRawBytes(stream, picture.g);
+            ReadRawBytes(stream, picture.b);
+            ReadRawBytes(stream, picture.Brightness);
+
+            if (hasAlpha)
+            {
+                picture.a = GC.AllocateUninitializedArray<float>(pixels);
+                ReadRawBytes(stream, picture.a);
+            }
+
+            picture.ProcessStack = [new PictureProcessStack
+            {
+                OperationDisplayName = "Loaded from VFD cache",
+                Operator = typeof(PictureExtensions),
+                ProcessingFuncStackTrace = new StackTrace(true),
+            }];
+
+            return picture;
+        }
+
+        private static void WriteRawBytes<T>(Stream stream, ReadOnlySpan<T> source)
+            where T : unmanaged
+        {
+            ReadOnlySpan<byte> bytes = MemoryMarshal.AsBytes(source);
+            stream.Write(bytes);
+        }
+
+        private static void ReadRawBytes<T>(Stream stream, T[] destination)
+            where T : unmanaged
+        {
+            ReadRawBytes(stream, destination.AsSpan());
+        }
+
+        private static void ReadRawBytes<T>(Stream stream, Span<T> destination)
+            where T : unmanaged
+        {
+            Span<byte> bytes = MemoryMarshal.AsBytes(destination);
+            while (!bytes.IsEmpty)
+            {
+                int read = stream.Read(bytes);
+                if (read <= 0)
+                {
+                    throw new EndOfStreamException("Unexpected end of VFD payload.");
+                }
+                bytes = bytes.Slice(read);
+            }
+        }
+
+        private static bool TryReadExactly(Stream stream, Span<byte> destination)
+        {
+            while (!destination.IsEmpty)
+            {
+                int read = stream.Read(destination);
+                if (read <= 0)
+                {
+                    return false;
+                }
+                destination = destination.Slice(read);
+            }
+
+            return true;
+        }
+
+        private readonly record struct VfdFrameHeader(int FrameType, int Width, int Height, bool HasAlpha, bool Compressed, float MaximumBrightness);
+
+        private const int VfdHeaderSize = 18;
+
+        #endregion
+
+        #region SixLabors
 
         [DebuggerStepThrough()]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -312,6 +971,8 @@ namespace projectFrameCut.Shared
                 return result;
             }
         }
+
+
         [DebuggerStepThrough()]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static Image SaveToSixLaborsImage(this IHDRPicture<ushort> image, int resultPPB = 16, bool? saveAlpha = null, HDRImageDegradeToSDRMode? degradeToSDRMode = null)
@@ -736,6 +1397,7 @@ namespace projectFrameCut.Shared
             };
         }
 
+        #endregion
 
         public static (int Width, int Height) GetDimensions(this IPicture picture) => (picture.Width, picture.Height);
         public static (int Width, int Height) GetDimensions(string picPath) => new Picture8bpp(picPath).GetDimensions();

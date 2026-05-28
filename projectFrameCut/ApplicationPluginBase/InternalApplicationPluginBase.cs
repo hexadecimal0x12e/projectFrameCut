@@ -41,6 +41,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Basic", () => new BasicTextStyleProvider() },
             { "Title", () => new TitleTextStyleProvider() },
             { "Pinyin", () => new PinyinTextStyleProvider() },
+            { "LlmTranslate", () => new LlmTranslateTextStyleProvider() },
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

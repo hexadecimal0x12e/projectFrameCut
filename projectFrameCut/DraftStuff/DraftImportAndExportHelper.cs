@@ -247,7 +247,7 @@ namespace projectFrameCut.DraftStuff
                         entries = je.Deserialize<IReadOnlyList<TextClipEntry>>();
                     if (entries is { Count: > 0 })
                     {
-                        var bounds = TextClipMeasureHelper.MeasureBounds(entries);
+                        var bounds = TextMeasureHelper.MeasureBounds(entries);
                         if (bounds.Width > 0 && bounds.Height > 0)
                         {
                             exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));

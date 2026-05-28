@@ -1048,11 +1048,11 @@ public partial class TestPage : ContentPage
 
     }
 
-    private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
+    private void PPBPaddingSlider_DragCompleted(object sender, EventArgs e)
     {
         Dispatcher.Dispatch(() =>
         {
-            ppb.DefaultPadding = e.NewValue;
+            ppb.DefaultPadding = PPBPaddingSlider.Value;
             PpbTestGrid.Content = ppb.Build();
         });
     }

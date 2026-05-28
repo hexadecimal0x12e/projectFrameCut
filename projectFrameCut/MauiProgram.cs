@@ -169,6 +169,7 @@ namespace projectFrameCut
 
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
+                IApplicationPluginBase.AppDataRoot = BasicDataPath;
             }
             catch (Exception ex)
             {
@@ -193,7 +194,6 @@ namespace projectFrameCut
                 $"                  cmdline: {Environment.CommandLine}");
             Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
-
             try
             {
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))

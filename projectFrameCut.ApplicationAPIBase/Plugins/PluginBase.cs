@@ -33,6 +33,15 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public static int CurrentAppLevelPluginAPIVersion => 5;
 
         /// <summary>
+        /// The root of app's data.
+        /// </summary>
+        public static string AppDataRoot 
+        { 
+            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; } 
+            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; } 
+        } = "";
+
+        /// <summary>
         /// Get the version of the Application-level plugin.
         /// </summary>
         public int AppLevelPluginAPIVersion { get; }

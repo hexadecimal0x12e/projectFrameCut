@@ -1,8 +1,11 @@
 using SixLabors.Fonts;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -53,6 +56,17 @@ public class FontItem : INotifyPropertyChanged
         }
     }
 
+    private bool _isFavorite;
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set
+        {
+            _isFavorite = value;
+            OnPropertyChanged();
+        }
+    }
+
     public event PropertyChangedEventHandler PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -60,6 +74,15 @@ public class FontItem : INotifyPropertyChanged
 
 public partial class FontPicker : ContentView
 {
+    private sealed class FontFavoritesStore
+    {
+        public List<string> Favorites { get; set; } = [];
+    }
+
+    private const string FavoritesCategory = "Favorites";
+    private readonly HashSet<string> _favoriteFontNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string _favoritesFilePath;
+
     public static readonly BindableProperty FontsSourceProperty = BindableProperty.Create(
         nameof(FontsSource), typeof(IEnumerable<FontItem>), typeof(FontPicker), null,
         propertyChanged: OnFontsSourceChanged);
@@ -99,6 +122,8 @@ public partial class FontPicker : ContentView
 
     public FontPicker()
     {
+        _favoritesFilePath = Path.Combine(IApplicationPluginBase.AppDataRoot, "font-favorites.json");
+        LoadFavoritesFromDisk();
         InitializeComponent();
         SearchEntry.TextChanged += SearchEntry_TextChanged;
         FontCollectionView.Scrolled += FontCollectionView_Scrolled;
@@ -168,6 +193,7 @@ public partial class FontPicker : ContentView
     {
         if (bindable is FontPicker picker)
         {
+            picker.ApplyFavoriteFlags();
             picker.RefreshCategories();
             picker.FilterFonts(picker.SearchEntry.Text);
         }
@@ -182,6 +208,9 @@ public partial class FontPicker : ContentView
             .OrderBy(c => c)
             .ToList() ?? new List<string>();
 
+        if (FontsSource?.Any(f => f.IsFavorite) == true)
+            categories.Insert(0, FavoritesCategory);
+
         _categoryList = ["All", .. categories];
 
         CategoryPicker.ItemsSource = _categoryList;
@@ -190,6 +219,11 @@ public partial class FontPicker : ContentView
         _syncingCategory = true;
         var current = SelectedCategory;
         var idx = !string.IsNullOrEmpty(current) ? _categoryList.IndexOf(current) : 0;
+        if (idx < 0)
+        {
+            SetValue(SelectedCategoryProperty, null);
+            idx = 0;
+        }
         CategoryPicker.SelectedIndex = Math.Max(0, idx);
         _syncingCategory = false;
     }
@@ -216,7 +250,9 @@ public partial class FontPicker : ContentView
         // 按 Category 筛选
         var selectedCategory = SelectedCategory;
         if (!string.IsNullOrEmpty(selectedCategory))
-            filtered = filtered.Where(f => f.Category == selectedCategory);
+            filtered = selectedCategory == FavoritesCategory
+                ? filtered.Where(f => f.IsFavorite)
+                : filtered.Where(f => f.Category == selectedCategory);
 
         // 按搜索文本筛选
         if (!string.IsNullOrWhiteSpace(searchText))
@@ -225,11 +261,14 @@ public partial class FontPicker : ContentView
             filtered = filtered.Where(f => f.FontName?.ToLowerInvariant().Contains(lower) == true);
         }
 
+        filtered = filtered.OrderByDescending(f => f.IsFavorite);
+        var filteredList = filtered.ToList();
+
         // 重置所有预览，等待按需渲染
-        foreach (var item in filtered)
+        foreach (var item in filteredList)
             item.PreviewImageSource = null;
 
-        _filteredFonts = new ObservableCollection<FontItem>(filtered);
+        _filteredFonts = new ObservableCollection<FontItem>(filteredList);
         _firstVisibleIndex = 0;
         _lastVisibleIndex = 0;
         FontCollectionView.ItemsSource = _filteredFonts;
@@ -384,5 +423,85 @@ public partial class FontPicker : ContentView
 
         SelectedFont = current;
         SelectedFontChanged?.Invoke(this, current);
+    }
+
+    private void FavoriteButton_Clicked(object sender, EventArgs e)
+    {
+        if (sender is not Button { CommandParameter: FontItem item })
+            return;
+
+        item.IsFavorite = !item.IsFavorite;
+
+        if (!string.IsNullOrWhiteSpace(item.FontName))
+        {
+            if (item.IsFavorite)
+                _favoriteFontNames.Add(item.FontName);
+            else
+                _favoriteFontNames.Remove(item.FontName);
+        }
+
+        SaveFavoritesToDisk();
+        RefreshCategories();
+
+        if (SelectedCategory == FavoritesCategory && !item.IsFavorite)
+            FilterFonts(SearchEntry.Text);
+    }
+
+    private void ApplyFavoriteFlags()
+    {
+        if (FontsSource == null)
+            return;
+
+        foreach (var item in FontsSource)
+            item.IsFavorite = !string.IsNullOrWhiteSpace(item.FontName) && _favoriteFontNames.Contains(item.FontName);
+    }
+
+    private void LoadFavoritesFromDisk()
+    {
+        var folder = Path.GetDirectoryName(_favoritesFilePath);
+        if (!string.IsNullOrEmpty(folder))
+            Directory.CreateDirectory(folder);
+
+        if (!File.Exists(_favoritesFilePath))
+            return;
+
+        try
+        {
+            var text = File.ReadAllText(_favoritesFilePath);
+            var data = JsonSerializer.Deserialize<FontFavoritesStore>(text);
+            if (data?.Favorites == null)
+                return;
+
+            _favoriteFontNames.Clear();
+            foreach (var fontName in data.Favorites.Where(static f => !string.IsNullOrWhiteSpace(f)))
+                _favoriteFontNames.Add(fontName);
+        }
+        catch (JsonException ex)
+        {
+            Debug.WriteLine($"Font favorites JSON is invalid: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            Debug.WriteLine($"Failed to read font favorites JSON: {ex.Message}");
+        }
+    }
+
+    private void SaveFavoritesToDisk()
+    {
+        var folder = Path.GetDirectoryName(_favoritesFilePath);
+        if (!string.IsNullOrEmpty(folder))
+            Directory.CreateDirectory(folder);
+
+        var model = new FontFavoritesStore
+        {
+            Favorites = _favoriteFontNames.OrderBy(static f => f, StringComparer.OrdinalIgnoreCase).ToList()
+        };
+
+        var json = JsonSerializer.Serialize(model, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        File.WriteAllText(_favoritesFilePath, json);
     }
 }

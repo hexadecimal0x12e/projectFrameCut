@@ -32,8 +32,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private ulong requireCount = 0, cacheHitCount = 0;
 
-        private const int HeaderSize = 18; // Magic(4) + Type(1) + Width(4) + Height(4) + HasAlpha(1) + MaxBrightness(4)
-
         public VideoFrameDiskCache(string videoPath)
         {
             _sourceVideoPath = videoPath;
@@ -168,34 +166,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
             try
             {
                 cacheHitCount++;
-                byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float _, out bool hasAlpha);
-                if (frameType != 0 || rawData == null) return false;
-
-                int pixelCount = width * height;
-                int expectedSize = pixelCount * 3 + (hasAlpha ? pixelCount * 4 : 0);
-                if (rawData.Length < expectedSize) return false;
-
-                var pic = new Picture8bpp(width, height);
-                Buffer.BlockCopy(rawData, 0, pic.r, 0, pixelCount);
-                Buffer.BlockCopy(rawData, pixelCount, pic.g, 0, pixelCount);
-                Buffer.BlockCopy(rawData, pixelCount * 2, pic.b, 0, pixelCount);
-                if (hasAlpha)
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+                if (!fs.TryLoadVfd(out picture))
                 {
-                    pic.a = new float[pixelCount];
-                    Buffer.BlockCopy(rawData, pixelCount * 3, pic.a, 0, pixelCount * 4);
-                    pic.hasAlphaChannel = true;
+                    picture = null;
+                    return false;
                 }
-                pic.ProcessStack = [new PictureProcessStack
-                  {
-                      OperationDisplayName = $"Loaded from disk cache, frame #{frameNumber}",
-                      Operator = typeof(VideoFrameDiskCache),
-                      ProcessingFuncStackTrace = new StackTrace(true),
-                  }];
-                picture = pic;
                 return true;
             }
             catch (Exception ex)
             {
+                Log(ex, $"DiskCache: failed to read 8bpp frame {frameNumber}", this);
+                //CleanupFile(frameNumber);
                 return false;
             }
         }
@@ -212,31 +194,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             try
             {
                 cacheHitCount++;
-                byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float _, out bool hasAlpha);
-                if (frameType != 1 || rawData == null) return false;
-
-                int pixelCount = width * height;
-                int ushortBytes = pixelCount * 2;
-                int expectedSize = ushortBytes * 3 + (hasAlpha ? pixelCount * 4 : 0);
-                if (rawData.Length < expectedSize) return false;
-
-                var pic = new Picture16bpp(width, height);
-                Buffer.BlockCopy(rawData, 0, pic.r, 0, ushortBytes);
-                Buffer.BlockCopy(rawData, ushortBytes, pic.g, 0, ushortBytes);
-                Buffer.BlockCopy(rawData, ushortBytes * 2, pic.b, 0, ushortBytes);
-                if (hasAlpha)
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+                if (!fs.TryLoadVfd(out picture))
                 {
-                    pic.a = new float[pixelCount];
-                    Buffer.BlockCopy(rawData, ushortBytes * 3, pic.a, 0, pixelCount * 4);
-                    pic.hasAlphaChannel = true;
+                    picture = null;
+                    return false;
                 }
-                pic.ProcessStack = [new PictureProcessStack
-                  {
-                      OperationDisplayName = $"Loaded from disk cache, frame #{frameNumber}",
-                      Operator = typeof(VideoFrameDiskCache),
-                      ProcessingFuncStackTrace = new StackTrace(true),
-                  }];
-                picture = pic;
                 return true;
             }
             catch (Exception ex)
@@ -259,37 +222,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             try
             {
                 cacheHitCount++;
-                byte[] rawData = ReadAndDecompress(path, out int width, out int height, out int frameType, out float maxBrightness, out bool hasAlpha);
-                if (frameType != 2 || rawData == null) return false;
-
-                int pixelCount = width * height;
-                int ushortBytes = pixelCount * 2;
-                int expectedSize = ushortBytes * 3 + pixelCount * 4 + (hasAlpha ? pixelCount * 4 : 0);
-                if (rawData.Length < expectedSize) return false;
-
-                var pic = new HDRPicture16bpp(width, height)
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+                if (!fs.TryLoadVfd(out picture))
                 {
-                    MaximumBrightness = maxBrightness > 0f && float.IsFinite(maxBrightness) ? maxBrightness : 1000f,
-                };
-                Buffer.BlockCopy(rawData, 0, pic.r, 0, ushortBytes);
-                Buffer.BlockCopy(rawData, ushortBytes, pic.g, 0, ushortBytes);
-                Buffer.BlockCopy(rawData, ushortBytes * 2, pic.b, 0, ushortBytes);
-                Buffer.BlockCopy(rawData, ushortBytes * 3, pic.Brightness, 0, pixelCount * 4);
-
-                int alphaOffset = ushortBytes * 3 + pixelCount * 4;
-                if (hasAlpha)
-                {
-                    pic.a = new float[pixelCount];
-                    Buffer.BlockCopy(rawData, alphaOffset, pic.a, 0, pixelCount * 4);
-                    pic.hasAlphaChannel = true;
+                    picture = null;
+                    return false;
                 }
-                pic.ProcessStack = [new PictureProcessStack
-                  {
-                      OperationDisplayName = $"Loaded from HDR disk cache, frame #{frameNumber}",
-                      Operator = typeof(VideoFrameDiskCache),
-                      ProcessingFuncStackTrace = new StackTrace(true),
-                  }];
-                picture = pic;
                 return true;
             }
             catch (Exception ex)
@@ -300,53 +238,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        // ============ Internal serialization ============
-
-        private static void WriteHeader(Span<byte> header, int frameType, int width, int height, bool hasAlpha, float maxBrightness)
-        {
-            header[0] = (byte)'V'; header[1] = (byte)'F';
-            header[2] = (byte)'C'; header[3] = (byte)'D';
-            header[4] = (byte)frameType;
-            Unsafe.WriteUnaligned(ref header[5], width);
-            Unsafe.WriteUnaligned(ref header[9], height);
-            // Flags: bit0=HasAlpha, bit1=!Compressed (0=compressed for backward compat)
-            byte flags = hasAlpha ? (byte)1 : (byte)0;
-            if (!EnableCompression) flags |= 2;
-            header[13] = flags;
-            Unsafe.WriteUnaligned(ref header[14], maxBrightness);
-        }
-
         private unsafe void Save8bppSync(uint frameNumber, IPicture<byte> picture)
         {
             if (_disposed) return;
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
-            int pixelCount = picture.Width * picture.Height;
-            bool hasAlpha = picture.hasAlphaChannel && picture.a != null;
-            int dataSize = pixelCount * 3 + (hasAlpha ? pixelCount * 4 : 0);
-
-            byte[] rawData = GC.AllocateUninitializedArray<byte>(dataSize, pinned: false);
-            Buffer.BlockCopy(picture.r, 0, rawData, 0, pixelCount);
-            Buffer.BlockCopy(picture.g, 0, rawData, pixelCount, pixelCount);
-            Buffer.BlockCopy(picture.b, 0, rawData, pixelCount * 2, pixelCount);
-            if (hasAlpha)
-                Buffer.BlockCopy(picture.a!, 0, rawData, pixelCount * 3, pixelCount * 4);
-
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            Span<byte> header = stackalloc byte[HeaderSize];
-            WriteHeader(header, 0, picture.Width, picture.Height, hasAlpha, 0f);
-            fs.Write(header);
-
-            if (EnableCompression)
-            {
-                using var gz = new GZipStream(fs, DefaultCompressionLevel, leaveOpen: true);
-                gz.Write(rawData, 0, rawData.Length);
-            }
-            else
-            {
-                fs.Write(rawData, 0, rawData.Length);
-            }
+            picture.SaveAsVfd(fs, EnableCompression);
 
             EnforceCacheSizeLimit();
         }
@@ -357,32 +256,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
-            int pixelCount = picture.Width * picture.Height;
-            bool hasAlpha = picture.hasAlphaChannel && picture.a != null;
-            int ushortBytes = pixelCount * 2;
-            int dataSize = ushortBytes * 3 + (hasAlpha ? pixelCount * 4 : 0);
-
-            byte[] rawData = GC.AllocateUninitializedArray<byte>(dataSize, pinned: false);
-            Buffer.BlockCopy(picture.r, 0, rawData, 0, ushortBytes);
-            Buffer.BlockCopy(picture.g, 0, rawData, ushortBytes, ushortBytes);
-            Buffer.BlockCopy(picture.b, 0, rawData, ushortBytes * 2, ushortBytes);
-            if (hasAlpha)
-                Buffer.BlockCopy(picture.a!, 0, rawData, ushortBytes * 3, pixelCount * 4);
-
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            Span<byte> header = stackalloc byte[HeaderSize];
-            WriteHeader(header, 1, picture.Width, picture.Height, hasAlpha, 0f);
-            fs.Write(header);
-
-            if (EnableCompression)
-            {
-                using var gz = new GZipStream(fs, DefaultCompressionLevel, leaveOpen: true);
-                gz.Write(rawData, 0, rawData.Length);
-            }
-            else
-            {
-                fs.Write(rawData, 0, rawData.Length);
-            }
+            picture.SaveAsVfd(fs, EnableCompression);
 
             EnforceCacheSizeLimit();
         }
@@ -393,75 +268,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             string path = GetPath(frameNumber);
             if (File.Exists(path)) return;
 
-            int pixelCount = picture.Width * picture.Height;
-            bool hasAlpha = picture.hasAlphaChannel && picture.a != null;
-            int ushortBytes = pixelCount * 2;
-            int dataSize = ushortBytes * 3 + pixelCount * 4 + (hasAlpha ? pixelCount * 4 : 0);
-
-            byte[] rawData = GC.AllocateUninitializedArray<byte>(dataSize, pinned: false);
-            Buffer.BlockCopy(picture.r, 0, rawData, 0, ushortBytes);
-            Buffer.BlockCopy(picture.g, 0, rawData, ushortBytes, ushortBytes);
-            Buffer.BlockCopy(picture.b, 0, rawData, ushortBytes * 2, ushortBytes);
-            Buffer.BlockCopy(picture.Brightness, 0, rawData, ushortBytes * 3, pixelCount * 4);
-            if (hasAlpha)
-                Buffer.BlockCopy(picture.a!, 0, rawData, ushortBytes * 3 + pixelCount * 4, pixelCount * 4);
-
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            Span<byte> header = stackalloc byte[HeaderSize];
-            WriteHeader(header, 2, picture.Width, picture.Height, hasAlpha, picture.MaximumBrightness);
-            fs.Write(header);
-
-            if (EnableCompression)
-            {
-                using var gz = new GZipStream(fs, DefaultCompressionLevel, leaveOpen: true);
-                gz.Write(rawData, 0, rawData.Length);
-            }
-            else
-            {
-                fs.Write(rawData, 0, rawData.Length);
-            }
+            picture.SaveAsVfd(fs, EnableCompression);
 
             EnforceCacheSizeLimit();
-        }
-
-        private static byte[]? ReadAndDecompress(string path, out int width, out int height, out int frameType, out float maxBrightness, out bool hasAlpha)
-        {
-            width = 0; height = 0; frameType = -1; maxBrightness = 0f; hasAlpha = false;
-
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
-
-            Span<byte> header = stackalloc byte[HeaderSize];
-            if (fs.Read(header) < HeaderSize)
-                return null;
-
-            if (header[0] != 'V' || header[1] != 'F' || header[2] != 'C' || header[3] != 'D')
-                return null;
-
-            frameType = header[4];
-            if (frameType < 0 || frameType > 2)
-                return null;
-
-            width = Unsafe.ReadUnaligned<int>(ref header[5]);
-            height = Unsafe.ReadUnaligned<int>(ref header[9]);
-            hasAlpha = (header[13] & 1) != 0;
-            // Bit1=0 means compressed (backward compatible), Bit1=1 means uncompressed
-            bool compressed = (header[13] & 2) == 0;
-            maxBrightness = Unsafe.ReadUnaligned<float>(ref header[14]);
-
-            if (width <= 0 || height <= 0)
-                return null;
-
-            using var ms = new MemoryStream(Math.Max(width * height * 6, 4096));
-            if (compressed)
-            {
-                using var gz = new GZipStream(fs, CompressionMode.Decompress, leaveOpen: true);
-                gz.CopyTo(ms);
-            }
-            else
-            {
-                fs.CopyTo(ms);
-            }
-            return ms.ToArray();
         }
 
         private void CleanupFile(uint frameNumber)

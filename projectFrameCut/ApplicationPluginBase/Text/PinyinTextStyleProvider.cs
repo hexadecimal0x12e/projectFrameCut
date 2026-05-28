@@ -1,6 +1,7 @@
 using Microsoft.Maui.Graphics;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using TinyPinyin;
@@ -182,21 +183,77 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         public PropertyPanelBuilder BuildPropertyPanel()
         {
             var panel = new PropertyPanelBuilder();
-            panel.AddEntry(TextKey, "Text", BasicText, "Text");
+            var currentText = BasicText;
+            var currentFont = GetOrDefault(FontKey, "HarmonyOS Sans SC");
+            var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
+            var glyphWarning = new Label
+            {
+                TextColor = Colors.OrangeRed,
+                FontSize = 12,
+                IsVisible = false,
+                LineBreakMode = LineBreakMode.WordWrap
+            };
+
+            void UpdateGlyphWarning()
+            {
+                var warning = TextServices.GetMissingGlyphWarning(currentFont, currentText, fontSize);
+                glyphWarning.Text = warning;
+                glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
+            }
+
+            panel.AddEntry(TextKey, "Text", BasicText, "Text", entry =>
+            {
+                entry.TextChanged += (s, e) =>
+                {
+                    currentText = e.NewTextValue ?? string.Empty;
+                    UpdateGlyphWarning();
+                };
+            }, EntryUpdateEventCallMode.OnAnyTextChange);
 
             var fontOptions = TextServices.LoadedFonts.Keys.OrderBy(c => c).ToArray();
-            var currentFont = GetOrDefault(FontKey, "Arial");
             if (fontOptions.Length > 0)
             {
-                panel.AddPicker(FontKey, "Font", fontOptions, fontOptions.Contains(currentFont) ? currentFont : fontOptions.First());
+                currentFont = fontOptions.Contains(currentFont) ? currentFont : fontOptions.First();
+                panel.AddPicker(FontKey, "Font", fontOptions, currentFont, picker =>
+                {
+#if iDevices
+                    picker.Closed += (s, e) =>
+                    {
+                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
+                        {
+                            currentFont = selectedFont;
+                            UpdateGlyphWarning();
+                        }
+                    };
+#else
+                    picker.SelectedIndexChanged += (s, e) =>
+                    {
+                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
+                        {
+                            currentFont = selectedFont;
+                            UpdateGlyphWarning();
+                        }
+                    };
+#endif
+                });
             }
             else
             {
-                panel.AddEntry(FontKey, "Font", currentFont, "Arial");
+                panel.AddEntry(FontKey, "Font", currentFont, "Arial", entry =>
+                {
+                    entry.TextChanged += (s, e) =>
+                    {
+                        currentFont = e.NewTextValue ?? string.Empty;
+                        UpdateGlyphWarning();
+                    };
+                }, EntryUpdateEventCallMode.OnAnyTextChange);
             }
 
-            var size = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
-            panel.AddSlider(SizeKey, "Font Size", 20, 400, size, eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+            UpdateGlyphWarning();
+
+            panel.AddCustomChild(glyphWarning);
+
+            panel.AddSlider(SizeKey, "Font Size", 20, 400, fontSize, eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
             var pinyinRatio = ParseFloat(GetOrDefault(PinyinFontSizeRatioKey, DefaultPinyinFontSizeRatio.ToString(CultureInfo.InvariantCulture)), DefaultPinyinFontSizeRatio);
             panel.AddSlider(PinyinFontSizeRatioKey, "Pinyin Size Ratio", 0.15f, 0.8f, pinyinRatio, eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
@@ -247,7 +304,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
 
             var rect = MeasureEntries(BuildEntries());
-            return (_parameters, (int)rect.Width, (int)rect.Height);
+            return (_parameters, Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
         }
 
         public Dictionary<string, string> HandleClipResize(bool isInRatio, int TargetX, int TargetY, int TargetWidth, int TargetHeight)
@@ -294,27 +351,20 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (entries.Length == 0)
                 return new ClipPositionTuple(0, 0, Math.Max(1, canvasWidth), Math.Max(1, canvasHeight), false);
 
-            double minX = double.MaxValue;
-            double minY = double.MaxValue;
-            double maxX = double.MinValue;
-            double maxY = double.MinValue;
-
-            foreach (var entry in entries)
+            try
             {
-                var (left, top, right, bottom) = GetEntryBounds(entry);
-
-                minX = Math.Min(minX, left);
-                minY = Math.Min(minY, top);
-                maxX = Math.Max(maxX, right);
-                maxY = Math.Max(maxY, bottom);
+                var rect = TextMeasureHelper.MeasureBounds(entries);
+                return new ClipPositionTuple(
+                    (int)Math.Round(rect.X),
+                    (int)Math.Round(rect.Y),
+                    Math.Max(1, (int)Math.Ceiling(rect.Width)),
+                    Math.Max(1, (int)Math.Ceiling(rect.Height)),
+                    false);
             }
-
-            if (double.IsInfinity(minX) || double.IsInfinity(minY))
+            catch
+            {
                 return new ClipPositionTuple(0, 0, Math.Max(1, canvasWidth), Math.Max(1, canvasHeight), false);
-
-            int width = Math.Max(1, (int)Math.Ceiling(maxX - minX));
-            int height = Math.Max(1, (int)Math.Ceiling(maxY - minY));
-            return new ClipPositionTuple((int)Math.Round(minX), (int)Math.Round(minY), width, height, false);
+            }
         }
 
         private void EnsureDefaults()
@@ -361,33 +411,20 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         private static (float Width, float Height) MeasureEntries(TextClipEntry[] entries)
         {
-            float minX = float.MaxValue, minY = float.MaxValue;
-            float maxX = float.MinValue, maxY = float.MinValue;
-            bool hasBounds = false;
-
-            foreach (var entry in entries)
+            if (entries.Length == 0)
             {
-                if (string.IsNullOrEmpty(entry.text)) continue;
-                var (left, top, right, bottom) = GetEntryBounds(entry);
-
-                if (!hasBounds)
-                {
-                    minX = left; minY = top; maxX = right; maxY = bottom;
-                    hasBounds = true;
-                }
-                else
-                {
-                    minX = Math.Min(minX, left);
-                    minY = Math.Min(minY, top);
-                    maxX = Math.Max(maxX, right);
-                    maxY = Math.Max(maxY, bottom);
-                }
+                return (1f, 1f);
             }
 
-            if (!hasBounds)
+            try
+            {
+                var rect = TextMeasureHelper.MeasureBounds(entries);
+                return (Math.Max(1f, (float)Math.Ceiling(rect.Width)) + 15f, Math.Max(1f, (float)Math.Ceiling(rect.Height)) + 15f);
+            }
+            catch
+            {
                 return (1f, 1f);
-
-            return (Math.Max(1f, maxX - minX) + 15, Math.Max(1f, maxY - minY) + 15);
+            }
         }
 
         private static bool IsCJKCharacter(char c)

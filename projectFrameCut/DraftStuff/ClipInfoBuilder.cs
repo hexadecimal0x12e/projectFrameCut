@@ -1184,6 +1184,7 @@ namespace projectFrameCut.DraftStuff
             Action<FontPicker>? ShowPicker = null,
             Action? HidePicker = null)
         {
+            var currentEntry = e;
             Label SecLabel(string t) => new Label
             {
                 Text = t,
@@ -1200,6 +1201,20 @@ namespace projectFrameCut.DraftStuff
             };
 
             var stack = new VerticalStackLayout { Spacing = 4 };
+            var glyphWarning = new Label
+            {
+                TextColor = Colors.OrangeRed,
+                FontSize = 12,
+                IsVisible = false,
+                LineBreakMode = LineBreakMode.WordWrap
+            };
+
+            void UpdateGlyphWarning()
+            {
+                var warning = TextServices.GetMissingGlyphWarning(currentEntry.fontFamily, currentEntry.text, currentEntry.fontSize);
+                glyphWarning.Text = warning;
+                glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
+            }
 
             var headerGrid = new Grid
             {
@@ -1244,7 +1259,17 @@ namespace projectFrameCut.DraftStuff
                 MinimumHeightRequest = 64,
                 Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
             };
-            editor.Unfocused += (s, ev) => { onChanged?.Invoke(idx, e with { text = editor.Text }); };
+            editor.TextChanged += (s, ev) =>
+            {
+                currentEntry = currentEntry with { text = editor.Text ?? string.Empty };
+                UpdateGlyphWarning();
+            };
+            editor.Unfocused += (s, ev) =>
+            {
+                currentEntry = currentEntry with { text = editor.Text ?? string.Empty };
+                onChanged?.Invoke(idx, currentEntry);
+                UpdateGlyphWarning();
+            };
             stack.Children.Add(editor);
 
             // POSITION
@@ -1274,6 +1299,7 @@ namespace projectFrameCut.DraftStuff
             stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Font));
             var fonts = fontItems.Select(x => x.FontName).ToList();
             var currentFontName = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() ?? string.Empty;
+            currentEntry = currentEntry with { fontFamily = currentFontName };
 
             var fontGrid = new Grid
             {
@@ -1305,8 +1331,10 @@ namespace projectFrameCut.DraftStuff
             {
                 if (font == null) return;
                 fontSelectBtn.Text = font.DisplayName;
+                currentEntry = currentEntry with { fontFamily = font.FontName };
+                UpdateGlyphWarning();
                 HidePicker?.Invoke();
-                onChanged?.Invoke(idx, e with { fontFamily = font.FontName });
+                onChanged?.Invoke(idx, currentEntry);
             }
             if (ShowPicker is not null)
             {
@@ -1341,6 +1369,8 @@ namespace projectFrameCut.DraftStuff
             }
 
             stack.Children.Add(fontGrid);
+            UpdateGlyphWarning();
+            stack.Children.Add(glyphWarning);
 
 
             var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { SixLabors.Fonts.FontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, SixLabors.Fonts.FontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, SixLabors.Fonts.FontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, SixLabors.Fonts.FontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
@@ -1725,7 +1755,7 @@ namespace projectFrameCut.DraftStuff
                     Text = currentFont?.DisplayName ?? currentFontName,
                     HorizontalOptions = LayoutOptions.Fill,
                     BackgroundColor = Color.FromArgb("#1AFFFFFF"),
-                    TextColor = Colors.White,
+                    TextColor = AppInfo.RequestedTheme switch { AppTheme.Light => Colors.Black, _ => Colors.White },
                     FontSize = 13,
                     Padding = new Thickness(8, 4),
                     CornerRadius = 6

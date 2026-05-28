@@ -182,6 +182,83 @@ namespace projectFrameCut.Services
 
         }
 
+        public static string GetMissingGlyphWarning(string fontName, string text, float fontSize = 14f)
+        {
+            if (string.IsNullOrWhiteSpace(fontName) || string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            if (!TryResolveFont(fontName, fontSize, out var font))
+            {
+                return string.Empty;
+            }
+
+            var missing = TextHelper.GetMissingGlyphs(font, text).Distinct().ToArray();
+            if (missing.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var preview = string.Join(", ", missing.Take(6).Select(codePoint => $"U+{codePoint:X4}"));
+            var suffix = missing.Length > 6 ? "..." : string.Empty;
+            return $"当前字体 \"{fontName}\" 可能不支持部分字符：{preview}{suffix}";
+        }
+
+        private static bool TryResolveFont(string fontName, float fontSize, out Font font)
+        {
+            font = default!;
+
+            if (LoadedFonts.TryGetValue(fontName, out var item))
+            {
+                if (TryCreateFontFromItem(item, fontSize, out font))
+                {
+                    return true;
+                }
+            }
+
+            if (TextClip.GetFont().TryGet(fontName, out var family))
+            {
+                font = family.CreateFont(fontSize);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryCreateFontFromItem(FontItem item, float fontSize, out Font font)
+        {
+            font = default!;
+
+            var family = item.InnerFont?.Families.FirstOrDefault();
+            if (family is not null)
+            {
+                font = ((SixLabors.Fonts.FontFamily)family).CreateFont(fontSize);
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(item.Path) && File.Exists(item.Path))
+            {
+                try
+                {
+                    var collection = new FontCollection();
+                    family = collection.Add(item.Path);
+                    if (family is null)
+                    {
+                        return false;
+                    }
+                    font = ((SixLabors.Fonts.FontFamily)family).CreateFont(fontSize);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"TryCreateFontFromItem('{item.FontName}')");
+                }
+            }
+
+            return false;
+        }
+
         #endregion
 
         #region pron and order
@@ -455,4 +532,3 @@ namespace projectFrameCut.Services
 
 
 }
-

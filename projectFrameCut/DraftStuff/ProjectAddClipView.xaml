@@ -665,46 +665,87 @@
                     </Grid>
                 </Border>
 
+                <tv:CompactTabView Grid.Row="2" Margin="8,4,8,8">
+                    <tv:TabbedViewItem Header="新样式" Tag="ProviderStyles">
+                        <CollectionView x:Name="TextStyleProviderCollectionView"
+                                        ItemsSource="{Binding FilteredAvailableTextStyleProviders}"
+                                        SelectionMode="None"
+                                        SizeChanged="OnCollectionViewSizeChanged">
+                            <CollectionView.ItemsLayout>
+                                <GridItemsLayout Orientation="Vertical" Span="8" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                            </CollectionView.ItemsLayout>
 
-                <CollectionView x:Name="TextStyleProviderCollectionView"
-                                    Grid.Row="2"
-                                    ItemsSource="{Binding FilteredAvailableTextStyleProviders}"
-                                    SelectionMode="None"
-                                    Margin="8,4,8,8"
-                                    SizeChanged="OnCollectionViewSizeChanged">
-                    <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical" Span="8" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
-                    </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:TextStyleProviderItemViewModel">
+                                    <Border StrokeThickness="1"
+                                            Stroke="Gray"
+                                            ToolTipProperties.Text="{Binding Name}"
+                                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                                            HeightRequest="120"
+                                            WidthRequest="180"
+                                            StrokeShape="RoundRectangle 8">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                    NumberOfTapsRequired="2"
+                                                    Command="{Binding AddTextClipWithStyleProviderCommand}"/>
+                                        </Border.GestureRecognizers>
+                                        <Grid Padding="8">
+                                            <Image Source="{Binding PreviewSource}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:TextStyleProviderItemViewModel">
-                            <Border StrokeThickness="1"
-                                        Stroke="Gray"
-                                        ToolTipProperties.Text="{Binding Name}"
-                                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
-                                        HeightRequest="120"
-                                        WidthRequest="180"
-                                        StrokeShape="RoundRectangle 8">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                            NumberOfTapsRequired="2"
-                                            Command="{Binding AddTextClipWithStyleProviderCommand}"/>
-                                </Border.GestureRecognizers>
-                                <Grid Padding="8">
-                                    <Image Source="{Binding PreviewSource}"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
+                            <CollectionView.EmptyView>
+                                <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                                       FontSize="14"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       Margin="20"/>
+                            </CollectionView.EmptyView>
+                        </CollectionView>
+                    </tv:TabbedViewItem>
 
-                    <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
-                                   FontSize="14"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"
-                                   Margin="20"/>
-                    </CollectionView.EmptyView>
-                </CollectionView>
+                    <tv:TabbedViewItem Header="旧样式" Tag="LegacyStyles">
+                        <CollectionView x:Name="TextStyleCollectionView"
+                                        ItemsSource="{Binding FilteredAvailableTextStyles}"
+                                        SelectionMode="None"
+                                        SizeChanged="OnCollectionViewSizeChanged">
+                            <CollectionView.ItemsLayout>
+                                <GridItemsLayout Orientation="Vertical" Span="8" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                            </CollectionView.ItemsLayout>
+
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:TextStyleItemViewModel">
+                                    <Border StrokeThickness="1"
+                                            Stroke="Gray"
+                                            ToolTipProperties.Text="{Binding Name}"
+                                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                                            HeightRequest="120"
+                                            WidthRequest="180"
+                                            StrokeShape="RoundRectangle 8">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                    NumberOfTapsRequired="2"
+                                                    Command="{Binding AddTextClipWithStyleCommand}"/>
+                                        </Border.GestureRecognizers>
+                                        <Grid Padding="8">
+                                            <Image Source="{Binding PreviewSource}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+
+                            <CollectionView.EmptyView>
+                                <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                                       FontSize="14"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       Margin="20"/>
+                            </CollectionView.EmptyView>
+                        </CollectionView>
+                    </tv:TabbedViewItem>
+                </tv:CompactTabView>
             </Grid>
         </tv:TabbedViewItem>
         <!-- <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddPicture}" Tag="Picture" x:Name="AddPictureTab" x:FieldModifier="public" >

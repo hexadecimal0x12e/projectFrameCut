@@ -2,6 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
+             xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers"
              x:Class="projectFrameCut.ApplicationAPIBase.Views.Pickers.FontPicker"
              x:Name="Root">
@@ -46,12 +47,12 @@
                                 <Setter Property="BackgroundColor" Value="#80808080" />
                             </DataTrigger>
                         </Border.Triggers>
-                        <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto" ToolTipProperties.Text="{Binding FontName}" InputTransparent="True">
+                        <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto" ToolTipProperties.Text="{Binding FontName}">
                             <Label Text="{Binding DisplayName}" FontAttributes="Bold" FontSize="16" Grid.Row="0" Grid.Column="0" VerticalOptions="Center" LineBreakMode="TailTruncation" InputTransparent="True"/>
                             <Border StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="#EFEFEF" Padding="10,2" Grid.Row="0" Grid.Column="1" VerticalOptions="Center" InputTransparent="True">
                                 <Label Text="{Binding Category}" FontSize="12" TextColor="Gray" InputTransparent="True"/>
                             </Border>
-                            <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0, 5, 0, 0" HeightRequest="30" HorizontalOptions="Fill" InputTransparent="True">
+                            <Grid Grid.Row="1" Grid.Column="0" Margin="0, 5, 0, 0" HeightRequest="30" HorizontalOptions="Fill" InputTransparent="True">
                                 <Image Source="{Binding PreviewImageSource}"
                                        HorizontalOptions="Start"
                                        Aspect="AspectFit"
@@ -64,6 +65,26 @@
                                     <ActivityIndicator IsRunning="True" Color="Gray" HeightRequest="16" WidthRequest="16" InputTransparent="True"/>
                                 </HorizontalStackLayout>
                             </Grid>
+                            <Button Grid.Row="1"
+                                   Grid.Column="1"
+                                   Margin="8, 5, 0, 0"
+                                   WidthRequest="36"
+                                   HeightRequest="30"
+                                   Padding="0"
+                                   Text="☆"
+                                   FontSize="18"
+                                   TextColor="Black"
+                                   Clicked="FavoriteButton_Clicked"
+                                   CommandParameter="{Binding .}"
+                                   ToolTipProperties.Text="{l:Localized Key=FontPicker_Favorite_Add}">
+                               <Button.Triggers>
+                                   <DataTrigger TargetType="Button" Binding="{Binding IsFavorite}" Value="True">
+                                       <Setter Property="Text" Value="★" />
+                                       <Setter Property="TextColor" Value="#F0B400" />
+                                       <Setter Property="ToolTipProperties.Text" Value="{l:Localized Key=FontPicker_Favorite_Remove}" />
+                                   </DataTrigger>
+                               </Button.Triggers>
+                            </Button>
                         </Grid>
                     </Border>
                 </DataTemplate>

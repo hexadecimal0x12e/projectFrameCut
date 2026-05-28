@@ -152,7 +152,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var entries = BuildEntries();
             try
             {
-                var rect = TextClipMeasureHelper.MeasureBounds(entries);
+                var rect = TextMeasureHelper.MeasureBounds(entries);
                 return new ClipPositionTuple((int)Math.Round(rect.X), (int)Math.Round(rect.Y), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)), false);
             }
             catch
@@ -181,14 +181,14 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                             if (item is TextClipEntry te) list.Add(te);
                         }
                         Parameters[EntriesJsonKey] = System.Text.Json.JsonSerializer.Serialize(list);
-                        var rect = TextClipMeasureHelper.MeasureBounds(list.ToArray());
+                        var rect = TextMeasureHelper.MeasureBounds(list.ToArray());
                         return (new Dictionary<string, string>(Parameters), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
                     }
                     else if (args.Value is string js)
                     {
                         Parameters[EntriesJsonKey] = js;
                         var des = System.Text.Json.JsonSerializer.Deserialize<TextClipEntry[]>(js) ?? System.Array.Empty<TextClipEntry>();
-                        var rect = TextClipMeasureHelper.MeasureBounds(des);
+                        var rect = TextMeasureHelper.MeasureBounds(des);
                         return (new Dictionary<string, string>(Parameters), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
                     }
                 }

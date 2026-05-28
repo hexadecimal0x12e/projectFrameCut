@@ -175,10 +175,15 @@ public partial class DraftPage : ContentPage, IDraftPage
     private double _continuousAudioStartFrame = 0;
     private DateTime _lastDynamicPreviewUIUpdate = DateTime.MinValue;
 
-    Lock saveLocker = new();
+    readonly SemaphoreSlim saveLocker = new(1, 1);
 
     private CancellationTokenSource? _autoSaveCts;
     private const int AutoSaveDelayMs = 3000;
+    private const int SnapshotSaveDebounceMs = 600;
+    private readonly object _snapshotSaveGate = new();
+    private CancellationTokenSource? _snapshotSaveCts;
+    private ClipUpdateEventArgs? _pendingSnapshotSaveArgs;
+    private bool _historyPanelDirty = true;
 
     bool AlreadyDisappeared = false;
 
@@ -820,7 +825,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         AssisstantSubWindow.Content = ChatSessionsView;
         MainMultiWindowView.CloseWindow(AssisstantSubWindow);
-        HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
+        RefreshHistorySubWindowContent();
         MainMultiWindowView.CloseWindow(HistorySubWindow);
         //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
@@ -4501,7 +4506,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Clips[clip.Id] = clip;
 
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, SourceId = clip.Id, SourceName = clip.DisplayName, DetailInfo = e.Id, NoSave = false });
-        HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
+        MarkHistoryPanelDirty();
 
 
         await ReRenderUI();
@@ -6220,6 +6225,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void ActivateMultiWindowItem(MultiWindowItem window)
     {
+        if (window == HistorySubWindow && _historyPanelDirty)
+        {
+            RefreshHistorySubWindowContent();
+        }
+
         if (!MainMultiWindowView.Children.Contains(window))
         {
             MainMultiWindowView.AddWindow(window);
@@ -7706,12 +7716,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         if (!IsReadonly && (!e?.NoSave ?? false))
         {
-            await Save(false, e);
-            try
-            {
-                HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
-            }
-            catch { }
+            ScheduleSnapshotSave(e);
         }
 
         UpdatePlayheadHeight();
@@ -7790,6 +7795,74 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Log(ex, "auto-save failed", this);
             }
         }, TaskContinuationOptions.RunContinuationsAsynchronously);
+    }
+
+    private void ScheduleSnapshotSave(ClipUpdateEventArgs e)
+    {
+        if (AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
+        {
+            return;
+        }
+
+        lock (_snapshotSaveGate)
+        {
+            _pendingSnapshotSaveArgs = e;
+            _snapshotSaveCts?.Cancel();
+            _snapshotSaveCts?.Dispose();
+            _snapshotSaveCts = new CancellationTokenSource();
+            var cts = _snapshotSaveCts;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(SnapshotSaveDebounceMs, cts.Token);
+                    if (cts.Token.IsCancellationRequested || AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
+                    {
+                        return;
+                    }
+
+                    ClipUpdateEventArgs? pendingArgs;
+                    lock (_snapshotSaveGate)
+                    {
+                        pendingArgs = _pendingSnapshotSaveArgs;
+                        _pendingSnapshotSaveArgs = null;
+                    }
+
+                    await Save(false, pendingArgs);
+                    MarkHistoryPanelDirty();
+                }
+                catch (TaskCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "snapshot save failed", this);
+                }
+            }, cts.Token);
+        }
+    }
+
+    private void MarkHistoryPanelDirty()
+    {
+        _historyPanelDirty = true;
+        if (MainMultiWindowView.Children.Contains(HistorySubWindow))
+        {
+            RefreshHistorySubWindowContent();
+        }
+    }
+
+    private void RefreshHistorySubWindowContent()
+    {
+        try
+        {
+            HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
+            _historyPanelDirty = false;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "refresh history panel", this);
+        }
     }
 
 
@@ -7980,65 +8053,65 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
-        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
-        var assets = Assets.Values.ToList();
-        var snapshotId = Guid.NewGuid();
-        string slot = ".";
-        if (noSlot)
+        if (!await saveLocker.WaitAsync(1500))
         {
-            ProjectInfo.NormallyExited = true;
-            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
-            try
-            {
-                CancellationTokenSource cts = new();
-                cts.CancelAfter(10000);
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        var thumbPath = ProjectInfo.ThumbPath ?? previewer.RenderFrame(0U, 1280, 720);
-                        if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
-                        {
-                            var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
-                            File.Copy(thumbPath, destPath, true);
-                        }
-                    }
-                    catch { }
-
-                }, cts.Token);
-
-            }
-            catch { }
+            Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
+            return;
         }
-        else //avoid worst condition (crashes while saving)
+        try
         {
-            slot = $"slot_{snapshotId}";
-            ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
+            var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
+            var assets = Assets.Values.ToList();
+            var snapshotId = Guid.NewGuid();
+            string slot = ".";
+            if (noSlot)
             {
-                Previous = PreviousSnapshotID
-            };
-            if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
-            {
-                if (!prevEntry.Next.Contains(snapshotId))
-                    prevEntry.Next.Add(snapshotId);
-            }
-            ProjectInfo.LastSnapshotID = snapshotId;
-            CurrentSnapshotID = snapshotId;
-            LogDiagnostic($"Switching slot to {snapshotId}...");
+                ProjectInfo.NormallyExited = true;
+                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
+                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
+                try
+                {
+                    using var cts = new CancellationTokenSource();
+                    cts.CancelAfter(10000);
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
+                            var thumbPath = ProjectInfo.ThumbPath ?? previewer.RenderFrame(0U, 1280, 720);
+                            if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
+                            {
+                                var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
+                                File.Copy(thumbPath, destPath, true);
+                            }
+                        }
+                        catch { }
 
-            if (MaximumSaveSlot >= 0)
-            {
-                PruneOldestSaveSlots();
-            }
+                    }, cts.Token);
 
-            if (!saveLocker.TryEnter(1500))
-            {
-                Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
-                return;
+                }
+                catch { }
             }
-            try
+            else //avoid worst condition (crashes while saving)
             {
+                slot = $"slot_{snapshotId}";
+                ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
+                {
+                    Previous = PreviousSnapshotID
+                };
+                if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
+                {
+                    if (!prevEntry.Next.Contains(snapshotId))
+                        prevEntry.Next.Add(snapshotId);
+                }
+                ProjectInfo.LastSnapshotID = snapshotId;
+                CurrentSnapshotID = snapshotId;
+                LogDiagnostic($"Switching slot to {snapshotId}...");
+
+                if (MaximumSaveSlot >= 0)
+                {
+                    PruneOldestSaveSlots();
+                }
+
                 if (args is not null)
                 {
                     draft.ChangeReason = args.ToString();
@@ -8051,48 +8124,30 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
                 PreviousSnapshotID = draft.SnapshotID;
+                _historyNavigatedByUndoRedo = false;
             }
-            catch (Exception ex)
+
+            ProjectDuration = draft.Duration;
+            ProjectInfo.LastChanged = DateTime.Now;
+            ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+            ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+            ProjectInfo.PluginUsed =
+                draft.Clips.OfType<ClipDraftDTO>()
+                           .Select(c => c.FromPlugin)
+                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                           .Where(c => !c.StartsWith("projectFrameCut.Render."))
+                           .Distinct().ToList();
+
+            if (ClipEditor != null)
             {
-                Log(ex, "saving draft failed", this);
-                SetStateFail(Localized.DraftPage_CannotSave_Exception(ex));
-            }
-            finally
-            {
-                saveLocker.Exit();
-
+                ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
+                ProjectInfo.Properties["InteractableEditor_EnableSnapping"] = ClipEditor.EnableSnapping.ToString();
+                ProjectInfo.Properties["InteractableEditor_DisallowClipOutOfBounds"] = ClipEditor.DisallowClipOutOfBounds.ToString();
+                ProjectInfo.Properties["InteractableEditor_ShowReferenceLines"] = ClipEditor.ShowReferenceLines.ToString();
+                ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
             }
 
-            _historyNavigatedByUndoRedo = false;
-
-        }
-
-        //SaveMainMultiWindowViewStateToProjectInfo();
-
-        ProjectDuration = draft.Duration;
-        ProjectInfo.LastChanged = DateTime.Now;
-        ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
-        ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
-        ProjectInfo.PluginUsed =
-            draft.Clips.OfType<ClipDraftDTO>()
-                       .Select(c => c.FromPlugin)
-                       .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
-                       .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
-                       .Where(c => !c.StartsWith("projectFrameCut.Render."))
-                       .Distinct().ToList();
-
-        if (ClipEditor != null)
-        {
-            ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
-            ProjectInfo.Properties["InteractableEditor_EnableSnapping"] = ClipEditor.EnableSnapping.ToString();
-            ProjectInfo.Properties["InteractableEditor_DisallowClipOutOfBounds"] = ClipEditor.DisallowClipOutOfBounds.ToString();
-            ProjectInfo.Properties["InteractableEditor_ShowReferenceLines"] = ClipEditor.ShowReferenceLines.ToString();
-            ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
-        }
-
-        saveLocker.Enter();
-        try
-        {
             await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.pjfc"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
             ProjectInfo.SaveSnapshotMapping(WorkingPath, savingOpts);
         }
@@ -8103,7 +8158,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         finally
         {
-            saveLocker.Exit();
+            saveLocker.Release();
         }
 
     }
@@ -8378,7 +8433,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             EnsureContinuousTrackIndices();
             CurrentSnapshotID = snapshotId;
             PreviousSnapshotID = draftJson.PreviousSnapshot;
-            HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
+            RefreshHistorySubWindowContent();
             DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 

@@ -220,6 +220,9 @@ namespace projectFrameCut.InteractableEditor
             Math.Abs(a.Blue - b.Blue) < 0.004 &&
             Math.Abs(a.Alpha - b.Alpha) < 0.004;
 
+        private static Brush GetClipOverlayStroke(ClipElementUI? clip)
+            => clip?.Clip.Stroke ?? Colors.Yellow;
+
         public ContentView RealtimePreviewHost => LivePreviewerHost;
         public Image StaticPreviewOverlayImage => PreviewOverlayImage;
         public bool IsPlacingReferenceLine => _isPlacingReferenceLine && _pendingReferenceLineOrientation != null;
@@ -416,12 +419,16 @@ namespace projectFrameCut.InteractableEditor
                     || (!ClipVisual.IsVisible && !PreviewHost.IsVisible);
             }
 
-            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual)
+            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null)
             {
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
                 ClipVisual.IsVisible = showClipVisual;
+                if (showClipVisual)
+                {
+                    ClipVisual.Stroke = clipStroke ?? Colors.Yellow;
+                }
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
                 UpdateRootInputTransparency();
 
@@ -1540,7 +1547,8 @@ namespace projectFrameCut.InteractableEditor
                     showHandles,
                     showSizeLabel,
                     showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                    isCurrentClip);
+                    isCurrentClip,
+                    isCurrentClip ? GetClipOverlayStroke(_currentClip) : null);
 
                 UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
 
@@ -1941,7 +1949,8 @@ namespace projectFrameCut.InteractableEditor
                         showHandles: showHandles,
                         showSizeLabel: showSizeLabel,
                         sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                        showClipVisual: isCurrentClip);
+                        showClipVisual: isCurrentClip,
+                        clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
 
                     UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
