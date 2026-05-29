@@ -346,12 +346,7 @@ namespace projectFrameCut.WinUI
         public static void Crash(Exception ex)
         {
             MauiProgram.LogWriter?.Flush();
-#if DEBUG
-            if (Debugger.IsAttached)
-            {
-                throw ex;
-            }
-#endif
+
             try
             {
                 MauiProgram.LogWriter?.WriteLine("*** FATAL: CRASH");
@@ -361,6 +356,15 @@ namespace projectFrameCut.WinUI
 
             }
             catch (Exception) { }
+
+#if DEBUG
+            if (Debugger.IsAttached)
+            {
+                Debugger.BreakForUserUnhandledException(ex);
+                Environment.Exit(ex.HResult);
+            }
+#endif
+
             try
             {
                 if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it

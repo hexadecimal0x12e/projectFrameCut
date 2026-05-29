@@ -90,7 +90,11 @@ namespace projectFrameCut.Services
                     Font font = null!;
                     try
                     {
-                        font = item.InnerFont?.Families?.FirstOrDefault().CreateFont(fontSize) ?? throw new InvalidOperationException("Font not available.");
+                        if (!TryResolveFontFamily(item, out var family))
+                        {
+                            throw new InvalidOperationException("Font not available.");
+                        }
+                        font = family.CreateFont(fontSize);
                     }
                     catch
                     {
@@ -154,18 +158,25 @@ namespace projectFrameCut.Services
             {
                 var info = TextHelper.ReadFontFileInfo(f);
                 var fontCollection = new FontCollection();
+                FontFamily family;
                 try
                 {
-                    fontCollection.Add(f);
+                    family = fontCollection.Add(f);
                 }
                 catch (Exception ex)
                 {
                     Log(ex, $"Failed to add font to collection: {f}");
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(family.Name))
+                {
+                    continue;
                 }
                 LoadedFonts.TryAdd(info.EnglishName, new FontItem
                 {
                     InnerItem = info,
                     InnerFont = fontCollection,
+                    InnerFamily = family,
                     Category = Localized.TextServices_FontCatagory_YourAsset,
                     DisplayName = info.DisplayName,
                     PrimaryLanguageTag = TextHelper.ToLanguageCode(info.PrimaryLanguage, true),
@@ -226,14 +237,20 @@ namespace projectFrameCut.Services
             return false;
         }
 
-        private static bool TryCreateFontFromItem(FontItem item, float fontSize, out Font font)
+        public static bool TryResolveFontFamily(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item, out SixLabors.Fonts.FontFamily family)
         {
-            font = default!;
+            family = default;
 
-            var family = item.InnerFont?.Families.FirstOrDefault();
-            if (family is not null)
+            if (!string.IsNullOrWhiteSpace(item.InnerFamily.Name))
             {
-                font = ((SixLabors.Fonts.FontFamily)family).CreateFont(fontSize);
+                family = item.InnerFamily;
+                return true;
+            }
+
+            var collectionFamily = item.InnerFont?.Families.FirstOrDefault();
+            if (collectionFamily is { } fromCollection && !string.IsNullOrWhiteSpace(fromCollection.Name))
+            {
+                family = fromCollection;
                 return true;
             }
 
@@ -242,18 +259,32 @@ namespace projectFrameCut.Services
                 try
                 {
                     var collection = new FontCollection();
-                    family = collection.Add(item.Path);
-                    if (family is null)
+                    var pathFamily = collection.Add(item.Path);
+                    if (string.IsNullOrWhiteSpace(pathFamily.Name))
                     {
                         return false;
                     }
-                    font = ((SixLabors.Fonts.FontFamily)family).CreateFont(fontSize);
+
+                    family = pathFamily;
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    Log(ex, $"TryCreateFontFromItem('{item.FontName}')");
+                    Log(ex, $"TryResolveFontFamily('{item.FontName}')");
                 }
+            }
+
+            return false;
+        }
+
+        private static bool TryCreateFontFromItem(FontItem item, float fontSize, out Font font)
+        {
+            font = default!;
+
+            if (TryResolveFontFamily(item, out var family))
+            {
+                font = family.CreateFont(fontSize);
+                return true;
             }
 
             return false;

@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using Microsoft.Maui.Controls.Shapes;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 {
@@ -250,7 +251,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             return border;
         }
 
-        private void UpdateSelection()
+        private async void UpdateSelection()
         {
             if (TabItems == null || TabItems.Count == 0)
             {
@@ -315,34 +316,64 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 };
                 ContentPresenter.Content = indicator;
 
-                // Run the async factory off the UI thread to avoid blocking for heavy work.
-                _ = Task.Run(async () =>
+                View? lazyContent = null;
+                try
                 {
-                    View? lazyContent = null;
-                    try
+                    lazyContent = await selectedItem.LazyAsyncContentFactory();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Show Tab {SelectedItem.Tag}/{SelectedItem.Header} in the tabview of {Parent}({Parent.GetType().Name})", this);
+                    lazyContent = new VerticalStackLayout
                     {
-                        lazyContent = await selectedItem.LazyAsyncContentFactory();
-                    }
-                    catch
+                        Children =
+                            {
+                                new Label
+                                {
+                                    Text = LocalizedResources.APIBaseLocalizedResources.Localized.TabView_Error(SelectedItem?.Header?.ToString() ?? "Unknown tab"),
+                                    FontSize = 20,
+                                    TextColor = Colors.Yellow,
+                                    HorizontalOptions = LayoutOptions.Center,
+                                    VerticalOptions = LayoutOptions.Center
+                                },
+                                new Label
+                                {
+                                    Text = ex.ToString(),
+                                    FontSize = 12,
+                                    TextColor = Colors.Gray,
+                                    HorizontalOptions = LayoutOptions.Center,
+                                    VerticalOptions = LayoutOptions.Center
+                                }
+                            },
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new(8)
+                    };
+
+                    if (Debugger.IsAttached)
                     {
-                        // Swallow exceptions here to avoid crashing UI thread; consider logging if a logger is available.
+                        if (await Dispatcher.DispatchAsync(async () => await Shell.Current.CurrentPage.DisplayAlertAsync("Error", $"Failed to load content for tab '{SelectedItem?.Header ?? "Unknown"}'.{Environment.NewLine}Error: {ex.Message}{Environment.NewLine}{Environment.NewLine}Throw it?", "Yes", "No")))
+                        {
+                            throw;
+                        }
                     }
 
-                    MainThread.BeginInvokeOnMainThread(() =>
+                }
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (lazyContent != null)
                     {
-                        if (lazyContent != null)
-                        {
-                            _pendingTabContents[selectedItem] = lazyContent;
-                            UpdateSelection();
-                        }
-                        else
-                        {
-                            // Remove the indicator if loading failed or returned null and clear pending entry.
-                            if (ContentPresenter.Content == indicator)
-                                ContentPresenter.Content = null;
-                            _pendingTabContents[selectedItem] = null;
-                        }
-                    });
+                        _pendingTabContents[selectedItem] = lazyContent;
+                        UpdateSelection();
+                    }
+                    else
+                    {
+                        // Remove the indicator if loading failed or returned null and clear pending entry.
+                        if (ContentPresenter.Content == indicator)
+                            ContentPresenter.Content = null;
+                        _pendingTabContents[selectedItem] = null;
+                    }
                 });
 
                 return;
@@ -360,7 +391,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 ContentPresenter.Content = selectedContent;
             }
 
-           
+
         }
     }
 }

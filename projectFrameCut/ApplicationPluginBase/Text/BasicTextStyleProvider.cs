@@ -16,6 +16,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
+using System.Diagnostics;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -413,6 +414,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
+        [DebuggerStepThrough()]
         private string GetOrDefault(string key, string fallback)
         {
             return _parameters.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
@@ -420,6 +422,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 : fallback;
         }
 
+        [DebuggerStepThrough()]
         private static float ParseFloat(string? value, float fallback)
         {
             return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;

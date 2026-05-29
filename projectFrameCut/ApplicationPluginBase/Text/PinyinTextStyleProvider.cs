@@ -482,22 +482,14 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         private static Font ResolveFont(string fontFamily, float fontSize)
         {
-            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && fontItem.InnerFont is not null)
+            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var family))
             {
-                var family = fontItem.InnerFont.Families.FirstOrDefault();
-                if (family != default)
-                {
-                    return family.CreateFont(fontSize);
-                }
+                return family.CreateFont(fontSize);
             }
 
-            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && fallbackItem.InnerFont is not null)
+            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFamily))
             {
-                var fallbackFamily = fallbackItem.InnerFont.Families.FirstOrDefault();
-                if (fallbackFamily != default)
-                {
-                    return fallbackFamily.CreateFont(fontSize);
-                }
+                return fallbackFamily.CreateFont(fontSize);
             }
 
             var systemFamily = SystemFonts.Families.FirstOrDefault();

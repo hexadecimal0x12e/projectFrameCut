@@ -679,15 +679,20 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
 
                     // 第二步：创建 FontCollection（内存密集，失败时继续）
                     FontCollection? fontCollection = null;
+                    FontFamily family = default;
                     try
                     {
                         fontCollection = new FontCollection();
-                        fontCollection.Add(path);
+                        family = fontCollection.Add(path);
                     }
-                    catch
+#pragma warning disable CS0168 // to capture why font load fail in debugger
+                    catch (Exception ex)
                     {
                         // FontCollection 创建失败不影响继续，保留为 null
                     }
+#pragma warning restore CS0168 
+                    if (string.IsNullOrWhiteSpace(family.Name))
+                        return;
 
                     // 第三步：创建结果对象
                     var fontItem = new FontItem
@@ -698,6 +703,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                         Category = category,
                         InnerItem = info,
                         InnerFont = fontCollection,
+                        InnerFamily = family,
                         Path = path,
                     };
 

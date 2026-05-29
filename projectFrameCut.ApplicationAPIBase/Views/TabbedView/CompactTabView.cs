@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 {
@@ -8,6 +11,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
     {
         private readonly Grid _switchRow;
         private readonly Grid _contentHost;
+        private readonly Dictionary<TabbedViewItem, View?> _pendingTabContents = new();
 
         public event EventHandler<TabbedViewItem>? OnTabSwitched;
 
@@ -147,6 +151,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             _switchRow.ColumnDefinitions.Clear();
             _switchRow.Children.Clear();
             _contentHost.Children.Clear();
+            var previousPendingContents = new Dictionary<TabbedViewItem, View?>(_pendingTabContents);
+            _pendingTabContents.Clear();
 
             if (TabItems == null || TabItems.Count == 0)
             {
@@ -158,6 +164,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             {
                 int index = i;
                 var item = TabItems[i];
+                var content = item.Content;
+                if (previousPendingContents.TryGetValue(item, out var previousPendingContent) && previousPendingContent != null)
+                {
+                    content = previousPendingContent;
+                }
+
+                _pendingTabContents[item] = content;
+                item.Content = null;
 
                 _switchRow.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
@@ -200,7 +214,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             };
         }
 
-        private void UpdateSelection(bool raiseEvent)
+        private async void UpdateSelection(bool raiseEvent)
         {
             if (TabItems == null || TabItems.Count == 0)
             {
@@ -233,6 +247,78 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             if (SelectedItem != selected)
             {
                 SelectedItem = selected;
+            }
+
+            if (selected.LazyContentFactory != null && selected.Content == null &&
+                (!_pendingTabContents.TryGetValue(selected, out var cachedContent) || cachedContent == null))
+            {
+                var lazyContent = selected.LazyContentFactory();
+                if (lazyContent != null)
+                {
+                    selected.Content = lazyContent;
+                    _pendingTabContents[selected] = null;
+                }
+            }
+
+            if (selected.LazyAsyncContentFactory != null && selected.Content == null &&
+                (!_pendingTabContents.TryGetValue(selected, out var cachedAsyncContent) || cachedAsyncContent == null))
+            {
+                var indicator = new ActivityIndicator
+                {
+                    IsRunning = true,
+                    IsVisible = true,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                selected.Content = indicator;
+
+                View? lazyContent = null;
+                try
+                {
+                    lazyContent = await selected.LazyAsyncContentFactory();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Show Tab {selected.Tag}/{selected.Header} in the compact tabview of {Parent}({Parent?.GetType().Name})", this);
+                    lazyContent = new VerticalStackLayout
+                    {
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = ex.Message,
+                                FontSize = 12,
+                                TextColor = Colors.Gray,
+                                HorizontalOptions = LayoutOptions.Center,
+                                VerticalOptions = LayoutOptions.Center
+                            }
+                        },
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new Thickness(8)
+                    };
+                }
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (lazyContent != null)
+                    {
+                        selected.Content = lazyContent;
+                        _pendingTabContents[selected] = null;
+                    }
+                    else if (selected.Content == indicator)
+                    {
+                        selected.Content = null;
+                        _pendingTabContents[selected] = null;
+                    }
+                });
+            }
+
+            if (selected.Content == null && _pendingTabContents.TryGetValue(selected, out var pendingContent) && pendingContent != null)
+            {
+                selected.Content = pendingContent;
+                _pendingTabContents[selected] = null;
             }
 
             if (raiseEvent)

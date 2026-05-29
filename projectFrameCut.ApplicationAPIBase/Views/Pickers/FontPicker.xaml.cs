@@ -22,6 +22,8 @@ public class FontItem : INotifyPropertyChanged
 
     public FontCollection? InnerFont { get; set; }
 
+    public FontFamily InnerFamily { get; set; }
+
     private string? _displayName;
 
     public string DisplayName
