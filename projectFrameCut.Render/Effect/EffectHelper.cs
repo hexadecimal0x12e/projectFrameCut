@@ -1,4 +1,6 @@
 ﻿
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -127,10 +129,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p16.hasAlphaChannel,
-                    a = p16.hasAlphaChannel ? new float[width * height] : null
+                    
+                    
+                    HasAlphaChannel = p16.HasAlphaChannel,
+                    a = p16.HasAlphaChannel ? new float[width * height] : null
                 };
 
                 for (int y = 0; y < height; y++)
@@ -151,10 +153,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p8.hasAlphaChannel,
-                    a = p8.hasAlphaChannel ? new float[width * height] : null
+                    
+                    
+                    HasAlphaChannel = p8.HasAlphaChannel,
+                    a = p8.HasAlphaChannel ? new float[width * height] : null
                 };
 
                 for (int y = 0; y < height; y++)
@@ -215,9 +217,9 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(targetWidth, targetHeight)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                     a = new float[targetWidth * targetHeight]
                 };
 
@@ -246,9 +248,9 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(targetWidth, targetHeight)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                     a = new float[targetWidth * targetHeight]
                 };
 
@@ -309,9 +311,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(frame.Width, frame.Height)
                 {
-                    frameIndex = frame.frameIndex,
-                    filePath = frame.filePath,
-                    hasAlphaChannel = true,
+                    HasAlphaChannel = true,
                     a = new float[frame.Pixels]
                 };
 
@@ -337,9 +337,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(frame.Width, frame.Height)
                 {
-                    frameIndex = frame.frameIndex,
-                    filePath = frame.filePath,
-                    hasAlphaChannel = true,
+                    HasAlphaChannel = true,
                     a = new float[frame.Pixels]
                 };
 
@@ -383,7 +381,7 @@ namespace projectFrameCut.Render.Effect
             int radius = Math.Max(0, (int)Math.Ceiling(sigma));
             if (radius == 0)
             {
-                var copied = source.DeepCopy();
+                var copied = source.Clone();
                 copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                 {
                     OperationDisplayName = operationDisplayName,
@@ -410,9 +408,9 @@ namespace projectFrameCut.Render.Effect
 
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p16.hasAlphaChannel,
+                    
+                    
+                    HasAlphaChannel = p16.HasAlphaChannel,
                     a = a
                 };
                 for (int i = 0; i < source.Pixels; i++)
@@ -432,9 +430,9 @@ namespace projectFrameCut.Render.Effect
 
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p8.hasAlphaChannel,
+                    
+                    
+                    HasAlphaChannel = p8.HasAlphaChannel,
                     a = a
                 };
                 for (int i = 0; i < source.Pixels; i++)
@@ -471,7 +469,7 @@ namespace projectFrameCut.Render.Effect
             ArgumentNullException.ThrowIfNull(source);
             if (!horizontal && !vertical)
             {
-                var copied = source.DeepCopy();
+                var copied = source.Clone();
                 copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                 {
                     OperationDisplayName = operationDisplayName,
@@ -493,10 +491,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p16.hasAlphaChannel,
-                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p16.HasAlphaChannel,
+                    a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -524,10 +522,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p8.hasAlphaChannel,
-                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p8.HasAlphaChannel,
+                    a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -578,7 +576,7 @@ namespace projectFrameCut.Render.Effect
             amount = Math.Clamp(amount, 0f, 5f);
             if (amount <= 0f)
             {
-                var copied = source.DeepCopy();
+                var copied = source.Clone();
                 copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                 {
                     OperationDisplayName = operationDisplayName,
@@ -599,10 +597,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p16.hasAlphaChannel,
-                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p16.HasAlphaChannel,
+                    a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -639,10 +637,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p8.hasAlphaChannel,
-                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p8.HasAlphaChannel,
+                    a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -702,7 +700,7 @@ namespace projectFrameCut.Render.Effect
             radius = Math.Clamp(radius, 0.05f, 0.99f);
             if (strength <= 0f)
             {
-                var copied = source.DeepCopy();
+                var copied = source.Clone();
                 copied.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                 {
                     OperationDisplayName = operationDisplayName,
@@ -730,10 +728,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p16.hasAlphaChannel,
-                    a = p16.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p16.HasAlphaChannel,
+                    a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -762,10 +760,10 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = p8.hasAlphaChannel,
-                    a = p8.hasAlphaChannel ? new float[source.Pixels] : null
+                    
+                    
+                    HasAlphaChannel = p8.HasAlphaChannel,
+                    a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
 
                 for (int y = 0; y < source.Height; y++)
@@ -822,9 +820,9 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                     a = new float[source.Pixels]
                 };
                 Array.Copy(p16.r, dst.r, source.Pixels);
@@ -847,9 +845,9 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                     a = new float[source.Pixels]
                 };
                 Array.Copy(p8.r, dst.r, source.Pixels);

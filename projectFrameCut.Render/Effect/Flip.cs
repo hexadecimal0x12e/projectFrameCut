@@ -113,7 +113,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Flip",
             Operator = typeof(FlipProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Horizontal), Horizontal },

@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -151,12 +152,7 @@ namespace projectFrameCut.Render.Effect
                 Size = new Size(Width, Height),
                 Mode = PreserveAspectRatio ? ResizeMode.Max : ResizeMode.Stretch
             }));
-            IPicture resized = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(img),
-                16 => new Picture16bpp(img),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            IPicture resized = Shared.PictureExtensions.ToPJFCPicture(img, source.BitPerPixel);
             sw.Stop();
             _elapsed = sw.Elapsed;
 
@@ -179,7 +175,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Resize",
             Operator = typeof(ResizeProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Width), Width },
@@ -335,14 +331,14 @@ namespace projectFrameCut.Render.Effect
                 resultArr[3] is float[] a_out)
             {
                 IPicture result;
-                if (source.bitPerPixel == 16)
+                if (source.BitPerPixel == 16)
                 {
                     var p = new Picture16bpp(destWidth, destHeight);
                     p.r = r_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
                     p.g = g_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
                     p.b = b_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
                     p.a = a_out;
-                    p.hasAlphaChannel = true;
+                    p.HasAlphaChannel = true;
                     result = p;
                 }
                 else
@@ -352,7 +348,7 @@ namespace projectFrameCut.Render.Effect
                     p.g = g_out.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray();
                     p.b = b_out.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray();
                     p.a = a_out;
-                    p.hasAlphaChannel = true;
+                    p.HasAlphaChannel = true;
                     result = p;
                 }
                 sw.Stop();

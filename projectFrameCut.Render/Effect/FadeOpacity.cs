@@ -105,7 +105,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "FadeOpacity",
             Operator = typeof(FadeOpacityProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Opacity), Opacity }

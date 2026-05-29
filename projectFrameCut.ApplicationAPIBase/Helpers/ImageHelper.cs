@@ -5,7 +5,7 @@ using projectFrameCut.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats.Png;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 
 

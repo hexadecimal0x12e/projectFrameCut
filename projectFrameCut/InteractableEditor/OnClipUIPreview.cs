@@ -9,6 +9,8 @@ using Image = Microsoft.Maui.Controls.Image;
 using projectFrameCut.Asset;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Linq;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.InteractableEditor
 {
@@ -57,7 +59,7 @@ namespace projectFrameCut.InteractableEditor
                 return null;
             availableFrames = availableFrames.Order().ToList();
 
-            (var origWidth, var origHeight) = PictureExtensions.GetDimensions(pngs[0]);
+            (var origWidth, var origHeight) = new Picture8bpp(pngs[0]).GetDimensions();
 
             var rawClipHeight = clip.Clip.HeightRequest > 0
                 ? clip.Clip.HeightRequest

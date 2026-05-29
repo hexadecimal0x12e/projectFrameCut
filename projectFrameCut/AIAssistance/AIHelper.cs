@@ -10,7 +10,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.AIAssistance
 {

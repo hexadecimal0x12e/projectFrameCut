@@ -1,11 +1,13 @@
+using projectFrameCut.Drawing.Processing.Cropping;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using projectFrameCut.Render.Plugin;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -60,12 +62,7 @@ namespace projectFrameCut.Render.Effect
             var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
             var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(rect).Resize(targetWidth, targetHeight));
 
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(resultImg),
-                16 => new Picture16bpp(resultImg),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            IPicture result = Shared.PictureExtensions.ToPJFCPicture(resultImg, source.BitPerPixel);
             return result;
         }
 
@@ -147,8 +144,7 @@ namespace projectFrameCut.Render.Effect
                 safeCrop = new Rectangle(0, 0, Math.Min(source.Width, 1), Math.Min(source.Height, 1));
             }
 
-            using var cropped = EffectHelper.CropPicture(source, safeCrop.X, safeCrop.Y, safeCrop.Width, safeCrop.Height, "ZoomIn Crop", typeof(ZoomInProcessStep));
-            var result = cropped.Resize(TargetWidth, TargetHeight, false);
+            var result = source.EnterProcessContext().Crop(safeCrop.X, safeCrop.Y, safeCrop.Width, safeCrop.Height).Resize(TargetWidth, TargetHeight, false).Result;
             sw.Stop();
             _elapsed = sw.Elapsed;
 
@@ -176,7 +172,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "ZoomIn",
             Operator = typeof(ZoomInProcessStep),
             ProcessingFuncStackTrace = new System.Diagnostics.StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(CropRect), CropRect },

@@ -213,12 +213,7 @@ namespace projectFrameCut.Render.Effect
                     .AppendTranslation(new Vector2(centerX, centerY));
 
                 var transformed = img.Clone(ctx => ctx.Transform(transformBuilder).Crop(safeRect));
-                result = (int)source.bitPerPixel switch
-                {
-                    8 => new Picture8bpp(transformed),
-                    16 => new Picture16bpp(transformed),
-                    _ => throw new NotSupportedException("Specific pixel-mode is not supported.")
-                };
+                result = Shared.PictureExtensions.ToPJFCPicture(transformed, source.BitPerPixel);
             }
 
             sw.Stop();
@@ -272,7 +267,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Crop",
             Operator = typeof(CropProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(StartX), StartX },
@@ -474,7 +469,7 @@ namespace projectFrameCut.Render.Effect
                     p16.g.Select(Convert.ToSingle).ToArray(),
                     p16.b.Select(Convert.ToSingle).ToArray(),
                     p16.a ?? Enumerable.Repeat(1f, p16.Pixels).ToArray(),
-                    p16.hasAlphaChannel && p16.a is not null
+                    p16.HasAlphaChannel && p16.a is not null
                 );
             }
 
@@ -485,7 +480,7 @@ namespace projectFrameCut.Render.Effect
                     p8.g.Select(Convert.ToSingle).ToArray(),
                     p8.b.Select(Convert.ToSingle).ToArray(),
                     p8.a ?? Enumerable.Repeat(1f, p8.Pixels).ToArray(),
-                    p8.hasAlphaChannel && p8.a is not null
+                    p8.HasAlphaChannel && p8.a is not null
                 );
             }
 
@@ -494,13 +489,13 @@ namespace projectFrameCut.Render.Effect
 
         private static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a, bool keepAlpha)
         {
-            if (source.bitPerPixel == 16)
+            if (source.BitPerPixel == 16)
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = keepAlpha
+                    
+                    
+                    HasAlphaChannel = keepAlpha
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
                 picture.g = g.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -509,13 +504,13 @@ namespace projectFrameCut.Render.Effect
                 return picture;
             }
 
-            if (source.bitPerPixel == 8)
+            if (source.BitPerPixel == 8)
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = keepAlpha
+                    
+                    
+                    HasAlphaChannel = keepAlpha
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
                 picture.g = g.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();

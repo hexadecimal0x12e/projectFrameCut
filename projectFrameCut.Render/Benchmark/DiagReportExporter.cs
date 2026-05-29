@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.Benchmark
                         stepKey: stepKey,
                         stepElapsedMs: elapsed.TotalMilliseconds,
                         operationDisplayName: step.OperationDisplayName,
-                        stepName: step.StepUsed?.Name,
+                        stepName: "NA Due to projectFrameCut.Drawing",
                         op: step.Operator?.FullName,
                         propertiesJson: propsJson);
                 }
@@ -143,7 +143,6 @@ namespace projectFrameCut.Render.Benchmark
         private static string GetStepKey(PictureProcessStack step)
         {
             var name = step.OperationDisplayName;
-            if (string.IsNullOrWhiteSpace(name)) name = step.StepUsed?.Name;
             if (string.IsNullOrWhiteSpace(name)) name = step.Operator?.Name;
             return string.IsNullOrWhiteSpace(name) ? "(unknown)" : name;
         }

@@ -105,7 +105,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Sharpen",
             Operator = typeof(SharpenProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Amount), Amount }

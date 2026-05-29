@@ -1,4 +1,6 @@
-﻿namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
+﻿using projectFrameCut.Drawing.Base;
+
+namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public interface IMixture : IEffect
     {

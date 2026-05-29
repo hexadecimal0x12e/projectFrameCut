@@ -1,3 +1,5 @@
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -149,10 +151,6 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
 
         private static (float[] r, float[] g, float[] b, float[] a) ExtractFloatChannels(IPicture source)
         {
@@ -181,13 +179,13 @@ namespace projectFrameCut.Render.Effect
 
         private static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a)
         {
-            if (source.bitPerPixel == 16)
+            if (source.BitPerPixel == 16)
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
                 picture.g = g.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -196,13 +194,13 @@ namespace projectFrameCut.Render.Effect
                 return picture;
             }
 
-            if (source.bitPerPixel == 8)
+            if (source.BitPerPixel == 8)
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    
+                    
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
                 picture.g = g.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
@@ -212,6 +210,11 @@ namespace projectFrameCut.Render.Effect
             }
 
             throw new NotSupportedException($"Specific pixel-mode is not supported.");
+        }
+
+        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
+        {
+            throw new NotImplementedException();
         }
     }
 

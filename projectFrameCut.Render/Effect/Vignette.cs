@@ -112,7 +112,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Vignette",
             Operator = typeof(VignetteProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Strength), Strength },

@@ -106,7 +106,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Blur",
             Operator = typeof(BlurProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Sigma), Sigma }

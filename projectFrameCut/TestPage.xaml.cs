@@ -34,6 +34,8 @@ using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
 using System.Text;
 using FFmpeg.AutoGen;
+using projectFrameCut.Drawing.Base.Picture;
+
 
 
 
@@ -198,7 +200,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region openGL test
-    private projectFrameCut.Shared.Picture16bpp srcA, srcB;
+    private Picture16bpp srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
@@ -212,11 +214,11 @@ public partial class TestPage : ContentPage
             Task.WaitAll([
                 Task.Run(() =>
                 {
-                    srcA = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
+                    srcA = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
                 Task.Run(() =>
                 {
-                    srcB = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
+                    srcB = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
             ]);
 
@@ -544,13 +546,13 @@ public partial class TestPage : ContentPage
             Debug.WriteLine("Waiting for convertor done...");
             Task.WaitAll(RConvertor, GConvertor, BConvertor);
             Debug.WriteLine("Writing result...");
-            var outPic = new projectFrameCut.Shared.Picture16bpp(srcA.Width, srcA.Height)
+            var outPic = new Picture16bpp(srcA.Width, srcA.Height)
             {
                 r = uOutR,
                 g = uOutG,
                 b = uOutB,
                 a = outA,
-                hasAlphaChannel = true
+                HasAlphaChannel = true
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";
@@ -822,7 +824,7 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -904,7 +906,7 @@ public partial class TestPage : ContentPage
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();

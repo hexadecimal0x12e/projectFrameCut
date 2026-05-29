@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;

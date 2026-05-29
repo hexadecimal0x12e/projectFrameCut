@@ -16,6 +16,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Drawing.Processing.Resizing;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -88,7 +89,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             if (decoder is HDRDecoderContext h)
             {
-                return h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
+                return ((HDRPicture16bpp)h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize)).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
             }
 
             return decoder.GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
@@ -483,7 +484,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.EnterProcessContext().Resize(targetWidth, targetHeight, forceResize).Result.ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
@@ -686,7 +687,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             get;
             init
             {
-                if(!Guid.TryParse(Id, out field))
+                if (!Guid.TryParse(Id, out field))
                 {
                     Log($"A clip's ID field should be a valid guid. The input field has an invalid data '{Id}'", "warn");
                     field = Guid.Empty;
@@ -846,7 +847,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         OperationDisplayName = "TextClip Render",
                         Operator = typeof(TextClip),
                         ProcessingFuncStackTrace = new System.Diagnostics.StackTrace(true),
-                        StepUsed = null,
                         Properties = new Dictionary<string, object>
                         {
                             { "TextEntries", serializedEntries },
@@ -857,13 +857,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             IPicture rendered = targetPPB.Value switch
             {
-                8 => new Picture8bpp(canvas) { ProcessStack = stack },
-                16 => new Picture16bpp(canvas) { ProcessStack = stack },
+                8 => Shared.PictureExtensions.ToPJFCPicture(canvas, 8).ModifiyProcessStack(stack),
+                16 => Shared.PictureExtensions.ToPJFCPicture(canvas, 16).ModifiyProcessStack(stack),
                 _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
 
             CacheRenderedFrame(cacheKey, rendered);
-            return rendered.DeepCopy();
+            return rendered.Clone();
         }
 
 
@@ -929,7 +929,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     if (!cachedFrame.Disposed)
                     {
-                        picture = cachedFrame.DeepCopy();
+                        picture = cachedFrame.Clone();
                         return true;
                     }
 

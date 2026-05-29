@@ -1,4 +1,5 @@
 ﻿using FFmpeg.AutoGen;
+using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.ColorSpaces;
@@ -1084,7 +1085,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 b = new ushort[size],
                 Brightness = new float[size],
                 MaximumBrightness = maxBrightness,
-                hasAlphaChannel = hasAlpha,
+                HasAlphaChannel = hasAlpha,
                 a = hasAlpha ? Enumerable.Repeat(1f, size).ToArray() : null,
             };
 

@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -62,11 +63,11 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public Picture16bpp Resize(Picture16bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IPicture<ushort> Resize(IPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (Picture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -115,8 +116,8 @@ namespace projectFrameCut.Render.Effect
 
                 result = new Picture16bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel
                 };
 
                 // Computer may return ushort[] (typed path) or float[] (fallback)
@@ -173,11 +174,11 @@ namespace projectFrameCut.Render.Effect
             return (Picture16bpp)result!;
         }
 
-        public Picture8bpp Resize(Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IPicture<byte> Resize(IPicture<byte> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (Picture8bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -226,8 +227,8 @@ namespace projectFrameCut.Render.Effect
 
                 result = new Picture8bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel
                 };
 
                 // Computer may return byte[] (typed path) or float[] (fallback)
@@ -284,11 +285,11 @@ namespace projectFrameCut.Render.Effect
             return (Picture8bpp)result!;
         }
 
-        public HDRPicture16bpp Resize(HDRPicture16bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IHDRPicture<ushort> Resize(IHDRPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (HDRPicture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -337,8 +338,8 @@ namespace projectFrameCut.Render.Effect
                 int dstPixels = checked(destW * destH);
                 result = new HDRPicture16bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel,
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel,
                     MaximumBrightness = source.MaximumBrightness,
                 };
 

@@ -96,16 +96,7 @@ namespace projectFrameCut.Render.Benchmark
 
             static string GetStepKey(PictureProcessStack step)
             {
-                var name = step.OperationDisplayName;
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    name = step.StepUsed?.Name;
-                }
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    name = step.Operator?.Name;
-                }
-                return string.IsNullOrWhiteSpace(name) ? "(unknown)" : name;
+                return  "(unknown)";
             }
 
             var orderedKeys = new List<string>(capacity: 64);

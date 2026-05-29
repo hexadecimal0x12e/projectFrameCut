@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {

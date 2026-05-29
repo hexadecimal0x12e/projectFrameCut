@@ -251,7 +251,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         DiscardBrightnessChannel,
         /// <summary>
-        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.bitPerPixel"/>.
+        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.BitPerPixel"/>.
         /// </summary>
         DisallowDowngrade
     }

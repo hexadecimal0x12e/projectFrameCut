@@ -27,13 +27,14 @@ using PointF = SixLabors.ImageSharp.PointF;
 using VerticalAlignment = SixLabors.Fonts.VerticalAlignment;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Services
 {
     public static class TextServices
     {
         #region thumb
-        public static Shared.IPicture GenerateFontThumbnail(string fontPath)
+        public static Drawing.Base.IPicture GenerateFontThumbnail(string fontPath)
         {
             if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
             {
@@ -54,7 +55,7 @@ namespace projectFrameCut.Services
                     Font font = family.CreateFont(72, FontStyle.Regular);
                     ctx.DrawText(sampleText, font, Color.Black, new PointF(10, 240));
                 });
-                return new Picture8bpp(canvas);
+                return Shared.PictureExtensions.ToPJFCPicture(canvas, 8);
             }
             catch
             {

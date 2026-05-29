@@ -102,7 +102,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "MaskApplier",
             Operator = typeof(MaskApplierProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { "MaskWidth", _mask.Width },

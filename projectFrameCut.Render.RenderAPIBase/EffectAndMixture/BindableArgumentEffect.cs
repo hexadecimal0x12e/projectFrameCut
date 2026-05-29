@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;

@@ -194,12 +194,7 @@ namespace projectFrameCut.Render.Effect
                 if (Opacity < 1f)
                     i.Opacity(Opacity);
             });
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(img),
-                16 => new Picture16bpp(img),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            IPicture result = Shared.PictureExtensions.ToPJFCPicture(img, source.BitPerPixel);
             sw.Stop();
             _elapsed = sw.Elapsed;
 
@@ -249,7 +244,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "ColorAdjustment",
             Operator = typeof(ColorAdjustmentProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Brightness), Brightness },

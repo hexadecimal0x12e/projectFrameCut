@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.Setting.SettingPages;
 
@@ -428,12 +428,10 @@ public partial class AdvancedSettingPage : ContentPage
                     {
                         WriteSetting("render_SaveCheckpoint", "true");
                         Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                     }
                     else
                     {
                         WriteSetting("render_SaveCheckpoint", "false");
-                        IPicture.DiagImagePath = null;
                     }
                     break;
                 default:

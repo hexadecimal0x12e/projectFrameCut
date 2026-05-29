@@ -41,7 +41,6 @@ namespace projectFrameCut.Render.Rendering
                 {
                     var step = item.GetStep(frame, width, height);
                     steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
                 }
                 catch (Exception ex)
                 {
@@ -70,7 +69,6 @@ namespace projectFrameCut.Render.Rendering
                 {
                     var step = c.GetStep(frame, targetFrame, width, height);
                     steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {c.Name}({c.TypeName}) : {step.GetProcessStack()}");
 
                 }
                 catch (Exception ex)
@@ -206,7 +204,6 @@ namespace projectFrameCut.Render.Rendering
                                 }
                                 var step = crg.GenerateResultStep(cachedValue, targetFrame, width, height);
                                 steps.Add(step);
-                                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
                             }
                             catch (Exception ex)
                             {
@@ -266,7 +263,7 @@ namespace projectFrameCut.Render.Rendering
                 },
             };
             var frame = wtmkClip.GetFrameRelativeToStartPointOfSource(0, src.Width, src.Height, true, 8);
-            var result = ClassicOverlayMixture.Default.Mix(src, frame, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), frame.bitPerPixel);
+            var result = ClassicOverlayMixture.Default.Mix(src, frame, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), frame.BitPerPixel);
             result.ProcessStack = src.ProcessStack.Append(new PictureProcessStack { OperationDisplayName = "Add AI Watermark", Operator = typeof(EffectProcessing), ProcessingFuncStackTrace = new StackTrace(true), Elapsed = sw.Elapsed }).ToList();
             return result;
         }

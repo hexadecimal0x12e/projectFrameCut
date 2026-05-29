@@ -5,6 +5,7 @@ using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -21,7 +22,7 @@ using System.Text.Json;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Color = Microsoft.Maui.Graphics.Color;
 using Image = Microsoft.Maui.Controls.Image;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
 
@@ -1266,7 +1267,7 @@ public partial class DraftEffectBindingView : ContentView
                 try
                 {
                     var effectId = effect.BindedEffectGroupID;
-                    LogDiagnostic($"Effect {effectId} returns:\r\n{Shared.PictureProcessStack.FormatProcessStackForLog(pic.ProcessStack)}");
+                    LogDiagnostic($"Effect {effectId} returns:\r\n{PictureProcessStack.FormatProcessStackForLog(pic.ProcessStack)}");
                     if (string.IsNullOrEmpty(effectId) || pic == null) return;
 
                     if (Guid.TryParse(effectId, out var gid) && _nodes.TryGetValue(gid, out var nodeByGuid))

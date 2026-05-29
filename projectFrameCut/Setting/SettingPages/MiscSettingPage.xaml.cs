@@ -7,7 +7,7 @@ using System.Diagnostics;
 namespace projectFrameCut.Setting.SettingPages;
 
 using static SettingManager.SettingsManager;
-using IPicture = Shared.IPicture;
+using IPicture = Drawing.Base.IPicture;
 
 public partial class MiscSettingPage : ContentPage
 {
@@ -165,12 +165,10 @@ public partial class MiscSettingPage : ContentPage
                     {
                         WriteSetting("render_SaveCheckpoint", "true");
                         Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                     }
                     else
                     {
                         WriteSetting("render_SaveCheckpoint", "false");
-                        IPicture.DiagImagePath = null;
                     }
                     break;
                 case "DeveloperMode":

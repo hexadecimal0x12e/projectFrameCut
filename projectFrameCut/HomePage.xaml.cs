@@ -31,9 +31,10 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using static System.Net.Mime.MediaTypeNames;
 using Application = Microsoft.Maui.Controls.Application;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Drawing.Base;
 
 
 
@@ -1355,14 +1356,12 @@ public partial class HomePage : ContentPage
         if (SettingsManager.IsBoolSettingTrue("render_SaveCheckpoint"))
         {
             Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-            IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
             PictureProcesser.SaveDiagResult = true;
             PictureProcesser.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
 
         }
         else
         {
-            IPicture.DiagImagePath = null;
             PictureProcesser.SaveDiagResult = false;
         }
         IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
@@ -1376,7 +1375,6 @@ public partial class HomePage : ContentPage
         VideoFrameDiskCache.MaximumCacheSizeBytes = SettingsManager.GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
         IVideoSource.EnableMemoryCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
         IVideoSource.EnableDiskCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-        IPicture.PictureResizer = SettingsManager.IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true) ? new Render.Effect.HwAccelPictureResizer() : new CPUBilinearPictureResizer();
         ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();

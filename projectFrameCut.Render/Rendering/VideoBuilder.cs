@@ -129,7 +129,7 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(frame);
             if (frame.Width != Width || frame.Height != Height)
-                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
+                throw new ArgumentException($"The result's size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
                 {
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
@@ -158,11 +158,10 @@ namespace projectFrameCut.Render.Rendering
             }
 
             Interlocked.Increment(ref _totalFramesCount);
-            frame.frameIndex = index;
 
             if (!IPicture.AllowPixelModeDowngrade && writer.TargetPPB is IPicture.PicturePixelMode m)
             {
-                if (frame.bitPerPixel < m) throw new InvalidOperationException($"Frame #{index}'s PicturePixelMode {(int)frame.bitPerPixel} is smaller than target's PicturePixelMode {(int)m}, and IPicture.AllowPixelModeDowngrade is false.")
+                if (frame.BitPerPixel < m) throw new InvalidOperationException($"Frame #{index}'s PicturePixelMode {(int)frame.BitPerPixel} is smaller than target's PicturePixelMode {(int)m}, and IPicture.AllowPixelModeDowngrade is false.")
                 {
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
@@ -185,7 +184,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
             {
-                OnPreviewGenerated?.Invoke(this, frame.DeepCopy());
+                OnPreviewGenerated?.Invoke(this, frame.Clone());
                 countSinceLastPreview = 0;
             }
 

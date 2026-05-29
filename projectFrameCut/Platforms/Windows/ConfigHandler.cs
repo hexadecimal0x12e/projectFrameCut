@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
-using static projectFrameCut.Shared.IPicture;
+using static projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.WinUI
 {

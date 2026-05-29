@@ -34,6 +34,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Using Include="projectFrameCut.Drawing.Base" />
+		<Using Include="projectFrameCut.Drawing.Base.Picture" />
 		<Using Include="projectFrameCut.Render.RenderAPIBase" />
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>

@@ -26,10 +26,13 @@ using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
 using System.Reflection;
+using projectFrameCut.Drawing.Base;
+
 
 
 

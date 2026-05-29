@@ -48,7 +48,8 @@ using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
-
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Base;
 
 
 #if WINDOWS
@@ -76,7 +77,6 @@ using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
 using Google.Android.Material.Chip;
 using Java.Nio.Channels;
-
 #endif
 
 namespace projectFrameCut;

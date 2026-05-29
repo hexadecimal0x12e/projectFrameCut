@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;

@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
 using System.Text;

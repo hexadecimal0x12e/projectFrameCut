@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -1357,11 +1358,11 @@ namespace projectFrameCut.Render.Rendering
                     frame = EffectProcessing.ProcessAIWatermark(frame, null);
 
                 }
-                if (Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.UShortPicture)
+                if (Use16Bit && frame.BitPerPixel != IPicture.PicturePixelMode.UShortPicture)
                 {
                     frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
                 }
-                else if (!Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.BytePicture)
+                else if (!Use16Bit && frame.BitPerPixel != IPicture.PicturePixelMode.BytePicture)
                 {
                     frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
                 }

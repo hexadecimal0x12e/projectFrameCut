@@ -15,7 +15,7 @@ namespace projectFrameCut.Shared
         /// How many bit contains in one sample.
         /// </summary>
         /// <remarks>
-        /// Similar to <see cref="IPicture.bitPerPixel"/>, for example, if a IAudioSample use 32-bit float to storage samples, this field should be 32.
+        /// Similar to <see cref="IPicture.BitPerPixel"/>, for example, if a IAudioSample use 32-bit float to storage samples, this field should be 32.
         /// </remarks>
         public int bitPerSample { get; }
         /// <summary>
