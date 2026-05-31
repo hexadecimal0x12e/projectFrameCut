@@ -34,6 +34,8 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
             { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
+            { "ProgressPlacer", () => new Effect.ProgressPlacerEffectBundle() },
+            { "ProgressCrop", () => new Effect.ProgressCropEffectBundle() },
         };
 
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>

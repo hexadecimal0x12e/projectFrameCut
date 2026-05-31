@@ -550,7 +550,7 @@ public partial class TestPage : ContentPage
                 g = uOutG,
                 b = uOutB,
                 a = outA,
-                hasAlphaChannel = true
+                HasAlphaChannel = true
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";

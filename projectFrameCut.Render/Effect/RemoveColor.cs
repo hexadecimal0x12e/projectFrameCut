@@ -161,7 +161,7 @@ namespace projectFrameCut.Render.Effect
                     g = p16_out.g,
                     b = p16_out.b,
                     a = alpha,
-                    hasAlphaChannel = true
+                    HasAlphaChannel = true
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {
@@ -202,7 +202,7 @@ namespace projectFrameCut.Render.Effect
                     g = p8_out.g,
                     b = p8_out.b,
                     a = alpha,
-                    hasAlphaChannel = true
+                    HasAlphaChannel = true
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {

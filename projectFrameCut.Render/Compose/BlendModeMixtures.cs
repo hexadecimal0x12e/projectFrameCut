@@ -62,14 +62,14 @@ namespace projectFrameCut.Render.Compose
                 {
                     if (p8.r is null || p8.g is null || p8.b is null) return false;
                     if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels) return false;
-                    if (p8.hasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
+                    if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
                     return true;
                 }
                 if (pic is Picture16bpp p16)
                 {
                     if (p16.r is null || p16.g is null || p16.b is null) return false;
                     if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels) return false;
-                    if (p16.hasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
+                    if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
                     return true;
                 }
                 return true;
@@ -83,7 +83,7 @@ namespace projectFrameCut.Render.Compose
                     g = new float[p16.Pixels];
                     b = new float[p16.Pixels];
                     for (int i = 0; i < p16.Pixels; i++) { r[i] = p16.r[i]; g[i] = p16.g[i]; b[i] = p16.b[i]; }
-                    a = p16.hasAlphaChannel ? p16.a : null;
+                    a = p16.HasAlphaChannel ? p16.a : null;
                     return;
                 }
                 if (pic is IPicture<byte> p8)
@@ -92,7 +92,7 @@ namespace projectFrameCut.Render.Compose
                     g = new float[p8.Pixels];
                     b = new float[p8.Pixels];
                     for (int i = 0; i < p8.Pixels; i++) { r[i] = p8.r[i] * 257f; g[i] = p8.g[i] * 257f; b[i] = p8.b[i] * 257f; }
-                    a = p8.hasAlphaChannel ? p8.a : null;
+                    a = p8.HasAlphaChannel ? p8.a : null;
                     return;
                 }
                 throw new NotSupportedException();
@@ -200,10 +200,10 @@ namespace projectFrameCut.Render.Compose
 
                 if (!HasValidChannels(basePicture) || !HasValidChannels(topPicture))
                 {
-                    var baseBpp = (int)basePicture.bitPerPixel;
-                    var topBpp = (int)topPicture.bitPerPixel;
-                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.hasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
-                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.hasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
+                    var baseBpp = (int)basePicture.BitPerPixel;
+                    var topBpp = (int)topPicture.BitPerPixel;
+                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.HasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
+                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.HasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
                 }
 
                 ExtractChannels(basePicture, out float[] baseR, out float[] baseG, out float[] baseB, out float[]? baseA);
@@ -371,7 +371,7 @@ namespace projectFrameCut.Render.Compose
                         : (baseHasHdr ? baseMaxBrightness : topMaxBrightness);
                 }
 
-                bool outputHasAlpha = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel
+                bool outputHasAlpha = basePicture.HasAlphaChannel || topPicture.HasAlphaChannel
                     || basePicture.Width != targetWidth || basePicture.Height != targetHeight;
 
                 IPicture result;
@@ -383,7 +383,7 @@ namespace projectFrameCut.Render.Compose
                         g = ConvertToByteChannel(outG),
                         b = ConvertToByteChannel(outB),
                         a = outputHasAlpha ? outA : null,
-                        hasAlphaChannel = outputHasAlpha,
+                        HasAlphaChannel = outputHasAlpha,
                         ProcessStack = new List<PictureProcessStack> { procStack },
                     };
                 }
@@ -397,7 +397,7 @@ namespace projectFrameCut.Render.Compose
                             g = ConvertToUShortChannel(outG),
                             b = ConvertToUShortChannel(outB),
                             a = outputHasAlpha ? outA : null,
-                            hasAlphaChannel = outputHasAlpha,
+                            HasAlphaChannel = outputHasAlpha,
                             ProcessStack = new List<PictureProcessStack> { procStack },
                             Brightness = outBrightness ?? new float[targetPixels],
                             MaximumBrightness = outputMaximumBrightness,
@@ -411,7 +411,7 @@ namespace projectFrameCut.Render.Compose
                             g = ConvertToUShortChannel(outG),
                             b = ConvertToUShortChannel(outB),
                             a = outputHasAlpha ? outA : null,
-                            hasAlphaChannel = outputHasAlpha,
+                            HasAlphaChannel = outputHasAlpha,
                             ProcessStack = new List<PictureProcessStack> { procStack },
                         };
                     }

@@ -37,8 +37,8 @@ namespace projectFrameCut.Shared
             result.r = new ushort[dstPixels];
             result.g = new ushort[dstPixels];
             result.b = new ushort[dstPixels];
-            result.a = source.hasAlphaChannel ? new float[dstPixels] : null;
-            result.hasAlphaChannel = source.hasAlphaChannel;
+            result.a = source.HasAlphaChannel ? new float[dstPixels] : null;
+            result.HasAlphaChannel = source.HasAlphaChannel;
 
             double xRatio = (double)source.Width / destW;
             double yRatio = (double)source.Height / destH;
@@ -107,7 +107,7 @@ namespace projectFrameCut.Shared
                     result.g[dstIdx] = (ushort)gg;
                     result.b[dstIdx] = (ushort)bb;
 
-                    if (source.hasAlphaChannel && source.a != null)
+                    if (source.HasAlphaChannel && source.a != null)
                     {
                         double a00 = source.a[k00];
                         double a10 = source.a[k10];
@@ -165,8 +165,8 @@ namespace projectFrameCut.Shared
             result.r = new byte[dstPixels];
             result.g = new byte[dstPixels];
             result.b = new byte[dstPixels];
-            result.a = source.hasAlphaChannel ? new float[dstPixels] : null;
-            result.hasAlphaChannel = source.hasAlphaChannel;
+            result.a = source.HasAlphaChannel ? new float[dstPixels] : null;
+            result.HasAlphaChannel = source.HasAlphaChannel;
 
             double xRatio = (double)source.Width / destW;
             double yRatio = (double)source.Height / destH;
@@ -235,7 +235,7 @@ namespace projectFrameCut.Shared
                     result.g[dstIdx] = (byte)gg;
                     result.b[dstIdx] = (byte)bb;
 
-                    if (source.hasAlphaChannel && source.a != null)
+                    if (source.HasAlphaChannel && source.a != null)
                     {
                         double a00 = source.a[k00];
                         double a10 = source.a[k10];
@@ -293,8 +293,8 @@ namespace projectFrameCut.Shared
                 r = new ushort[dstPixels],
                 g = new ushort[dstPixels],
                 b = new ushort[dstPixels],
-                a = source.hasAlphaChannel ? new float[dstPixels] : null,
-                hasAlphaChannel = source.hasAlphaChannel,
+                a = source.HasAlphaChannel ? new float[dstPixels] : null,
+                HasAlphaChannel = source.HasAlphaChannel,
                 Brightness = new float[dstPixels],
                 MaximumBrightness = (source.MaximumBrightness > 0f && float.IsFinite(source.MaximumBrightness))
                     ? source.MaximumBrightness
@@ -371,7 +371,7 @@ namespace projectFrameCut.Shared
                     result.g[dstIdx] = (ushort)gg;
                     result.b[dstIdx] = (ushort)bb;
 
-                    if (source.hasAlphaChannel && source.a != null)
+                    if (source.HasAlphaChannel && source.a != null)
                     {
                         double a00 = source.a[k00];
                         double a10 = source.a[k10];

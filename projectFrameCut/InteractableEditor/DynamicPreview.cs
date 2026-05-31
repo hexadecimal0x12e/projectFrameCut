@@ -1532,7 +1532,7 @@ public sealed class DynamicPreview : IDisposable
         }
         else
         {
-            resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+            resizedFrame = resized.BitPerPixel == IPicture.PicturePixelMode.BytePicture
                 ? resized
                 : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
         }

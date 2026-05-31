@@ -671,7 +671,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
             try
             {
                 var resolved = frameResolver(frameIndex, state);
-                frame = resolved.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                frame = resolved.BitPerPixel == IPicture.PicturePixelMode.BytePicture
                     ? resolved
                     : resolved.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
             }
@@ -747,7 +747,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
         }
         else
         {
-            resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+            resizedFrame = resized.BitPerPixel == IPicture.PicturePixelMode.BytePicture
                 ? resized
                 : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
         }
@@ -838,7 +838,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
             }
             else
             {
-                resizedFrame = resized.bitPerPixel == IPicture.PicturePixelMode.BytePicture
+                resizedFrame = resized.BitPerPixel == IPicture.PicturePixelMode.BytePicture
                     ? resized
                     : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
             }

@@ -92,10 +92,10 @@ namespace projectFrameCut.Render.Compose
 
                 if (!HasValidChannels(basePicture) || !HasValidChannels(topPicture))
                 {
-                    var baseBpp = (int)basePicture.bitPerPixel;
-                    var topBpp = (int)topPicture.bitPerPixel;
-                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.hasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
-                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.hasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
+                    var baseBpp = (int)basePicture.BitPerPixel;
+                    var topBpp = (int)topPicture.BitPerPixel;
+                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.HasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
+                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.HasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
                 }
 
                 bool baseHasHdrBrightness = TryGetHdrBrightness(basePicture, out float[]? baseBrightness, out float baseMaximumBrightness);
@@ -104,8 +104,8 @@ namespace projectFrameCut.Render.Compose
                 int targetPixels = checked(targetWidth * targetHeight);
 
                 bool outputHasAlpha =
-                    basePicture.hasAlphaChannel
-                    || topPicture.hasAlphaChannel
+                    basePicture.HasAlphaChannel
+                    || topPicture.HasAlphaChannel
                     || basePicture.Width != targetWidth
                     || basePicture.Height != targetHeight;
 
@@ -199,7 +199,7 @@ namespace projectFrameCut.Render.Compose
                 g = outG,
                 b = outB,
                 a = outputHasAlpha ? outA : null,
-                hasAlphaChannel = outputHasAlpha,
+                HasAlphaChannel = outputHasAlpha,
                 ProcessStack = new List<PictureProcessStack> { procStack },
             };
         }
@@ -248,7 +248,7 @@ namespace projectFrameCut.Render.Compose
                 g = outG,
                 b = outB,
                 a = outputHasAlpha ? outA : null,
-                hasAlphaChannel = outputHasAlpha,
+                HasAlphaChannel = outputHasAlpha,
                 ProcessStack = new List<PictureProcessStack> { procStack },
                 Brightness = shouldComposeHdrBrightness ? outBrightness ?? new float[targetPixels] : new float[targetPixels],
                 MaximumBrightness = outputMaximumBrightness,
@@ -275,7 +275,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     // Batch process alpha channel with SIMD
-                    if (p16.hasAlphaChannel && p16.a is not null)
+                    if (p16.HasAlphaChannel && p16.a is not null)
                     {
                         SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, basePicture.Width);
                     }
@@ -305,7 +305,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     // Batch process alpha channel with SIMD
-                    if (p8.hasAlphaChannel && p8.a is not null)
+                    if (p8.HasAlphaChannel && p8.a is not null)
                     {
                         SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, basePicture.Width);
                     }
@@ -345,7 +345,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     // Batch process alpha channel with SIMD
-                    if (p16.hasAlphaChannel && p16.a is not null)
+                    if (p16.HasAlphaChannel && p16.a is not null)
                     {
                         SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, basePicture.Width);
                     }
@@ -390,7 +390,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     // Batch process alpha channel with SIMD
-                    if (p8.hasAlphaChannel && p8.a is not null)
+                    if (p8.HasAlphaChannel && p8.a is not null)
                     {
                         SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, basePicture.Width);
                     }
@@ -1125,7 +1125,7 @@ namespace projectFrameCut.Render.Compose
             {
                 if (p8.r is null || p8.g is null || p8.b is null) return false;
                 if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels) return false;
-                if (p8.hasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
+                if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
                 return true;
             }
 
@@ -1133,7 +1133,7 @@ namespace projectFrameCut.Render.Compose
             {
                 if (p16.r is null || p16.g is null || p16.b is null) return false;
                 if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels) return false;
-                if (p16.hasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
+                if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
                 return true;
             }
 

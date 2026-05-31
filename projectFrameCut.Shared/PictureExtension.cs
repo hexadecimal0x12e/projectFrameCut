@@ -42,7 +42,7 @@ namespace projectFrameCut.Shared
                 int height = source.Height;
                 int pixels = source.Pixels;
 
-                if (source.bitPerPixel == 16)
+                if (source.BitPerPixel == 16)
                 {
                     // Prefer typed interface if available
                     if (source is IPicture<ushort> s16)
@@ -52,9 +52,8 @@ namespace projectFrameCut.Shared
 
                         var dst = new Picture16bpp(width, height)
                         {
-                            frameIndex = s16.frameIndex,
-                            filePath = s16.filePath,
-                            hasAlphaChannel = s16.hasAlphaChannel
+                            Tag = s16.Tag,
+                            HasAlphaChannel = s16.HasAlphaChannel
                         };
 
                         // ensure destination arrays exist
@@ -65,16 +64,16 @@ namespace projectFrameCut.Shared
                         Array.Copy(s16.g, dst.g, pixels);
                         Array.Copy(s16.b, dst.b, pixels);
 
-                        if (s16.hasAlphaChannel && s16.a != null)
+                        if (s16.HasAlphaChannel && s16.a != null)
                         {
                             dst.a = new float[pixels];
                             Array.Copy(s16.a, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
+                            dst.HasAlphaChannel = true;
                         }
                         else
                         {
                             dst.a = null;
-                            dst.hasAlphaChannel = false;
+                            dst.HasAlphaChannel = false;
                         }
                         dst.ProcessStack = s16.ProcessStack.Append(new PictureProcessStack
                         {
@@ -91,16 +90,15 @@ namespace projectFrameCut.Shared
                         var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[] ?? throw new InvalidOperationException("Red channel missing for 16bpp picture.");
                         var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[] ?? throw new InvalidOperationException("Green channel missing for 16bpp picture.");
                         var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[] ?? throw new InvalidOperationException("Blue channel missing for 16bpp picture.");
-                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                        var aa = source.HasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
 
                         if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
                             throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
 
                         var dst = new Picture16bpp(width, height)
                         {
-                            frameIndex = source.frameIndex,
-                            filePath = source.filePath,
-                            hasAlphaChannel = source.hasAlphaChannel
+                            Tag = source.Tag,
+                            HasAlphaChannel = source.HasAlphaChannel
                         };
 
                         dst.r = new ushort[pixels];
@@ -114,12 +112,12 @@ namespace projectFrameCut.Shared
                         {
                             dst.a = new float[pixels];
                             Array.Copy(aa, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
+                            dst.HasAlphaChannel = true;
                         }
                         else
                         {
                             dst.a = null;
-                            dst.hasAlphaChannel = false;
+                            dst.HasAlphaChannel = false;
                         }
                         dst.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                         {
@@ -131,7 +129,7 @@ namespace projectFrameCut.Shared
                         return dst;
                     }
                 }
-                else if (source.bitPerPixel == 8)
+                else if (source.BitPerPixel == 8)
                 {
                     if (source is IPicture<byte> s8)
                     {
@@ -140,15 +138,14 @@ namespace projectFrameCut.Shared
 
                         var dst = new Picture8bpp(width, height)
                         {
-                            frameIndex = s8.frameIndex,
-                            filePath = s8.filePath,
+                            Tag = s8.Tag,
                             ProcessStack = s8.ProcessStack.Append(new PictureProcessStack
                             {
                                 OperationDisplayName = "Deep copied",
                                 Operator = typeof(PictureExtensions),
                                 ProcessingFuncStackTrace = new StackTrace(true),
                             }).ToList(),
-                            hasAlphaChannel = s8.hasAlphaChannel
+                            HasAlphaChannel = s8.HasAlphaChannel
                         };
 
                         dst.r = new byte[pixels];
@@ -158,16 +155,16 @@ namespace projectFrameCut.Shared
                         Array.Copy(s8.g, dst.g, pixels);
                         Array.Copy(s8.b, dst.b, pixels);
 
-                        if (s8.hasAlphaChannel && s8.a != null)
+                        if (s8.HasAlphaChannel && s8.a != null)
                         {
                             dst.a = new float[pixels];
                             Array.Copy(s8.a, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
+                            dst.HasAlphaChannel = true;
                         }
                         else
                         {
                             dst.a = null;
-                            dst.hasAlphaChannel = false;
+                            dst.HasAlphaChannel = false;
                         }
                         dst.ProcessStack = s8.ProcessStack.Append(new PictureProcessStack
                         {
@@ -183,22 +180,21 @@ namespace projectFrameCut.Shared
                         var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as byte[] ?? throw new InvalidOperationException("Red channel missing for 8bpp picture.");
                         var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as byte[] ?? throw new InvalidOperationException("Green channel missing for 8bpp picture.");
                         var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[] ?? throw new InvalidOperationException("Blue channel missing for 8bpp picture.");
-                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                        var aa = source.HasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
 
                         if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
                             throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
 
                         var dst = new Picture8bpp(width, height)
                         {
-                            frameIndex = source.frameIndex,
-                            filePath = source.filePath,
+                            Tag = source.Tag,
                             ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                             {
                                 OperationDisplayName = "Deep copied",
                                 Operator = typeof(PictureExtensions),
                                 ProcessingFuncStackTrace = new StackTrace(true),
                             }).ToList(),
-                            hasAlphaChannel = source.hasAlphaChannel
+                            HasAlphaChannel = source.HasAlphaChannel
                         };
 
                         dst.r = new byte[pixels];
@@ -212,12 +208,12 @@ namespace projectFrameCut.Shared
                         {
                             dst.a = new float[pixels];
                             Array.Copy(aa, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
+                            dst.HasAlphaChannel = true;
                         }
                         else
                         {
                             dst.a = null;
-                            dst.hasAlphaChannel = false;
+                            dst.HasAlphaChannel = false;
                         }
                         dst.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                         {
@@ -283,7 +279,7 @@ namespace projectFrameCut.Shared
             bool disposeWorkingPicture = false;
             try
             {
-                workingPicture = image.bitPerPixel == resultPPB ? image : image.ToBitPerPixel(resultPPB);
+                workingPicture = image.BitPerPixel == resultPPB ? image : image.ToBitPerPixel(resultPPB);
                 disposeWorkingPicture = !ReferenceEquals(workingPicture, image);
                 SaveAsPngDirect(workingPicture, stream, saveAlpha);
             }
@@ -306,10 +302,10 @@ namespace projectFrameCut.Shared
         {
             lock (image)
             {
-                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+                float[]? aa = image.HasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.HasAlphaChannel && aa is not null;
 
-                switch (image.bitPerPixel.Value)
+                switch (image.BitPerPixel.Value)
                 {
                     case 8:
                         WritePng8(stream, image.Width, image.Height,
@@ -526,11 +522,11 @@ namespace projectFrameCut.Shared
 
             lock (picture)
             {
-                WriteVfdHeader(stream, frameType: 0, picture.Width, picture.Height, picture.hasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
+                WriteVfdHeader(stream, frameType: 0, picture.Width, picture.Height, picture.HasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
                 Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
                 try
                 {
-                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.hasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
+                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.HasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
                 }
                 finally
                 {
@@ -557,11 +553,11 @@ namespace projectFrameCut.Shared
 
             lock (picture)
             {
-                WriteVfdHeader(stream, frameType: 1, picture.Width, picture.Height, picture.hasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
+                WriteVfdHeader(stream, frameType: 1, picture.Width, picture.Height, picture.HasAlphaChannel && picture.a is not null, maxBrightness: 0f, compress);
                 Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
                 try
                 {
-                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.hasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
+                    WriteVfdPicture(payload, picture.r, picture.g, picture.b, picture.HasAlphaChannel && picture.a is not null, picture.a is null ? default : picture.a);
                 }
                 finally
                 {
@@ -582,7 +578,7 @@ namespace projectFrameCut.Shared
 
             lock (picture)
             {
-                bool hasAlpha = picture.hasAlphaChannel && picture.a is not null;
+                bool hasAlpha = picture.HasAlphaChannel && picture.a is not null;
                 WriteVfdHeader(stream, frameType: 2, picture.Width, picture.Height, hasAlpha, picture.MaximumBrightness, compress);
                 Stream payload = compress ? new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true) : stream;
                 try
@@ -773,7 +769,7 @@ namespace projectFrameCut.Shared
                 g = GC.AllocateUninitializedArray<byte>(pixels),
                 b = GC.AllocateUninitializedArray<byte>(pixels),
                 a = null,
-                hasAlphaChannel = hasAlpha,
+                HasAlphaChannel = hasAlpha,
             };
 
             ReadRawBytes(stream, picture.r);
@@ -805,7 +801,7 @@ namespace projectFrameCut.Shared
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
                 a = null,
-                hasAlphaChannel = hasAlpha,
+                HasAlphaChannel = hasAlpha,
             };
 
             ReadRawBytes(stream, picture.r);
@@ -837,7 +833,7 @@ namespace projectFrameCut.Shared
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
                 a = null,
-                hasAlphaChannel = hasAlpha,
+                HasAlphaChannel = hasAlpha,
                 Brightness = GC.AllocateUninitializedArray<float>(pixels),
                 MaximumBrightness = maximumBrightness > 0f && float.IsFinite(maximumBrightness) ? maximumBrightness : 1000f,
             };
@@ -924,11 +920,11 @@ namespace projectFrameCut.Shared
             }
             lock (image)
             {
-                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+                float[]? aa = image.HasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.HasAlphaChannel && aa is not null;
 
                 Image result;
-                if (image.bitPerPixel == 16)
+                if (image.BitPerPixel == 16)
                 {
                     var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[];
                     var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[];
@@ -946,7 +942,7 @@ namespace projectFrameCut.Shared
                         result = _SaveToInternal16bppWithNoAlpha(image, rr, gg, bb);
                     }
                 }
-                else if (image.bitPerPixel == 8)
+                else if (image.BitPerPixel == 8)
                 {
                     var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as byte[];
                     var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as byte[];
@@ -980,8 +976,8 @@ namespace projectFrameCut.Shared
             var mode = degradeToSDRMode ??= DefaultHDRImageDegradeToSDRMode;
             lock (image)
             {
-                float[]? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+                float[]? aa = image.HasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.HasAlphaChannel && aa is not null;
 
                 Image result;
                 if (alpha)
@@ -1340,7 +1336,7 @@ namespace projectFrameCut.Shared
         public static HDRPicture16bpp ToHDRPicture(this IPicture source, float brightness, int maximumBrightness = 5000)
         {
             var s = source.ToBitPerPixel(16) as IPicture<ushort>;
-            if (s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
+            if (s is null) throw new InvalidCastException($"Could not cast source {source.Tag} to IPicture<ushort>");
             float normalizedBrightness = float.IsFinite(brightness) ? Math.Clamp(brightness, 0f, 1f) : 1f;
             return new HDRPicture16bpp(s, false)
             {
@@ -1348,7 +1344,7 @@ namespace projectFrameCut.Shared
                 g = s.g,
                 b = s.b,
                 a = s.a,
-                hasAlphaChannel = s.hasAlphaChannel && s.a is not null,
+                HasAlphaChannel = s.HasAlphaChannel && s.a is not null,
                 Brightness = Enumerable.Repeat(normalizedBrightness, s.Pixels).ToArray(),
                 MaximumBrightness = maximumBrightness,
                 ProcessStack = source.ProcessStack.Append(new PictureProcessStack
@@ -1365,7 +1361,7 @@ namespace projectFrameCut.Shared
         public static HDRPicture16bpp ToHDRPictureBySignal(this IPicture source, int maximumBrightness = 203)
         {
             var s = source.ToBitPerPixel(16) as IPicture<ushort>;
-            if (s is null) throw new InvalidCastException($"Could not cast source {source.filePath}/{source.frameIndex} to IPicture<ushort>");
+            if (s is null) throw new InvalidCastException($"Could not cast source {source.Tag} to IPicture<ushort>");
 
             int validMaximumBrightness = Math.Clamp(maximumBrightness, 100, 10000);
             var brightness = new float[s.Pixels];
@@ -1385,7 +1381,7 @@ namespace projectFrameCut.Shared
                 g = s.g,
                 b = s.b,
                 a = s.a,
-                hasAlphaChannel = s.hasAlphaChannel && s.a is not null,
+                HasAlphaChannel = s.HasAlphaChannel && s.a is not null,
                 Brightness = brightness,
                 MaximumBrightness = validMaximumBrightness,
                 ProcessStack = source.ProcessStack.Append(new PictureProcessStack

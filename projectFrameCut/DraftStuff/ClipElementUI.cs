@@ -465,29 +465,69 @@ namespace projectFrameCut.DraftStuff
             return ClipMode.Special; // fallback
         }
 
+        private static readonly Brush[] _defaultClipColorPalette = new Brush[]
+        {
+            new SolidColorBrush(Color.FromRgb(255, 107, 107)),  // 柔和红
+            new SolidColorBrush(Color.FromRgb(78, 205, 196)),   // 青绿
+            new SolidColorBrush(Color.FromRgb(255, 159, 67)),   // 橙色
+            new SolidColorBrush(Color.FromRgb(69, 162, 255)),   // 蓝色
+            new SolidColorBrush(Color.FromRgb(255, 214, 10)),   // 黄色
+            new SolidColorBrush(Color.FromRgb(175, 82, 222)),   // 紫色
+            new SolidColorBrush(Color.FromRgb(46, 213, 115)),   // 绿色
+            new SolidColorBrush(Color.FromRgb(255, 82, 82)),    // 珊瑚红
+            new SolidColorBrush(Color.FromRgb(100, 181, 246)),  // 浅蓝
+            new SolidColorBrush(Color.FromRgb(255, 138, 101)),  // 深橙
+            new SolidColorBrush(Color.FromRgb(129, 199, 132)),  // 浅绿
+            new SolidColorBrush(Color.FromRgb(186, 104, 200)),  // 紫罗兰
+            new SolidColorBrush(Color.FromRgb(255, 171, 145)),  // 桃色
+            new SolidColorBrush(Color.FromRgb(128, 222, 234)),  // 青色
+            new SolidColorBrush(Color.FromRgb(240, 98, 146)),   // 粉红
+        };
+
+        private static Brush[]? _clipColorPalette;
+
+        private static Brush[] GetPalette()
+        {
+            if (_clipColorPalette == null)
+            {
+                _clipColorPalette = TryLoadPaletteFromFile() ?? _defaultClipColorPalette;
+            }
+            return _clipColorPalette;
+        }
+
+        private static Brush[]? TryLoadPaletteFromFile()
+        {
+            try
+            {
+                var palettePath = Path.Combine(MauiProgram.DataPath, "palette.json");
+                if (!System.IO.File.Exists(palettePath)) return null;
+
+                var json = System.IO.File.ReadAllText(palettePath);
+                var hexColors = JsonSerializer.Deserialize<string[]>(json);
+                if (hexColors == null || hexColors.Length == 0) return null;
+
+                var brushes = new Brush[hexColors.Length];
+                for (int i = 0; i < hexColors.Length; i++)
+                {
+                    brushes[i] = new SolidColorBrush(Color.FromArgb(hexColors[i]));
+                }
+                return brushes;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public static Brush DetermineAssetColor(ClipMode? mode)
         {
-            return mode switch
-            {
-                ClipMode.VideoClip => new SolidColorBrush(Colors.CornflowerBlue),
-                ClipMode.PhotoClip => new SolidColorBrush(Colors.MediumSeaGreen),
-                ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
-                ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
-                ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
-                ClipMode.MarkingClip => new SolidColorBrush(Color.FromRgba(51, 136, 255, 96)),
-                ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
-                _ => new SolidColorBrush(Colors.Gray),
-            };
+            var palette = GetPalette();
+            return palette[Random.Shared.Next(palette.Length)];
         }
         public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null)
         {
-            return type switch
-            {
-                AssetType.Video => new SolidColorBrush(Colors.CornflowerBlue),
-                AssetType.Image => new SolidColorBrush(Colors.MediumSeaGreen),
-                AssetType.Audio => new SolidColorBrush(Colors.Goldenrod),
-                _ => DetermineAssetColor(mode)
-            };
+            var palette = GetPalette();
+            return palette[Random.Shared.Next(palette.Length)];
         }
 
     }

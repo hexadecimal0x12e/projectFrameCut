@@ -104,7 +104,7 @@ namespace projectFrameCut.Render.Effect
                 Width = width,
                 Height = height,
                 Pixels = pixelsCount,
-                hasAlphaChannel = false,
+                HasAlphaChannel = false,
                 ProcessStack = source.ProcessStack?.ToList() ?? new List<PictureProcessStack>()
             };
         }

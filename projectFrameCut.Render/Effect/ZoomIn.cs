@@ -60,7 +60,7 @@ namespace projectFrameCut.Render.Effect
             var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
             var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(rect).Resize(targetWidth, targetHeight));
 
-            IPicture result = (int)source.bitPerPixel switch
+            IPicture result = (int)source.BitPerPixel switch
             {
                 8 => new Picture8bpp(resultImg),
                 16 => new Picture16bpp(resultImg),

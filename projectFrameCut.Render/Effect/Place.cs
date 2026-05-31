@@ -181,13 +181,12 @@ namespace projectFrameCut.Render.Effect
 
         private static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a)
         {
-            if (source.bitPerPixel == 16)
+            if (source.BitPerPixel == 16)
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    Tag = source.Tag,
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
                 picture.g = g.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -196,13 +195,12 @@ namespace projectFrameCut.Render.Effect
                 return picture;
             }
 
-            if (source.bitPerPixel == 8)
+            if (source.BitPerPixel == 8)
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    Tag = source.Tag,
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
                 picture.g = g.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();

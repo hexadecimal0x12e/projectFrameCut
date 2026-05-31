@@ -372,7 +372,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int totalPixels = width * height;
             var picture = new Picture16bpp(width, height)
             {
-                frameIndex = frameNumber
+                Tag = $"frame #{frameNumber}"
             };
 
             int offset = 0;
@@ -396,7 +396,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (alphaBits != 0b000)
             {
                 picture.a = new float[totalPixels];
-                picture.hasAlphaChannel = true;
+                picture.HasAlphaChannel = true;
 
                 for (int i = 0; i < totalPixels; i++)
                 {
@@ -424,7 +424,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int totalPixels = width * height;
             var picture = new Picture8bpp(width, height)
             {
-                frameIndex = frameNumber
+                Tag = $"frame #{frameNumber}"
             };
 
             int offset = 0;
@@ -448,7 +448,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (alphaBits != 0b000)
             {
                 picture.a = new float[totalPixels];
-                picture.hasAlphaChannel = true;
+                picture.HasAlphaChannel = true;
 
                 for (int i = 0; i < totalPixels; i++)
                 {

@@ -127,10 +127,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new TimeoutException($"Timed out while waiting for the rendered frame {targetFrame} to be available. This may indicate a problem in the rendering process.");
                 }
             }, 90 * 1000, new OperationCanceledException("One-frame render operation timed out for 90 seconds."));
-            if (frame.frameIndex is not null && frame.frameIndex != targetFrame)
-            {
-                Log($"Warning: The decoded frame index {frame.frameIndex} does not match the requested frame index {targetFrame}. This may indicate a problem in the rendering process.");
-            }
             return frame;
 
         }

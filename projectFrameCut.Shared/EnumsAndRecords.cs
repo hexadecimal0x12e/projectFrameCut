@@ -56,14 +56,17 @@ namespace projectFrameCut.Shared
         NotSpecified = -1,
     }
 
+    [Flags]
     public enum EffectTarget
     {
-        Video,
-        Audio,
-        SpeedVariance,
-        ColorAdjustment,
-        Mixture,
         NotSpecified = -1,
+        Video = 0,
+        Audio = 1,
+        SpeedVariance = 2,
+        Mixture = 4,
+        ColorAdjustment = 8,
+
+        IsKeyFramed = 1 << 16,
     }
 
     public enum BindableArgumentEffectType
@@ -251,7 +254,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         DiscardBrightnessChannel,
         /// <summary>
-        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.bitPerPixel"/>.
+        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.BitPerPixel"/>.
         /// </summary>
         DisallowDowngrade
     }

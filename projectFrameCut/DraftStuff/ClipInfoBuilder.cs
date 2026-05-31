@@ -13,16 +13,22 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
+using projectFrameCut.Converters;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -40,12 +46,8 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
-using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
-using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Converters;
-using projectFrameCut.ApplicationPluginBase.Effect;
-using projectFrameCut.Render.EncodeAndDecode;
-using System.Collections.Concurrent;
+using Microsoft.Maui.Graphics.Text;
+
 
 
 
@@ -81,6 +83,7 @@ namespace projectFrameCut.DraftStuff
 
         #region init
         DraftPage page;
+        TabbedView tabbedView = new();
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
@@ -112,87 +115,118 @@ namespace projectFrameCut.DraftStuff
 
         public async Task<View> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            TabbedView t = new();
-            t.Background = page.Background;
-            t.TabItems.Add(new TabbedViewItem
+            tabbedView = new();
+            tabbedView.Background = page.Background;
+            tabbedView.TabItems.Add(new TabbedViewItem
             {
                 Header = Localized.MainSettingsPage_Tab_General,
-                Content = BuildGeneralTab(clip, handler)
+                Content = BuildGeneralTab(clip, handler),
+                Tag = "general"
             });
             if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.TextOption_TabTitle,
-                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler),
+                    Tag = "text"
                 });
             }
             if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true))
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Timing,
-                    LazyContentFactory = () => BuildTimingTab(clip, handler)
+                    LazyContentFactory = () => BuildTimingTab(clip, handler),
+                    Tag = "timing"
                 });
             }
             if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
-                    LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler)
+                    LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler),
+                    Tag = "sizeAndPosition"
                 });
 
             }
             if (clip.ClipType != ClipMode.MarkingClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = Localized.InteractableEditor_KeyFrame,
+                    LazyContentFactory = () => BuildKeyFrameTab(clip, handler),
+                    Tag = "keyframe"
+                });
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Effect,
-                    LazyAsyncContentFactory = () => BuildEffectTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildEffectTab(clip, handler),
+                    Tag = "effect"
                 });
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Mixture,
-                    LazyContentFactory = () => BuildMixtureTab(clip, handler)
+                    LazyContentFactory = () => BuildMixtureTab(clip, handler),
+                    Tag = "mixture"
                 });
                 if (clip.ClipType != ClipMode.AudioClip)
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_ColorAdjust,
-                        LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler)
+                        LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler),
+                        Tag = "colorAdjust"
                     });
                 }
                 if (!clip.isInfiniteLength)
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_SpeedRatio,
-                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler)
+                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler),
+                        Tag = "speedAndRatio"
                     });
                 }
                 if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_Effect_Classic,
-                        LazyContentFactory = () => BuildClassicEffectTab(clip, handler)
+                        LazyContentFactory = () => BuildClassicEffectTab(clip, handler),
+                        Tag = "effectClassic"
                     });
                     if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
                     {
-                        t.TabItems.Add(new TabbedViewItem
+                        tabbedView.TabItems.Add(new TabbedViewItem
                         {
                             Header = PPLocalizedResources.TextOption_TabTitle_Classic,
-                            LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler)
+                            LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler),
+                            Tag = "textClassic"
                         });
                     }
                 }
-
-
             }
 
-            return t;
+            tabbedView.HeaderRightContent = new Button
+            {
+                Text = "\ue5d5",
+                FontFamily = "Icons",
+                WidthRequest = 40,
+                HeightRequest = 35,
+                Padding = 0,
+                VerticalOptions = LayoutOptions.Center,
+                Command = new Command(() =>
+                {
+                    tabbedView.Dispatcher.Dispatch(() =>
+                    {
+                        if (page.SelectedClip is not null) page.RefreshPropertyPanel(page.SelectedClip);
+                    });
+                })
+            };
+
+            return tabbedView;
         }
 
         #endregion
@@ -454,7 +488,8 @@ namespace projectFrameCut.DraftStuff
 
                 var resetButton = new Button
                 {
-                    Text = "↺",
+                    Text = "\ue5d5",
+                    FontFamily = "Icons",
                     WidthRequest = 40,
                     HeightRequest = 35,
                     Padding = 0,
@@ -797,12 +832,14 @@ namespace projectFrameCut.DraftStuff
                 bundle.Parameters["Width"] = page.ProjectInfo.RelativeWidth;
                 bundle.Parameters["Height"] = page.ProjectInfo.RelativeHeight;
                 bundle.Parameters["Angle"] = 0f;
+                bundle.Parameters["CropList"] = "[]";
                 return bundle;
             }
 
-            IEffectBundle NormalizeCropBundle(IEffectBundle? source, IEffect? fallbackEffect)
+            IEffectBundle NormalizeCropBundle(IEffectBundle? source, IEffect? fallbackEffect, string? fallbackCropList = null)
             {
                 var normalized = BuildDefaultCropBundle();
+                var cropList = fallbackCropList ?? "[]";
 
                 if (source != null && string.Equals(source.TypeName, "Crop", StringComparison.Ordinal))
                 {
@@ -812,6 +849,7 @@ namespace projectFrameCut.DraftStuff
                     normalized.Parameters["Width"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Width", page.ProjectInfo.RelativeWidth));
                     normalized.Parameters["Height"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Height", page.ProjectInfo.RelativeHeight));
                     normalized.Parameters["Angle"] = ReadDictionaryFloatValue(source.Parameters, "Angle", 0f);
+                    normalized.Parameters["CropList"] = ReadDictionaryStringValue(source.Parameters, "CropList", cropList);
                     return normalized;
                 }
 
@@ -823,8 +861,10 @@ namespace projectFrameCut.DraftStuff
                     normalized.Parameters["Width"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Width", page.ProjectInfo.RelativeWidth));
                     normalized.Parameters["Height"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Height", page.ProjectInfo.RelativeHeight));
                     normalized.Parameters["Angle"] = ReadEffectFloatParameter(fallbackEffect, "Angle", 0f);
+                    cropList = ReadEffectStringParameter(fallbackEffect, "CropList", cropList);
                 }
 
+                normalized.Parameters["CropList"] = cropList;
                 return normalized;
             }
 
@@ -835,6 +875,7 @@ namespace projectFrameCut.DraftStuff
             clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
             clip.EffectBundles.TryGetValue(InternalCropBundleGuid, out var existingInternalCropBundle);
             var currentCropBundle = NormalizeCropBundle(existingInternalCropBundle, existingCropEffect);
+            var currentCropListText = ReadDictionaryStringValue(currentCropBundle.Parameters, "CropList", "[]");
             IEffectBundle previousCropPayload = currentCropBundle;
 
             var cropView = new ClipCropConfiguratorView
@@ -860,7 +901,8 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
                 .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
                 .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
+                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
+                .AddEntry("cropList", EffectBundleUiHelper.ParamLabel("CropList"), currentCropListText, "[]", null, EntryUpdateEventCallMode.OnAnyTextChange);
 
             cropView.ConfigurationChanged += (s, bundle) =>
             {
@@ -872,7 +914,9 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
-                var normalized = NormalizeCropBundle(bundle, existingCropEffect);
+                var normalized = NormalizeCropBundle(bundle, existingCropEffect, currentCropListText);
+                currentCropBundle = normalized;
+                currentCropListText = ReadDictionaryStringValue(normalized.Parameters, "CropList", currentCropListText);
                 clip.EffectBundles[InternalCropBundleGuid] = normalized;
 
                 // The internal crop now comes from bundle conversion to effect.
@@ -1041,6 +1085,31 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
+                if (e.Id == "cropList")
+                {
+                    currentCropListText = e.Value?.ToString() ?? "[]";
+                    currentCropBundle.Parameters["CropList"] = currentCropListText;
+                    clip.EffectBundles[InternalCropBundleGuid] = currentCropBundle;
+                    clip.Effects.Remove(InternalCropID);
+                    RebuildAllEffects(clip);
+
+                    if (TryFindInternalCropEffect(clip, out var rebuiltCrop))
+                    {
+                        rebuiltCrop.RelativeWidth = page.ProjectInfo.RelativeWidth;
+                        rebuiltCrop.RelativeHeight = page.ProjectInfo.RelativeHeight;
+                        SyncOutputSizeFromCropIfNeeded(rebuiltCrop);
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", rebuiltCrop, previousCropPayload));
+                    }
+                    else
+                    {
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", currentCropBundle, previousCropPayload));
+                    }
+
+                    previousCropPayload = currentCropBundle;
+                    SyncCropInputsFromView();
+                    return;
+                }
+
                 if (!syncingCropInputs)
                 {
                     if (e.Id == "cropStartX" && int.TryParse(e.Value?.ToString(), out var sx))
@@ -1084,6 +1153,24 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
+            void SetCropTextEntryText(string id, string value)
+            {
+                if (transformPpb is null)
+                {
+                    return;
+                }
+
+                if (transformPpb.Components.TryGetValue(id, out var component) && component is Entry entry)
+                {
+                    if (entry.Text != value)
+                    {
+                        entry.Text = value;
+                    }
+
+                    transformPpb.Properties[id] = value;
+                }
+            }
+
             void SyncCropInputsFromView()
             {
                 syncingCropInputs = true;
@@ -1093,6 +1180,7 @@ namespace projectFrameCut.DraftStuff
                     SetCropEntryText("cropStartY", cropView.StartY);
                     SetCropEntryText("cropWidth", cropView.CropWidth);
                     SetCropEntryText("cropHeight", cropView.CropHeight);
+                    SetCropTextEntryText("cropList", currentCropListText);
                 }
                 finally
                 {
@@ -1164,13 +1252,350 @@ namespace projectFrameCut.DraftStuff
                 cropView
             };
 
-            root.Add(switchRow, 0, 0);
-            root.Add(contentHost, 0, 1);
+            if (TryGetProgressPlacerBundle(clip, out _, out _, false))
+            {
+                root.Add(new Label
+                {
+                    Text = "当前片段存在关键帧，在此处的编辑只会影响初始值。",
+                    TextColor = Color.FromArgb("#FF8080"),
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(10, 10, 0, 0)
+                }, 0, 0);
+                root.RowDefinitions.Insert(0, new RowDefinition(GridLength.Auto));
+                switchRow.Padding = new Thickness(10, 4, 10, 0);
+                root.Add(switchRow, 0, 1);
+                root.Add(contentHost, 0, 2);
+
+            }
+            else
+            {
+                root.Add(switchRow, 0, 0);
+                root.Add(contentHost, 0, 1);
+            }
+
             SyncCropInputsFromView();
             SetTab(false);
             return root;
         }
 
+        private bool TryGetProgressPlacerBundle(ClipElementUI clip, out IKeyFramedEffectProvider provider, out IEffectBundle bundle, bool createIfMissing = false)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            foreach (var eb in clip.EffectBundles.Values)
+            {
+                if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
+                {
+                    provider = kfp;
+                    bundle = eb;
+                    return true;
+                }
+            }
+
+            if (createIfMissing)
+            {
+                var newBundle = new ProgressPlacerEffectBundle();
+                clip.EffectBundles[newBundle.Id] = newBundle;
+                AutoConnectBundleToOutput(clip, newBundle);
+                RebuildAllEffects(clip);
+                provider = newBundle;
+                bundle = newBundle;
+                return true;
+            }
+
+            provider = null!;
+            bundle = null!;
+            return false;
+        }
+
+        #endregion
+
+        #region kf
+
+        private View BuildKeyFrameTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var root = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(12, 10)
+            };
+            var title = new Label
+            {
+                Text = Localized.InteractableEditor_KeyFrame,
+                FontSize = 20,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#E8EEF8")
+            };
+            root.Children.Add(title);
+            ClipPositionTuple GetCurrentClipPosition()
+            {
+                int width = clip.TargetWidth > 0 ? clip.TargetWidth : (int)Math.Max(1, page.ProjectInfo.RelativeWidth);
+                int height = clip.TargetHeight > 0 ? clip.TargetHeight : (int)Math.Max(1, page.ProjectInfo.RelativeHeight);
+                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false);
+            }
+
+            bool hasAnyProvider = false;
+
+            foreach (var kvp in clip.EffectBundles)
+            {
+                if (kvp.Value is not IKeyFramedEffectProvider provider)
+                    continue;
+
+                hasAnyProvider = true;
+                var section = BuildKeyframeProviderSectionUI(provider, clip, GetCurrentClipPosition, handler);
+                root.Children.Add(section);
+            }
+
+            // Also check ProgressPlacer which may exist as its own bundle
+            if (TryGetProgressPlacerBundle(clip, out var placerProvider, out _, false) && !hasAnyProvider)
+            {
+                hasAnyProvider = true;
+                var section = BuildKeyframeProviderSectionUI(placerProvider, clip, GetCurrentClipPosition, handler);
+                root.Children.Add(section);
+            }
+
+            if (!hasAnyProvider)
+            {
+
+                root.Children.Add(new Label
+                {
+                    Text = "当前片段还没有支持关键帧的效果。",
+                    TextColor = Color.FromArgb("#A8B8CC"),
+                    FontSize = 12,
+                    LineBreakMode = LineBreakMode.WordWrap
+                });
+            }
+
+            // 列出可用的支持关键帧的 Effect，供用户添加
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            if (allBundleFactories.Count > 0)
+            {
+                root.Children.Add(new BoxView
+                {
+                    HeightRequest = 1,
+                    Color = Colors.White.WithAlpha(0.1f),
+                    Margin = new Thickness(0, 8)
+                });
+
+                root.Children.Add(new Label
+                {
+                    Text = "添加关键帧效果",
+                    FontSize = 16,
+                    TextColor = Color.FromArgb("#C8C8CC"),
+                    Margin = new Thickness(0, 4, 0, 8)
+                });
+
+                var addPpb = new PropertyPanelBuilder();
+                root.Children.Add(BuildAddEffectPanel(
+                    EffectTarget.IsKeyFramed | clip.GetEffectTarget(),
+                    page,
+                    allBundleFactories,
+                    addPpb,
+                    (s, e) =>
+                    {
+                        if (e.Id == "AddBundle" &&
+                            addPpb.Properties.TryGetValue("NewBundleType", out var typeObj) &&
+                            typeObj is string bundleTypeName &&
+                            allBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("ProgressList", null, null));
+                            // 重建标签页
+                            var rebuiltTab = BuildKeyFrameTab(clip, handler);
+                            if (root.Parent is ScrollView sv)
+                            {
+                                sv.Content = rebuiltTab;
+                            }
+                        }
+                    },
+                    showSubfix: false,
+                    ignoreIsUserAddableEffectProperty: true //all IKeyFramedEffectProvider is non-user-addable because of they can't configured in Effect tab.
+                ));
+            }
+
+            return new ScrollView { Content = root };
+        }
+
+        private View BuildKeyframeProviderSectionUI(
+            IKeyFramedEffectProvider provider,
+            ClipElementUI clip,
+            Func<ClipPositionTuple> getDefaultPosition,
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            var section = new VerticalStackLayout { Spacing = 8, Margin = new Thickness(0, 0, 0, 8) };
+
+            string displayName = EffectBundleUiHelper.L(provider.TypeName, provider.TypeName);
+
+            var actionsRow = new HorizontalStackLayout { Spacing = 8 };
+            var collapseButton = new Label
+            {
+                Text = "▼",
+                TextColor = Color.FromArgb("#A8B8CC"),
+                FontSize = 14,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Start
+            };
+            var title = new Label
+            {
+                Text = displayName,
+                FontSize = 20,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#E8EEF8"),
+                HorizontalOptions = LayoutOptions.Start
+            };
+            var addButton = new Button
+            {
+                Text = "+",
+                CornerRadius = 8,
+                FontAttributes = FontAttributes.Bold,
+                HorizontalOptions = LayoutOptions.End
+            };
+            actionsRow.Children.Add(collapseButton);
+            actionsRow.Children.Add(title);
+            actionsRow.Children.Add(addButton);
+            section.Children.Add(actionsRow);
+
+            var listHost = new VerticalStackLayout { Spacing = 8 };
+            section.Children.Add(listHost);
+
+            bool isCollapsed = false;
+            var collapseTap = new TapGestureRecognizer();
+            var titleTap = new TapGestureRecognizer();
+            void SwitchCollpaseMode()
+            {
+                isCollapsed = !isCollapsed;
+                collapseButton.Text = isCollapsed ? "▶" : "▼";
+                listHost.IsVisible = !isCollapsed;
+            }
+            collapseTap.Tapped += (_, _) => SwitchCollpaseMode();
+            titleTap.Tapped += (_, _) => SwitchCollpaseMode();
+            collapseButton.GestureRecognizers.Add(collapseTap);
+            title.GestureRecognizers.Add(titleTap);
+
+            // Store a stable reference to the "CropList" parameter name for the notification event
+            string listParamName = $"{provider.TypeName}List";
+
+            void RebuildList()
+            {
+                listHost.Children.Clear();
+
+                var steps = provider.Steps;
+                if (steps.Count == 0)
+                {
+                    listHost.Children.Add(new Label
+                    {
+                        Text = "暂无关键帧。",
+                        TextColor = Color.FromArgb("#A8B8CC"),
+                        FontSize = 12
+                    });
+                    listHost.Children.Add(new Button
+                    {
+                        Text = PPLocalizedResources.EffectProp_Remove,
+                        Command = new Command(() =>
+                        {
+                            if (provider is IEffectBundle bud) clip.EffectBundles?.Remove(bud.Id);
+                            handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                            RebuildList();
+                        }),
+                        TextColor = Color.FromArgb("#FF8080")
+                    });
+                    return;
+                }
+
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    int idx = i;
+                    var stepInfo = steps[idx];
+
+                    var card = new Border
+                    {
+                        Stroke = Colors.White.WithAlpha(0.10f),
+                        StrokeShape = new RoundRectangle { CornerRadius = 10 },
+                        Background = new SolidColorBrush(Color.FromArgb("#0FFFFFFF")),
+                        Padding = new Thickness(10)
+                    };
+
+                    var stack = new VerticalStackLayout { Spacing = 8 };
+
+                    var header = new Grid
+                    {
+                        ColumnDefinitions =
+                        {
+                            new ColumnDefinition(GridLength.Star),
+                            new ColumnDefinition(GridLength.Auto)
+                        }
+                    };
+                    header.Add(new Label
+                    {
+                        Text = stepInfo.DisplayLabel,
+                        FontAttributes = FontAttributes.Bold,
+                        FontSize = 13,
+                        TextColor = Color.FromArgb("#DDE7F3")
+                    }, 0, 0);
+
+                    var deleteButton = new Button
+                    {
+                        Text = "\ue9d5",
+                        FontFamily = "Icons",
+                        CornerRadius = 8,
+                        Padding = new Thickness(10, 4),
+                        TextColor = Color.FromArgb("#FF8080")
+                    };
+                    deleteButton.Clicked += (_, _) =>
+                    {
+                        provider.RemoveStep(idx);
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                        RebuildList();
+                    };
+                    header.Add(deleteButton, 1, 0);
+                    stack.Children.Add(header);
+
+                    var stepPpb = provider.CreateStepUI(idx);
+                    var stepView = stepPpb.Build();
+                    stepPpb.PropertyChanged += (s, args) =>
+                    {
+                        if (provider.HandleStepUIChange(idx, args))
+                        {
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                            RebuildList();
+                        }
+                    };
+                    stack.Children.Add(stepView);
+                    card.Content = stack;
+                    listHost.Children.Add(card);
+                }
+            }
+
+            addButton.Clicked += (_, _) =>
+            {
+                if (isCollapsed)
+                {
+                    isCollapsed = !isCollapsed;
+                    collapseButton.Text = isCollapsed ? "▶" : "▼";
+                    listHost.IsVisible = !isCollapsed;
+                }
+                provider.AddStep(getDefaultPosition());
+                RebuildAllEffects(clip);
+                handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                RebuildList();
+            };
+
+            RebuildList();
+            return section;
+        }
 
         #endregion
 
@@ -2232,7 +2657,41 @@ namespace projectFrameCut.DraftStuff
             var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
+                var filteredBundles = clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")).ToList();
+
+                // Sort bundles in input→output order by traversing the connection chain
+                var sortedBundles = new List<KeyValuePair<Guid, IEffectBundle>>();
+                var visitedIds = new HashSet<Guid>();
+                var traverseQueue = new Queue<Guid>();
+                foreach (var b in filteredBundles)
+                {
+                    if (b.Value.BindedInputId == IEffectBundle.InputAnchorGUID || (b.Value.BindedInputIds?.Contains(IEffectBundle.InputAnchorGUID) ?? false))
+                    {
+                        traverseQueue.Enqueue(b.Key);
+                    }
+                }
+                while (traverseQueue.Count > 0)
+                {
+                    var id = traverseQueue.Dequeue();
+                    if (!visitedIds.Add(id)) continue;
+                    var bundleKvp = filteredBundles.First(b => b.Key == id);
+                    sortedBundles.Add(bundleKvp);
+                    foreach (var b in filteredBundles)
+                    {
+                        if ((b.Value.BindedInputId == id || (b.Value.BindedInputIds?.Contains(id) ?? false)) && !visitedIds.Contains(b.Key))
+                        {
+                            traverseQueue.Enqueue(b.Key);
+                        }
+                    }
+                }
+                // Append any remaining bundles not connected to the main chain
+                foreach (var b in filteredBundles)
+                {
+                    if (!visitedIds.Contains(b.Key))
+                        sortedBundles.Add(b);
+                }
+
+                foreach (var bundleKvp in sortedBundles)
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2541,7 +3000,8 @@ namespace projectFrameCut.DraftStuff
             Dictionary<string, Func<IEffectBundle>> bundlesFactories,
             PropertyPanelBuilder ppb,
             EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
-            bool showSubfix = true)
+            bool showSubfix = true,
+            bool ignoreIsUserAddableEffectProperty = false)
         {
             if (bundlesFactories == null || bundlesFactories.Count == 0)
             {
@@ -2569,7 +3029,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserVisibleEffect).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target == target).Select(c => c.c).OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserAddableEffect || ignoreIsUserAddableEffectProperty).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target.HasFlag(target)).Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -3220,6 +3680,13 @@ namespace projectFrameCut.DraftStuff
                 handler?.Invoke(s, e);
             };
 
+            ppb.AddButton("重置", (_, _) =>
+            {
+                clip.EffectBundles?.Remove(InternalColorAdjustmentBundleGuid);
+                RebuildAllEffects(clip);
+                handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+            }, (c) => c.TextColor = Color.FromArgb("#FF8080"));
+
             return ppb.BuildWithScrollView();
         }
         #endregion
@@ -3848,6 +4315,21 @@ namespace projectFrameCut.DraftStuff
             return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
         }
 
+        private static string ReadStringValue(object? raw, string fallback)
+        {
+            if (raw is string s)
+            {
+                return s;
+            }
+
+            if (raw is JsonElement elem && elem.ValueKind == JsonValueKind.String)
+            {
+                return elem.GetString() ?? fallback;
+            }
+
+            return raw?.ToString() ?? fallback;
+        }
+
         private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
             => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
 
@@ -3864,6 +4346,15 @@ namespace projectFrameCut.DraftStuff
         {
             ArgumentNullException.ThrowIfNull(effect);
             return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
+        }
+
+        private static string ReadDictionaryStringValue(IReadOnlyDictionary<string, object>? values, string key, string fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadStringValue(raw, fallback) : fallback;
+
+        private static string ReadEffectStringParameter(IEffect effect, string key, string fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryStringValue(effect.Parameters, key, fallback);
         }
 
         private static bool TryGetCropSize(IEffect effect, out int width, out int height)

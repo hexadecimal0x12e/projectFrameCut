@@ -115,8 +115,8 @@ namespace projectFrameCut.Render.Effect
 
                 result = new Picture16bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel
                 };
 
                 // Computer may return ushort[] (typed path) or float[] (fallback)
@@ -226,8 +226,8 @@ namespace projectFrameCut.Render.Effect
 
                 result = new Picture8bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel
                 };
 
                 // Computer may return byte[] (typed path) or float[] (fallback)
@@ -337,8 +337,8 @@ namespace projectFrameCut.Render.Effect
                 int dstPixels = checked(destW * destH);
                 result = new HDRPicture16bpp(destW, destH)
                 {
-                    a = source.hasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    hasAlphaChannel = source.hasAlphaChannel,
+                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
+                    HasAlphaChannel = source.HasAlphaChannel,
                     MaximumBrightness = source.MaximumBrightness,
                 };
 

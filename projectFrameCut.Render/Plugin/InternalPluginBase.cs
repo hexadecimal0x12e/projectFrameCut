@@ -122,12 +122,14 @@ public class InternalPluginBase : IPluginBase
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
         {"Jitter", new(() => new JitterEffect()) },
-        {"ProgressPlacer", new(() => new ProgressPlacer()) }
+        {"ProgressPlacer", new(() => new ProgressPlacer()) },
+        {"Crop", new(() => new ProgressCropper_ImageSharp()) }
     };
 
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         {"ZoomIn", new ZoomInContinuousEffectFactory()},
+        {"Crop", new ProgressCropperEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -258,4 +260,3 @@ public class InternalPluginBase : IPluginBase
     public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 
 }
-

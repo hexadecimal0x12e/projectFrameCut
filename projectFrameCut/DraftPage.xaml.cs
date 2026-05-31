@@ -48,6 +48,7 @@ using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.ApplicationPluginBase.Effect;
 
 
 
@@ -4527,8 +4528,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     public async void RefreshPropertyPanel(ClipElementUI clip)
     {
         var panel = await BuildPropertyPanel(clip);
-        Popup.Content = WrapPropertyPanelContent(clip, panel);
-        RightContentBorder.Content = panel;
+        await Dispatcher.DispatchAsync(() =>
+        {
+            Popup.Content = WrapPropertyPanelContent(clip, panel);
+            RightContentBorder.Content = panel;
+        });
     }
 
     private static View WrapPropertyPanelContent(ClipElementUI clip, View panel)
@@ -6622,51 +6626,26 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        clip.Effects ??= new Dictionary<string, projectFrameCut.Render.RenderAPIBase.EffectAndMixture.IEffect>();
+        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
 
-        string? effectKey = null;
-        ProgressPlacer? progressPlacer = null;
-        foreach (var effectEntry in clip.Effects)
+        IKeyFramedEffectProvider? provider = null;
+        foreach (var eb in clip.EffectBundles.Values)
         {
-            if (effectEntry.Value is ProgressPlacer placer)
+            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
             {
-                effectKey = effectEntry.Key;
-                progressPlacer = placer;
-                break;
-            }
-
-            if (string.Equals(effectEntry.Value.TypeName, "ProgressPlacer", StringComparison.Ordinal))
-            {
-                effectKey = effectEntry.Key;
-                var rebuilt = (ProgressPlacer)new ProgressPlacer().WithParameters(effectEntry.Value.Parameters);
-                rebuilt.Name = effectEntry.Value.Name;
-                rebuilt.Id = effectEntry.Value.Id;
-                rebuilt.Index = effectEntry.Value.Index;
-                rebuilt.Enabled = effectEntry.Value.Enabled;
-                rebuilt.RelativeWidth = effectEntry.Value.RelativeWidth;
-                rebuilt.RelativeHeight = effectEntry.Value.RelativeHeight;
-                rebuilt.BindedEffectGroupID = effectEntry.Value.BindedEffectGroupID;
-                progressPlacer = rebuilt;
-                clip.Effects[effectKey] = rebuilt;
+                provider = kfp;
                 break;
             }
         }
 
-        if (progressPlacer is null)
+        if (provider is null)
         {
-            var maxIndex = clip.Effects.Count == 0 ? 0 : clip.Effects.Values.Max(e => e.Index) + 1;
-            progressPlacer = new ProgressPlacer
-            {
-                Name = "ProgressPlacer",
-                Id = Guid.NewGuid().ToString(),
-                Index = maxIndex,
-                Enabled = true,
-                RelativeWidth = (int)Math.Max(1, ProjectInfo.RelativeWidth),
-                RelativeHeight = (int)Math.Max(1, ProjectInfo.RelativeHeight),
-                ProgressList = new List<ProgressData>()
-            };
-            effectKey = $"ProgressPlacer-{Guid.NewGuid():N}";
-            clip.Effects[effectKey] = progressPlacer;
+            var newBundle = new ProgressPlacerEffectBundle();
+            newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
+            newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            clip.EffectBundles[newBundle.Id] = newBundle;
+            provider = newBundle;
+            ClipInfoBuilder.RebuildAllEffects(clip);
         }
 
         var progress = ComputeClipProgressForFrame(clip, frame);
@@ -6677,18 +6656,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             Math.Max(1, position.TargetHeight),
             false);
 
-        var existingIndex = progressPlacer.ProgressList.FindIndex(p => Math.Abs(p.Index - progress) <= 0.000001d);
-        var keyframeData = new ProgressData(progress, safePosition);
-        if (existingIndex >= 0)
-        {
-            progressPlacer.ProgressList[existingIndex] = keyframeData;
-        }
-        else
-        {
-            progressPlacer.ProgressList.Add(keyframeData);
-        }
-
-        progressPlacer.ProgressList.Sort((a, b) => a.Index.CompareTo(b.Index));
+        provider.UpsertStep(progress, safePosition);
+        ClipInfoBuilder.RebuildAllEffects(clip);
     }
 
     private double ComputeClipProgressForFrame(ClipElementUI clip, uint frame)

@@ -43,7 +43,7 @@ namespace projectFrameCut.Render.Transform
         {
             IPicture? result = null;
 
-            if(prevPic.bitPerPixel == 16 || nextPic.bitPerPixel == 16)
+            if(prevPic.BitPerPixel == 16 || nextPic.BitPerPixel == 16)
             {
                 if (prevPic.ToBitPerPixel(16) is IPicture<ushort> p16 && nextPic.ToBitPerPixel(16) is IPicture<ushort> n16)
                 {
@@ -67,7 +67,7 @@ namespace projectFrameCut.Render.Transform
                     }
 
                     // handle alpha channel if any of inputs has it
-                    if (p16.hasAlphaChannel || n16.hasAlphaChannel)
+                    if (p16.HasAlphaChannel || n16.HasAlphaChannel)
                     {
                         outPic.a = new float[total];
                         for (int i = 0; i < total; i++)
@@ -76,7 +76,7 @@ namespace projectFrameCut.Render.Transform
                             float a2 = n16.a is null ? 1f : n16.a[i];
                             outPic.a[i] = Math.Clamp(a1 * wPrev + a2 * wNext, 0f, 1f);
                         }
-                        outPic.hasAlphaChannel = true;
+                        outPic.HasAlphaChannel = true;
                     }
 
                     result = outPic;
@@ -110,7 +110,7 @@ namespace projectFrameCut.Render.Transform
                     }
 
                     // handle alpha channel if any of inputs has it
-                    if (p.hasAlphaChannel || n.hasAlphaChannel)
+                    if (p.HasAlphaChannel || n.HasAlphaChannel)
                     {
                         outPic.a = new float[total];
                         for (int i = 0; i < total; i++)
@@ -119,7 +119,7 @@ namespace projectFrameCut.Render.Transform
                             float a2 = n.a is null ? 1f : n.a[i];
                             outPic.a[i] = Math.Clamp(a1 * wPrev + a2 * wNext, 0f, 1f);
                         }
-                        outPic.hasAlphaChannel = true;
+                        outPic.HasAlphaChannel = true;
                     }
 
                     result = outPic;

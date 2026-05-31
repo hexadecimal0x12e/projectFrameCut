@@ -37,7 +37,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         public static string? DiagImagePath { get; set; }
         /// <summary>
-        /// Allow convert a IPicture to a lower <see cref="bitPerPixel"/>.
+        /// Allow convert a IPicture to a lower <see cref="BitPerPixel"/>.
         /// </summary>
         /// <remarks>
         /// When this is false, an <see cref="InvalidOperationException"/> will be thrown when attempting to convert to a lower pixel mode, either in <see cref="ToBitPerPixel(int)"/> or in VideoWriter.
@@ -52,7 +52,7 @@ namespace projectFrameCut.Shared
         /// Get how much bits in one pixel.
         /// Please refer to <see cref="PicturePixelMode"/> for more information.
         /// </summary>
-        public PicturePixelMode bitPerPixel { get; }
+        public PicturePixelMode BitPerPixel { get; }
         /// <summary>
         /// The width of this picture
         /// </summary>
@@ -66,13 +66,9 @@ namespace projectFrameCut.Shared
         /// </summary>
         public int Pixels { get; init; }
         /// <summary>
-        /// The frame index this picture comes from. Used for diagnostics only.
+        /// Diagnostic tag for this picture.
         /// </summary>
-        public uint? frameIndex { get; set; } //诊断用
-        /// <summary>
-        /// The file path this picture comes from. Used for diagnostics only.
-        /// </summary>
-        public string? filePath { get; set; } //诊断用
+        public string? Tag { get; set; }
 
         /// <summary>
         /// Records each step of the image processed.
@@ -85,7 +81,7 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Indicates whether this picture has an alpha channel.
         /// </summary>
-        public bool hasAlphaChannel { get; set; }
+        public bool HasAlphaChannel { get; set; }
         /// <summary>
         /// Get whether this picture has been disposed.
         /// </summary>
@@ -224,7 +220,7 @@ namespace projectFrameCut.Shared
         [JsonIgnore()]
         public T[] b { get; set; }
 
-        public new bool hasAlphaChannel { get => false; set { } }
+        public new bool HasAlphaChannel { get => false; set { } }
 
         public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
     }
@@ -269,16 +265,15 @@ namespace projectFrameCut.Shared
         public int Height { get; set; }
         public int Pixels { get; init; }
 
-        public uint? frameIndex { get; set; } //诊断用
-        public string? filePath { get; set; } //诊断用
+        public string? Tag { get; set; }
 
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
 
-        public bool hasAlphaChannel { get; set; } = false;
+        public bool HasAlphaChannel { get; set; } = false;
 
-        public PicturePixelMode bitPerPixel => 16;
+        public PicturePixelMode BitPerPixel => 16;
         /// <summary>
         /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
         /// </summary>
@@ -300,12 +295,12 @@ namespace projectFrameCut.Shared
                 if (picture.a != null && picture.a.Length == Pixels)
                 {
                     a = picture.a;
-                    hasAlphaChannel = true;
+                    HasAlphaChannel = true;
                 }
                 else
                 {
                     a = null;
-                    hasAlphaChannel = false;
+                    HasAlphaChannel = false;
                 }
             }
 
@@ -407,7 +402,7 @@ namespace projectFrameCut.Shared
             }
 
             Pixels = checked(Width * Height);
-            filePath = imagePath;
+            Tag = imagePath;
             ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -443,7 +438,7 @@ namespace projectFrameCut.Shared
             b = GC.AllocateUninitializedArray<ushort>(Pixels);
             if (source.PixelType.BitsPerPixel == 64) //Rgba32
             {
-                hasAlphaChannel = true;
+                HasAlphaChannel = true;
                 a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba64>();
                 img.ProcessPixelRows(accessor =>
@@ -458,7 +453,7 @@ namespace projectFrameCut.Shared
             }
             else if (source.PixelType.BitsPerPixel == 32) //Rgba32
             {
-                hasAlphaChannel = true;
+                HasAlphaChannel = true;
                 a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba32>();
                 img.ProcessPixelRows(accessor =>
@@ -473,7 +468,7 @@ namespace projectFrameCut.Shared
             }
             else //Rgb24
             {
-                hasAlphaChannel = false;
+                HasAlphaChannel = false;
                 a = null;
                 var img = source.CloneAs<Rgb24>();
                 img.ProcessPixelRows(accessor =>
@@ -512,11 +507,11 @@ namespace projectFrameCut.Shared
         {
             lock (this)
             {
-                if (haveAlpha == hasAlphaChannel)
+                if (haveAlpha == HasAlphaChannel)
                 {
                     return this;
                 }
-                hasAlphaChannel = haveAlpha;
+                HasAlphaChannel = haveAlpha;
                 if (!haveAlpha)
                 {
                     a = null;
@@ -533,10 +528,10 @@ namespace projectFrameCut.Shared
         {
             lock (this)
             {
-                if (!hasAlphaChannel || a == null || a.Length != Pixels)
+                if (!HasAlphaChannel || a == null || a.Length != Pixels)
                 {
                     a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
-                    hasAlphaChannel = true;
+                    HasAlphaChannel = true;
                 }
             }
         }
@@ -544,10 +539,10 @@ namespace projectFrameCut.Shared
 
         public void EnsureNoAlpha()
         {
-            if (hasAlphaChannel || a != null || a?.Length == Pixels)
+            if (HasAlphaChannel || a != null || a?.Length == Pixels)
             {
                 a = null;
-                hasAlphaChannel = false;
+                HasAlphaChannel = false;
             }
         }
 
@@ -593,12 +588,12 @@ namespace projectFrameCut.Shared
             if (a != null)
             {
                 pic.a = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, a.Value);
-                pic.hasAlphaChannel = true;
+                pic.HasAlphaChannel = true;
             }
             else
             {
                 pic.a = null;
-                pic.hasAlphaChannel = false;
+                pic.HasAlphaChannel = false;
             }
             return pic;
         }
@@ -656,13 +651,12 @@ namespace projectFrameCut.Shared
                 var sw = Stopwatch.StartNew();
                 var pic = new Picture8bpp(Width, Height, allocateArrays: false)
                 {
-                    frameIndex = this.frameIndex,
-                    filePath = this.filePath,
-                    hasAlphaChannel = this.hasAlphaChannel,
+                    Tag = this.Tag,
+                    HasAlphaChannel = this.HasAlphaChannel,
                     ProcessStack = this.ProcessStack,
                 };
 
-                if (hasAlphaChannel && a != null)
+                if (HasAlphaChannel && a != null)
                 {
                     pic.a = GC.AllocateUninitializedArray<float>(Pixels);
                     Array.Copy(a, pic.a, Pixels);
@@ -731,7 +725,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
+        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{HasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
     }
 
     #endregion
@@ -757,15 +751,14 @@ namespace projectFrameCut.Shared
         public int Height { get; set; }
         public int Pixels { get; init; }
 
-        public uint? frameIndex { get; set; } //诊断用
-        public string? filePath { get; set; } //诊断用
+        public string? Tag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
 
-        public bool hasAlphaChannel { get; set; } = false;
+        public bool HasAlphaChannel { get; set; } = false;
 
-        public PicturePixelMode bitPerPixel => 8;
+        public PicturePixelMode BitPerPixel => 8;
 
 
 
@@ -790,12 +783,12 @@ namespace projectFrameCut.Shared
                 if (picture.a != null && picture.a.Length == Pixels)
                 {
                     a = picture.a;
-                    hasAlphaChannel = true;
+                    HasAlphaChannel = true;
                 }
                 else
                 {
                     a = null;
-                    hasAlphaChannel = false;
+                    HasAlphaChannel = false;
                 }
             }
 
@@ -903,7 +896,7 @@ namespace projectFrameCut.Shared
             }
 
             Pixels = checked(Width * Height);
-            filePath = imagePath;
+            Tag = imagePath;
             ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -937,7 +930,7 @@ namespace projectFrameCut.Shared
             b = GC.AllocateUninitializedArray<byte>(Pixels);
             if (source.PixelType.BitsPerPixel == 64) //Rgba64
             {
-                hasAlphaChannel = true;
+                HasAlphaChannel = true;
                 a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba64>();
                 img.ProcessPixelRows(accessor =>
@@ -960,7 +953,7 @@ namespace projectFrameCut.Shared
             }
             else if (source.PixelType.BitsPerPixel == 32) //Rgba32
             {
-                hasAlphaChannel = true;
+                HasAlphaChannel = true;
                 a = GC.AllocateUninitializedArray<float>(Pixels);
                 var img = source.CloneAs<Rgba32>();
                 img.ProcessPixelRows(accessor =>
@@ -975,7 +968,7 @@ namespace projectFrameCut.Shared
             }
             else //Rgb24
             {
-                hasAlphaChannel = false;
+                HasAlphaChannel = false;
                 a = null;
                 var img = source.CloneAs<Rgb24>();
                 img.ProcessPixelRows(accessor =>
@@ -1019,11 +1012,11 @@ namespace projectFrameCut.Shared
         {
             lock (this)
             {
-                if (haveAlpha == hasAlphaChannel)
+                if (haveAlpha == HasAlphaChannel)
                 {
                     return this;
                 }
-                hasAlphaChannel = haveAlpha;
+                HasAlphaChannel = haveAlpha;
                 if (!haveAlpha)
                 {
                     a = null;
@@ -1040,10 +1033,10 @@ namespace projectFrameCut.Shared
         {
             lock (this)
             {
-                if (!hasAlphaChannel || a == null || a.Length != Pixels)
+                if (!HasAlphaChannel || a == null || a.Length != Pixels)
                 {
                     a = PictureBufferUtilities.AllocateFilledArray(Pixels, 1f);
-                    hasAlphaChannel = true;
+                    HasAlphaChannel = true;
                 }
             }
         }
@@ -1051,10 +1044,10 @@ namespace projectFrameCut.Shared
 
         public void EnsureNoAlpha()
         {
-            if (hasAlphaChannel || a != null || a?.Length == Pixels)
+            if (HasAlphaChannel || a != null || a?.Length == Pixels)
             {
                 a = null;
-                hasAlphaChannel = false;
+                HasAlphaChannel = false;
             }
         }
 
@@ -1100,12 +1093,12 @@ namespace projectFrameCut.Shared
             if (a != null)
             {
                 pic.a = PictureBufferUtilities.AllocateFilledArray(pic.Pixels, a.Value);
-                pic.hasAlphaChannel = true;
+                pic.HasAlphaChannel = true;
             }
             else
             {
                 pic.a = null;
-                pic.hasAlphaChannel = false;
+                pic.HasAlphaChannel = false;
             }
             return pic;
         }
@@ -1160,14 +1153,13 @@ namespace projectFrameCut.Shared
                 var sw = Stopwatch.StartNew();
                 var pic = new Picture16bpp(Width, Height, allocateArrays: false)
                 {
-                    frameIndex = this.frameIndex,
-                    filePath = this.filePath,
-                    hasAlphaChannel = this.hasAlphaChannel,
+                    Tag = this.Tag,
+                    HasAlphaChannel = this.HasAlphaChannel,
                     ProcessStack = this.ProcessStack
                 };
 
 
-                if (hasAlphaChannel && a != null)
+                if (HasAlphaChannel && a != null)
                 {
                     pic.a = GC.AllocateUninitializedArray<float>(Pixels);
                     Array.Copy(a, pic.a, Pixels);
@@ -1236,7 +1228,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
+        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{HasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1}";
 
 
     }
@@ -1250,16 +1242,15 @@ namespace projectFrameCut.Shared
         [JsonIgnore()]
         public bool[] b { get; set; } = Array.Empty<bool>();
 
-        public PicturePixelMode bitPerPixel => 1;
+        public PicturePixelMode BitPerPixel => 1;
 
         public int Width { get; set; }
         public int Height { get; set; }
         public int Pixels { get; init; }
-        public uint? frameIndex { get; set; }
-        public string? filePath { get; set; }
+        public string? Tag { get; set; }
 
         public List<PictureProcessStack> ProcessStack { get; set; }
-        public bool hasAlphaChannel { get; set; }
+        public bool HasAlphaChannel { get; set; }
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
 
@@ -1313,7 +1304,7 @@ namespace projectFrameCut.Shared
             var result = new Picture8bpp(Width, Height, allocateArrays: false)
             {
                 a = null,
-                hasAlphaChannel = false,
+                HasAlphaChannel = false,
                 Width = Width,
                 Height = Height,
                 Pixels = Pixels,
@@ -1481,18 +1472,18 @@ namespace projectFrameCut.Shared
             if (a != null)
             {
                 pic.a = PictureBufferUtilities.AllocateFilledArray(pixels, Math.Clamp(a.Value, 0f, 1f));
-                pic.hasAlphaChannel = true;
+                pic.HasAlphaChannel = true;
             }
             else
             {
                 pic.a = null;
-                pic.hasAlphaChannel = false;
+                pic.HasAlphaChannel = false;
             }
 
             return pic;
         }
 
-        public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{hasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average()}(0..1), {Brightness.Average() * MaximumBrightness}nit";
+        public string GetDiagnosticsInfo() => $"HDR image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:(has:{HasAlphaChannel}){a?.Average(Convert.ToDecimal) ?? -1} L:{Brightness.Average()}(0..1), {Brightness.Average() * MaximumBrightness}nit";
 
         public long GetUniqueID()
         {
@@ -1531,19 +1522,18 @@ namespace projectFrameCut.Shared
 
             var result = new Picture16bpp(Width, Height, allocateArrays: false)
             {
-                frameIndex = frameIndex,
-                filePath = filePath,
+                Tag = this.Tag,
             };
 
             result.r = GC.AllocateUninitializedArray<ushort>(Pixels);
             result.g = GC.AllocateUninitializedArray<ushort>(Pixels);
             result.b = GC.AllocateUninitializedArray<ushort>(Pixels);
 
-            if (hasAlphaChannel && a != null)
+            if (HasAlphaChannel && a != null)
             {
                 result.a = GC.AllocateUninitializedArray<float>(Pixels);
                 Array.Copy(a, result.a, Pixels);
-                result.hasAlphaChannel = true;
+                result.HasAlphaChannel = true;
             }
 
             result.ProcessStack = new List<PictureProcessStack>(ProcessStack);

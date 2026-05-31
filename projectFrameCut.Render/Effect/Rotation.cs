@@ -140,7 +140,7 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            IPicture result = (int)source.bitPerPixel switch
+            IPicture result = (int)source.BitPerPixel switch
             {
                 8 => new Picture8bpp(img),
                 16 => new Picture16bpp(img),
