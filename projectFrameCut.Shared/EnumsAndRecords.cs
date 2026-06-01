@@ -60,13 +60,15 @@ namespace projectFrameCut.Shared
     public enum EffectTarget
     {
         NotSpecified = -1,
-        Video = 0,
-        Audio = 1,
-        SpeedVariance = 2,
-        Mixture = 4,
-        ColorAdjustment = 8,
+        Video = 2,
+        Audio = 4,
+        SpeedVariance = 8,
+        Mixture = 16,
+        ColorAdjustment = 32,
 
         IsKeyFramed = 1 << 16,
+        IsNotVisibleInEffectEditor = 1 << 17,
+        IsNotVisibleInNewEffectSelector = 1 << 18,
     }
 
     public enum BindableArgumentEffectType

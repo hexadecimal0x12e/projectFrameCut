@@ -292,7 +292,7 @@ public partial class DraftEffectBindingView : ContentView
             // The logic to load factories and instantiate IEffectBundle has been removed.
             // We iterate bundleData directly to create visual nodes.
 
-            foreach (var bundle in _clip.EffectBundles.Values.Where(c => c.Target == _clip.GetEffectTarget()))
+            foreach (var bundle in _clip.EffectBundles.Values)
             {
                 // Placeholder Node Creation
                 // We assume 1 input port "Input" because we cannot inspect the real effect logic anymore.
@@ -1178,6 +1178,17 @@ public partial class DraftEffectBindingView : ContentView
     {
         _drawable.Connections.Clear();
 
+        bool TryAddConnection(Guid sourceId, NodeViewModel target, int targetPortIndex)
+        {
+            if (_nodes.TryGetValue(sourceId, out var sourceNode))
+            {
+                _drawable.Connections.Add((sourceNode, target, targetPortIndex));
+                return true;
+            }
+
+            return false;
+        }
+
         if (!_nodes.Any(n => n.Value.Kind == NodeKind.Effect && n.Value.OutputAnchorID == IEffectBundle.OutputAnchorGUID)) //no any effect connected to output
         {
             _drawable.Connections.Add((_inputNode ?? throw new NullReferenceException(), _outputNode ?? throw new NullReferenceException(), 0));
@@ -1192,12 +1203,22 @@ public partial class DraftEffectBindingView : ContentView
             {
                 for (int i = 0; i < item.InputAnchorIDs.Count; i++)
                 {
-                    if (item.InputAnchorIDs[i] != IEffectBundle.NoConnectionGUID) _drawable.Connections.Add((_nodes[item.InputAnchorIDs[i]], item, i));
+                    var inputId = item.InputAnchorIDs[i];
+                    if (inputId == IEffectBundle.NoConnectionGUID) continue;
+
+                    if (!TryAddConnection(inputId, item, i))
+                    {
+                        // Ensure stale or deleted node references do not keep crashing the editor.
+                        item.InputAnchorIDs[i] = IEffectBundle.NoConnectionGUID;
+                    }
                 }
             }
             else
             {
-                if (item.InputAnchorID != IEffectBundle.NoConnectionGUID) _drawable.Connections.Add((_nodes[item.InputAnchorID], item, 0));
+                if (item.InputAnchorID != IEffectBundle.NoConnectionGUID && !TryAddConnection(item.InputAnchorID, item, 0))
+                {
+                    item.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                }
 
             }
 
@@ -1381,11 +1402,11 @@ public partial class DraftEffectBindingView : ContentView
             {
                 if (e.Id == "AddBundle")
                 {
-                    // ´¦ÀíÌí¼ÓÂß¼­
                     var BundleType = e.Value?.ToString();
                     if (!string.IsNullOrWhiteSpace(BundleType)) AddBundle(BundleType);
                 }
-            }
+            },
+            hideKeyFramedBundles: true
         ));
     }
 

@@ -107,7 +107,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleUiHelper.L("DisplayName_Effect_Blur", "Blur"),
                 Description = EffectBundleUiHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_effect_blur")
+                Thumbnail = ImageSource.FromFile("effectsample_blur")
             };
         }
     }

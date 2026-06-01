@@ -410,12 +410,12 @@ public partial class ClipCropConfiguratorView : ContentView
 		if (RelativeWidth > 0 && StartX + CropWidth > RelativeWidth)
 		{
 			SummaryLabel.TextColor = Colors.Red;
-            SummaryLabel.Text = "StartX + Width 超出 RelativeWidth。";
+            SummaryLabel.Text = Localized.InteractableEditor_ClipCropConfiguratorView_WidthOverflow;
 		}
 		else if (RelativeHeight > 0 && StartY + CropHeight > RelativeHeight)
 		{
             SummaryLabel.TextColor = Colors.Red;
-            SummaryLabel.Text = "StartY + Height 超出 RelativeHeight。";
+            SummaryLabel.Text = Localized.InteractableEditor_ClipCropConfiguratorView_HeightOverflow;
 		}
 		else
 		{

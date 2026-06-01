@@ -832,14 +832,12 @@ namespace projectFrameCut.DraftStuff
                 bundle.Parameters["Width"] = page.ProjectInfo.RelativeWidth;
                 bundle.Parameters["Height"] = page.ProjectInfo.RelativeHeight;
                 bundle.Parameters["Angle"] = 0f;
-                bundle.Parameters["CropList"] = "[]";
                 return bundle;
             }
 
-            IEffectBundle NormalizeCropBundle(IEffectBundle? source, IEffect? fallbackEffect, string? fallbackCropList = null)
+            IEffectBundle NormalizeCropBundle(IEffectBundle? source, IEffect? fallbackEffect)
             {
                 var normalized = BuildDefaultCropBundle();
-                var cropList = fallbackCropList ?? "[]";
 
                 if (source != null && string.Equals(source.TypeName, "Crop", StringComparison.Ordinal))
                 {
@@ -849,7 +847,6 @@ namespace projectFrameCut.DraftStuff
                     normalized.Parameters["Width"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Width", page.ProjectInfo.RelativeWidth));
                     normalized.Parameters["Height"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Height", page.ProjectInfo.RelativeHeight));
                     normalized.Parameters["Angle"] = ReadDictionaryFloatValue(source.Parameters, "Angle", 0f);
-                    normalized.Parameters["CropList"] = ReadDictionaryStringValue(source.Parameters, "CropList", cropList);
                     return normalized;
                 }
 
@@ -861,10 +858,8 @@ namespace projectFrameCut.DraftStuff
                     normalized.Parameters["Width"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Width", page.ProjectInfo.RelativeWidth));
                     normalized.Parameters["Height"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Height", page.ProjectInfo.RelativeHeight));
                     normalized.Parameters["Angle"] = ReadEffectFloatParameter(fallbackEffect, "Angle", 0f);
-                    cropList = ReadEffectStringParameter(fallbackEffect, "CropList", cropList);
                 }
 
-                normalized.Parameters["CropList"] = cropList;
                 return normalized;
             }
 
@@ -875,7 +870,6 @@ namespace projectFrameCut.DraftStuff
             clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
             clip.EffectBundles.TryGetValue(InternalCropBundleGuid, out var existingInternalCropBundle);
             var currentCropBundle = NormalizeCropBundle(existingInternalCropBundle, existingCropEffect);
-            var currentCropListText = ReadDictionaryStringValue(currentCropBundle.Parameters, "CropList", "[]");
             IEffectBundle previousCropPayload = currentCropBundle;
 
             var cropView = new ClipCropConfiguratorView
@@ -898,11 +892,10 @@ namespace projectFrameCut.DraftStuff
                 .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                 .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
-                .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropList", EffectBundleUiHelper.ParamLabel("CropList"), currentCropListText, "[]", null, EntryUpdateEventCallMode.OnAnyTextChange);
+                .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused);
 
             cropView.ConfigurationChanged += (s, bundle) =>
             {
@@ -914,9 +907,8 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
-                var normalized = NormalizeCropBundle(bundle, existingCropEffect, currentCropListText);
+                var normalized = NormalizeCropBundle(bundle, existingCropEffect);
                 currentCropBundle = normalized;
-                currentCropListText = ReadDictionaryStringValue(normalized.Parameters, "CropList", currentCropListText);
                 clip.EffectBundles[InternalCropBundleGuid] = normalized;
 
                 // The internal crop now comes from bundle conversion to effect.
@@ -1085,31 +1077,6 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
-                if (e.Id == "cropList")
-                {
-                    currentCropListText = e.Value?.ToString() ?? "[]";
-                    currentCropBundle.Parameters["CropList"] = currentCropListText;
-                    clip.EffectBundles[InternalCropBundleGuid] = currentCropBundle;
-                    clip.Effects.Remove(InternalCropID);
-                    RebuildAllEffects(clip);
-
-                    if (TryFindInternalCropEffect(clip, out var rebuiltCrop))
-                    {
-                        rebuiltCrop.RelativeWidth = page.ProjectInfo.RelativeWidth;
-                        rebuiltCrop.RelativeHeight = page.ProjectInfo.RelativeHeight;
-                        SyncOutputSizeFromCropIfNeeded(rebuiltCrop);
-                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", rebuiltCrop, previousCropPayload));
-                    }
-                    else
-                    {
-                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", currentCropBundle, previousCropPayload));
-                    }
-
-                    previousCropPayload = currentCropBundle;
-                    SyncCropInputsFromView();
-                    return;
-                }
-
                 if (!syncingCropInputs)
                 {
                     if (e.Id == "cropStartX" && int.TryParse(e.Value?.ToString(), out var sx))
@@ -1180,7 +1147,6 @@ namespace projectFrameCut.DraftStuff
                     SetCropEntryText("cropStartY", cropView.StartY);
                     SetCropEntryText("cropWidth", cropView.CropWidth);
                     SetCropEntryText("cropHeight", cropView.CropHeight);
-                    SetCropTextEntryText("cropList", currentCropListText);
                 }
                 finally
                 {
@@ -1256,7 +1222,7 @@ namespace projectFrameCut.DraftStuff
             {
                 root.Add(new Label
                 {
-                    Text = "当前片段存在关键帧，在此处的编辑只会影响初始值。",
+                    Text = PPLocalizedResources.KeyFrame_EditWarning,
                     TextColor = Color.FromArgb("#FF8080"),
                     FontSize = 12,
                     HorizontalOptions = LayoutOptions.Fill,
@@ -1363,7 +1329,7 @@ namespace projectFrameCut.DraftStuff
 
                 root.Children.Add(new Label
                 {
-                    Text = "当前片段还没有支持关键帧的效果。",
+                    Text = PPLocalizedResources.KeyFrame_NoSupport,
                     TextColor = Color.FromArgb("#A8B8CC"),
                     FontSize = 12,
                     LineBreakMode = LineBreakMode.WordWrap
@@ -1383,7 +1349,7 @@ namespace projectFrameCut.DraftStuff
 
                 root.Children.Add(new Label
                 {
-                    Text = "添加关键帧效果",
+                    Text = PPLocalizedResources.KeyFrame_AddTitle,
                     FontSize = 16,
                     TextColor = Color.FromArgb("#C8C8CC"),
                     Margin = new Thickness(0, 4, 0, 8)
@@ -1420,7 +1386,7 @@ namespace projectFrameCut.DraftStuff
                         }
                     },
                     showSubfix: false,
-                    ignoreIsUserAddableEffectProperty: true //all IKeyFramedEffectProvider is non-user-addable because of they can't configured in Effect tab.
+                    ignoreIsNotVisibleInNewEffectSelector: true //keyframed effect may not have visible UI but should still be addable from this panel
                 ));
             }
 
@@ -1495,7 +1461,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     listHost.Children.Add(new Label
                     {
-                        Text = "暂无关键帧。",
+                        Text = PPLocalizedResources.KeyFrame_Empty,
                         TextColor = Color.FromArgb("#A8B8CC"),
                         FontSize = 12
                     });
@@ -1538,7 +1504,7 @@ namespace projectFrameCut.DraftStuff
                     };
                     header.Add(new Label
                     {
-                        Text = stepInfo.DisplayLabel,
+                        Text = PPLocalizedResources.KeyFrame_Progress(i, stepInfo.Progress),
                         FontAttributes = FontAttributes.Bold,
                         FontSize = 13,
                         TextColor = Color.FromArgb("#DDE7F3")
@@ -2038,7 +2004,7 @@ namespace projectFrameCut.DraftStuff
             if (showAllOptions)
             {
                 var subTrackSwitch = new Switch { IsToggled = e.ShouldInSubtrack, VerticalOptions = LayoutOptions.Center };
-                var subTrackLabel = new Label { Text = "Place in subtrack by default", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+                var subTrackLabel = new Label { Text = PPLocalizedResources.TextOption_PlaceInSubtrack, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
                 subTrackSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); };
                 var subTrackGrid = new Grid
                 {
@@ -2631,25 +2597,34 @@ namespace projectFrameCut.DraftStuff
         {
             ArgumentNullException.ThrowIfNull(clip);
             PropertyPanelBuilder ppb = new();
-            ppb.AddButton(PPLocalizedResources.EffectBind_Title, (s, e) =>
+            ppb.AddButton(PPLocalizedResources.EffectBind_Title, async (s, e) =>
             {
-                var bindView = new DraftEffectBindingView();
-                bindView.LoadClip(clip, page);
-                if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+                try
                 {
-                    page.Popup.Content = bindView;
-                }
-                else
-                {
-                    var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                    var bindView = new DraftEffectBindingView();
+                    bindView.LoadClip(clip, page);
+                    if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
                     {
-                        Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
-                        Content = bindView,
-                        IsPopOutVisible = true
-                    };
-                    page.MainMultiWindowView.AddWindow(v);
-                    v.Maximize();
-                    v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                        page.Popup.Content = bindView;
+                    }
+                    else
+                    {
+                        var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                        {
+                            Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
+                            Content = bindView,
+                            IsPopOutVisible = true
+                        };
+                        page.MainMultiWindowView.AddWindow(v);
+                        v.Maximize();
+                        v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Show effect binding view for {clip.DisplayName}", this);
+                    await page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                    if (Debugger.IsAttached) throw;
                 }
 
             });
@@ -2657,7 +2632,10 @@ namespace projectFrameCut.DraftStuff
             var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                var filteredBundles = clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")).ToList();
+                var filteredBundles = clip.EffectBundles
+                    .Where(c =>
+                    ((c.Value.Target.HasFlag(clip.GetEffectTarget()) && !c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)) || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
+                    .ToList();
 
                 // Sort bundles in input→output order by traversing the connection chain
                 var sortedBundles = new List<KeyValuePair<Guid, IEffectBundle>>();
@@ -2729,9 +2707,12 @@ namespace projectFrameCut.DraftStuff
                         ppb.AddCheckbox($"Bundle|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
                         ppb.AddEntry($"Bundle|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
 
-                        ppb.AddSeparator();
+                        if (!bundleInstance.Target.HasFlag(EffectTarget.IsKeyFramed))
+                        {
+                            ppb.AddSeparator();
 
-                        ppb.AddFromAnother(bundlePpb, bundleInstance);
+                            ppb.AddFromAnother(bundlePpb, bundleInstance);
+                        }
 
                         ppb.AddSeparator();
 
@@ -2779,7 +2760,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler));
+            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler, hideKeyFramedBundles: true));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -2961,12 +2942,12 @@ namespace projectFrameCut.DraftStuff
             };
             ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"),
                   p => p.AddSeparator()
-                        .AddButton("Show all", (s, e) =>
+                        .AddButton(PPLocalizedResources.EffectTab_ShowAll, (s, e) =>
                         {
                             showAllEffect = true;
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                         })
-                        .AddButton("Rebuild", async (s, e) =>
+                        .AddButton(PPLocalizedResources.EffectTab_Rebuild, async (s, e) =>
                         {
                             try
                             {
@@ -3001,7 +2982,8 @@ namespace projectFrameCut.DraftStuff
             PropertyPanelBuilder ppb,
             EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
             bool showSubfix = true,
-            bool ignoreIsUserAddableEffectProperty = false)
+            bool ignoreIsNotVisibleInNewEffectSelector = false,
+            bool hideKeyFramedBundles = false)
         {
             if (bundlesFactories == null || bundlesFactories.Count == 0)
             {
@@ -3029,7 +3011,9 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserAddableEffect || ignoreIsUserAddableEffectProperty).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target.HasFlag(target)).Select(c => c.c).OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c =>
+                (target == EffectTarget.NotSpecified || (c.Item1.Target.HasFlag(target) && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)))
+                && (!hideKeyFramedBundles || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider))).Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -3300,7 +3284,7 @@ namespace projectFrameCut.DraftStuff
                                 }
                                 break;
                             default:
-                                ppb.AddText($"unknown effect role.");
+                                ppb.AddText(PPLocalizedResources.EffectProp_UnknownRole);
                                 break;
 
 
@@ -3680,7 +3664,7 @@ namespace projectFrameCut.DraftStuff
                 handler?.Invoke(s, e);
             };
 
-            ppb.AddButton("重置", (_, _) =>
+            ppb.AddButton(PPLocalizedResources.ColorAdjustment_Reset, (_, _) =>
             {
                 clip.EffectBundles?.Remove(InternalColorAdjustmentBundleGuid);
                 RebuildAllEffects(clip);
@@ -3799,7 +3783,7 @@ namespace projectFrameCut.DraftStuff
                     {
                         page.Dispatcher.Dispatch(async () =>
                         {
-                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one SpeedVarianceProvider.", Localized._OK);
+                            await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.SpeedAndRatio_ErrSingle, Localized._OK);
                         });
                         return;
                     }
@@ -3934,7 +3918,7 @@ namespace projectFrameCut.DraftStuff
                     {
                         page.Dispatcher.Dispatch(async () =>
                         {
-                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one Mixture.", Localized._OK);
+                            await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.Mixture_ErrSingle, Localized._OK);
                         });
                         return;
                     }

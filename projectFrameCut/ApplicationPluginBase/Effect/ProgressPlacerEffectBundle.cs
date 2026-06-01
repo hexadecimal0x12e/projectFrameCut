@@ -20,7 +20,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public string TypeName => "ProgressPlacer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectType TypeOfEffect => EffectType.ContinuousClipPositionProvider;
-        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed;
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
 
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "ProgressPlacer";

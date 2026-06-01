@@ -30,6 +30,21 @@ public partial class ClipPlaceConfiguratorView : ContentView
     private PanGestureRecognizer? _blPan;
     private PanGestureRecognizer? _brPan;
 
+    public static readonly BindableProperty AllowClipOutOfBoundsProperty = BindableProperty.Create(
+        nameof(AllowClipOutOfBounds),
+        typeof(bool),
+        typeof(ClipPlaceConfiguratorView),
+        false,
+        BindingMode.TwoWay,
+        propertyChanged: OnAnyBindablePropertyChanged);
+
+    public static readonly BindableProperty MaintainAspectRatioProperty = BindableProperty.Create(
+        nameof(MaintainAspectRatio),
+        typeof(bool),
+        typeof(ClipPlaceConfiguratorView),
+        false,
+        BindingMode.TwoWay);
+
     public static readonly BindableProperty EnabledProperty = BindableProperty.Create(
         nameof(Enabled),
         typeof(bool),
@@ -94,6 +109,24 @@ public partial class ClipPlaceConfiguratorView : ContentView
         set => SetValue(EnabledProperty, value);
     }
 
+    public bool AllowClipOutOfBounds
+    {
+        get => (bool)GetValue(AllowClipOutOfBoundsProperty);
+        set => SetValue(AllowClipOutOfBoundsProperty, value);
+    }
+
+    public bool MaintainAspectRatio
+    {
+        get => (bool)GetValue(MaintainAspectRatioProperty);
+        set => SetValue(MaintainAspectRatioProperty, value);
+    }
+
+    public bool DisallowClipOutOfBounds
+    {
+        get => !AllowClipOutOfBounds;
+        set => AllowClipOutOfBounds = !value;
+    }
+
     public int TargetX
     {
         get => (int)GetValue(TargetXProperty);
@@ -136,6 +169,16 @@ public partial class ClipPlaceConfiguratorView : ContentView
         InitGestureRecognizers();
         SyncUiFromProperties();
         ValidateAndNotify();
+    }
+
+    private void OnDisallowOutOfBoundsChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        AllowClipOutOfBounds = !e.Value;
+    }
+
+    private void OnMaintainRatioChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        MaintainAspectRatio = e.Value;
     }
 
     public void LoadFromPosition(ClipPositionTuple position)
@@ -336,6 +379,16 @@ public partial class ClipPlaceConfiguratorView : ContentView
         HandleBR.IsVisible = Enabled;
     }
 
+    private (double scaleX, double scaleY) GetScaleFactors()
+    {
+        var viewport = GetViewportRect();
+        var workspaceW = Math.Max(1, GetWorkspaceWidth());
+        var workspaceH = Math.Max(1, GetWorkspaceHeight());
+        var scaleX = viewport.Width / workspaceW;
+        var scaleY = viewport.Height / workspaceH;
+        return (scaleX, scaleY);
+    }
+
     private void OnSelectionPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
         if (!Enabled)
@@ -352,7 +405,8 @@ public partial class ClipPlaceConfiguratorView : ContentView
                 _dragStartH = TargetHeight;
                 break;
             case GestureStatus.Running:
-                ApplyRect(_dragStartX + e.TotalX, _dragStartY + e.TotalY, _dragStartW, _dragStartH);
+                var (sx, sy) = GetScaleFactors();
+                ApplyRect(_dragStartX + e.TotalX / sx, _dragStartY + e.TotalY / sy, _dragStartW, _dragStartH);
                 break;
         }
     }
@@ -373,7 +427,8 @@ public partial class ClipPlaceConfiguratorView : ContentView
                 _dragStartH = TargetHeight;
                 break;
             case GestureStatus.Running:
-                ApplyResize(handle, e.TotalX, e.TotalY);
+                var (sx, sy) = GetScaleFactors();
+                ApplyResize(handle, e.TotalX / sx, e.TotalY / sy);
                 break;
         }
     }
@@ -382,7 +437,7 @@ public partial class ClipPlaceConfiguratorView : ContentView
     {
         var workspaceW = Math.Max(1, GetWorkspaceWidth());
         var workspaceH = Math.Max(1, GetWorkspaceHeight());
-        var rect = ClampRect(x, y, w, h, workspaceW, workspaceH);
+        var rect = ClampRect(x, y, w, h, workspaceW, workspaceH, AllowClipOutOfBounds);
 
         _isInternalUiSync = true;
         try
@@ -403,6 +458,12 @@ public partial class ClipPlaceConfiguratorView : ContentView
 
     private void ApplyResize(ResizeHandle handle, double deltaX, double deltaY)
     {
+        if (MaintainAspectRatio && _dragStartW > MinClipSize && _dragStartH > MinClipSize)
+        {
+            ApplyResizeWithRatio(handle, deltaX, deltaY);
+            return;
+        }
+
         var x = _dragStartX;
         var y = _dragStartY;
         var w = _dragStartW;
@@ -435,45 +496,60 @@ public partial class ClipPlaceConfiguratorView : ContentView
         ApplyRect(x, y, w, h);
     }
 
-    private static Rect ClampRect(double x, double y, double w, double h, double workspaceW, double workspaceH)
+    private void ApplyResizeWithRatio(ResizeHandle handle, double deltaX, double deltaY)
+    {
+        var ratio = _dragStartW / _dragStartH;
+
+        // 用拖动更大的轴作为主驱动轴
+        double w, h;
+        if (Math.Abs(deltaX) > Math.Abs(deltaY))
+        {
+            // 宽度驱动
+            w = handle is ResizeHandle.TopLeft or ResizeHandle.BottomLeft
+                ? Math.Max(MinClipSize, _dragStartW - deltaX)
+                : Math.Max(MinClipSize, _dragStartW + deltaX);
+            h = w / ratio;
+        }
+        else
+        {
+            // 高度驱动
+            h = handle is ResizeHandle.TopLeft or ResizeHandle.TopRight
+                ? Math.Max(MinClipSize, _dragStartH - deltaY)
+                : Math.Max(MinClipSize, _dragStartH + deltaY);
+            w = h * ratio;
+        }
+
+        // 根据固定角重新计算原点
+        double x = handle switch
+        {
+            ResizeHandle.TopLeft or ResizeHandle.BottomLeft => _dragStartX + _dragStartW - w,
+            _ => _dragStartX
+        };
+        double y = handle switch
+        {
+            ResizeHandle.TopLeft or ResizeHandle.TopRight => _dragStartY + _dragStartH - h,
+            _ => _dragStartY
+        };
+
+        ApplyRect(x, y, w, h);
+    }
+
+    private static Rect ClampRect(double x, double y, double w, double h, double workspaceW, double workspaceH, bool allowOutOfBounds)
     {
         w = Math.Max(MinClipSize, w);
         h = Math.Max(MinClipSize, h);
 
-        if (x < 0)
+        if (allowOutOfBounds)
         {
-            w += x;
-            x = 0;
+            return new Rect(x, y, w, h);
         }
 
-        if (y < 0)
-        {
-            h += y;
-            y = 0;
-        }
+        // 只限制位置，不改变尺寸
+        if (x < 0) x = 0;
+        if (y < 0) y = 0;
+        if (x + w > workspaceW) x = Math.Max(0, workspaceW - w);
+        if (y + h > workspaceH) y = Math.Max(0, workspaceH - h);
 
-        if (x + w > workspaceW)
-        {
-            w = Math.Max(MinClipSize, workspaceW - x);
-        }
-
-        if (y + h > workspaceH)
-        {
-            h = Math.Max(MinClipSize, workspaceH - y);
-        }
-
-        if (x > workspaceW - MinClipSize)
-        {
-            x = Math.Max(0, workspaceW - MinClipSize);
-            w = MinClipSize;
-        }
-
-        if (y > workspaceH - MinClipSize)
-        {
-            y = Math.Max(0, workspaceH - MinClipSize);
-            h = MinClipSize;
-        }
-
-        return new Rect(x, y, Math.Max(MinClipSize, w), Math.Max(MinClipSize, h));
+        return new Rect(x, y, w, h);
     }
 }

@@ -666,7 +666,7 @@
                 </Border>
 
                 <tv:CompactTabView Grid.Row="2" Margin="8,4,8,8">
-                    <tv:TabbedViewItem Header="新样式" Tag="ProviderStyles">
+                    <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddText_PluginStyle}" Tag="ProviderStyles">
                         <CollectionView x:Name="TextStyleProviderCollectionView"
                                         ItemsSource="{Binding FilteredAvailableTextStyleProviders}"
                                         SelectionMode="None"
@@ -706,7 +706,7 @@
                         </CollectionView>
                     </tv:TabbedViewItem>
 
-                    <tv:TabbedViewItem Header="旧样式" Tag="LegacyStyles">
+                    <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddText_UserStyle}" Tag="LegacyStyles">
                         <CollectionView x:Name="TextStyleCollectionView"
                                         ItemsSource="{Binding FilteredAvailableTextStyles}"
                                         SelectionMode="None"

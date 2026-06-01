@@ -683,7 +683,7 @@ namespace projectFrameCut.Shared
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(bitPerPixel), "仅支持 8 或 16 bpp。");
+                throw new ArgumentOutOfRangeException(nameof(bitPerPixel), "Only 8 and 16 bits per pixel are supported.");
             }
         }
 
@@ -1186,7 +1186,7 @@ namespace projectFrameCut.Shared
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(bitPerPixel), "仅支持 8 或 16 bpp。");
+                throw new ArgumentOutOfRangeException(nameof(bitPerPixel), "Only 8 and 16 bits per pixel are supported.");
             }
         }
 

@@ -329,7 +329,7 @@ public partial class UserDataManagePage : ContentPage
             var shown = await FileSystemService.ShowFileInFolderAsync(path);
             if (!shown)
             {
-                await DisplayAlertAsync(Localized._Error, $"无法打开位置:\n{path}", Localized._OK);
+                await DisplayAlertAsync(Localized._Error, Localized.UserDataManagePage_OpenActionNotSupported, Localized._OK);
             }
         }
     }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.InteractableEditor.ClipPlaceConfiguratorView">
     <Border StrokeThickness="0" Padding="12">
         <VerticalStackLayout Spacing="10">
@@ -8,12 +9,18 @@
                 <Label x:Name="SummaryLabel"
                        FontSize="12"
                        TextColor="#D0D0D0"
-                       VerticalOptions="Center" />
-                <Label Grid.Column="1"
-                       Text="Drag or resize"
-                       FontSize="12"
-                       TextColor="#808080"
-                       VerticalOptions="Center" />
+                       VerticalOptions="Center"
+                       HorizontalOptions="Start"/>
+                <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center" HorizontalOptions="End">
+                    <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AspectRatio}">
+                        <CheckBox x:Name="MaintainRatioCheck" CheckedChanged="OnMaintainRatioChanged" VerticalOptions="Center" />
+                        <Label Text="&#xe3f5;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}">
+                        <CheckBox x:Name="DisallowOutOfBoundsCheck" CheckedChanged="OnDisallowOutOfBoundsChanged" />
+                        <Label Text="&#xf54f;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </HorizontalStackLayout>
             </Grid>
 
             <Border StrokeThickness="0"

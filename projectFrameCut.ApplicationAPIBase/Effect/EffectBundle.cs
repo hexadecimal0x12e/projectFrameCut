@@ -176,10 +176,6 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <returns></returns>
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null);
 
-        /// <summary>
-        /// Get whether this effect is visible to the user in the 'Create Effect' tab.
-        /// </summary>
-        public virtual bool IsUserAddableEffect => TypeOfEffect != EffectType.NotSpecified;
 
     }
 

@@ -31,7 +31,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
-        public EffectTarget Target => EffectTarget.Video;
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
