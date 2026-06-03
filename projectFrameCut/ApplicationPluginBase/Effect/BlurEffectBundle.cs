@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -107,7 +108,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleUiHelper.L("DisplayName_Effect_Blur", "Blur"),
                 Description = EffectBundleUiHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
-                Thumbnail = ImageSource.FromFile("effectsample_blur")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/blur.png"))
             };
         }
     }

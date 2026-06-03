@@ -1404,7 +1404,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u5DE6\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u5DE6\u8FB9\u6CA1\u6709\u53D7\u652F\u6301\u7684\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1412,7 +1412,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u53F3\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u53F3\u8FB9\u6CA1\u6709\u53D7\u652F\u6301\u7684\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1628,7 +1628,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u8981\u653E\u7F6E\u300C{name}\u300D:\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1921,7 +1921,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u5FFD\u7565\u6A21\u677F\u4F5C\u7528\u57DF\uFF08\u663E\u793A\u6240\u6709\u7684\u6A21\u677F\uFF09",
+        "Value": "\u663E\u793A\u6240\u6709\u7684\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4787,6 +4787,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u6309\u6BD4\u4F8B\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
         "Value": "StartY \u002B Height \u8D85\u51FA RelativeHeight\u3002",
         "Mode": "ConstString",
@@ -6504,14 +6512,6 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_AspectRatio",
-        "Value": "\u6309\u6BD4\u4F8B\u7F29\u653E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

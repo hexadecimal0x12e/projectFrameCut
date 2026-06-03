@@ -110,7 +110,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
 
-            panel.AddButton("打开编辑器", async (s, e) =>
+            panel.AddButton(EffectBundleUiHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
             {
                 try
                 {
@@ -139,13 +139,6 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         Padding = new Thickness(20)
                     };
 
-                    stack.Children.Add(new Label
-                    {
-                        Text = $"交互编辑位置关键帧 #{index + 1}",
-                        FontSize = 18,
-                        FontAttributes = FontAttributes.Bold,
-                        TextColor = Color.FromArgb("#E8EEF8")
-                    });
 
                     stack.Children.Add(posEditor);
 
@@ -153,7 +146,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
                     var cancelBtn = new Button
                     {
-                        Text = "取消",
+                        Text = Localized._Cancel,
                         BackgroundColor = Color.FromArgb("#3A3A3C"),
                         TextColor = Colors.White,
                         CornerRadius = 8,
@@ -163,7 +156,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
                     var saveBtn = new Button
                     {
-                        Text = "保存",
+                        Text = Localized._Save,
                         BackgroundColor = Color.FromArgb("#4A90D9"),
                         TextColor = Colors.White,
                         CornerRadius = 8,
@@ -206,25 +199,30 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             panel.AddSeparator();
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_x_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_X", "X"),
-                item.Position.TargetX.ToString(), "0");
+            panel.AddCollapsibleSection(
+                EffectBundleUiHelper.L("Effect_Placer_Collapsible_Position", "坐标"),
+                contentPanel =>
+                {
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_x_{index}",
+                        EffectBundleUiHelper.L("_StartX", "X"),
+                        item.Position.TargetX.ToString(), "0");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_y_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_Y", "Y"),
-                item.Position.TargetY.ToString(), "0");
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_y_{index}",
+                        EffectBundleUiHelper.L("_StartY", "Y"),
+                        item.Position.TargetY.ToString(), "0");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_w_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_W", "W"),
-                item.Position.TargetWidth.ToString(), "1");
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_w_{index}",
+                        EffectBundleUiHelper.L("_Width", "W"),
+                        item.Position.TargetWidth.ToString(), "1");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_h_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_H", "H"),
-                item.Position.TargetHeight.ToString(), "1");
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_h_{index}",
+                        EffectBundleUiHelper.L("_Height", "H"),
+                        item.Position.TargetHeight.ToString(), "1");
+                });
 
             return panel;
         }

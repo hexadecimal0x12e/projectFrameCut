@@ -82,7 +82,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public EffectType TypeOfEffect => EffectType.NormalEffect;
 
-        public EffectTarget Target => EffectTarget.ColorAdjustment;
+        public EffectTarget Target => EffectTarget.ColorAdjustment | EffectTarget.IsNotVisibleInEffectEditor;
 
         public IEffectFactory[] Create()
         {

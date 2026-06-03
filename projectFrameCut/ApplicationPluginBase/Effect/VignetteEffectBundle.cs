@@ -22,8 +22,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Radius", 0.65f }
         };
 
-        public List<string> ParametersNeeded => VignetteEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => VignetteEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => VignetteEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => VignetteEffect_IPicture.ParametersType;
 
         public string TypeName => "Vignette";
         public bool IsNormalEffect => true;

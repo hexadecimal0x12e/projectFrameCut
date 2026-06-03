@@ -4,6 +4,8 @@ using CommunityToolkit.Maui.Storage;
 using System;
 using System.Diagnostics;
 using System.IO;
+using projectFrameCut.Shared;
+
 
 
 #if WINDOWS
@@ -24,6 +26,20 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static string GetAppPackageFileSync(string path)
+        {
+            if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+            var cacheDir = Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "AppPackageFiles"));
+            var tempFilePath = Path.Combine(cacheDir.FullName, path);
+            if (File.Exists(tempFilePath)) return tempFilePath;
+            var s = TaskHelper.SyncWait(() => FileSystem.OpenAppPackageFileAsync(path), cancellationToken: CancellationToken.None);
+            if (s == null) throw new FileNotFoundException($"File {path} not found in app package.");
+            using var fileStream = File.Create(tempFilePath);
+            s.CopyTo(fileStream);
+            fileStream.Flush();
+            return tempFilePath;
+        }
+
         public static async Task<bool> GrantPermissions()
         {
             var read = await Permissions.RequestAsync<Permissions.StorageRead>();

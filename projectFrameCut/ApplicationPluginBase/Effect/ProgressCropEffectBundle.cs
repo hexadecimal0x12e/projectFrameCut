@@ -135,7 +135,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 0d, 1d, item.Index,
                 eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
-            panel.AddButton("打开编辑器", async (s, e) =>
+            panel.AddButton(EffectBundleUiHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
             {
                 try
                 {
@@ -165,21 +165,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         Padding = new Thickness(20)
                     };
 
-                    stack.Children.Add(new Label
-                    {
-                        Text = $"交互编辑裁剪关键帧 #{index + 1}",
-                        FontSize = 18,
-                        FontAttributes = FontAttributes.Bold,
-                        TextColor = Color.FromArgb("#E8EEF8")
-                    });
-
                     stack.Children.Add(cropEditor);
 
                     var buttons = new HorizontalStackLayout { Spacing = 10, HorizontalOptions = LayoutOptions.End, Margin = new Thickness(0, 8, 0, 0) };
 
                     var cancelBtn = new Button
                     {
-                        Text = "取消",
+                        Text = Localized._Cancel,
                         BackgroundColor = Color.FromArgb("#3A3A3C"),
                         TextColor = Colors.White,
                         CornerRadius = 8,
@@ -189,7 +181,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
                     var saveBtn = new Button
                     {
-                        Text = "保存",
+                        Text = Localized._Save,
                         BackgroundColor = Color.FromArgb("#4A90D9"),
                         TextColor = Colors.White,
                         CornerRadius = 8,
@@ -236,35 +228,36 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             panel.AddSeparator();
 
+            panel.AddCollapsibleSection(
+                EffectBundleUiHelper.L("Effect_Crop_Collapsible_Transform", "坐标与旋转"),
+                contentPanel =>
+                {
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_startX_{index}",
+                        EffectBundleUiHelper.L("_StartX", "X"),
+                        item.StartX.ToString(), "0");
 
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_startY_{index}",
+                        EffectBundleUiHelper.L("_StartY", "Y"),
+                        item.StartY.ToString(), "0");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_startX_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_X", "X"),
-                item.StartX.ToString(), "0");
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_w_{index}",
+                        EffectBundleUiHelper.L("_Width", "W"),
+                        item.Width.ToString(), "1");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_startY_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_Y", "Y"),
-                item.StartY.ToString(), "0");
+                    EffectBundleUiHelper.AddNumericEntry(
+                        contentPanel, $"step_h_{index}",
+                        EffectBundleUiHelper.L("_Height", "H"),
+                        item.Height.ToString(), "1");
 
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_w_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_W", "W"),
-                item.Width.ToString(), "1");
-
-            EffectBundleUiHelper.AddNumericEntry(
-                panel, $"step_h_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_H", "H"),
-                item.Height.ToString(), "1");
-
-            panel.AddSlider(
-                $"step_angle_{index}",
-                EffectBundleUiHelper.L("General_Rotation", "Rotation"),
-                -180d, 180d, item.Angle,
-                eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
-
-
+                    contentPanel.AddSlider(
+                        $"step_angle_{index}",
+                        EffectBundleUiHelper.L("General_Rotation", "Rotation"),
+                        -180d, 180d, item.Angle,
+                        eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+                });
 
             return panel;
         }

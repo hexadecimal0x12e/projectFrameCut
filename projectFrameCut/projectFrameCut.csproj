@@ -338,6 +338,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<MauiImage Include="Resources\Raw\EffectSample\blur.png" />
 		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 

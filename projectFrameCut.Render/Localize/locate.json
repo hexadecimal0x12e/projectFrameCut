@@ -79,7 +79,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u6E32\u67D3\u548C\u5904\u7406\u80FD\u529B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -296,7 +296,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u91CD\u7F6E",
+        "Value": "\u91CD\u7F6E\u9ED8\u8BA4\u8C03\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -681,6 +681,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u5728\u7F16\u8F91\u5668\u91CC\u914D\u7F6E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Effect_RenderOrder",
         "Value": "\u6548\u679C\u6E32\u67D3\u987A\u5E8F",
         "Mode": "ConstString",
@@ -924,7 +932,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u8FD9\u4E9B\u6548\u679C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7ED3\u679C\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u8FD9\u4E9B\u6548\u679C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7ED3\u679C\uFF0C\u5E76\u4E14\u5B83\u4EEC\u53EF\u80FD\u4F1A\u88AB\u8986\u76D6\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1191,7 +1199,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u5F53\u524D\u7247\u6BB5\u5B58\u5728\u5173\u952E\u5E27\uFF0C\u5728\u6B64\u5904\u7684\u7F16\u8F91\u53EA\u4F1A\u5F71\u54CD\u521D\u59CB\u503C\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u5F53\u524D\u7247\u6BB5\u5B58\u5728\u5173\u952E\u5E27\uFF0C\u5728\u6B64\u5904\u7684\u7F16\u8F91\u53EA\u4F1A\u5F71\u54CD\u521D\u59CB\u503C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1199,7 +1207,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u6682\u65E0\u5173\u952E\u5E27\u3002",
+        "Value": "\u6B64\u6548\u679C\u4E0B\u6682\u65E0\u5173\u952E\u5E27\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1214,6 +1222,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u5173\u952E\u5E27 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "Mixture_ErrMultiplePvd",
         "Value": "\u9519\u8BEF\uFF1A\u68C0\u6D4B\u5230\u591A\u4E2A\u6DF7\u5408\u5668\u3002\u8BF7\u5728\u201C\u6548\u679C\u201D\u6807\u7B7E\u9875\u91CC\u5220\u9664\u591A\u4F59\u7684\u6DF7\u5408\u5668\u3002",
         "Mode": "ConstString",
@@ -1223,7 +1257,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u6BCF\u4E2A\u7247\u6BB5\u53EA\u80FD\u6709\u4E00\u4E2A Mixture\u3002",
+        "Value": "\u6BCF\u4E2A\u7247\u6BB5\u53EA\u80FD\u6709\u4E00\u4E2A\u6DF7\u5408\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1247,7 +1281,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u6BD4\u4F8B",
+        "Value": "\u53D8\u901F\u6BD4\u4F8B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1660,6 +1694,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u7684\u8FD9\u4E9B\u6587\u672C\u914D\u7F6E\u53EF\u80FD\u4F1A\u88AB\u8986\u76D6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "TextOption_Title",
         "Value": "\u6587\u672C\u914D\u7F6E",
         "Mode": "ConstString",
@@ -1832,29 +1874,11 @@
         "DontTranslate": false
       },
       {
-        "Id": "KeyFrame_Progress",
-        "Value": "\u5173\u952E\u5E27 #{i} ({p:p2})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "int",
-            "Value": "i"
-          },
-          {
-            "Key": "double",
-            "Value": "p"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "i",
-            "Value": ""
-          },
-          {
-            "Key": "p",
-            "Value": ""
-          }
-        ],
+        "Id": "Add_Effect_None",
+        "Value": "\u6CA1\u6709\u4EFB\u4F55\u53EF\u7528\u7684\u6548\u679C\u3002\u8BF7\u68C0\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],

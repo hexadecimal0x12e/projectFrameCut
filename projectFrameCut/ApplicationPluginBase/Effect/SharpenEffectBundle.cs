@@ -21,8 +21,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Amount", 1f }
         };
 
-        public List<string> ParametersNeeded => SharpenEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => SharpenEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => SharpenEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => SharpenEffect_IPicture.ParametersType;
 
         public string TypeName => "Sharpen";
         public bool IsNormalEffect => true;
