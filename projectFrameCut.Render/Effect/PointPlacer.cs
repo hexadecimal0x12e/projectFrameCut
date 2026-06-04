@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -50,7 +51,7 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            return EffectHelper.PlacePicture(frame, startX, startY, targetWidth, targetHeight, "PointPlacer", GetType());
+            return PlaceEffect.Process(frame, startX, startY, targetWidth, targetHeight);
         }
 
         public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)

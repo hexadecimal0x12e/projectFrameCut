@@ -1,9 +1,9 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace projectFrameCut.Render.Effect
@@ -61,22 +61,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.VignettePicture(source, Strength, Radius, "Vignette", typeof(VignetteEffect_IPicture));
-            sw.Stop();
-            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-            {
-                Elapsed = sw.Elapsed,
-                OperationDisplayName = "Vignette",
-                Operator = typeof(VignetteEffect_IPicture),
-                ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object>
-                {
-                    { nameof(Strength), Strength },
-                    { nameof(Radius), Radius }
-                }
-            }).ToList();
-            return result;
+            return VignetteEffect.Process(source, Strength, Radius);
         }
 
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)

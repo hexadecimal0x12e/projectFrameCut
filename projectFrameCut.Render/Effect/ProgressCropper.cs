@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Diagnostics;
@@ -182,7 +183,7 @@ namespace projectFrameCut.Render.Effect
             var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
             if (computer is null)
             {
-                return EffectHelper.CropPicture(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height, "Crop", typeof(ProgressCropper_HwAccel));
+                return CropEffect.Process(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height);
             }
 
             var sw = Stopwatch.StartNew();

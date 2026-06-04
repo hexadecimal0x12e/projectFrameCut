@@ -1,9 +1,9 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace projectFrameCut.Render.Effect
@@ -57,21 +57,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.SharpenPicture(source, Amount, "Sharpen", typeof(SharpenEffect_IPicture));
-            sw.Stop();
-            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-            {
-                Elapsed = sw.Elapsed,
-                OperationDisplayName = "Sharpen",
-                Operator = typeof(SharpenEffect_IPicture),
-                ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object>
-                {
-                    { nameof(Amount), Amount }
-                }
-            }).ToList();
-            return result;
+            return SharpenEffect.Process(source, Amount);
         }
 
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)

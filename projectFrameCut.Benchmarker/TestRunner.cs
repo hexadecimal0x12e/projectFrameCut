@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Render.Effect;
+﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -43,9 +45,9 @@ namespace projectFrameCut.Benchmarker
             rnd.NextBytes(pic.b);
 
             // mark process stack for diagnostic
-            pic.ProcessStack = new List<projectFrameCut.Shared.PictureProcessStack>
+            pic.ProcessStack = new List<projectFrameCut.Drawing.Base.PictureProcessStack>
             {
-                new projectFrameCut.Shared.PictureProcessStack
+                new projectFrameCut.Drawing.Base.PictureProcessStack
                 {
                     OperationDisplayName = "Generated noise",
                     Operator = typeof(Picture8bpp),

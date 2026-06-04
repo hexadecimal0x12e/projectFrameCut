@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -104,7 +105,7 @@ namespace projectFrameCut.Render.Effect
 
             if (computer is null)
             {
-                return EffectHelper.PlacePicture(source, startX, startY, targetWidth, targetHeight, "Place", typeof(PlaceEffect_HwAccel));
+                return PlaceEffect.Process(source, startX, startY, targetWidth, targetHeight);
             }
 
             var sw = Stopwatch.StartNew();

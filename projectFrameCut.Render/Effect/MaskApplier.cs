@@ -1,9 +1,9 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -38,7 +38,7 @@ namespace projectFrameCut.Render.Effect
                 return frame;
             }
 
-            return EffectHelper.ApplyMaskPicture(frame, maskPic, "MaskApplier", typeof(MaskApplier));
+            return MaskEffect.Process(frame, maskPic);
         }
 
         public bool IsValueValid(object value) => value is BitMaskPicture;

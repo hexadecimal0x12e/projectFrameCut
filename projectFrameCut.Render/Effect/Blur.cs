@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -88,10 +89,9 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = Stopwatch.StartNew();
-            var result = EffectHelper.BlurPicture(source, Sigma, "Blur", typeof(BlurProcessStep));
+            var result = BlurEffect.Process(source, Sigma);
             sw.Stop();
             _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
             return result;
         }
 
@@ -106,7 +106,7 @@ namespace projectFrameCut.Render.Effect
             OperationDisplayName = "Blur",
             Operator = typeof(BlurProcessStep),
             ProcessingFuncStackTrace = new StackTrace(true),
-            
+
             Properties = new Dictionary<string, object>
             {
                 { nameof(Sigma), Sigma }

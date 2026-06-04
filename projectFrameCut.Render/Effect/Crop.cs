@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -200,7 +201,7 @@ namespace projectFrameCut.Render.Effect
             IPicture result;
             if (Math.Abs(Angle) <= float.Epsilon)
             {
-                result = EffectHelper.CropPicture(source, StartX, StartY, Width, Height, "Crop", typeof(CropProcessStep));
+                result = CropEffect.Process(source, StartX, StartY, Width, Height);
             }
             else
             {
@@ -600,7 +601,7 @@ namespace projectFrameCut.Render.Effect
             var safeRect = BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
             if (computer is null)
             {
-                return EffectHelper.CropPicture(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height, "Crop", typeof(CropEffect_HwAccel));
+                return CropEffect.Process(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height);
             }
 
             var sw = Stopwatch.StartNew();

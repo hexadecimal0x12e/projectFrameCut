@@ -18,6 +18,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing.Base\projectFrameCut.Drawing.Base.csproj" />
 		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing.Processing\projectFrameCut.Drawing.Processing.csproj" />
+		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing.Effect\projectFrameCut.Drawing.Effect.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />

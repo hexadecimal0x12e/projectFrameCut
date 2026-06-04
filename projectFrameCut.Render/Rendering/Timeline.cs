@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+﻿using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -223,7 +224,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                             if (x != 0 || y != 0 || effected.Width != targetWidth || effected.Height != targetHeight)
                             {
-                                d = EffectHelper.PlacePicture(d, x, y, targetWidth, targetHeight, "AutoPlaceForEffectCallback", typeof(Timeline));
+                                d = PlaceEffect.Process(d, x, y, targetWidth, targetHeight);
                             }
                             AfterEffectCallback(effect, d);
                         }
