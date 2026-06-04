@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class FlipEffect_ImageSharp : INormalEffect
+    public class FlipEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
+        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = ["Horizontal", "Vertical"];
@@ -51,7 +51,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            return new FlipEffect_ImageSharp
+            return new FlipEffect_IPicture
             {
                 Horizontal = Convert.ToBoolean(parameters["Horizontal"]),
                 Vertical = Convert.ToBoolean(parameters["Vertical"]),
@@ -63,63 +63,24 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            throw new NotImplementedException();
+            var sw = Stopwatch.StartNew();
+            var result = EffectHelper.FlipPicture(source, Horizontal, Vertical, "Flip", typeof(FlipEffect_IPicture));
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                Elapsed = sw.Elapsed,
+                OperationDisplayName = "Flip",
+                Operator = typeof(FlipEffect_IPicture),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = Parameters
+            }).ToList();
+            return result;
         }
 
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
         {
-            return new FlipProcessStep(Horizontal, Vertical);
+            throw new NotImplementedException();
         }
-    }
-
-    public class FlipProcessStep : IPictureProcessStep
-    {
-        private TimeSpan? _elapsed;
-        public string Name => "Flip";
-        public Dictionary<string, object?> Properties { get; set; } = new();
-
-        public bool Horizontal { get; }
-        public bool Vertical { get; }
-
-        public FlipProcessStep(bool horizontal, bool vertical)
-        {
-            Horizontal = horizontal;
-            Vertical = vertical;
-            Properties = new Dictionary<string, object?>
-            {
-                { nameof(Horizontal), Horizontal },
-                { nameof(Vertical), Vertical }
-            };
-        }
-
-        public IPicture Process(IPicture source)
-        {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.FlipPicture(source, Horizontal, Vertical, "Flip", typeof(FlipProcessStep));
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
-            return result;
-        }
-
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return null;
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "Flip",
-            Operator = typeof(FlipProcessStep),
-            ProcessingFuncStackTrace = new StackTrace(true),
-            
-            Properties = new Dictionary<string, object>
-            {
-                { nameof(Horizontal), Horizontal },
-                { nameof(Vertical), Vertical }
-            }
-        };
     }
 
     public class FlipEffectFactory : IEffectFactory
@@ -134,7 +95,7 @@ namespace projectFrameCut.Render.Effect
             { "Vertical", "bool" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp, EffectImplementType.IPicture];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -144,8 +105,7 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => FlipEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.IPicture => FlipEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => FlipEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
@@ -159,7 +119,7 @@ namespace projectFrameCut.Render.Effect
             };
             if (!parameters.ContainsKey("Horizontal")) parameters["Horizontal"] = false;
             if (!parameters.ContainsKey("Vertical")) parameters["Vertical"] = false;
-            return FlipEffect_ImageSharp.FromParametersDictionary(parameters);
+            return FlipEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

@@ -62,10 +62,10 @@ public class InternalPluginBase : IPluginBase
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
-        {"Flip", new(() => new FlipEffect_ImageSharp()) },
-        {"Sharpen", new(() => new SharpenEffect_ImageSharp()) },
-        {"Vignette", new(() => new VignetteEffect_ImageSharp()) },
-        {"FadeOpacity", new(() => new FadeOpacityEffect_ImageSharp()) },
+        {"Flip", new(() => new FlipEffect_IPicture()) },
+        {"Sharpen", new(() => new SharpenEffect_IPicture()) },
+        {"Vignette", new(() => new VignetteEffect_IPicture()) },
+        {"FadeOpacity", new(() => new FadeOpacityEffect_IPicture()) },
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
         {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
         {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
@@ -122,12 +122,14 @@ public class InternalPluginBase : IPluginBase
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
         {"Jitter", new(() => new JitterEffect()) },
-        {"ProgressPlacer", new(() => new ProgressPlacer()) }
+        {"ProgressPlacer", new(() => new ProgressPlacer()) },
+        {"Crop", new(() => new ProgressCropper_ImageSharp()) }
     };
 
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         {"ZoomIn", new ZoomInContinuousEffectFactory()},
+        {"Crop", new ProgressCropperEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -258,4 +260,3 @@ public class InternalPluginBase : IPluginBase
     public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 
 }
-

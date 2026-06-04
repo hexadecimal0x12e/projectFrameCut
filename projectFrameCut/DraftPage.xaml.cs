@@ -50,6 +50,8 @@ using projectFrameCut.InteractableEditor;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.ApplicationPluginBase.Effect;
+using CommunityToolkit.Maui.Extensions;
 
 
 #if WINDOWS
@@ -73,10 +75,6 @@ using projectFrameCut.MetalAccelerater;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
-using Android.Content.Res;
-using CommunityToolkit.Maui.Extensions;
-using Google.Android.Material.Chip;
-using Java.Nio.Channels;
 #endif
 
 namespace projectFrameCut;
@@ -347,6 +345,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
+        ClipEditor.ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
         ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
         ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
@@ -403,6 +402,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
+        ClipEditor.ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
         ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
         ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
@@ -2589,6 +2589,41 @@ public partial class DraftPage : ContentPage, IDraftPage
         return RefreshSelectionUiAsync();
     }
 
+    private async Task OnClipEditorOverlayDoubleTappedAsync(string clipId)
+    {
+        if (string.IsNullOrWhiteSpace(clipId) || MultiSelectEnabled || !Clips.TryGetValue(clipId, out var clip) || clip.MovingStatus != ClipMovingStatus.Free)
+        {
+            return;
+        }
+
+        // Select the clip (same behavior as single tap)
+        ClearSelectionInternal();
+        AddClipToSelection(clip);
+        OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
+        OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        await RefreshSelectionUiAsync();
+
+        // Then flash the clip in the timeline
+        LogDiagnostic($"Clip {clip.Id} double-tapped in editor overlay, flashing in timeline");
+        await FlashClipAsync(clip);
+    }
+
+    private async Task FlashClipAsync(ClipElementUI clip)
+    {
+        if (clip.Clip is null) return;
+
+        var originalBackground = clip.Clip.Background;
+
+        // Flash twice for a noticeable "闪一下" visual effect
+        for (var i = 0; i < 2; i++)
+        {
+            clip.Clip.Background = Colors.White;
+            await Task.Delay(100);
+            clip.Clip.Background = originalBackground;
+            await Task.Delay(100);
+        }
+    }
+
     private Task OnClipEditorBlankAreaTappedAsync()
     {
         // 不再在点击空白区域时取消选中，避免用户在预览区或其他地方误触导致
@@ -4377,16 +4412,26 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region properties
-    private async Task<View> BuildPropertyPanel(ClipElementUI clip)
+    private async Task<TabbedView> BuildPropertyPanel(ClipElementUI clip)
     {
         if (clip is null)
         {
             Log("A null clip is provided.", "error");
             SetStateFail("No clip selected.");
-            return new Label
+            return new TabbedView
             {
-                Text = "No clip are selected. This SHOULD is a bug, please feedback.\r\n" +
-                      $"{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}",
+                TabItems =
+                {
+                    new TabbedViewItem
+                    {
+                        Header = "Error",
+                        Content = new Label
+                        {
+                            Text = "No clip are selected. This SHOULD is a bug, please feedback.\r\n" +
+                            $"{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}"
+                        }
+                    }
+                }
             };
         }
         try
@@ -4524,21 +4569,29 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    public async void RefreshPropertyPanel(ClipElementUI clip)
+    public async void RefreshPropertyPanel(ClipElementUI clip, bool keepTab = true)
     {
+        string origTab = "";
+        if (Popup.Content is ScrollView s && s.Content is TabbedView tv) origTab = tv.SelectedItem.Tag;
+        if (Popup.Content is TabbedView tv1) origTab = tv1.SelectedItem.Tag;
+        if (RightContentBorder.Content is ScrollView s2 && s2.Content is TabbedView tv2) origTab = tv2.SelectedItem.Tag;
+        if (RightContentBorder.Content is TabbedView tv3) origTab = tv3.SelectedItem.Tag;
         var panel = await BuildPropertyPanel(clip);
-        Popup.Content = WrapPropertyPanelContent(clip, panel);
-        RightContentBorder.Content = panel;
-    }
-
-    private static View WrapPropertyPanelContent(ClipElementUI clip, View panel)
-    {
-        if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
+        await Dispatcher.DispatchAsync(() =>
         {
-            return panel;
-        }
-
-        return new ScrollView { Content = panel };
+            if (Popup.IsVisible && popupShowingDirection != "none")
+            {
+                Popup.Content = panel;
+            }
+            else
+            {
+                RightContentBorder.Content = panel;
+            }
+            if (keepTab)
+            {
+                panel.SelectByTag(origTab);
+            }
+        });
     }
 
 
@@ -5738,7 +5791,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             StrokeShape = new RoundRectangle { CornerRadius = 4 },
             Padding = new Thickness(2),
             Opacity = 0.95,
-            Content = clip is not null ? WrapPropertyPanelContent(clip, popupContent) : popupContent
+            Content = popupContent
         };
 
         frame.GestureRecognizers.Add(nopGesture);
@@ -6622,51 +6675,26 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        clip.Effects ??= new Dictionary<string, projectFrameCut.Render.RenderAPIBase.EffectAndMixture.IEffect>();
+        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
 
-        string? effectKey = null;
-        ProgressPlacer? progressPlacer = null;
-        foreach (var effectEntry in clip.Effects)
+        IKeyFramedEffectProvider? provider = null;
+        foreach (var eb in clip.EffectBundles.Values)
         {
-            if (effectEntry.Value is ProgressPlacer placer)
+            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
             {
-                effectKey = effectEntry.Key;
-                progressPlacer = placer;
-                break;
-            }
-
-            if (string.Equals(effectEntry.Value.TypeName, "ProgressPlacer", StringComparison.Ordinal))
-            {
-                effectKey = effectEntry.Key;
-                var rebuilt = (ProgressPlacer)new ProgressPlacer().WithParameters(effectEntry.Value.Parameters);
-                rebuilt.Name = effectEntry.Value.Name;
-                rebuilt.Id = effectEntry.Value.Id;
-                rebuilt.Index = effectEntry.Value.Index;
-                rebuilt.Enabled = effectEntry.Value.Enabled;
-                rebuilt.RelativeWidth = effectEntry.Value.RelativeWidth;
-                rebuilt.RelativeHeight = effectEntry.Value.RelativeHeight;
-                rebuilt.BindedEffectGroupID = effectEntry.Value.BindedEffectGroupID;
-                progressPlacer = rebuilt;
-                clip.Effects[effectKey] = rebuilt;
+                provider = kfp;
                 break;
             }
         }
 
-        if (progressPlacer is null)
+        if (provider is null)
         {
-            var maxIndex = clip.Effects.Count == 0 ? 0 : clip.Effects.Values.Max(e => e.Index) + 1;
-            progressPlacer = new ProgressPlacer
-            {
-                Name = "ProgressPlacer",
-                Id = Guid.NewGuid().ToString(),
-                Index = maxIndex,
-                Enabled = true,
-                RelativeWidth = (int)Math.Max(1, ProjectInfo.RelativeWidth),
-                RelativeHeight = (int)Math.Max(1, ProjectInfo.RelativeHeight),
-                ProgressList = new List<ProgressData>()
-            };
-            effectKey = $"ProgressPlacer-{Guid.NewGuid():N}";
-            clip.Effects[effectKey] = progressPlacer;
+            var newBundle = new ProgressPlacerEffectBundle();
+            newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
+            newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+            clip.EffectBundles[newBundle.Id] = newBundle;
+            provider = newBundle;
+            ClipInfoBuilder.RebuildAllEffects(clip);
         }
 
         var progress = ComputeClipProgressForFrame(clip, frame);
@@ -6677,18 +6705,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             Math.Max(1, position.TargetHeight),
             false);
 
-        var existingIndex = progressPlacer.ProgressList.FindIndex(p => Math.Abs(p.Index - progress) <= 0.000001d);
-        var keyframeData = new ProgressData(progress, safePosition);
-        if (existingIndex >= 0)
-        {
-            progressPlacer.ProgressList[existingIndex] = keyframeData;
-        }
-        else
-        {
-            progressPlacer.ProgressList.Add(keyframeData);
-        }
-
-        progressPlacer.ProgressList.Sort((a, b) => a.Index.CompareTo(b.Index));
+        provider.UpsertStep(progress, safePosition);
+        ClipInfoBuilder.RebuildAllEffects(clip);
     }
 
     private double ComputeClipProgressForFrame(ClipElementUI clip, uint frame)

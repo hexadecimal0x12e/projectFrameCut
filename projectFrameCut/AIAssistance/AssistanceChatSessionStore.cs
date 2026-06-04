@@ -8,7 +8,7 @@ internal sealed class AssistanceChatSession
 {
     public Guid SessionId { get; init; }
 
-    public string Title { get; set; } = "新会话";
+    public string Title { get; set; } = Localized.AIAssistant_NewChatDefaultTitle;
 
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
@@ -16,7 +16,7 @@ internal sealed class AssistanceChatSession
 
     public List<AssistanceChatHistorySnapshot> History { get; } = [];
 
-    public string LastPreview => Messages.LastOrDefault()?.Message ?? "（暂无消息）";
+    public string LastPreview => Messages.LastOrDefault()?.Message ?? "None";
 }
 
 internal sealed class AssistanceChatMessageSnapshot
@@ -71,7 +71,7 @@ internal static class AssistanceChatSessionStore
             AssistanceChatSession session = new()
             {
                 SessionId = Guid.NewGuid(),
-                Title = string.IsNullOrWhiteSpace(title) ? "新会话" : title.Trim(),
+                Title = string.IsNullOrWhiteSpace(title) ? Localized.AIAssistant_NewChatDefaultTitle : title.Trim(),
                 UpdatedAt = DateTime.Now,
             };
             store.Sessions.Add(session);
@@ -98,7 +98,7 @@ internal static class AssistanceChatSessionStore
             AssistanceChatSession created = new()
             {
                 SessionId = sessionId ?? Guid.NewGuid(),
-                Title = "新会话",
+                Title = Localized.AIAssistant_NewChatDefaultTitle,
                 UpdatedAt = DateTime.Now,
             };
             store.Sessions.Add(created);
@@ -192,7 +192,7 @@ internal static class AssistanceChatSessionStore
         AssistanceChatSession created = new()
         {
             SessionId = sessionId,
-            Title = "新会话",
+            Title = Localized.AIAssistant_NewChatDefaultTitle,
             UpdatedAt = DateTime.Now,
         };
         store.Sessions.Add(created);
@@ -257,7 +257,7 @@ internal static class AssistanceChatSessionStore
         AssistanceChatSession session = new()
         {
             SessionId = snapshot.SessionId,
-            Title = string.IsNullOrWhiteSpace(snapshot.Title) ? "新会话" : snapshot.Title.Trim(),
+            Title = string.IsNullOrWhiteSpace(snapshot.Title) ? Localized.AIAssistant_NewChatDefaultTitle : snapshot.Title.Trim(),
             UpdatedAt = snapshot.UpdatedAt == default ? DateTime.Now : snapshot.UpdatedAt,
         };
 
@@ -405,7 +405,7 @@ internal static class AssistanceChatSessionStore
     {
         public Guid SessionId { get; init; }
 
-        public string Title { get; init; } = "新会话";
+        public string Title { get; init; } = Localized.AIAssistant_NewChatDefaultTitle;
 
         public DateTime UpdatedAt { get; init; } = DateTime.Now;
 

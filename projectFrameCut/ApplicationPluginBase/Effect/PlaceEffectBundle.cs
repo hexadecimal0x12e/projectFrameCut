@@ -30,7 +30,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
-        public EffectTarget Target => EffectTarget.Video;
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -57,20 +57,20 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             int startY = EffectBundleUiHelper.GetInt(Parameters, "StartY", 0);
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartX", EffectBundleUiHelper.ParamLabel("StartX"), startX.ToString(), "0");
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartY", EffectBundleUiHelper.ParamLabel("StartY"), startY.ToString(), "0");
+            panel.AddPositionTupleInputBox("place", new SingleLineLabel(EffectBundleUiHelper.L("_PlacePosition", "Position")), PositionTupleMode.XY, (startX, startY, 0, 0));
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "StartX")
+            switch (args.Id)
             {
-                EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
-            }
-            else if (args.Id == "StartY")
-            {
-                EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
+                case "place_X":
+                    EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
+                    break;
+                case "place_Y":
+                    EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
+                    break;
             }
 
             return Parameters;

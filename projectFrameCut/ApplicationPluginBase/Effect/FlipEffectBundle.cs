@@ -22,8 +22,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Vertical", false }
         };
 
-        public List<string> ParametersNeeded => FlipEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => FlipEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => FlipEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => FlipEffect_IPicture.ParametersType;
 
         public string TypeName => "Flip";
         public bool IsNormalEffect => true;

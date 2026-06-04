@@ -13,16 +13,22 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
+using projectFrameCut.Converters;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -40,12 +46,8 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
-using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
-using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Converters;
-using projectFrameCut.ApplicationPluginBase.Effect;
-using projectFrameCut.Render.EncodeAndDecode;
-using System.Collections.Concurrent;
+using Microsoft.Maui.Graphics.Text;
+
 
 
 
@@ -81,10 +83,11 @@ namespace projectFrameCut.DraftStuff
 
         #region init
         DraftPage page;
+        TabbedView tabbedView = new();
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
-        bool showAllEffect = false;
+        static bool showAllEffect = false;
 
         /// <summary>
         /// Gets the default color hex string based on clip type.
@@ -110,89 +113,120 @@ namespace projectFrameCut.DraftStuff
         }
 
 
-        public async Task<View> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        public async Task<TabbedView> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            TabbedView t = new();
-            t.Background = page.Background;
-            t.TabItems.Add(new TabbedViewItem
+            tabbedView = new();
+            tabbedView.Background = page.Background;
+            tabbedView.TabItems.Add(new TabbedViewItem
             {
                 Header = Localized.MainSettingsPage_Tab_General,
-                Content = BuildGeneralTab(clip, handler)
+                Content = BuildGeneralTab(clip, handler),
+                Tag = "general"
             });
             if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.TextOption_TabTitle,
-                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler),
+                    Tag = "text"
                 });
             }
             if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true))
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Timing,
-                    LazyContentFactory = () => BuildTimingTab(clip, handler)
+                    LazyContentFactory = () => BuildTimingTab(clip, handler),
+                    Tag = "timing"
                 });
             }
             if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
-                    LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler)
+                    LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler),
+                    Tag = "sizeAndPosition"
                 });
 
             }
             if (clip.ClipType != ClipMode.MarkingClip)
             {
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = Localized.InteractableEditor_KeyFrame,
+                    LazyContentFactory = () => BuildKeyFrameTab(clip, handler),
+                    Tag = "keyframe"
+                });
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Effect,
-                    LazyAsyncContentFactory = () => BuildEffectTab(clip, handler)
+                    LazyAsyncContentFactory = () => BuildEffectTab(clip, handler),
+                    Tag = "effect"
                 });
-                t.TabItems.Add(new TabbedViewItem
+                tabbedView.TabItems.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Mixture,
-                    LazyContentFactory = () => BuildMixtureTab(clip, handler)
+                    LazyContentFactory = () => BuildMixtureTab(clip, handler),
+                    Tag = "mixture"
                 });
                 if (clip.ClipType != ClipMode.AudioClip)
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_ColorAdjust,
-                        LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler)
+                        LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler),
+                        Tag = "colorAdjust"
                     });
                 }
                 if (!clip.isInfiniteLength)
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_SpeedRatio,
-                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler)
+                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler),
+                        Tag = "speedAndRatio"
                     });
                 }
                 if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
                 {
-                    t.TabItems.Add(new TabbedViewItem
+                    tabbedView.TabItems.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_Effect_Classic,
-                        LazyContentFactory = () => BuildClassicEffectTab(clip, handler)
+                        LazyContentFactory = () => BuildClassicEffectTab(clip, handler),
+                        Tag = "effectClassic"
                     });
                     if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
                     {
-                        t.TabItems.Add(new TabbedViewItem
+                        tabbedView.TabItems.Add(new TabbedViewItem
                         {
                             Header = PPLocalizedResources.TextOption_TabTitle_Classic,
-                            LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler)
+                            LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler),
+                            Tag = "textClassic"
                         });
                     }
                 }
-
-
             }
 
-            return t;
+            tabbedView.HeaderRightContent = new Button
+            {
+                Text = "\ue5d5",
+                FontFamily = "Icons",
+                WidthRequest = 40,
+                HeightRequest = 35,
+                Padding = 0,
+                VerticalOptions = LayoutOptions.Center,
+                Command = new Command(() =>
+                {
+                    tabbedView.Dispatcher.Dispatch(() =>
+                    {
+                        if (page.SelectedClip is not null) page.RefreshPropertyPanel(page.SelectedClip);
+                    });
+                })
+            };
+
+            return tabbedView;
         }
 
         #endregion
@@ -454,7 +488,8 @@ namespace projectFrameCut.DraftStuff
 
                 var resetButton = new Button
                 {
-                    Text = "↺",
+                    Text = "\ue5d5",
+                    FontFamily = "Icons",
                     WidthRequest = 40,
                     HeightRequest = 35,
                     Padding = 0,
@@ -561,11 +596,7 @@ namespace projectFrameCut.DraftStuff
 
                     return layout;
                 }, "solidColor", currentSolidColorHex)
-                .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
-                .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
-                .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
-                .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-                .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20), PositionTupleMode.XYWH, (valX, valY, valW, valH), entryWidth: 70)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
             .AppendWhen(clip.ClipType == ClipMode.AudioClip,
             (c) =>
@@ -643,43 +674,50 @@ namespace projectFrameCut.DraftStuff
                     handler?.Invoke(s, e);
                     return;
                 }
-                if (e.Id.StartsWith("place") || e.Id.StartsWith("resize"))
+                if (e.Id.StartsWith("place_"))
                 {
                     clip.Effects ??= new Dictionary<string, IEffect>();
 
-                    if (e.Id.StartsWith("place"))
+                    switch (e.Id)
                     {
-                        int currentX = ResolvePanelInt(ppb, e.Id, e.Value, "placeX", clip.TargetX);
-                        int currentY = ResolvePanelInt(ppb, e.Id, e.Value, "placeY", clip.TargetY);
-                        clip.TargetX = currentX;
-                        clip.TargetY = currentY;
-                        handler?.Invoke(s, e);
-                        return;
-                    }
-
-                    if (e.Id.StartsWith("resize"))
-                    {
-                        if (clip.ClipType == ClipMode.SolidColorClip)
-                        {
-                            int solidCurrentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth));
-                            int solidCurrentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight));
-
-                            clip.TargetWidth = Math.Max(1, solidCurrentW);
-                            clip.TargetHeight = Math.Max(1, solidCurrentH);
-                            clip.ExtraData ??= new Dictionary<string, object>();
-                            clip.ExtraData[SolidColorOutputWidthKey] = clip.TargetWidth;
-                            clip.ExtraData[SolidColorOutputHeightKey] = clip.TargetHeight;
-                            clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
-                            handler?.Invoke(s, e);
-                            return;
-                        }
-
-                        int currentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
-                        int currentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
-                        clip.TargetWidth = Math.Max(1, currentW);
-                        clip.TargetHeight = Math.Max(1, currentH);
-                        handler?.Invoke(s, e);
-                        return;
+                        case "place_X":
+                            clip.TargetX = (int)Math.Round(Convert.ToDouble(e.Value));
+                            break;
+                        case "place_Y":
+                            clip.TargetY = (int)Math.Round(Convert.ToDouble(e.Value));
+                            break;
+                        case "place_W":
+                            {
+                                int w = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
+                                if (clip.ClipType == ClipMode.SolidColorClip)
+                                {
+                                    clip.TargetWidth = w;
+                                    clip.ExtraData ??= new Dictionary<string, object>();
+                                    clip.ExtraData[SolidColorOutputWidthKey] = w;
+                                    clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
+                                }
+                                else
+                                {
+                                    clip.TargetWidth = w;
+                                }
+                                break;
+                            }
+                        case "place_H":
+                            {
+                                int h = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
+                                if (clip.ClipType == ClipMode.SolidColorClip)
+                                {
+                                    clip.TargetHeight = h;
+                                    clip.ExtraData ??= new Dictionary<string, object>();
+                                    clip.ExtraData[SolidColorOutputHeightKey] = h;
+                                    clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
+                                }
+                                else
+                                {
+                                    clip.TargetHeight = h;
+                                }
+                                break;
+                            }
                     }
 
                     handler?.Invoke(s, e);
@@ -689,7 +727,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (e.Value is double deg)
                     {
-                        var newR = new RotationEffect_ImageSharp
+                        var newR = new RotationEffect_IPicture
                         {
                             Angle = (float)deg,
                             Enabled = true,
@@ -773,7 +811,7 @@ namespace projectFrameCut.DraftStuff
             if (clip.TargetWidth > 0) valW = clip.TargetWidth;
             if (clip.TargetHeight > 0) valH = clip.TargetHeight;
 
-            if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_ImageSharp rot)
+            if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_IPicture rot)
             {
                 rotationDeg = rot.Angle;
             }
@@ -849,18 +887,19 @@ namespace projectFrameCut.DraftStuff
             cropView.RelativeHeight = page.ProjectInfo.RelativeHeight;
 
             var transformPpb = new PropertyPanelBuilder()
-                .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 25))
-                .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
-                .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
-                .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-                .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 25), PositionTupleMode.XYWH, (valX, valY, valW, valH), entryWidth: 70)
                 .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                 .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
-                .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
-                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
+                .AddSwitch("cropEnable", PPLocalizedResources._Enabled, currentCropBundle.Enabled)
+                .AppendWhen(currentCropBundle.Enabled,
+                c => c.AddButton(PPLocalizedResources.Effect_ProgressPlacer_OpenEditor, async (_, _) => await page.ShowAPopup(content: cropView, mode: "dialog"))
+                    .AddSeparator()
+                    .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                    .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                    .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                    .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
+                    );
 
             cropView.ConfigurationChanged += (s, bundle) =>
             {
@@ -873,6 +912,7 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 var normalized = NormalizeCropBundle(bundle, existingCropEffect);
+                currentCropBundle = normalized;
                 clip.EffectBundles[InternalCropBundleGuid] = normalized;
 
                 // The internal crop now comes from bundle conversion to effect.
@@ -935,8 +975,8 @@ namespace projectFrameCut.DraftStuff
                 int croppedW = Math.Max(1, cropW);
                 int croppedH = Math.Max(1, cropH);
 
-                SetTransformEntryText("resizeW", croppedW);
-                SetTransformEntryText("resizeH", croppedH);
+                SetTransformEntryText("place_W", croppedW);
+                SetTransformEntryText("place_H", croppedH);
                 ApplyResizeToModelWithCurrentMode(croppedW, croppedH);
             }
 
@@ -947,8 +987,8 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
-                int currentW = ResolvePanelInt(transformPpb, "resizeW", transformPpb.Properties.GetValueOrDefault("resizeW"), "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
-                int currentH = ResolvePanelInt(transformPpb, "resizeH", transformPpb.Properties.GetValueOrDefault("resizeH"), "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+                int currentW = ResolvePanelInt(transformPpb, "place_W", transformPpb.Properties.GetValueOrDefault("place_W"), "place_W", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                int currentH = ResolvePanelInt(transformPpb, "place_H", transformPpb.Properties.GetValueOrDefault("place_H"), "place_H", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
 
                 currentW = Math.Max(1, currentW);
                 currentH = Math.Max(1, currentH);
@@ -966,8 +1006,8 @@ namespace projectFrameCut.DraftStuff
                     snappedH = Math.Max(1, (int)Math.Round(currentW / sourceAspect, MidpointRounding.AwayFromZero));
                 }
 
-                SetTransformEntryText("resizeW", snappedW);
-                SetTransformEntryText("resizeH", snappedH);
+                SetTransformEntryText("place_W", snappedW);
+                SetTransformEntryText("place_H", snappedH);
                 ApplyResizeToModelWithCurrentMode(snappedW, snappedH);
             }
 
@@ -993,21 +1033,23 @@ namespace projectFrameCut.DraftStuff
                     return;
                 }
 
-                if (e.Id.StartsWith("place"))
+                if (e.Id.StartsWith("place_"))
                 {
-                    clip.TargetX = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeX", clip.TargetX);
-                    clip.TargetY = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeY", clip.TargetY);
-
-                    handler?.Invoke(s, e);
-                    return;
-                }
-
-                if (e.Id.StartsWith("resize"))
-                {
-                    int w = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
-                    int h = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
-                    clip.TargetWidth = Math.Max(1, w);
-                    clip.TargetHeight = Math.Max(1, h);
+                    switch (e.Id)
+                    {
+                        case "place_X":
+                            clip.TargetX = (int)Math.Round(Convert.ToDouble(e.Value));
+                            break;
+                        case "place_Y":
+                            clip.TargetY = (int)Math.Round(Convert.ToDouble(e.Value));
+                            break;
+                        case "place_W":
+                            clip.TargetWidth = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
+                            break;
+                        case "place_H":
+                            clip.TargetHeight = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
+                            break;
+                    }
 
                     handler?.Invoke(s, e);
                     return;
@@ -1017,13 +1059,13 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (e.Value is double deg)
                     {
-                        RotationEffect_ImageSharp? existingRotation = null;
-                        if (clip.Effects.TryGetValue(InternalRotationID, out var existingRot) && existingRot is RotationEffect_ImageSharp oldRot)
+                        RotationEffect_IPicture? existingRotation = null;
+                        if (clip.Effects.TryGetValue(InternalRotationID, out var existingRot) && existingRot is RotationEffect_IPicture oldRot)
                         {
                             existingRotation = oldRot;
                         }
 
-                        clip.Effects[InternalRotationID] = new RotationEffect_ImageSharp
+                        clip.Effects[InternalRotationID] = new RotationEffect_IPicture
                         {
                             Angle = (float)deg,
                             Enabled = existingRotation?.Enabled ?? true,
@@ -1059,6 +1101,14 @@ namespace projectFrameCut.DraftStuff
                     {
                         cropView.CropHeight = h;
                     }
+                    else if (e.Id == "cropEnable" && e.Value is bool cropEnabled)
+                    {
+                        cropView.Enabled = cropEnabled;
+                        handler?.Invoke(s, e);
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        return;
+
+                    }
                 }
 
                 handler?.Invoke(s, e);
@@ -1084,6 +1134,24 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
+            void SetCropTextEntryText(string id, string value)
+            {
+                if (transformPpb is null)
+                {
+                    return;
+                }
+
+                if (transformPpb.Components.TryGetValue(id, out var component) && component is Entry entry)
+                {
+                    if (entry.Text != value)
+                    {
+                        entry.Text = value;
+                    }
+
+                    transformPpb.Properties[id] = value;
+                }
+            }
+
             void SyncCropInputsFromView()
             {
                 syncingCropInputs = true;
@@ -1100,77 +1168,354 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
-            var transformTabView = transformPpb.BuildWithScrollView();
+            var scrollView = transformPpb.BuildWithScrollView();
 
-            var transformButton = new Button
+            if (TryGetProgressPlacerBundle(clip, out _, out _, false))
             {
-                Text = PPLocalizedResources.General_LocationAndSize,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Center,
-                CornerRadius = 8,
-                FontSize = 13,
-                Padding = new Thickness(10, 6)
-            };
-            var cropButton = new Button
-            {
-                Text = PPLocalizedResources.General_Crop,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Center,
-                CornerRadius = 8,
-                FontSize = 13,
-                Padding = new Thickness(10, 6)
-            };
+                var root = new Grid
+                {
+                    RowDefinitions =
+                    {
+                        new RowDefinition(GridLength.Auto),
+                        new RowDefinition(GridLength.Star)
+                    },
+                    RowSpacing = 8
+                };
+                root.Add(new Label
+                {
+                    Text = PPLocalizedResources.KeyFrame_EditWarning,
+                    TextColor = Colors.Yellow,
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(10, 10, 0, 0)
+                }, 0, 0);
+                root.Add(scrollView, 0, 1);
 
-            void SetTab(bool showCrop)
-            {
-                transformTabView.IsVisible = !showCrop;
-                cropView.IsVisible = showCrop;
-
-                transformButton.BackgroundColor = showCrop ? Color.FromArgb("#1F1F22") : Color.FromArgb("#3A3A40");
-                cropButton.BackgroundColor = showCrop ? Color.FromArgb("#3A3A40") : Color.FromArgb("#1F1F22");
-                transformButton.TextColor = showCrop ? Color.FromArgb("#C8C8CC") : Colors.White;
-                cropButton.TextColor = showCrop ? Colors.White : Color.FromArgb("#C8C8CC");
+                SyncCropInputsFromView();
+                return root;
             }
 
-            transformButton.Clicked += (_, _) => SetTab(false);
-            cropButton.Clicked += (_, _) => SetTab(true);
-
-            var root = new Grid
-            {
-                RowDefinitions =
-                {
-                    new RowDefinition(GridLength.Auto),
-                    new RowDefinition(GridLength.Star)
-                },
-                RowSpacing = 8
-            };
-
-            var switchRow = new Grid
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition(GridLength.Star),
-                    new ColumnDefinition(GridLength.Star)
-                },
-                ColumnSpacing = 8,
-                Padding = new Thickness(10, 10, 10, 0)
-            };
-            switchRow.Add(transformButton, 0, 0);
-            switchRow.Add(cropButton, 1, 0);
-
-            var contentHost = new Grid
-            {
-                transformTabView,
-                cropView
-            };
-
-            root.Add(switchRow, 0, 0);
-            root.Add(contentHost, 0, 1);
             SyncCropInputsFromView();
-            SetTab(false);
-            return root;
+            return scrollView;
         }
 
+        private bool TryGetProgressPlacerBundle(ClipElementUI clip, out IKeyFramedEffectProvider provider, out IEffectBundle bundle, bool createIfMissing = false)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            foreach (var eb in clip.EffectBundles.Values)
+            {
+                if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
+                {
+                    provider = kfp;
+                    bundle = eb;
+                    return true;
+                }
+            }
+
+            if (createIfMissing)
+            {
+                var newBundle = new ProgressPlacerEffectBundle();
+                clip.EffectBundles[newBundle.Id] = newBundle;
+                AutoConnectBundleToOutput(clip, newBundle);
+                RebuildAllEffects(clip);
+                provider = newBundle;
+                bundle = newBundle;
+                return true;
+            }
+
+            provider = null!;
+            bundle = null!;
+            return false;
+        }
+
+        #endregion
+
+        #region kf
+
+        private View BuildKeyFrameTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+            var root = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(12, 10)
+            };
+            var title = new Label
+            {
+                Text = Localized.InteractableEditor_KeyFrame,
+                FontSize = 20,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#E8EEF8")
+            };
+            root.Children.Add(title);
+            ClipPositionTuple GetCurrentClipPosition()
+            {
+                int width = clip.TargetWidth > 0 ? clip.TargetWidth : (int)Math.Max(1, page.ProjectInfo.RelativeWidth);
+                int height = clip.TargetHeight > 0 ? clip.TargetHeight : (int)Math.Max(1, page.ProjectInfo.RelativeHeight);
+                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false);
+            }
+
+            bool hasAnyProvider = false;
+
+            foreach (var kvp in clip.EffectBundles)
+            {
+                if (kvp.Value is not IKeyFramedEffectProvider provider)
+                    continue;
+
+                hasAnyProvider = true;
+                var section = BuildKeyframeProviderSectionUI(provider, clip, GetCurrentClipPosition, handler);
+                root.Children.Add(section);
+            }
+
+            // Also check ProgressPlacer which may exist as its own bundle
+            if (TryGetProgressPlacerBundle(clip, out var placerProvider, out _, false) && !hasAnyProvider)
+            {
+                hasAnyProvider = true;
+                var section = BuildKeyframeProviderSectionUI(placerProvider, clip, GetCurrentClipPosition, handler);
+                root.Children.Add(section);
+            }
+
+            if (!hasAnyProvider)
+            {
+
+                root.Children.Add(new Label
+                {
+                    Text = PPLocalizedResources.KeyFrame_NoSupport,
+                    TextColor = Color.FromArgb("#A8B8CC"),
+                    FontSize = 12,
+                    LineBreakMode = LineBreakMode.WordWrap
+                });
+            }
+
+            // 列出可用的支持关键帧的 Effect，供用户添加
+            var allBundleFactories = EffectServices.GetAvailableEffectBundles();
+            if (allBundleFactories.Count > 0)
+            {
+                root.Children.Add(new BoxView
+                {
+                    HeightRequest = 1,
+                    Color = Colors.White.WithAlpha(0.1f),
+                    Margin = new Thickness(0, 8)
+                });
+
+                root.Children.Add(new Label
+                {
+                    Text = PPLocalizedResources.KeyFrame_AddTitle,
+                    FontSize = 16,
+                    TextColor = Color.FromArgb("#C8C8CC"),
+                    Margin = new Thickness(0, 4, 0, 8)
+                });
+
+                var addPpb = new PropertyPanelBuilder();
+                root.Children.Add(BuildAddEffectPanel(
+                    EffectTarget.IsKeyFramed | clip.GetEffectTarget(),
+                    page,
+                    allBundleFactories,
+                    addPpb,
+                    (s, e) =>
+                    {
+                        if (e.Id == "AddBundle" &&
+                            addPpb.Properties.TryGetValue("NewBundleType", out var typeObj) &&
+                            typeObj is string bundleTypeName &&
+                            allBundleFactories.TryGetValue(bundleTypeName, out var factory))
+                        {
+                            var instance = factory();
+                            instance.Id = Guid.NewGuid();
+                            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+                            clip.EffectBundles[instance.Id] = instance;
+                            AutoConnectBundleToOutput(clip, instance);
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("ProgressList", null, null));
+                            // 重建标签页
+                            var rebuiltTab = BuildKeyFrameTab(clip, handler);
+                            if (root.Parent is ScrollView sv)
+                            {
+                                sv.Content = rebuiltTab;
+                            }
+                        }
+                    },
+                    showSubfix: false,
+                    ignoreIsNotVisibleInNewEffectSelector: true //keyframed effect may not have visible UI but should still be addable from this panel
+                ));
+            }
+
+            return new ScrollView { Content = root };
+        }
+
+        private View BuildKeyframeProviderSectionUI(
+            IKeyFramedEffectProvider provider,
+            ClipElementUI clip,
+            Func<ClipPositionTuple> getDefaultPosition,
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            var section = new VerticalStackLayout { Spacing = 8, Margin = new Thickness(0, 0, 0, 8) };
+
+            string displayName = EffectBundleUiHelper.L(provider.TypeName, provider.TypeName);
+
+            var actionsRow = new HorizontalStackLayout { Spacing = 8 };
+            var collapseButton = new Label
+            {
+                Text = "▼",
+                TextColor = Color.FromArgb("#A8B8CC"),
+                FontSize = 14,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Start
+            };
+            var title = new Label
+            {
+                Text = displayName,
+                FontSize = 20,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#E8EEF8"),
+                HorizontalOptions = LayoutOptions.Start
+            };
+            var addButton = new Button
+            {
+                Text = "+",
+                CornerRadius = 8,
+                FontAttributes = FontAttributes.Bold,
+                HorizontalOptions = LayoutOptions.End
+            };
+            actionsRow.Children.Add(collapseButton);
+            actionsRow.Children.Add(title);
+            actionsRow.Children.Add(addButton);
+            section.Children.Add(actionsRow);
+
+            var listHost = new VerticalStackLayout { Spacing = 8 };
+            section.Children.Add(listHost);
+
+            bool isCollapsed = false;
+            var collapseTap = new TapGestureRecognizer();
+            var titleTap = new TapGestureRecognizer();
+            void SwitchCollpaseMode()
+            {
+                isCollapsed = !isCollapsed;
+                collapseButton.Text = isCollapsed ? "▶" : "▼";
+                listHost.IsVisible = !isCollapsed;
+            }
+            collapseTap.Tapped += (_, _) => SwitchCollpaseMode();
+            titleTap.Tapped += (_, _) => SwitchCollpaseMode();
+            collapseButton.GestureRecognizers.Add(collapseTap);
+            title.GestureRecognizers.Add(titleTap);
+
+            // Store a stable reference to the "CropList" parameter name for the notification event
+            string listParamName = $"{provider.TypeName}List";
+
+            void RebuildList()
+            {
+                listHost.Children.Clear();
+
+                var steps = provider.Steps;
+                if (steps.Count == 0)
+                {
+                    listHost.Children.Add(new Label
+                    {
+                        Text = PPLocalizedResources.KeyFrame_Empty,
+                        TextColor = Color.FromArgb("#A8B8CC"),
+                        FontSize = 12
+                    });
+                    listHost.Children.Add(new Button
+                    {
+                        Text = PPLocalizedResources.EffectProp_Remove,
+                        Command = new Command(() =>
+                        {
+                            if (provider is IEffectBundle bud) clip.EffectBundles?.Remove(bud.Id);
+                            handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                            RebuildList();
+                        }),
+                        TextColor = Color.FromArgb("#FF8080")
+                    });
+                    return;
+                }
+
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    int idx = i;
+                    var stepInfo = steps[idx];
+
+                    var card = new Border
+                    {
+                        Stroke = Colors.White.WithAlpha(0.10f),
+                        StrokeShape = new RoundRectangle { CornerRadius = 10 },
+                        Background = new SolidColorBrush(Color.FromArgb("#0FFFFFFF")),
+                        Padding = new Thickness(10)
+                    };
+
+                    var stack = new VerticalStackLayout { Spacing = 8 };
+
+                    var header = new Grid
+                    {
+                        ColumnDefinitions =
+                        {
+                            new ColumnDefinition(GridLength.Star),
+                            new ColumnDefinition(GridLength.Auto)
+                        }
+                    };
+                    header.Add(new Label
+                    {
+                        Text = PPLocalizedResources.KeyFrame_Progress(i, stepInfo.Progress),
+                        FontAttributes = FontAttributes.Bold,
+                        FontSize = 13,
+                        TextColor = Color.FromArgb("#DDE7F3")
+                    }, 0, 0);
+
+                    var deleteButton = new Button
+                    {
+                        Text = "\ue9d5",
+                        FontFamily = "Icons",
+                        CornerRadius = 8,
+                        Padding = new Thickness(10, 4),
+                        TextColor = Color.FromArgb("#FF8080")
+                    };
+                    deleteButton.Clicked += (_, _) =>
+                    {
+                        provider.RemoveStep(idx);
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                        RebuildList();
+                    };
+                    header.Add(deleteButton, 1, 0);
+                    stack.Children.Add(header);
+
+                    var stepPpb = provider.CreateStepUI(idx);
+                    var stepView = stepPpb.Build();
+                    stepPpb.PropertyChanged += (s, args) =>
+                    {
+                        if (provider.HandleStepUIChange(idx, args))
+                        {
+                            RebuildAllEffects(clip);
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                            RebuildList();
+                        }
+                    };
+                    stack.Children.Add(stepView);
+                    card.Content = stack;
+                    listHost.Children.Add(card);
+                }
+            }
+
+            addButton.Clicked += (_, _) =>
+            {
+                if (isCollapsed)
+                {
+                    isCollapsed = !isCollapsed;
+                    collapseButton.Text = isCollapsed ? "▶" : "▼";
+                    listHost.IsVisible = !isCollapsed;
+                }
+                provider.AddStep(getDefaultPosition());
+                RebuildAllEffects(clip);
+                handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                RebuildList();
+            };
+
+            RebuildList();
+            return section;
+        }
 
         #endregion
 
@@ -1613,7 +1958,7 @@ namespace projectFrameCut.DraftStuff
             if (showAllOptions)
             {
                 var subTrackSwitch = new Switch { IsToggled = e.ShouldInSubtrack, VerticalOptions = LayoutOptions.Center };
-                var subTrackLabel = new Label { Text = "Place in subtrack by default", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+                var subTrackLabel = new Label { Text = PPLocalizedResources.TextOption_PlaceInSubtrack, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
                 subTrackSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); };
                 var subTrackGrid = new Grid
                 {
@@ -1671,27 +2016,83 @@ namespace projectFrameCut.DraftStuff
 
             if (styleProvider == null)
             {
-                // Fallback to OldTextClipEntry provider which reads/writes TextEntries from ExtraData
-                var fallback = new projectFrameCut.ApplicationPluginBase.Text.OldTextClipEntryTextStyleProvider();
-                // If clip has TextEntries in ExtraData, pass them to provider.Parameters
+                List<TextClipEntry>? entries = null;
                 if (clip.ExtraData != null && clip.ExtraData.TryGetValue("TextEntries", out var teObj))
                 {
-                    try
+                    if (teObj is List<TextClipEntry> list)
+                        entries = list;
+                    else if (teObj is System.Text.Json.JsonElement je)
                     {
-                        if (teObj is System.Text.Json.JsonElement je)
-                        {
-                            fallback.Parameters["TextEntriesJson"] = je.GetRawText();
-                        }
-                        else
-                        {
-                            // serialize known list types
-                            fallback.Parameters["TextEntriesJson"] = System.Text.Json.JsonSerializer.Serialize(teObj);
-                        }
+                        try { entries = System.Text.Json.JsonSerializer.Deserialize<List<TextClipEntry>>(je); }
+                        catch { }
                     }
-                    catch { }
                 }
 
-                styleProvider = fallback;
+                if (entries is { Count: 1 })
+                {
+                    var entry = entries[0];
+
+                    static string ToArgbHex(ushort r, ushort g, ushort b, float a)
+                    {
+                        var ab = (byte)Math.Round(a * 255);
+                        var rb = (byte)Math.Round(r / 65535.0 * 255);
+                        var gb = (byte)Math.Round(g / 65535.0 * 255);
+                        var bb = (byte)Math.Round(b / 65535.0 * 255);
+                        return $"#{ab:X2}{rb:X2}{gb:X2}{bb:X2}";
+                    }
+                    static string ToArgbHexNoAlpha(ushort r, ushort g, ushort b)
+                    {
+                        var rb = (byte)Math.Round(r / 65535.0 * 255);
+                        var gb = (byte)Math.Round(g / 65535.0 * 255);
+                        var bb = (byte)Math.Round(b / 65535.0 * 255);
+                        return $"#FF{rb:X2}{gb:X2}{bb:X2}";
+                    }
+
+                    var basic = new projectFrameCut.ApplicationPluginBase.Text.BasicTextStyleProvider
+                    {
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["Text"] = entry.text ?? string.Empty,
+                            ["FontFamily"] = entry.fontFamily ?? "Arial",
+                            ["FontSize"] = entry.fontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            ["Color"] = ToArgbHex(entry.r, entry.g, entry.b, entry.a ?? 1f),
+                            ["FontStyle"] = entry.fontStyle.ToString(),
+                            ["HorizontalAlignment"] = entry.horizontalAlignment.ToString(),
+                            ["VerticalAlignment"] = entry.verticalAlignment.ToString(),
+                            ["WrappingWidth"] = entry.wrappingWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                            ["ApplyKerning"] = entry.applyKerning.ToString(),
+                            ["LineSpacing"] = entry.lineSpacing.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            ["Rotation"] = entry.rotation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            ["StrokeWidth"] = entry.strokeWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                            ["StrokeColor"] = ToArgbHexNoAlpha(entry.strokeR, entry.strokeG, entry.strokeB),
+                            ["Dpi"] = entry.dpi?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                            ["UseVerticalLayout"] = entry.UseVerticalLayout.ToString(),
+                            ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString()
+                        }
+                    };
+                    styleProvider = basic;
+                }
+                else
+                {
+                    var fallback = new projectFrameCut.ApplicationPluginBase.Text.OldTextClipEntryTextStyleProvider();
+                    if (clip.ExtraData != null && clip.ExtraData.TryGetValue("TextEntries", out var teObj2))
+                    {
+                        try
+                        {
+                            if (teObj2 is System.Text.Json.JsonElement je)
+                            {
+                                fallback.Parameters["TextEntriesJson"] = je.GetRawText();
+                            }
+                            else
+                            {
+                                fallback.Parameters["TextEntriesJson"] = System.Text.Json.JsonSerializer.Serialize(teObj2);
+                            }
+                        }
+                        catch { }
+                    }
+
+                    styleProvider = fallback;
+                }
             }
 
             var providerPpb = styleProvider.BuildPropertyPanel();
@@ -1903,6 +2304,8 @@ namespace projectFrameCut.DraftStuff
             var fonts = TextServices.LoadedFonts.Select(c => c.Value);
             var entriesContainer = new VerticalStackLayout { Spacing = 8 };
 
+            entriesContainer.Add(new Label { Text = PPLocalizedResources.TextOption_TabTitle_Classic_Warn, TextColor = Colors.Yellow });
+
             void UpdateStoredEntries()
             {
                 clip.ExtraData["TextEntries"] = entries;
@@ -2021,6 +2424,7 @@ namespace projectFrameCut.DraftStuff
             var factories = EffectServices.GetAvailableEffectBundles();
             if (clip.EffectBundles != null)
             {
+                NormalizeBundlePipeline(clip);
                 var sortedBundles = SortEffectBundles(clip.EffectBundles);
                 if (!sortedBundles.ListAny()) return;
                 for (int i = 0; i < sortedBundles.Count; i++)
@@ -2029,7 +2433,7 @@ namespace projectFrameCut.DraftStuff
                     bundleData.Parameters ??= new();
                 }
                 var bundleDict = sortedBundles.ToDictionary(b => b.Id, b => b);
-                var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType));
+                var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters.Where(c => !c.Key.StartsWith("__DraftEffectBindingView")).ToDictionary(c => c.Key, c => c.Value), bundleData.ParametersType));
                 var bundleFacts = sortedBundles
                     .Where(c => c.Enabled)
                     .SelectMany(bundle => bundle.Create().Select(effectFactory => (bundleId: bundle.Id, effectFactory)))
@@ -2186,7 +2590,7 @@ namespace projectFrameCut.DraftStuff
 
             var lastBundle = clip.EffectBundles.Values
                 .FirstOrDefault(b => b.BindedOutputId == IEffectBundle.OutputAnchorGUID
-                                  && b.Target == target
+                                  && AreTargetsCompatible(b.Target, target)
                                   && b.Id != newBundle.Id);
 
             if (lastBundle != null)
@@ -2202,37 +2606,273 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        /// <summary>
+        /// 判断两个 EffectTarget 是否兼容（可连接）。
+        /// </summary>
+        private static bool AreTargetsCompatible(EffectTarget a, EffectTarget b)
+        {
+            var aBase = a & ~(EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector);
+            var bBase = b & ~(EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector);
+            if (aBase == EffectTarget.NotSpecified || bBase == EffectTarget.NotSpecified)
+                return true;
+            return (aBase & bBase) != 0;
+        }
+
+        /// <summary>
+        /// 验证并修复所有 EffectBundle 的连接一致性：
+        /// - 自身连接 → 断开
+        /// - 单向连接（A→B 但 B 没有指回 A）→ 断开
+        /// - 扇入（多个 bundle 的输入指向同一个 source）→ 只保留第一个
+        /// </summary>
+        private static void ValidateAndFixBundleConnections(ClipElementUI clip)
+        {
+            if (clip.EffectBundles == null || clip.EffectBundles.Count == 0) return;
+            var bundles = clip.EffectBundles;
+
+            foreach (var bundle in bundles.Values)
+            {
+                // 自身连接
+                if (bundle.BindedInputId == bundle.Id)
+                {
+                    bundle.BindedInputId = IEffectBundle.NoConnectionGUID;
+                    if (bundle.BindedInputIds is not null && bundle.BindedInputIds.Count > 0)
+                        bundle.BindedInputIds[0] = IEffectBundle.NoConnectionGUID;
+                }
+                if (bundle.BindedOutputId == bundle.Id)
+                {
+                    bundle.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                }
+
+                // 单输入：BindedInputId 指向的 bundle 必须将其 BindedOutputId 指回自己
+                if (bundle.InputAnchorsDisplayName is null)
+                {
+                    if (IsValidInputDependency(bundle.BindedInputId))
+                    {
+                        if (!bundles.TryGetValue(bundle.BindedInputId, out var src) || src.BindedOutputId != bundle.Id)
+                        {
+                            bundle.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            if (bundle.BindedInputIds is not null && bundle.BindedInputIds.Count > 0)
+                                bundle.BindedInputIds[0] = IEffectBundle.NoConnectionGUID;
+                        }
+                    }
+                }
+
+                // 多输入：逐个检查 BindedInputIds
+                if (bundle.BindedInputIds is not null && bundle.InputAnchorsDisplayName is not null)
+                {
+                    for (int i = 0; i < bundle.BindedInputIds.Count; i++)
+                    {
+                        var id = bundle.BindedInputIds[i];
+                        if (IsValidInputDependency(id))
+                        {
+                            if (!bundles.TryGetValue(id, out var src) || src.BindedOutputId != bundle.Id)
+                                bundle.BindedInputIds[i] = IEffectBundle.NoConnectionGUID;
+                        }
+                    }
+                }
+
+                // BindedOutputId 指向的 bundle 必须将其 BindedInputId/BindedInputIds 指回自己
+                if (IsValidOutputDependency(bundle.BindedOutputId))
+                {
+                    if (!bundles.TryGetValue(bundle.BindedOutputId, out var tgt))
+                    {
+                        bundle.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                    }
+                    else
+                    {
+                        bool pointsBack = tgt.BindedInputId == bundle.Id
+                            || (tgt.BindedInputIds?.Contains(bundle.Id) ?? false);
+                        if (!pointsBack)
+                            bundle.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                    }
+                }
+            }
+
+            // 扇入修复：不允许两个 bundle 的 BindedInputId 指向同一个 source
+            var usedOutputs = new Dictionary<Guid, Guid>();
+            foreach (var bundle in bundles.Values)
+            {
+                if (bundle.InputAnchorsDisplayName is null)
+                {
+                    if (IsValidInputDependency(bundle.BindedInputId))
+                    {
+                        if (usedOutputs.TryGetValue(bundle.BindedInputId, out var firstConsumer))
+                        {
+                            bundle.BindedInputId = IEffectBundle.NoConnectionGUID;
+                            if (bundle.BindedInputIds is not null && bundle.BindedInputIds.Count > 0)
+                                bundle.BindedInputIds[0] = IEffectBundle.NoConnectionGUID;
+                        }
+                        else
+                        {
+                            usedOutputs[bundle.BindedInputId] = bundle.Id;
+                        }
+                    }
+                }
+                else if (bundle.BindedInputIds is not null)
+                {
+                    for (int i = 0; i < bundle.BindedInputIds.Count; i++)
+                    {
+                        var id = bundle.BindedInputIds[i];
+                        if (IsValidInputDependency(id))
+                        {
+                            if (usedOutputs.TryGetValue(id, out var firstConsumer))
+                                bundle.BindedInputIds[i] = IEffectBundle.NoConnectionGUID;
+                            else
+                                usedOutputs[id] = bundle.Id;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 规范化 Bundle 管线：若检测到并行链，将其合并为单链。
+        /// 仅在确实存在并行链时才执行重排，避免覆盖用户已手动配置好的单链顺序。
+        /// 内部 Effect（ColorAdjustment、Crop 等）排在前面，用户 Effect 排在后面。
+        /// Mixture 和 SpeedVariance 断开连接（它们在渲染时由系统直接提取，不参与绑定管线）。
+        /// </summary>
+        private static void NormalizeBundlePipeline(ClipElementUI clip)
+        {
+            if (clip.EffectBundles == null || clip.EffectBundles.Count <= 1) return;
+            var bundles = clip.EffectBundles;
+
+            var pipelineBundles = new List<IEffectBundle>();
+            var detachedBundles = new List<IEffectBundle>();
+
+            foreach (var b in bundles.Values)
+            {
+                if (b.Target.HasFlag(EffectTarget.SpeedVariance) || b.Target.HasFlag(EffectTarget.Mixture))
+                    detachedBundles.Add(b);
+                else
+                    pipelineBundles.Add(b);
+            }
+
+            foreach (var b in detachedBundles)
+            {
+                b.BindedInputId = IEffectBundle.NoConnectionGUID;
+                b.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                if (b.BindedInputIds != null)
+                {
+                    for (int i = 0; i < b.BindedInputIds.Count; i++)
+                        b.BindedInputIds[i] = IEffectBundle.NoConnectionGUID;
+                }
+            }
+
+            if (pipelineBundles.Count <= 1) return;
+
+            var directToInputCount = pipelineBundles.Count(b =>
+                b.BindedInputId == IEffectBundle.InputAnchorGUID ||
+                (b.BindedInputIds?.Contains(IEffectBundle.InputAnchorGUID) ?? false));
+
+            if (directToInputCount <= 1) return;
+
+            var sorted = pipelineBundles
+                .OrderBy(b => b.Target.HasFlag(EffectTarget.ColorAdjustment) ? 0 : 1)
+                .ThenBy(b => b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) ? 0 : 1)
+                .ToList();
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                var b = sorted[i];
+                b.BindedInputId = i == 0 ? IEffectBundle.InputAnchorGUID : sorted[i - 1].Id;
+                b.BindedOutputId = i == sorted.Count - 1 ? IEffectBundle.OutputAnchorGUID : sorted[i + 1].Id;
+
+                b.BindedInputIds ??= new List<Guid>();
+                if (b.BindedInputIds.Count == 0)
+                    b.BindedInputIds.Add(b.BindedInputId);
+                else
+                    b.BindedInputIds[0] = b.BindedInputId;
+            }
+        }
+
         public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             ArgumentNullException.ThrowIfNull(clip);
             PropertyPanelBuilder ppb = new();
-            ppb.AddButton(PPLocalizedResources.EffectBind_Title, (s, e) =>
+            ppb.AddButton(PPLocalizedResources.EffectBind_Title, async (s, e) =>
             {
-                var bindView = new DraftEffectBindingView();
-                bindView.LoadClip(clip, page);
-                if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+                try
                 {
-                    page.Popup.Content = bindView;
-                }
-                else
-                {
-                    var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                    var bindView = new DraftEffectBindingView();
+                    bindView.LoadClip(clip, page, showAllEffect);
+                    // Sync effect changes back to the property panel in real time
+                    bindView.EffectBundlesChanged += () =>
                     {
-                        Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
-                        Content = bindView,
-                        IsPopOutVisible = true
+                        RebuildAllEffects(clip, false);
+                        handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     };
-                    page.MainMultiWindowView.AddWindow(v);
-                    v.Maximize();
-                    v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                    if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+                    {
+                        page.Popup.Content = bindView;
+                    }
+                    else
+                    {
+                        var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                        {
+                            Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
+                            Content = bindView,
+                            IsPopOutVisible = true
+                        };
+                        page.MainMultiWindowView.AddWindow(v);
+                        v.Maximize();
+                        v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Show effect binding view for {clip.DisplayName}", this);
+                    await page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                    if (Debugger.IsAttached) throw;
                 }
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
-            var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider) ?? 0) >= 2;
+            var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
+            var haveManyMixtureProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleKvp in clip.EffectBundles.Where(c => c.Value.Target == clip.GetEffectTarget() || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider) || showAllEffect && SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab")))
+                var filteredBundles = clip.EffectBundles
+                    .Where(c =>
+                        showAllEffect
+                        || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
+                             && c.Value.Target.HasFlag(clip.GetEffectTarget()))
+                        || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
+                        || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider))
+                    .ToList();
+
+                // Sort bundles in input→output order by traversing the connection chain
+                var sortedBundles = new List<KeyValuePair<Guid, IEffectBundle>>();
+                var visitedIds = new HashSet<Guid>();
+                var traverseQueue = new Queue<Guid>();
+                foreach (var b in filteredBundles)
+                {
+                    if (b.Value.BindedInputId == IEffectBundle.InputAnchorGUID || (b.Value.BindedInputIds?.Contains(IEffectBundle.InputAnchorGUID) ?? false))
+                    {
+                        traverseQueue.Enqueue(b.Key);
+                    }
+                }
+                while (traverseQueue.Count > 0)
+                {
+                    var id = traverseQueue.Dequeue();
+                    if (!visitedIds.Add(id)) continue;
+                    var bundleKvp = filteredBundles.First(b => b.Key == id);
+                    sortedBundles.Add(bundleKvp);
+                    foreach (var b in filteredBundles)
+                    {
+                        if ((b.Value.BindedInputId == id || (b.Value.BindedInputIds?.Contains(id) ?? false)) && !visitedIds.Contains(b.Key))
+                        {
+                            traverseQueue.Enqueue(b.Key);
+                        }
+                    }
+                }
+                // Append any remaining bundles not connected to the main chain
+                foreach (var b in filteredBundles)
+                {
+                    if (!visitedIds.Contains(b.Key))
+                        sortedBundles.Add(b);
+                }
+
+                foreach (var bundleKvp in sortedBundles)
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
@@ -2245,6 +2885,8 @@ namespace projectFrameCut.DraftStuff
                         if (id == IEffectBundle.InputAnchorGUID) return PPLocalizedResources.EffectBind_SourcePicture;
                         if (clip.EffectBundles != null && clip.EffectBundles.TryGetValue(id, out var b))
                         {
+                            if (!showAllEffect && b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
+                                return GetInputAnchorSelection(b.BindedInputId);
                             return $"{b.Name} ({b.Id})";
                         }
                         return string.Empty;
@@ -2256,6 +2898,8 @@ namespace projectFrameCut.DraftStuff
                         if (id == IEffectBundle.OutputAnchorGUID) return PPLocalizedResources.EffectBind_FinalResult;
                         if (clip.EffectBundles != null && clip.EffectBundles.TryGetValue(id, out var b))
                         {
+                            if (!showAllEffect && b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
+                                return GetOutputAnchorSelection(b.BindedOutputId);
                             return $"{b.TypeName} ({b.Id})";
                         }
                         return string.Empty;
@@ -2270,20 +2914,42 @@ namespace projectFrameCut.DraftStuff
                         ppb.AddCheckbox($"Bundle|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
                         ppb.AddEntry($"Bundle|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
 
+                        if (!bundleInstance.Target.HasFlag(EffectTarget.IsKeyFramed))
+                        {
+                            ppb.AddSeparator();
+
+                            ppb.AddFromAnother(bundlePpb, bundleInstance);
+                        }
+
                         ppb.AddSeparator();
 
-                        ppb.AddFromAnother(bundlePpb, bundleInstance);
+                        // 计算当前输入锚点选中项（用于 Picker 默认值和确保当前选中项不被过滤掉）
+                        Guid resolvedInAnchorId;
+                        if (bundleInstance.InputAnchorsDisplayName is null)
+                        {
+                            resolvedInAnchorId = bundleInstance.BindedInputId;
+                            if (resolvedInAnchorId == IEffectBundle.NoConnectionGUID && bundleInstance.BindedInputIds is not null && bundleInstance.BindedInputIds.Count > 0)
+                                resolvedInAnchorId = bundleInstance.BindedInputIds[0];
+                        }
+                        else
+                        {
+                            resolvedInAnchorId = bundleInstance.BindedInputId;
+                        }
 
-                        ppb.AddSeparator();
+                        // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
+                        var inAnchorBundleOptions = clip.EffectBundles
+                            .Where(b => b.Key != bundleId
+                                && AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
+                                && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
+                            .Select(b => $"{b.Value.Name} ({b.Key})")
+                            .ToList();
+                        var curIn = GetInputAnchorSelection(resolvedInAnchorId);
+                        if (curIn is not null && !inAnchorBundleOptions.Contains(curIn))
+                            inAnchorBundleOptions.Add(curIn);
 
                         if (bundleInstance.InputAnchorsDisplayName is null)
                         {
-                            var selectedInAnchor = bundleInstance.BindedInputId;
-                            if (selectedInAnchor == IEffectBundle.NoConnectionGUID && bundleInstance.BindedInputIds is not null && bundleInstance.BindedInputIds.Count > 0)
-                            {
-                                selectedInAnchor = bundleInstance.BindedInputIds[0];
-                            }
-                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", string.IsNullOrWhiteSpace(bundleInstance.InputAnchorDisplayName) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(bundleInstance.InputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
+                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", string.IsNullOrWhiteSpace(bundleInstance.InputAnchorDisplayName) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(bundleInstance.InputAnchorDisplayName), inAnchorBundleOptions.Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(resolvedInAnchorId));
                         }
                         else
                         {
@@ -2293,12 +2959,23 @@ namespace projectFrameCut.DraftStuff
                                 var currentId = (bundleInstance.BindedInputIds != null && idx >= 0 && idx < bundleInstance.BindedInputIds.Count)
                                     ? bundleInstance.BindedInputIds[idx]
                                     : IEffectBundle.NoConnectionGUID;
-                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", string.IsNullOrWhiteSpace(item) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(item), clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(currentId));
+                                ppb.AddPicker($"Bundle|{bundleId}|InAnchors|{item}", string.IsNullOrWhiteSpace(item) ? PPLocalizedResources.EffectBind_InputAnchor : PPLocalizedResources.EffectBind_InputAnchorWithName(item), inAnchorBundleOptions.Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).Distinct(StringComparer.InvariantCultureIgnoreCase).ToArray(), GetInputAnchorSelection(currentId));
 
                             }
                         }
 
-                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), clip.EffectBundles.Select(b => $"{b.Value.TypeName} ({b.Key})").Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
+                        // 构建过滤后的 OutAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
+                        var outTargetBundleOptions = clip.EffectBundles
+                            .Where(b => b.Key != bundleId
+                                && AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
+                                && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
+                            .Select(b => $"{b.Value.TypeName} ({b.Key})")
+                            .ToList();
+                        var curOut = GetOutputAnchorSelection(bundleInstance.BindedOutputId);
+                        if (curOut is not null && !outTargetBundleOptions.Contains(curOut))
+                            outTargetBundleOptions.Add(curOut);
+
+                        ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), outTargetBundleOptions.Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).Distinct(StringComparer.InvariantCultureIgnoreCase).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
 
                         ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                         ppb.AddSeparator();
@@ -2320,7 +2997,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler));
+            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectTarget(), page, bundlesFactories, ppb, handler, hideKeyFramedBundles: true));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -2420,22 +3097,60 @@ namespace projectFrameCut.DraftStuff
                                 case "InAnchor":
                                     if (clip.EffectBundles.TryGetValue(bundleId, out var inBundle))
                                     {
-                                        if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectBundle.InputAnchorGUID, out var inId))
+                                        if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectBundle.InputAnchorGUID, out var newSourceId))
                                         {
-                                            inBundle.BindedInputId = inId;
-                                            if (inBundle.InputAnchorsDisplayName is null)
                                             {
-                                                if (inBundle.BindedInputIds is null || inBundle.BindedInputIds.Count == 0)
+                                                var oldSourceId = inBundle.BindedInputId;
+
+                                                if (IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
                                                 {
-                                                    inBundle.BindedInputIds = [inId];
+                                                    if (clip.EffectBundles.TryGetValue(oldSourceId, out var oldSource))
+                                                    {
+                                                        if (oldSource.BindedOutputId == inBundle.Id)
+                                                            oldSource.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                                                    }
                                                 }
-                                                else
+
+                                                inBundle.BindedInputId = newSourceId;
+                                                if (inBundle.InputAnchorsDisplayName is null)
                                                 {
-                                                    inBundle.BindedInputIds[0] = inId;
+                                                    inBundle.BindedInputIds ??= new List<Guid>();
+                                                    if (inBundle.BindedInputIds.Count == 0)
+                                                        inBundle.BindedInputIds.Add(newSourceId);
+                                                    else
+                                                        inBundle.BindedInputIds[0] = newSourceId;
                                                 }
+
+                                                if (IsValidInputDependency(newSourceId))
+                                                {
+                                                    if (clip.EffectBundles.TryGetValue(newSourceId, out var newSource))
+                                                    {
+                                                        if (newSource.BindedOutputId != IEffectBundle.NoConnectionGUID &&
+                                                            newSource.BindedOutputId != IEffectBundle.OutputAnchorGUID &&
+                                                            newSource.BindedOutputId != inBundle.Id)
+                                                        {
+                                                            if (clip.EffectBundles.TryGetValue(newSource.BindedOutputId, out var conflictedTarget))
+                                                            {
+                                                                if (conflictedTarget.BindedInputId == newSourceId)
+                                                                    conflictedTarget.BindedInputId = IEffectBundle.NoConnectionGUID;
+                                                                if (conflictedTarget.BindedInputIds is not null)
+                                                                {
+                                                                    for (int ci = 0; ci < conflictedTarget.BindedInputIds.Count; ci++)
+                                                                    {
+                                                                        if (conflictedTarget.BindedInputIds[ci] == newSourceId)
+                                                                            conflictedTarget.BindedInputIds[ci] = IEffectBundle.NoConnectionGUID;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        newSource.BindedOutputId = inBundle.Id;
+                                                    }
+                                                }
+
+                                                ValidateAndFixBundleConnections(clip);
+                                                RebuildAllEffects(clip);
+                                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                             }
-                                            RebuildAllEffects(clip);
-                                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
                                     }
                                     break;
@@ -2447,17 +3162,57 @@ namespace projectFrameCut.DraftStuff
                                             var idx = Array.IndexOf(insBundle.InputAnchorsDisplayName, parts[3]);
                                             if (idx >= 0)
                                             {
-                                                if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectBundle.InputAnchorGUID, out var inIds))
+                                                if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectBundle.InputAnchorGUID, out var newSourceId))
                                                 {
                                                     if (insBundle.BindedInputIds is null || insBundle.BindedInputIds.Count != insBundle.InputAnchorsDisplayName.Length)
                                                     {
                                                         insBundle.BindedInputIds = Enumerable.Repeat(IEffectBundle.NoConnectionGUID, insBundle.InputAnchorsDisplayName.Length).ToList();
                                                     }
-                                                    insBundle.BindedInputIds[idx] = inIds;
-                                                    if (insBundle.InputAnchorsDisplayName.Length == 1 && idx == 0)
+
+                                                    // 1. 断开该端口的旧源端
+                                                    var oldSourceId = insBundle.BindedInputIds[idx];
+                                                    if (IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
                                                     {
-                                                        insBundle.BindedInputId = inIds;
+                                                        if (clip.EffectBundles.TryGetValue(oldSourceId, out var oldSource))
+                                                        {
+                                                            if (oldSource.BindedOutputId == insBundle.Id)
+                                                                oldSource.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                                                        }
                                                     }
+
+                                                    // 2. 设置新连接
+                                                    insBundle.BindedInputIds[idx] = newSourceId;
+                                                    if (insBundle.InputAnchorsDisplayName.Length == 1 && idx == 0)
+                                                        insBundle.BindedInputId = newSourceId;
+
+                                                    // 3. 如果新源端是有效的 bundle，将其 BindedOutputId 指向当前 bundle
+                                                    if (IsValidInputDependency(newSourceId))
+                                                    {
+                                                        if (clip.EffectBundles.TryGetValue(newSourceId, out var newSource))
+                                                        {
+                                                            if (newSource.BindedOutputId != IEffectBundle.NoConnectionGUID &&
+                                                                newSource.BindedOutputId != IEffectBundle.OutputAnchorGUID &&
+                                                                newSource.BindedOutputId != insBundle.Id)
+                                                            {
+                                                                if (clip.EffectBundles.TryGetValue(newSource.BindedOutputId, out var conflictedTarget))
+                                                                {
+                                                                    if (conflictedTarget.BindedInputId == newSourceId)
+                                                                        conflictedTarget.BindedInputId = IEffectBundle.NoConnectionGUID;
+                                                                    if (conflictedTarget.BindedInputIds is not null)
+                                                                    {
+                                                                        for (int ci = 0; ci < conflictedTarget.BindedInputIds.Count; ci++)
+                                                                        {
+                                                                            if (conflictedTarget.BindedInputIds[ci] == newSourceId)
+                                                                                conflictedTarget.BindedInputIds[ci] = IEffectBundle.NoConnectionGUID;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            newSource.BindedOutputId = insBundle.Id;
+                                                        }
+                                                    }
+
+                                                    ValidateAndFixBundleConnections(clip);
                                                     RebuildAllEffects(clip);
                                                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                                 }
@@ -2468,11 +3223,111 @@ namespace projectFrameCut.DraftStuff
                                 case "OutAnchor":
                                     if (clip.EffectBundles.TryGetValue(bundleId, out var outBundle))
                                     {
-                                        if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_FinalResult, IEffectBundle.OutputAnchorGUID, out var outId))
+                                        if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_FinalResult, IEffectBundle.OutputAnchorGUID, out var newTargetId))
                                         {
-                                            outBundle.BindedOutputId = outId;
-                                            RebuildAllEffects(clip);
-                                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                            // 智能插入：当 showAllEffect=false 且用户选择"输出画面"时，
+                                            // 将当前 Effect 插入到链尾（lastBundle→Final 变为 lastBundle→thisBundle→Final），
+                                            // 避免绕过隐藏的内部 Effect。
+                                            bool outAnchorHandled = false;
+                                            if (newTargetId == IEffectBundle.OutputAnchorGUID && !showAllEffect)
+                                            {
+                                                var lastBundle = clip.EffectBundles?.Values
+                                                    .FirstOrDefault(b => b.Id != outBundle.Id
+                                                        && b.BindedOutputId == IEffectBundle.OutputAnchorGUID
+                                                        && AreTargetsCompatible(b.Target, outBundle.Target));
+                                                if (lastBundle != null)
+                                                {
+                                                    // a. 断开旧目标端
+                                                    var oldTargetId = outBundle.BindedOutputId;
+                                                    if (IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
+                                                    {
+                                                        if (clip.EffectBundles.TryGetValue(oldTargetId, out var oldTarget))
+                                                        {
+                                                            if (oldTarget.BindedInputId == outBundle.Id)
+                                                                oldTarget.BindedInputId = IEffectBundle.NoConnectionGUID;
+                                                            if (oldTarget.BindedInputIds is not null)
+                                                            {
+                                                                for (int ci = 0; ci < oldTarget.BindedInputIds.Count; ci++)
+                                                                {
+                                                                    if (oldTarget.BindedInputIds[ci] == outBundle.Id)
+                                                                        oldTarget.BindedInputIds[ci] = IEffectBundle.NoConnectionGUID;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    // b. lastBundle 的输出重定向到 outBundle
+                                                    lastBundle.BindedOutputId = outBundle.Id;
+
+                                                    // c. outBundle 从 lastBundle 接收，输出到 Final
+                                                    outBundle.BindedInputId = lastBundle.Id;
+                                                    outBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+                                                    outBundle.BindedInputIds ??= new List<Guid>();
+                                                    if (outBundle.BindedInputIds.Count == 0)
+                                                        outBundle.BindedInputIds.Add(lastBundle.Id);
+                                                    else
+                                                        outBundle.BindedInputIds[0] = lastBundle.Id;
+
+                                                    ValidateAndFixBundleConnections(clip);
+                                                    RebuildAllEffects(clip);
+                                                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                                    outAnchorHandled = true;
+                                                }
+                                            }
+
+                                            if (!outAnchorHandled)
+                                            {
+                                                var oldTargetId = outBundle.BindedOutputId;
+
+                                                // 1. 断开旧目标端的输入指向
+                                                if (IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
+                                                {
+                                                    if (clip.EffectBundles.TryGetValue(oldTargetId, out var oldTarget))
+                                                    {
+                                                        if (oldTarget.BindedInputId == outBundle.Id)
+                                                            oldTarget.BindedInputId = IEffectBundle.NoConnectionGUID;
+                                                        if (oldTarget.BindedInputIds is not null)
+                                                        {
+                                                            for (int ci = 0; ci < oldTarget.BindedInputIds.Count; ci++)
+                                                            {
+                                                                if (oldTarget.BindedInputIds[ci] == outBundle.Id)
+                                                                    oldTarget.BindedInputIds[ci] = IEffectBundle.NoConnectionGUID;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                // 2. 设置新输出端
+                                                outBundle.BindedOutputId = newTargetId;
+
+                                                // 3. 如果新目标是有效的 bundle，将其 BindedInputId 指向当前 bundle
+                                                if (IsValidOutputDependency(newTargetId))
+                                                {
+                                                    if (clip.EffectBundles.TryGetValue(newTargetId, out var newTarget))
+                                                    {
+                                                        if (newTarget.BindedInputId != IEffectBundle.NoConnectionGUID &&
+                                                            newTarget.BindedInputId != IEffectBundle.InputAnchorGUID &&
+                                                            newTarget.BindedInputId != outBundle.Id)
+                                                        {
+                                                            if (clip.EffectBundles.TryGetValue(newTarget.BindedInputId, out var conflictedSource))
+                                                            {
+                                                                if (conflictedSource.BindedOutputId == newTargetId)
+                                                                    conflictedSource.BindedOutputId = IEffectBundle.NoConnectionGUID;
+                                                            }
+                                                        }
+                                                        newTarget.BindedInputId = outBundle.Id;
+                                                        if (newTarget.BindedInputIds is null || newTarget.BindedInputIds.Count == 0)
+                                                            newTarget.BindedInputIds = [outBundle.Id];
+                                                        else if (newTarget.BindedInputIds[0] == IEffectBundle.NoConnectionGUID
+                                                                 || newTarget.InputAnchorsDisplayName is null)
+                                                            newTarget.BindedInputIds[0] = outBundle.Id;
+                                                    }
+                                                }
+
+                                                ValidateAndFixBundleConnections(clip);
+                                                RebuildAllEffects(clip);
+                                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                            }
                                         }
                                     }
                                     break;
@@ -2500,14 +3355,14 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             };
-            ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"),
+            ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("DeveloperMode"),
                   p => p.AddSeparator()
-                        .AddButton("Show all", (s, e) =>
+                        .AddButton(PPLocalizedResources.EffectTab_ShowAll, (s, e) =>
                         {
-                            showAllEffect = true;
+                            showAllEffect = !showAllEffect;
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                         })
-                        .AddButton("Rebuild", async (s, e) =>
+                        .AddButton(PPLocalizedResources.EffectTab_Rebuild, async (s, e) =>
                         {
                             try
                             {
@@ -2533,6 +3388,19 @@ namespace projectFrameCut.DraftStuff
             public required string Description { get; init; }
             public ImageSource? Thumbnail { get; init; }
             public MediaSource? VideoThumbnail { get; init; }
+            public required string EffectTypeName { get; init; }
+        }
+
+        private static string GetEffectTypeName(EffectTarget target)
+        {
+            StringBuilder result = new();
+            if (target.HasFlag(EffectTarget.Video)) result.Append("视频");
+            if (target.HasFlag(EffectTarget.Audio)) result.Append("音频");
+            if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append("变速");
+            if (target.HasFlag(EffectTarget.Mixture)) result.Append("混合");
+            if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append("调色");
+            if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(" | 关键帧");
+            return result.ToString();
         }
 
         public static View BuildAddEffectPanel(
@@ -2541,7 +3409,9 @@ namespace projectFrameCut.DraftStuff
             Dictionary<string, Func<IEffectBundle>> bundlesFactories,
             PropertyPanelBuilder ppb,
             EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
-            bool showSubfix = true)
+            bool showSubfix = true,
+            bool ignoreIsNotVisibleInNewEffectSelector = false,
+            bool hideKeyFramedBundles = false)
         {
             if (bundlesFactories == null || bundlesFactories.Count == 0)
             {
@@ -2553,7 +3423,7 @@ namespace projectFrameCut.DraftStuff
                     Padding = 12,
                     Content = new Label
                     {
-                        Text = PPLocalizedResources.Add_Effect_Select,
+                        Text = PPLocalizedResources.Add_Effect_None,
                         Opacity = 0.7,
                         FontSize = 13
                     }
@@ -2569,7 +3439,9 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c => c.Item1.IsUserVisibleEffect).Where(c => target == EffectTarget.NotSpecified || c.Item1.Target == target).Select(c => c.c).OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c =>
+                (target == EffectTarget.NotSpecified || (c.Item1.Target.HasFlag(target) && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)))
+                && (!hideKeyFramedBundles || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider))).Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -2592,6 +3464,7 @@ namespace projectFrameCut.DraftStuff
                         Description = display?.Description ?? "",
                         Thumbnail = display?.Thumbnail,
                         VideoThumbnail = display?.VideoThumbnail,
+                        EffectTypeName = GetEffectTypeName(instance.Target),
                     });
                 }
                 catch
@@ -2601,7 +3474,8 @@ namespace projectFrameCut.DraftStuff
                         BundleTypeName = bundleTypeName,
                         Title = bundleTypeName,
                         Description = "",
-                        Thumbnail = null
+                        Thumbnail = null,
+                        EffectTypeName = "?"
                     });
                 }
             }
@@ -2620,63 +3494,158 @@ namespace projectFrameCut.DraftStuff
             };
 
             BindableLayout.SetItemsSource(flex, cards);
+            BindableLayout.SetEmptyView(flex, new Border
+            {
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Content = new Label
+                {
+                    Text = PPLocalizedResources.Add_Effect_None,
+                    FontSize = 25,
+                },
+            });
             BindableLayout.SetItemTemplate(flex, new DataTemplate(() =>
             {
+                // ─── Preview image ───
                 var image = new Image
                 {
-                    HeightRequest = 64,
-                    WidthRequest = 64,
                     Aspect = Aspect.AspectFill,
-                    HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.Start
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill
                 };
                 image.SetBinding(Image.SourceProperty, nameof(EffectBundleCardItem.Thumbnail));
 
-                var title = new Label
+                // ─── Video preview (hidden by default) ───
+                var mediaPlayer = new MediaElement
                 {
-                    FontSize = 14,
+                    Aspect = Aspect.AspectFill,
+                    ShouldAutoPlay = true,
+                    ShouldLoopPlayback = true,
+                    ShouldMute = true,
+                    ShouldShowPlaybackControls = false,
+                    IsVisible = false,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill
+                };
+
+                // ─── Effect type label (bottom-left overlay on thumbnail) ───
+                var typeLabel = new Label
+                {
+                    FontSize = 11,
+                    TextColor = Colors.White,
+                    VerticalOptions = LayoutOptions.End,
+                    HorizontalOptions = LayoutOptions.Start,
+                    Margin = new Thickness(6, 0, 0, 6),
+                    Padding = new Thickness(4, 2),
+                    Background = new SolidColorBrush(Colors.Black.WithAlpha(0.5f)),
+                };
+                typeLabel.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.EffectTypeName));
+
+                // ─── Effect name label (bottom-right overlay on thumbnail) ───
+                var nameLabel = new Label
+                {
+                    FontSize = 11,
+                    TextColor = Colors.White,
+                    VerticalOptions = LayoutOptions.End,
+                    HorizontalOptions = LayoutOptions.End,
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Padding = new Thickness(4, 2),
+                    Background = new SolidColorBrush(Colors.Black.WithAlpha(0.5f)),
+                    LineBreakMode = LineBreakMode.TailTruncation,
+                };
+                nameLabel.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Title));
+
+                // ─── Preview area (fills card) ───
+                var previewGrid = new Grid
+                {
+                    Children = { image, mediaPlayer, typeLabel, nameLabel }
+                };
+
+                // ─── Hover overlay (hidden by default, slides up from bottom) ───
+                var hoverTitle = new Label
+                {
+                    FontSize = 13,
                     FontAttributes = FontAttributes.Bold,
+                    TextColor = Colors.White,
                     LineBreakMode = LineBreakMode.TailTruncation
                 };
-                title.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Title));
-                title.SetBinding(ToolTipProperties.TextProperty, nameof(EffectBundleCardItem.Title));
+                hoverTitle.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Title));
 
-                var desc = new Label
+                var hoverDesc = new Label
                 {
-                    FontSize = 12,
-                    Opacity = 0.75,
+                    FontSize = 11,
+                    TextColor = Colors.White.WithAlpha(0.85f),
                     LineBreakMode = LineBreakMode.TailTruncation,
                     MaxLines = 2
                 };
-                desc.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Description));
-                desc.SetBinding(ToolTipProperties.TextProperty, nameof(EffectBundleCardItem.Description));
+                hoverDesc.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Description));
 
-                var textStack = new VerticalStackLayout
+                var hoverOverlay = new Border
                 {
-                    Spacing = 2,
-                    Children = { title, desc }
+                    IsVisible = false,
+                    VerticalOptions = LayoutOptions.End,
+                    Background = new SolidColorBrush(Colors.Gray.WithAlpha(0.85f)),
+                    Padding = new Thickness(8, 6),
+                    StrokeThickness = 0,
+                    Content = new VerticalStackLayout
+                    {
+                        Spacing = 2,
+                        Children = { hoverTitle, hoverDesc }
+                    }
                 };
 
-                var row = new VerticalStackLayout
+                // ─── Main card container ───
+                var cardContent = new Grid
                 {
-                    Spacing = 10
+                    Children = { previewGrid, hoverOverlay }
                 };
-                row.Children.Add(image);
-                row.Children.Add(textStack);
 
                 var border = new Border
                 {
                     WidthRequest = cardWidth,
                     HeightRequest = cardHeight,
                     Margin = new Thickness(cardMargin),
-                    Padding = 10,
+                    Padding = 0,
                     StrokeShape = new RoundRectangle { CornerRadius = 12 },
                     Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f)),
+                    StrokeThickness = 1,
                     Background = new SolidColorBrush(Colors.Transparent),
-                    Content = row
+                    Content = cardContent
                 };
 
+                // ─── Hover handling ───
+                void OnHover(bool isHovered)
+                {
+                    if (border.BindingContext is EffectBundleCardItem item)
+                    {
+                        if (isHovered)
+                        {
+                            hoverOverlay.IsVisible = true;
+                            if (item.VideoThumbnail is not null)
+                            {
+                                mediaPlayer.Source = item.VideoThumbnail;
+                                mediaPlayer.IsVisible = true;
+                                image.IsVisible = false;
+                                mediaPlayer.Play();
+                            }
+                        }
+                        else
+                        {
+                            hoverOverlay.IsVisible = false;
+                            mediaPlayer.Pause();
+                            mediaPlayer.Source = null;
+                            mediaPlayer.IsVisible = false;
+                            image.IsVisible = true;
+                        }
+                    }
+                }
 
+#if MACCATALYST || WINDOWS
+                var pointerGesture = new PointerGestureRecognizer();
+                pointerGesture.PointerEntered += (_, _) => OnHover(true);
+                pointerGesture.PointerExited += (_, _) => OnHover(false);
+                cardContent.GestureRecognizers.Add(pointerGesture);
+#endif
 
                 void SelectCard(Border selected)
                 {
@@ -2792,13 +3761,20 @@ namespace projectFrameCut.DraftStuff
                         }
                     }
                     ppb.AddSeparator();
+                    IEffectBundle? eb = null;
+                    ppb.AddCustomChild("IEffect.ID", new Label { Text = effect.Id });
                     ppb.AddCustomChild("IEffect.TypeName", new Label { Text = effect.TypeName });
                     ppb.AddCustomChild("IEffect.TypeOfEffect", new Label { Text = effect.TypeOfEffect.ToString() });
                     ppb.AddCustomChild("IEffect.ImplementType", new Label { Text = effect.ImplementType.ToString() });
-                    ppb.AppendWhen(!string.IsNullOrWhiteSpace(effect.Id), c => c.AddCustomChild("IEffect.ID", new Label { Text = effect.Id }));
+                    ppb.AppendWhen(
+                        condition: (Guid.TryParse(effect.BindedEffectGroupID, out var g) && (clip.EffectBundles?.TryGetValue(g, out eb) ?? false) && eb is not null),
+                        onTrue: c => c.AddCustomChild("Binded IEffectBundle", new Label { Text = $"{eb.Name} ({effect.BindedEffectGroupID})" })
+                                      .AddCustomChild("IEffectBundle.EffectTarget", new Label { Text = eb?.Target is not null ? eb.Target.ToString() : "No bundle" }),
+                        onFalse: c => c.AddCustomChild("Binded IEffectBundle", new Label { Text = $"Unknown bundle '{effect.BindedEffectGroupID}'" }));
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
+                        ppb.AddText("IBindableArgumentEffect effect prop:");
                         switch (be.EffectRole)
                         {
                             case BindableArgumentEffectType.ValueProvider:
@@ -2840,7 +3816,7 @@ namespace projectFrameCut.DraftStuff
                                 }
                                 break;
                             default:
-                                ppb.AddText($"unknown effect role.");
+                                ppb.AddText(PPLocalizedResources.EffectProp_UnknownRole);
                                 break;
 
 
@@ -3220,6 +4196,13 @@ namespace projectFrameCut.DraftStuff
                 handler?.Invoke(s, e);
             };
 
+            ppb.AddButton(PPLocalizedResources.ColorAdjustment_Reset, (_, _) =>
+            {
+                clip.EffectBundles?.Remove(InternalColorAdjustmentBundleGuid);
+                RebuildAllEffects(clip);
+                handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+            }, (c) => c.TextColor = Color.FromArgb("#FF8080"));
+
             return ppb.BuildWithScrollView();
         }
         #endregion
@@ -3332,7 +4315,7 @@ namespace projectFrameCut.DraftStuff
                     {
                         page.Dispatcher.Dispatch(async () =>
                         {
-                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one SpeedVarianceProvider.", Localized._OK);
+                            await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.SpeedAndRatio_ErrSingle, Localized._OK);
                         });
                         return;
                     }
@@ -3467,7 +4450,7 @@ namespace projectFrameCut.DraftStuff
                     {
                         page.Dispatcher.Dispatch(async () =>
                         {
-                            await page.DisplayAlertAsync(Localized._Info, "Each clip can only have one Mixture.", Localized._OK);
+                            await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.Mixture_ErrSingle, Localized._OK);
                         });
                         return;
                     }
@@ -3848,6 +4831,21 @@ namespace projectFrameCut.DraftStuff
             return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
         }
 
+        private static string ReadStringValue(object? raw, string fallback)
+        {
+            if (raw is string s)
+            {
+                return s;
+            }
+
+            if (raw is JsonElement elem && elem.ValueKind == JsonValueKind.String)
+            {
+                return elem.GetString() ?? fallback;
+            }
+
+            return raw?.ToString() ?? fallback;
+        }
+
         private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
             => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
 
@@ -3864,6 +4862,15 @@ namespace projectFrameCut.DraftStuff
         {
             ArgumentNullException.ThrowIfNull(effect);
             return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
+        }
+
+        private static string ReadDictionaryStringValue(IReadOnlyDictionary<string, object>? values, string key, string fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadStringValue(raw, fallback) : fallback;
+
+        private static string ReadEffectStringParameter(IEffect effect, string key, string fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryStringValue(effect.Parameters, key, fallback);
         }
 
         private static bool TryGetCropSize(IEffect effect, out int width, out int height)
@@ -3927,17 +4934,29 @@ namespace projectFrameCut.DraftStuff
 
         private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
         {
-            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
-            {
+            if (changedId == targetId && TryParseNumeric(changedValue, out var changed))
                 return changed;
-            }
 
-            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
-            {
+            if (panel.Properties.TryGetValue(targetId, out var uiValue) && TryParseNumeric(uiValue, out var parsed))
                 return parsed;
-            }
 
             return fallback;
+        }
+
+        private static bool TryParseNumeric(object? value, out int result)
+        {
+            result = 0;
+            if (value is double d)
+            {
+                result = (int)Math.Round(d);
+                return true;
+            }
+            if (value is int i)
+            {
+                result = i;
+                return true;
+            }
+            return int.TryParse(value?.ToString(), out result);
         }
 
         private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)

@@ -214,7 +214,7 @@ namespace projectFrameCut.Services
 
             var preview = string.Join(", ", missing.Take(6).Select(codePoint => $"U+{codePoint:X4}"));
             var suffix = missing.Length > 6 ? "..." : string.Empty;
-            return $"当前字体 \"{fontName}\" 可能不支持部分字符：{preview}{suffix}";
+            return Localized.TextServices_UnsupportGlyph(fontName, preview, suffix);
         }
 
         private static bool TryResolveFont(string fontName, float fontSize, out Font font)

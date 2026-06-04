@@ -89,6 +89,7 @@ namespace projectFrameCut.InteractableEditor
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
         private Func<string, Task>? _overlayClipTappedCallback;
+        private Func<string, Task>? _overlayClipDoubleTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
         private Func<Task>? _referenceLinesChangedCallback;
         private Action<string, uint, ClipPositionTuple>? _keyframeCandidateCapturedCallback;
@@ -335,6 +336,10 @@ namespace projectFrameCut.InteractableEditor
                 var rootTap = new TapGestureRecognizer();
                 rootTap.Tapped += (_, _) => _owner.OnClipOverlayTapped(this);
                 Root.GestureRecognizers.Add(rootTap);
+
+                var rootDoubleTap = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
+                rootDoubleTap.Tapped += (_, _) => _owner.OnClipOverlayDoubleTapped(this);
+                Root.GestureRecognizers.Add(rootDoubleTap);
 
                 ClipVisual.GestureRecognizers.Add(ClipPan);
                 HandleTL.GestureRecognizers.Add(TlPan);
@@ -660,6 +665,11 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
+        public void ConfigureOverlayClipDoubleTap(Func<string, Task>? doubleTapCallback)
+        {
+            _overlayClipDoubleTappedCallback = doubleTapCallback;
+        }
+
         public void ConfigureBlankAreaTap(Func<Task>? tapCallback)
         {
             _blankAreaTappedCallback = tapCallback;
@@ -817,6 +827,17 @@ namespace projectFrameCut.InteractableEditor
             _ = InvokeOverlayClipTappedAsync(callback, state.ClipId);
         }
 
+        private void OnClipOverlayDoubleTapped(ClipOverlayState state)
+        {
+            var callback = _overlayClipDoubleTappedCallback;
+            if (callback is null)
+            {
+                return;
+            }
+
+            _ = InvokeOverlayClipDoubleTappedAsync(callback, state.ClipId);
+        }
+
         private void OnEditorCanvasTapped(object? sender, TappedEventArgs e)
         {
             if (_isPlacingReferenceLine)
@@ -918,6 +939,18 @@ namespace projectFrameCut.InteractableEditor
             catch (Exception ex)
             {
                 LogDiagnostic($"Overlay clip tap callback failed: {ex.Message}");
+            }
+        }
+
+        private async Task InvokeOverlayClipDoubleTappedAsync(Func<string, Task> callback, string clipId)
+        {
+            try
+            {
+                await callback(clipId);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Overlay clip double-tap callback failed: {ex.Message}");
             }
         }
 

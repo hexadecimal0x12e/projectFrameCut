@@ -449,6 +449,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var size = width * height;
             var result = new Picture16bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new ushort[size],
                 g = new ushort[size],
                 b = new ushort[size],
@@ -1080,6 +1083,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             var result = new HDRPicture16bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new ushort[size],
                 g = new ushort[size],
                 b = new ushort[size],
@@ -1718,6 +1724,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new byte[size],
                 g = new byte[size],
                 b = new byte[size],
@@ -1785,7 +1794,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
     }
 }
-
 
 
 

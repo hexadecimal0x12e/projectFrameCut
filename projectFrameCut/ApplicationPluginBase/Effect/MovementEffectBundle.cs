@@ -99,10 +99,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             int duration = Math.Max(100, EffectBundleUiHelper.GetInt(Parameters, "Duration", 1000));
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartX", EffectBundleUiHelper.ParamLabel("StartX"), startX.ToString(), "0");
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartY", EffectBundleUiHelper.ParamLabel("StartY"), startY.ToString(), "0");
-            EffectBundleUiHelper.AddNumericEntry(panel, "EndX", EffectBundleUiHelper.ParamLabel("EndX"), endX.ToString(), "200");
-            EffectBundleUiHelper.AddNumericEntry(panel, "EndY", EffectBundleUiHelper.ParamLabel("EndY"), endY.ToString(), "0");
+            panel.AddPositionTupleInputBox("start", new SingleLineLabel(EffectBundleUiHelper.L("_MovementStart", "Start")), PositionTupleMode.XY, (startX, startY, 0, 0));
+            panel.AddPositionTupleInputBox("end", new SingleLineLabel(EffectBundleUiHelper.L("_MovementEnd", "End")), PositionTupleMode.XY, (endX, endY, 0, 0));
             panel.AddSlider(
                 "Duration",
                 EffectBundleUiHelper.L("Effect_Movement_Duration", "Duration"),
@@ -118,6 +116,22 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (!ParametersType.ContainsKey(args.Id))
             {
+                // check compound IDs from tuple inputs
+                switch (args.Id)
+                {
+                    case "start_X":
+                        EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
+                        return Parameters;
+                    case "start_Y":
+                        EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
+                        return Parameters;
+                    case "end_X":
+                        EffectBundleUiHelper.TrySetInt(Parameters, "EndX", args.Value);
+                        return Parameters;
+                    case "end_Y":
+                        EffectBundleUiHelper.TrySetInt(Parameters, "EndY", args.Value);
+                        return Parameters;
+                }
                 return Parameters;
             }
 

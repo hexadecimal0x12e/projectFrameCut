@@ -372,6 +372,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int totalPixels = width * height;
             var picture = new Picture16bpp(width, height)
             {
+                Tag = $"frame #{frameNumber}"
             };
 
             int offset = 0;
@@ -423,6 +424,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int totalPixels = width * height;
             var picture = new Picture8bpp(width, height)
             {
+                Tag = $"frame #{frameNumber}"
             };
 
             int offset = 0;

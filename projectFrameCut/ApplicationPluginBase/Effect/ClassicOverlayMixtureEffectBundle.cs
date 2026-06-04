@@ -45,7 +45,6 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "AccuracyMode", "Accurate" }
         };
 
-        bool IEffectBundle.IsUserVisibleEffect => false;
 
         public List<string> ParametersNeeded => ["AccuracyMode"];
         public Dictionary<string, string> ParametersType => new()

@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Base;
@@ -57,11 +58,29 @@ public partial class DraftEffectBindingView : ContentView
     private const double PanelMaxWidth = 800;
     private double _panelStartWidth;
     private double _panelWidthBeforeCollapse = 300;
-    private bool _isPanelCollapsed;
+
+    public bool PanelCollapsed { get; private set; }
+
+    private bool _showIsNotVisibleInEffectEditorEffect;
+    private bool _subscribedToPageEvents;
+
+    /// <summary>
+    /// Raised when effect bundles or connections have been modified inside this view.
+    /// Subscribers (e.g. ClipInfoBuilder's effect tab) should rebuild effects and refresh UI.
+    /// </summary>
+    public event Action? EffectBundlesChanged;
+
+    private void NotifyEffectBundlesChanged() => EffectBundlesChanged?.Invoke();
+
+    private const double NodeDefaultWidth = 150;
+    private const double NodeDefaultHeight = 80;
+    private const double NodeSpacing = 20;
+    private const int NodePlacementMaxAttempts = 200;
 
 
     public DraftEffectBindingView()
     {
+        BindingContext = this;
         InitializeComponent();
         _drawable = new ConnectionsDrawable(_nodes);
         ConnectionsLayer.Drawable = _drawable;
@@ -87,6 +106,7 @@ public partial class DraftEffectBindingView : ContentView
             platformView.PointerWheelChanged += OnWindowsPointerWheelChanged;
         }
 #endif
+        if (Handler == null) UnsubscribeFromPageEvents();
     }
 
 #if WINDOWS
@@ -200,11 +220,10 @@ public partial class DraftEffectBindingView : ContentView
         {
             case GestureStatus.Started:
                 _panelStartWidth = RightPanelColumn.Width.Value;
-                if (_isPanelCollapsed)
+                if (PanelCollapsed)
                 {
-                    _isPanelCollapsed = false;
+                    PanelCollapsed = false;
                     RightPanel.IsVisible = true;
-                    UpdatePanelToggleText();
                 }
                 break;
             case GestureStatus.Running:
@@ -214,33 +233,35 @@ public partial class DraftEffectBindingView : ContentView
                 break;
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
+                UpdatePanelToggleText();
                 break;
         }
     }
 
     private void OnTogglePanelClicked(object? sender, EventArgs e)
     {
-        if (_isPanelCollapsed)
+        if (PanelCollapsed)
         {
             double restoredWidth = Math.Clamp(_panelWidthBeforeCollapse, PanelMinWidth, PanelMaxWidth);
             RightPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
             RightPanel.IsVisible = true;
-            _isPanelCollapsed = false;
+            PanelCollapsed = false;
         }
         else
         {
             _panelWidthBeforeCollapse = Math.Clamp(RightPanelColumn.Width.Value, PanelMinWidth, PanelMaxWidth);
             RightPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
             RightPanel.IsVisible = false;
-            _isPanelCollapsed = true;
+            PanelCollapsed = true;
         }
-
+        OnPropertyChanged(nameof(PanelCollapsed));
         UpdatePanelToggleText();
     }
 
     private void UpdatePanelToggleText()
     {
-        TogglePanelButton.Text = _isPanelCollapsed ? ">" : "<";
+        TogglePanelButton.Text = PanelCollapsed ? "<" : ">";
+        OnPropertyChanged(nameof(PanelCollapsed));
     }
 
     private void UpdateDrawableScale()
@@ -253,10 +274,11 @@ public partial class DraftEffectBindingView : ContentView
         ConnectionsLayer.Invalidate();
     }
 
-    public void LoadClip(ClipElementUI clip, DraftPage? page = null)
+    public void LoadClip(ClipElementUI clip, DraftPage? page = null, bool showIsNotVisibleInEffectEditorEffect = false)
     {
         _clip = clip;
         _page = page;
+        _showIsNotVisibleInEffectEditorEffect = showIsNotVisibleInEffectEditorEffect;
         UpdateAddEffectsPanel();
         _nodes.Clear();
         NodesContainer.Children.Clear();
@@ -273,6 +295,7 @@ public partial class DraftEffectBindingView : ContentView
         _drawable.Scale = 1.0;
 
         // Create System Nodes
+        bool inputHasPosition = _clip?.ExtraData?.ContainsKey(ExtraDataInputXKey) == true && _clip?.ExtraData?.ContainsKey(ExtraDataInputYKey) == true;
         var inputX = GetExtraDataDouble(ExtraDataInputXKey, 50);
         var inputY = GetExtraDataDouble(ExtraDataInputYKey, 150);
         _inputNode = new NodeViewModel
@@ -286,6 +309,12 @@ public partial class DraftEffectBindingView : ContentView
             OutputAnchorID = IEffectBundle.NoConnectionGUID,
             DisplayName = PPLocalizedResources.EffectBind_SourcePicture
         };
+        if (!inputHasPosition)
+        {
+            var pos = FindNonOverlappingPosition(_inputNode, inputX, inputY);
+            _inputNode.X = pos.X;
+            _inputNode.Y = pos.Y;
+        }
         AddNode(_inputNode);
 
         if (_clip.EffectBundles != null)
@@ -293,8 +322,14 @@ public partial class DraftEffectBindingView : ContentView
             // The logic to load factories and instantiate IEffectBundle has been removed.
             // We iterate bundleData directly to create visual nodes.
 
-            foreach (var bundle in _clip.EffectBundles.Values.Where(c => c.Target == _clip.GetEffectTarget()))
+            var effectTarget = _clip.GetEffectTarget();
+            foreach (var bundle in _clip.EffectBundles.Values)
             {
+                // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
+                // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
+                if (!showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || !bundle.Target.HasFlag(_clip.GetEffectTarget())))
+                    continue;
+
                 // Placeholder Node Creation
                 // We assume 1 input port "Input" because we cannot inspect the real effect logic anymore.
                 var node = new NodeViewModel
@@ -313,8 +348,11 @@ public partial class DraftEffectBindingView : ContentView
                 }
                 else
                 {
-                    node.X = 250 + (_nodes.Count * 50);
-                    node.Y = 150 + (_nodes.Count * 20);
+                    var startX = 250 + (_nodes.Count * 50);
+                    var startY = 150 + (_nodes.Count * 20);
+                    var pos = FindNonOverlappingPosition(node, startX, startY);
+                    node.X = pos.X;
+                    node.Y = pos.Y;
                 }
 
                 AddNode(node);
@@ -324,6 +362,7 @@ public partial class DraftEffectBindingView : ContentView
         // Create Output Node
         // Position it far right
         double maxX = _nodes.Max(kvp => kvp.Value.X);
+        bool outputHasPosition = _clip?.ExtraData?.ContainsKey(ExtraDataOutputXKey) == true && _clip?.ExtraData?.ContainsKey(ExtraDataOutputYKey) == true;
         var outputX = GetExtraDataDouble(ExtraDataOutputXKey, Math.Max(maxX + 200, 600));
         var outputY = GetExtraDataDouble(ExtraDataOutputYKey, 150);
         _outputNode = new NodeViewModel
@@ -337,11 +376,29 @@ public partial class DraftEffectBindingView : ContentView
             OutputAnchorID = IEffectBundle.NoConnectionGUID,
             DisplayName = PPLocalizedResources.EffectBind_FinalResult
         };
+        if (!outputHasPosition)
+        {
+            var pos = FindNonOverlappingPosition(_outputNode, outputX, outputY);
+            _outputNode.X = pos.X;
+            _outputNode.Y = pos.Y;
+        }
         AddNode(_outputNode);
 
+        SubscribeToPageEvents();
         RebuildConnections();
         ApplySavedViewTransform();
         ConnectionsLayer.Invalidate();
+    }
+
+    /// <summary>
+    /// Reloads all effect data from the current clip.
+    /// Call this when external code (e.g. ClipInfoBuilder) has modified effect bundles
+    /// and the binding view needs to reflect the latest state.
+    /// </summary>
+    public void Reload()
+    {
+        if (_clip == null) return;
+        LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect);
     }
 
     private void AddNode(NodeViewModel node)
@@ -353,7 +410,104 @@ public partial class DraftEffectBindingView : ContentView
         _nodes.Add(node.Id, node);
     }
 
-    private View CreateNodeView(NodeViewModel node)
+    private Rect GetNodeBounds(NodeViewModel node, double x, double y)
+    {
+        double width = node.View?.Width > 0 ? node.View.Width : NodeDefaultWidth;
+        double height = node.View?.Height > 0 ? node.View.Height : NodeDefaultHeight;
+        return new Rect(x, y, width, height);
+    }
+
+    private Rect GetNodeBoundsPadded(NodeViewModel node, double x, double y)
+    {
+        var rect = GetNodeBounds(node, x, y);
+        if (NodeSpacing <= 0) return rect;
+        double pad = NodeSpacing / 2.0;
+        return new Rect(rect.X - pad, rect.Y - pad, rect.Width + (pad * 2), rect.Height + (pad * 2));
+    }
+
+    private static bool RectsOverlap(Rect a, Rect b)
+    {
+        return a.X < b.X + b.Width &&
+               a.X + a.Width > b.X &&
+               a.Y < b.Y + b.Height &&
+               a.Y + a.Height > b.Y;
+    }
+
+    private bool IsOverlapping(NodeViewModel node, double x, double y)
+    {
+        var candidate = GetNodeBoundsPadded(node, x, y);
+        foreach (var other in _nodes.Values)
+        {
+            if (other == node) continue;
+            var otherRect = GetNodeBoundsPadded(other, other.X, other.Y);
+            if (RectsOverlap(candidate, otherRect)) return true;
+        }
+        return false;
+    }
+
+    private Point FindNonOverlappingPosition(NodeViewModel node, double startX, double startY)
+    {
+        if (!IsOverlapping(node, startX, startY)) return new Point(startX, startY);
+
+        var size = GetNodeBounds(node, startX, startY);
+        double stepX = size.Width + NodeSpacing;
+        double stepY = size.Height + NodeSpacing;
+        int attempts = 0;
+        int maxRadius = 10;
+
+        for (int radius = 1; radius <= maxRadius && attempts < NodePlacementMaxAttempts; radius++)
+        {
+            for (int dx = -radius; dx <= radius && attempts < NodePlacementMaxAttempts; dx++)
+            {
+                for (int dy = -radius; dy <= radius && attempts < NodePlacementMaxAttempts; dy++)
+                {
+                    if (Math.Abs(dx) != radius && Math.Abs(dy) != radius) continue;
+                    double x = startX + (dx * stepX);
+                    double y = startY + (dy * stepY);
+                    attempts++;
+                    if (!IsOverlapping(node, x, y)) return new Point(x, y);
+                }
+            }
+        }
+
+        return new Point(startX, startY);
+    }
+
+    private bool TryMoveNodeWithoutOverlap(NodeViewModel node, double proposedX, double proposedY, out double resolvedX, out double resolvedY, out bool appliedX, out bool appliedY)
+    {
+        if (!IsOverlapping(node, proposedX, proposedY))
+        {
+            resolvedX = proposedX;
+            resolvedY = proposedY;
+            appliedX = true;
+            appliedY = true;
+            return true;
+        }
+
+        resolvedX = node.X;
+        resolvedY = node.Y;
+        appliedX = false;
+        appliedY = false;
+        bool moved = false;
+
+        if (!IsOverlapping(node, proposedX, node.Y))
+        {
+            resolvedX = proposedX;
+            appliedX = true;
+            moved = true;
+        }
+
+        if (!IsOverlapping(node, resolvedX, proposedY))
+        {
+            resolvedY = proposedY;
+            appliedY = true;
+            moved = true;
+        }
+
+        return moved;
+    }
+
+    private VerticalStackLayout CreateNodeView(NodeViewModel node)
     {
         ArgumentNullException.ThrowIfNull(node);
         var container = new VerticalStackLayout
@@ -519,57 +673,53 @@ public partial class DraftEffectBindingView : ContentView
 
         container.Add(frame);
 
-        // Preview Section
-        if (node.Kind == NodeKind.Effect || node.Kind == NodeKind.Input)
+        var arrow = new BoxView
         {
-            var arrow = new BoxView
-            {
-                Color = Colors.White,
-                WidthRequest = 2,
-                HeightRequest = 20,
-                HorizontalOptions = LayoutOptions.Center,
-                IsVisible = false // Hidden initially
-            };
+            Color = Colors.White,
+            WidthRequest = 2,
+            HeightRequest = 20,
+            HorizontalOptions = LayoutOptions.Center,
+            IsVisible = false // Hidden initially
+        };
 
-            var previewBorder = new Border
-            {
-                Stroke = Colors.White,
-                StrokeThickness = 2,
-                StrokeShape = new RoundRectangle { CornerRadius = 5 },
-                BackgroundColor = Colors.Black,
-                Padding = 0,
-                WidthRequest = node.Width,
-                HeightRequest = 120,
-                HorizontalOptions = LayoutOptions.Center,
-                IsVisible = false // Hidden initially
-            };
+        var previewBorder = new Border
+        {
+            Stroke = Colors.White,
+            StrokeThickness = 2,
+            StrokeShape = new RoundRectangle { CornerRadius = 5 },
+            BackgroundColor = Colors.Black,
+            Padding = 0,
+            WidthRequest = node.Width,
+            HeightRequest = 120,
+            HorizontalOptions = LayoutOptions.Center,
+            IsVisible = false // Hidden initially
+        };
 
-            var previewImage = new Microsoft.Maui.Controls.Image
-            {
-                Aspect = Aspect.AspectFit,
-            };
+        var previewImage = new Microsoft.Maui.Controls.Image
+        {
+            Aspect = Aspect.AspectFit,
+        };
 
-            previewBorder.Content = previewImage;
+        previewBorder.Content = previewImage;
 
-            container.Add(arrow);
-            container.Add(previewBorder);
+        container.Add(arrow);
+        container.Add(previewBorder);
 
-            // Property to update preview
-            node.PreviewImageChanged += (s, img) =>
-            {
-                previewImage.Source = img;
-                bool hasImage = img != null;
-                arrow.IsVisible = hasImage;
-                previewBorder.IsVisible = hasImage;
-            };
+        // Property to update preview
+        node.PreviewImageChanged += (s, img) =>
+        {
+            previewImage.Source = img;
+            bool hasImage = img != null;
+            arrow.IsVisible = hasImage;
+            previewBorder.IsVisible = hasImage;
+        };
 
-            // Trigger initial update if already set
-            if (node.PreviewImage != null)
-            {
-                previewImage.Source = node.PreviewImage;
-                arrow.IsVisible = true;
-                previewBorder.IsVisible = true;
-            }
+        // Trigger initial update if already set
+        if (node.PreviewImage != null)
+        {
+            previewImage.Source = node.PreviewImage;
+            arrow.IsVisible = true;
+            previewBorder.IsVisible = true;
         }
 
         return container;
@@ -583,6 +733,8 @@ public partial class DraftEffectBindingView : ContentView
                 _isDraggingNodeOrPort = true;
                 node.DragStartX = node.X;
                 node.DragStartY = node.Y;
+                node.DragTotalX = 0;
+                node.DragTotalY = 0;
                 ConnectionsLayer.Invalidate(); // Redraw connections while dragging
                 break;
             case GestureStatus.Running:
@@ -590,8 +742,18 @@ public partial class DraftEffectBindingView : ContentView
                 double scale = NodesContainer.Scale;
                 if (scale <= 0) scale = 0.1;
 
-                node.X = node.DragStartX + (e.TotalX / scale);
-                node.Y = node.DragStartY + (e.TotalY / scale);
+                double deltaX = (e.TotalX - node.DragTotalX) / scale;
+                double deltaY = (e.TotalY - node.DragTotalY) / scale;
+
+                double proposedX = node.X + deltaX;
+                double proposedY = node.Y + deltaY;
+                if (TryMoveNodeWithoutOverlap(node, proposedX, proposedY, out var resolvedX, out var resolvedY, out var appliedX, out var appliedY))
+                {
+                    node.X = resolvedX;
+                    node.Y = resolvedY;
+                    if (appliedX) node.DragTotalX = e.TotalX;
+                    if (appliedY) node.DragTotalY = e.TotalY;
+                }
 
                 // Use AutoSize for height while dragging so preview (if present)
                 // isn't clipped by a fixed height.
@@ -676,6 +838,42 @@ public partial class DraftEffectBindingView : ContentView
         _drawable.PanX = panX;
         _drawable.PanY = panY;
         UpdateDrawableScale();
+    }
+
+    private void SubscribeToPageEvents()
+    {
+        if (_page == null || _subscribedToPageEvents) return;
+        _page.OnClipChanged += OnPageClipChanged;
+        _subscribedToPageEvents = true;
+        Unloaded += OnViewUnloaded;
+    }
+
+    private void UnsubscribeFromPageEvents()
+    {
+        if (_page == null || !_subscribedToPageEvents) return;
+        _page.OnClipChanged -= OnPageClipChanged;
+        _subscribedToPageEvents = false;
+        Unloaded -= OnViewUnloaded;
+    }
+
+    private void OnViewUnloaded(object? sender, EventArgs e)
+    {
+        UnsubscribeFromPageEvents();
+    }
+
+    private void OnPageClipChanged(object? sender, ClipUpdateEventArgs e)
+    {
+        if (_clip == null) return;
+        if (e.SourceId != _clip.Id) return;
+        if (e.Reason != ClipUpdateReason.PropertyChanged) return;
+
+        Dispatcher.Dispatch(() =>
+        {
+            if (_clip == null) return;
+            // Avoid re-entrant Reload() if we're the one making changes
+            if (_isDraggingNodeOrPort) return;
+            Reload();
+        });
     }
 
     private void OnPortPan(NodeViewModel node, PanUpdatedEventArgs e, bool isInput, int portIndex = 0)
@@ -870,7 +1068,10 @@ public partial class DraftEffectBindingView : ContentView
         if (node.View is Border b2) b2.Stroke = Colors.Yellow;
 
         PropertiesPanel.Children.Clear();
+        AfterEffectBigPreview.Source = node.PreviewImage;
+
         PropertiesPanel.Children.Add(new Label { Text = node.DisplayName, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center });
+
 
         if (node.Kind != NodeKind.Effect)
         {
@@ -888,7 +1089,9 @@ public partial class DraftEffectBindingView : ContentView
                 node.Bundle.Parameters = node.Bundle.HandlePropertyPanelChange(args);
                 RebuildConnections();
                 ConnectionsLayer.Invalidate();
+                NotifyEffectBundlesChanged();
             };
+
 
             PropertiesPanel.Children.Add(ppb.BuildWithScrollView());
         }
@@ -1026,6 +1229,7 @@ public partial class DraftEffectBindingView : ContentView
         else ConnectNodesForOneinMultiout(source, target, targetPortIndex);
 
         SetStatusText(PPLocalizedResources.EffectBindView_Connected(source?.DisplayName ?? "Unknown", target?.DisplayName ?? "Unknown"));
+        NotifyEffectBundlesChanged();
     }
 
     private void ConnectNodesForOneinOneout(NodeViewModel source, NodeViewModel target)
@@ -1173,13 +1377,44 @@ public partial class DraftEffectBindingView : ContentView
 
         RebuildConnections();
         ConnectionsLayer.Invalidate();
+        NotifyEffectBundlesChanged();
     }
 
     private void RebuildConnections()
     {
         _drawable.Connections.Clear();
 
-        if (!_nodes.Any(n => n.Value.Kind == NodeKind.Effect && n.Value.OutputAnchorID == IEffectBundle.OutputAnchorGUID)) //no any effect connected to output
+        bool TryAddConnection(Guid sourceId, NodeViewModel target, int targetPortIndex)
+        {
+            if (_nodes.TryGetValue(sourceId, out var sourceNode))
+            {
+                _drawable.Connections.Add((sourceNode, target, targetPortIndex));
+                return true;
+            }
+
+            return false;
+        }
+
+        // 将可能指向隐藏 Bundle 的 sourceId 沿着链路向上追溯，
+        // 找到第一个可见节点（或 InputAnchorGUID / NoConnectionGUID）。
+        Guid ResolveVisibleSourceId(Guid sourceId)
+        {
+            while (sourceId != IEffectBundle.InputAnchorGUID
+                   && sourceId != IEffectBundle.NoConnectionGUID
+                   && !_nodes.ContainsKey(sourceId))
+            {
+                if (_clip?.EffectBundles?.TryGetValue(sourceId, out var hiddenBundle) == true)
+                    sourceId = hiddenBundle.BindedInputId;
+                else
+                    return IEffectBundle.NoConnectionGUID;
+            }
+            return sourceId;
+        }
+
+        if (!_nodes.Any(n => n.Value.Kind == NodeKind.Effect && n.Value.OutputAnchorID == IEffectBundle.OutputAnchorGUID)
+            && !(_clip?.EffectBundles?.Values.Any(b => b.BindedOutputId == IEffectBundle.OutputAnchorGUID
+                                                    && !b.Target.HasFlag(EffectTarget.SpeedVariance)
+                                                    && !b.Target.HasFlag(EffectTarget.Mixture)) ?? false))
         {
             _drawable.Connections.Add((_inputNode ?? throw new NullReferenceException(), _outputNode ?? throw new NullReferenceException(), 0));
 
@@ -1193,18 +1428,49 @@ public partial class DraftEffectBindingView : ContentView
             {
                 for (int i = 0; i < item.InputAnchorIDs.Count; i++)
                 {
-                    if (item.InputAnchorIDs[i] != IEffectBundle.NoConnectionGUID) _drawable.Connections.Add((_nodes[item.InputAnchorIDs[i]], item, i));
+                    var inputId = item.InputAnchorIDs[i];
+                    if (inputId == IEffectBundle.NoConnectionGUID) continue;
+
+                    var resolvedId = ResolveVisibleSourceId(inputId);
+                    if (resolvedId == IEffectBundle.NoConnectionGUID
+                        || !TryAddConnection(resolvedId, item, i))
+                    {
+                        // Ensure stale or deleted node references do not keep crashing the editor.
+                        item.InputAnchorIDs[i] = IEffectBundle.NoConnectionGUID;
+                    }
                 }
             }
             else
             {
-                if (item.InputAnchorID != IEffectBundle.NoConnectionGUID) _drawable.Connections.Add((_nodes[item.InputAnchorID], item, 0));
+                if (item.InputAnchorID != IEffectBundle.NoConnectionGUID)
+                {
+                    var resolvedId = ResolveVisibleSourceId(item.InputAnchorID);
+                    if (resolvedId == IEffectBundle.NoConnectionGUID
+                        || !TryAddConnection(resolvedId, item, 0))
+                    {
+                        item.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                    }
+                }
 
             }
 
-            if (item.Kind == NodeKind.Effect && item.OutputAnchorID == IEffectBundle.OutputAnchorGUID)
+            if (item.Kind == NodeKind.Effect)
             {
-                _drawable.Connections.Add((item, _outputNode ?? throw new NullReferenceException(), 0));
+                // 追踪输出链：如果 output 指向隐藏 Bundle，沿链向下找到 OutputAnchorGUID 或可见节点
+                var resolvedOutput = item.OutputAnchorID;
+                while (resolvedOutput != IEffectBundle.OutputAnchorGUID
+                       && resolvedOutput != IEffectBundle.NoConnectionGUID
+                       && !_nodes.ContainsKey(resolvedOutput))
+                {
+                    if (_clip?.EffectBundles?.TryGetValue(resolvedOutput, out var hiddenBundle) == true)
+                        resolvedOutput = hiddenBundle.BindedOutputId;
+                    else
+                        break;
+                }
+                if (resolvedOutput == IEffectBundle.OutputAnchorGUID)
+                {
+                    _drawable.Connections.Add((item, _outputNode ?? throw new NullReferenceException(), 0));
+                }
             }
 
             if (kvp.Key == IEffectBundle.OutputAnchorGUID) continue;
@@ -1260,25 +1526,65 @@ public partial class DraftEffectBindingView : ContentView
                 Effects = _clip.Effects?.Values?.ToArray() ?? []
             };
 
+            // Build a robust effect → node mapping.
+            // BindedEffectGroupID might not always be correctly configured,
+            // so we use multiple strategies to find the right node.
+            var effectToNodeMapping = new Dictionary<IEffect, NodeViewModel>();
+            if (_clip.EffectBundles != null && _clip.Effects != null)
+            {
+                foreach (var effect in _clip.Effects.Values)
+                {
+                    if (!Guid.TryParse(effect.Id, out _)) effect.Id = Guid.NewGuid().ToString();
+                    NodeViewModel? node = null;
+
+                    // Strategy 1: Match by BindedEffectGroupID (the canonical approach)
+                    if (effect.BindedEffectGroupID != null && Guid.TryParse(effect.BindedEffectGroupID, out var gid))
+                    {
+                        _nodes.TryGetValue(gid, out node);
+                    }
+
+                    // Strategy 2: Match by TypeName between effect and bundle → node
+                    if (node == null)
+                    {
+                        foreach (var bundle in _clip.EffectBundles.Values)
+                        {
+                            if (string.Equals(bundle.TypeName, effect.TypeName, StringComparison.Ordinal)
+                                && _nodes.TryGetValue(bundle.Id, out var n))
+                            {
+                                node = n;
+                                // Fix the BindedEffectGroupID so future code paths
+                                // also see the correct value.
+                                effect.BindedEffectGroupID = bundle.Id.ToString();
+                                Log($"Successfully mapped Effect {effect.Name}/{effect.Id}/{effect.TypeName} with Bundle {bundle.Name}/{bundle.TypeName}/{bundle.Id}");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (node != null)
+                    {
+                        effectToNodeMapping[effect] = node;
+                    }
+                }
+            }
 
             // Use AfterEffect callback to receive intermediate pictures after each effect
             var result = Timeline.MixtureLayers([frame], 0, w, h, 8, async (effect, pic) =>
             {
                 try
                 {
-                    var effectId = effect.BindedEffectGroupID;
-                    LogDiagnostic($"Effect {effectId} returns:\r\n{PictureProcessStack.FormatProcessStackForLog(pic.ProcessStack)}");
-                    if (string.IsNullOrEmpty(effectId) || pic == null) return;
+                    if (pic == null) return;
 
-                    if (Guid.TryParse(effectId, out var gid) && _nodes.TryGetValue(gid, out var nodeByGuid))
+                    if (effectToNodeMapping.TryGetValue(effect, out var node))
                     {
-                        LogDiagnostic($"Showing result on node {nodeByGuid.DisplayName}...");
-                        await UpdateNodePreview(nodeByGuid, pic);
-                        return;
+                        LogDiagnostic($"Showing result on node {node.DisplayName}...");
+                        await UpdateNodePreview(node, pic);
                     }
                     else
                     {
-                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}", "error");
+                        // No matching node — this is normal for internal effects
+                        // (e.g. Crop, Place, Resize) that don't appear as UI nodes.
+                        LogDiagnostic($"No UI node for effect '{effect.TypeName}' (BindedEffectGroupID={effect.BindedEffectGroupID})");
                     }
 
                 }
@@ -1295,9 +1601,13 @@ public partial class DraftEffectBindingView : ContentView
             projectRelativeWidth: projectRelativeWidth,
             projectRelativeHeight: projectRelativeHeight);
 
-            if (_outputNode is not null)
+            if (_outputNode is not null && result is not null)
             {
                 await UpdateNodePreview(_outputNode, result);
+            }
+            else
+            {
+                LogDiagnostic($"Cannot set preview for output node. Output node is null: {_outputNode == null}, result is null: {result == null}");
             }
 
 
@@ -1307,7 +1617,11 @@ public partial class DraftEffectBindingView : ContentView
         catch (Exception ex)
         {
             Log(ex, $"Failed to render", this);
-
+#if DEBUG
+            if (await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), "Throw", Localized._OK)) throw;
+#else
+            await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), Localized._OK);
+#endif
         }
 
     }
@@ -1315,20 +1629,20 @@ public partial class DraftEffectBindingView : ContentView
     private async Task UpdateNodePreview(NodeViewModel node, IPicture picture)
     {
         await MainThread.InvokeOnMainThreadAsync(async () =>
-         {
-             try
-             {
-                 using var stream = new MemoryStream();
-                 await Task.Run(() => picture.SaveToSixLaborsImage().SaveAsPng(stream)); // Assuming SaveAsPng exists as extension
-                 stream.Position = 0;
-                 var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
-                 node.PreviewImage = imageSource;
-             }
-             catch (Exception ex)
-             {
-                 Log(ex, "Failed to update preview image", this);
-             }
-         });
+        {
+            try
+            {
+                using var stream = new MemoryStream();
+                await Task.Run(() => picture.SaveToSixLaborsImage().SaveAsPng(stream)); // Assuming SaveAsPng exists as extension
+                stream.Position = 0;
+                var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
+                node.PreviewImage = imageSource;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to update preview image", this);
+            }
+        });
     }
 
     [DebuggerDisplay("{Id}, {Bundle?.TypeName}")]
@@ -1344,16 +1658,16 @@ public partial class DraftEffectBindingView : ContentView
 
         public Guid InputAnchorID { get => Bundle?.BindedInputId ?? field; set { if (Bundle != null) Bundle.BindedInputId = value; else field = value; } }
         public Guid OutputAnchorID { get => Bundle?.BindedOutputId ?? field; set { if (Bundle != null) Bundle.BindedOutputId = value; else field = value; } }
-        public List<Guid>? InputAnchorIDs { get => Bundle?.BindedInputIds; set { if (Bundle != null) Bundle.BindedInputIds = value; } }
+        public List<Guid>? InputAnchorIDs { get => Bundle?.BindedInputIds; set { Bundle?.BindedInputIds = value; } }
 
         public double DragStartX, DragStartY;
+        public double DragTotalX, DragTotalY;
 
         public double Width => View?.Width > 0 ? View.Width : 150;
 
-        public string DisplayName { get; set; }
+        public string DisplayName { get; set; } = "?";
 
-        private ImageSource? _previewImage;
-        public ImageSource? PreviewImage { get => _previewImage; set { _previewImage = value; PreviewImageChanged?.Invoke(this, value); } }
+        public ImageSource? PreviewImage { get; set { field = value; PreviewImageChanged?.Invoke(this, value); } }
         public event EventHandler<ImageSource?>? PreviewImageChanged;
 
 
@@ -1382,11 +1696,11 @@ public partial class DraftEffectBindingView : ContentView
             {
                 if (e.Id == "AddBundle")
                 {
-                    // ���������߼�
                     var BundleType = e.Value?.ToString();
                     if (!string.IsNullOrWhiteSpace(BundleType)) AddBundle(BundleType);
                 }
-            }
+            },
+            hideKeyFramedBundles: true
         ));
     }
 
@@ -1410,6 +1724,7 @@ public partial class DraftEffectBindingView : ContentView
         }
 
         SetStatusText(Localized._Done);
+        NotifyEffectBundlesChanged();
     }
 
     private async void GeneratePreviewButton_Clicked(object sender, EventArgs e)

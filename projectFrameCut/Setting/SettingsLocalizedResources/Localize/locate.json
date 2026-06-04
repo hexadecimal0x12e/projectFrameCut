@@ -2905,7 +2905,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "Select GPU for hardware acceleration during rendering/editing",
+        "Value": "Select the GPU for hardware acceleration during rendering/editing.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4948,7 +4948,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Render by layer (may be faster)",
+        "Value": "Enable layer-based rendering",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5029,7 +5029,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Separate with (half-width) commas, e.g., 0,1,2,3,4,5. Leave empty to auto-configure.",
+        "Value": "Use commas to separate values, e.g. 0,1,2,3,4,5. Leave empty to auto-configure.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5038,7 +5038,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Enable dynamic optimization concurrency (recommended)",
+        "Value": "Allow automatic renderer assignment (Recommended)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5056,7 +5056,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Use faster mixer (may cause precision issues)",
+        "Value": "Hardware-accelerated fast blending",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5065,7 +5065,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Use hardware accelerated scaling",
+        "Value": "Hardware-accelerated scaling",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5074,7 +5074,34 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Allow parallel decoding (may cause compatibility issues with clips from third-party plugins)",
+        "Value": "Allow parallel decoding",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Performance",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Configure features that improve rendering performance. It is recommended to enable all.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Warning: This option may cause compatibility issues with clips or decoders provided by third-party plugins.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5547,7 +5574,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u9078\u53D6\u7528\u65BC\u6E32\u67D3/\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
+        "Value": "\u9078\u64C7\u7528\u65BC\u6E32\u67D3/\u7DE8\u8F2F\u6642\uFF0C\u7528\u65BC\u786C\u9AD4\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7591,7 +7618,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u6309\u5C64\u6E32\u67D3\uFF08\u53EF\u80FD\u66F4\u5FEB\uFF09",
+        "Value": "\u5141\u8A31\u6309\u5C64\u6E32\u67D3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7663,7 +7690,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u4F7F\u7528(\u534A\u89D2)\u9017\u865F\u5206\u5272\uFF0C\u4F8B\u5982 0,1,2,3,4,5\uFF0C\u7559\u7A7A\u5C07\u81EA\u52D5\u914D\u7F6E",
+        "Value": "\u4F7F\u7528(\u534A\u5F62)\u9017\u865F\u5206\u5272\uFF0C\u4F8B\u5982 0,1,2,3,4,5 \u7559\u7A7A\u5C07\u81EA\u52D5\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7690,7 +7717,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u4F7F\u7528\u66F4\u5FEB\u901F\u7684\u6DF7\u5408\u5668\uFF08\u53EF\u80FD\u5C0E\u81F4\u7CBE\u5EA6\u554F\u984C\uFF09",
+        "Value": "\u786C\u9AD4\u52A0\u901F\u5FEB\u901F\u6DF7\u5408",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7699,7 +7726,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u5141\u8A31\u4E26\u884C\u89E3\u78BC\uFF08\u53EF\u80FD\u5C0E\u81F4\u7B2C\u4E09\u65B9\u5916\u639B\u7684Clip\u7522\u751F\u76F8\u5BB9\u6027\u554F\u984C\uFF09",
+        "Value": "\u5141\u8A31\u4E26\u884C\u89E3\u78BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7708,7 +7735,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u4F7F\u7528\u786C\u9AD4\u52A0\u901F\u7E2E\u653E",
+        "Value": "\u786C\u9AD4\u52A0\u901F\u7E2E\u653E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7717,7 +7744,34 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u555F\u7528\u52D5\u614B\u512A\u5316\u4E26\u767C\uFF08\u63A8\u85A6\uFF09",
+        "Value": "\u5141\u8A31\u81EA\u52D5\u5206\u914D\u6E32\u67D3\u5668\uFF08\u63A8\u85A6\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\u6548\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u914D\u7F6E\u63D0\u5347\u6E32\u67D3\u6027\u80FD\u7684\u529F\u80FD\uFF0C\u5EFA\u8BAE\u5168\u90E8\u555F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u9078\u9805\u53EF\u80FD\u5C0E\u81F4\u7531\u7B2C\u4E09\u65B9\u5916\u639B\u7A0B\u5F0F\u63D0\u4F9B\u7684\u7247\u6BB5\u6216\u89E3\u78BC\u5668\u7522\u751F\u76F8\u5BB9\u6027\u554F\u984C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8191,7 +8245,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0/\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0/\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u52A0\u901FGPU\u3092\u9078\u629E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10229,7 +10283,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u30EC\u30A4\u30E4\u3054\u3068\u306B\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\uFF08\u9AD8\u901F\u306B\u306A\u308B\u53EF\u80FD\u6027\u3042\u308A\uFF09",
+        "Value": "\u30EC\u30A4\u30E4\u30FC\u3054\u3068\u306B\u63CF\u753B\u8A31\u53EF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10319,16 +10373,16 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u534A\u89D2\u30AB\u30F3\u30DE\u3067\u533A\u5207\u3063\u3066\u304F\u3060\u3055\u3044\u3002\u4F8B\uFF1A0,1,2,3,4,5\u3002\u7A7A\u6B04\u306B\u3059\u308B\u3068\u81EA\u52D5\u8A2D\u5B9A\u3055\u308C\u307E\u3059\u3002",
+        "Value": "(\u534A\u89D2)\u30AB\u30F3\u30DE\u3067\u533A\u5207\u3063\u3066\u304F\u3060\u3055\u3044\u3002\u4F8B: 0,1,2,3,4,5 \u7A7A\u767D\u306E\u5834\u5408\u306F\u81EA\u52D5\u8A2D\u5B9A\u3055\u308C\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u7528\u4E8E\u65E5\u8BED\u7FFB\u8BD1\uFF0C\u6CE8\u610F\u534A\u89D2\u9017\u53F7\u7684\u4F7F\u7528\u8BF4\u660E",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u52D5\u7684\u540C\u6642\u6700\u9069\u5316\u3092\u6709\u52B9\u306B\u3059\u308B\uFF08\u63A8\u5968\uFF09",
+        "Value": "\u30EC\u30F3\u30C0\u30E9\u30FC\u306E\u81EA\u52D5\u5272\u308A\u5F53\u3066\u3092\u8A31\u53EF\u3059\u308B\uFF08\u63A8\u5968\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10337,16 +10391,16 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u3092\u4F7F\u7528\u3057\u305F\u62E1\u5927\u7E2E\u5C0F",
+        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u30B9\u30B1\u30FC\u30EA\u30F3\u30B0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
         "DontTranslate": false
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u4E26\u5217\u30C7\u30B3\u30FC\u30C9\u3092\u8A31\u53EF\uFF08\u30B5\u30FC\u30C9\u30D1\u30FC\u30C6\u30A3\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30AF\u30EA\u30C3\u30D7\u306B\u4E92\u63DB\u6027\u554F\u984C\u304C\u767A\u751F\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF09",
+        "Value": "\u4E26\u5217\u30C7\u30B3\u30FC\u30C9\u3092\u8A31\u53EF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10364,7 +10418,34 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u3088\u308A\u9AD8\u901F\u306A\u6DF7\u5408\u5668\u3092\u4F7F\u7528\u3059\u308B\uFF08\u7CBE\u5EA6\u554F\u984C\u306E\u53EF\u80FD\u6027\u3042\u308A\uFF09",
+        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u9AD8\u901F\u6DF7\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\u6027\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D1\u30D5\u30A9\u30FC\u30DE\u30F3\u30B9\u3092\u5411\u4E0A\u3055\u305B\u308B\u6A5F\u80FD\u306E\u8A2D\u5B9A\u3067\u3059\u3002\u3059\u3079\u3066\u6709\u52B9\u306B\u3059\u308B\u3053\u3068\u3092\u304A\u3059\u3059\u3081\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306F\u3001\u30B5\u30FC\u30C9\u30D1\u30FC\u30C6\u30A3\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u65AD\u7247\u3084\u30C7\u30B3\u30FC\u30C0\u306B\u4E92\u63DB\u6027\u554F\u984C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10838,7 +10919,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\uB80C\uB354\uB9C1/\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
+        "Value": "\uB80C\uB354\uB9C1/\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU\uB97C \uC120\uD0DD\uD558\uC2ED\uC2DC\uC624.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12879,7 +12960,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\uB808\uC774\uC5B4\uBCC4 \uB80C\uB354\uB9C1 (\uB354 \uBE60\uB97C \uC218 \uC788\uC74C)",
+        "Value": "\uB808\uC774\uC5B4\uBCC4 \uB80C\uB354\uB9C1 \uD5C8\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12942,7 +13023,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "(\uBC18\uAC01) \uC27C\uD45C\uB85C \uAD6C\uBD84\uD558\uC138\uC694. \uC608: 0,1,2,3,4,5. \uBE44\uC6CC \uB450\uBA74 \uC790\uB3D9\uC73C\uB85C \uC124\uC815\uB429\uB2C8\uB2E4.",
+        "Value": "(\uBC18\uAC01) \uC27C\uD45C\uB85C \uAD6C\uBD84\uD569\uB2C8\uB2E4. \uC608: 0,1,2,3,4,5 \uBE44\uC6CC\uB450\uBA74 \uC790\uB3D9\uC73C\uB85C \uC124\uC815\uB429\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12969,7 +13050,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uD06C\uAE30 \uC870\uC815 \uC0AC\uC6A9",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uD06C\uAE30 \uC870\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12978,7 +13059,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\uBCD1\uB82C \uB514\uCF54\uB529 \uD5C8\uC6A9\uFF08\uD0C0\uC0AC \uD50C\uB7EC\uADF8\uC778\uC758 Clip\uC5D0 \uD638\uD658\uC131 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4\uFF09",
+        "Value": "\uBCD1\uB82C \uB514\uCF54\uB529 \uD5C8\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12987,7 +13068,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\uB354 \uBE60\uB978 \uD63C\uD569\uAE30 \uC0AC\uC6A9 (\uC815\uBC00\uB3C4 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC74C)",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uACE0\uC18D \uD63C\uD569",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13005,7 +13086,34 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\uB3D9\uC801 \uCD5C\uC801\uD654 \uB3D9\uC2DC\uC131 \uD65C\uC131\uD654 (\uAD8C\uC7A5)",
+        "Value": "\uB80C\uB354\uB7EC \uC790\uB3D9 \uD560\uB2F9 \uD5C8\uC6A9(\uAD8C\uC7A5)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\uACBD\uACE0: \uC774 \uC635\uC158\uC740 \uD0C0\uC0AC \uD50C\uB7EC\uADF8\uC778\uC5D0\uC11C \uC81C\uACF5\uD558\uB294 \uC138\uADF8\uBA3C\uD2B8 \uB610\uB294 \uB514\uCF54\uB354\uC5D0\uC11C \uD638\uD658\uC131 \uBB38\uC81C\uB97C \uBC1C\uC0DD\uC2DC\uD0AC \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\uB80C\uB354\uB9C1 \uC131\uB2A5\uC744 \uD5A5\uC0C1\uC2DC\uD0A4\uB294 \uAE30\uB2A5\uC744 \uAD6C\uC131\uD569\uB2C8\uB2E4. \uBAA8\uB450 \uD65C\uC131\uD654\uD558\uB294 \uAC83\uC744 \uAD8C\uC7A5\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\uC131\uB2A5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13479,7 +13587,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "S\u00E9lectionnez le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors du rendu/\u00E9dition",
+        "Value": "S\u00E9lectionnez le GPU utilis\u00E9 pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors du rendu/\u00E9dition.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15511,7 +15619,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Rendu par couche (peut-\u00EAtre plus rapide)",
+        "Value": "Permettre le rendu par couche",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15574,7 +15682,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Utilisez des virgules (demi-chasse) pour s\u00E9parer, par exemple 0,1,2,3,4,5. Laissez vide pour une configuration automatique.",
+        "Value": "Utilisez des virgules pour s\u00E9parer, par exemple 0,1,2,3,4,5. Laissez vide pour une configuration automatique.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15610,7 +15718,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Activer l\u0027optimisation dynamique de la concurrence (recommand\u00E9)",
+        "Value": "Autoriser l\u0027attribution automatique du rendu (recommand\u00E9)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15619,7 +15727,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Utiliser l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle pour la mise \u00E0 l\u0027\u00E9chelle",
+        "Value": "Redimensionnement acc\u00E9l\u00E9r\u00E9 par mat\u00E9riel",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15628,7 +15736,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Utiliser un m\u00E9langeur plus rapide (peut entra\u00EEner des probl\u00E8mes de pr\u00E9cision)",
+        "Value": "M\u00E9lange rapide acc\u00E9l\u00E9r\u00E9 par mat\u00E9riel",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15637,7 +15745,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Autoriser le d\u00E9codage parall\u00E8le (peut causer des probl\u00E8mes de compatibilit\u00E9 avec les clips des plugins tiers)",
+        "Value": "Activer le d\u00E9codage en parall\u00E8le",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15647,6 +15755,33 @@
       {
         "Id": "Render_MaxParallelWorkers",
         "Value": "Nombre maximal de travailleurs parall\u00E8les par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Fonctionnalit\u00E9s pour am\u00E9liorer les performances de rendu - il est recommand\u00E9 de toutes les activer.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Performance",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Avertissement : cette option peut entra\u00EEner des probl\u00E8mes de compatibilit\u00E9 avec les segments ou d\u00E9codeurs fournis par des plugins tiers.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16120,11 +16255,11 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u62E9GPU\u4EE5\u52A9\u6E32\u67D3\u7F16\u7E82\u4E4B\u786C\u4EF6\u52A0\u901F",
+        "Value": "\u53D6\u7528\u65BC\u6E32\u67D3\u7DE8\u8F2F\u4E4B\u6642\uFF0C\u4EE5\u8CC7GPU\u786C\u9AD4\u52A0\u901F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Select GPU for hardware acceleration during rendering/editing",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -18158,7 +18293,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u9010\u5C42\u6E32\u67D3\uFF0C\u6216\u66F4\u901F\u3002",
+        "Value": "\u53EF\u9010\u5C42\u6E32\u67D3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18257,16 +18392,16 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u542F\u52A8\u6001\u4F18\u5316\u5E76\u53D1\uFF0C\u8350",
+        "Value": "\u5141\u81EA\u52D5\u5206\u6D3E\u6E32\u67D3\u5668\uFF08\u85A6\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u539F\u610F\u4E3A\u201C\u542F\u7528\u52A8\u6001\u4F18\u5316\u5E76\u53D1\uFF08\u63A8\u8350\uFF09\u201D\uFF0C\u6B64\u5904\u8BD1\u4F5C\u6587\u8A00\u6587\u98CE\u683C",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u7528\u66F4\u901F\u4E4B\u6DF7\u5668\uFF08\u6216\u81F4\u7CBE\u5EA6\u6709\u5931\uFF09",
+        "Value": "\u786C\u9AD4\u52A0\u901F\u901F\u6DF7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18275,16 +18410,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u4EE5\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u7F29\u653E\u7684\u6587\u8A00\u6587\u8868\u8FF0",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u4EE5\u534A\u89D2\u9017\u865F\u5206\u4E4B\uFF0C\u59820,1,2,3,4,5\uFF0C\u7A7A\u5247\u81EA\u52D5\u914D\u7F6E\u3002",
+        "Value": "\u786C\u9AD4\u52A0\u901F\u7E2E\u653E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18292,8 +18418,44 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_CoreAffinityOverride_Desc",
+        "Value": "\u4EE5\u534A\u89D2\u9017\u53F7\u5206\u9694\uFF0C\u59820,1,2,3,4,5\uFF1B\u9619\u4E4B\u5219\u81EA\u52A8\u914D\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4F7F\u7528\u534A\u89D2\u9017\u53F7\u5206\u5272\uFF0C\u7559\u7A7A\u81EA\u52A8\u914D\u7F6E",
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u53EF\u5E76\u884C\u89E3\u78BC\uFF08\u6216\u81F4\u7B2C\u4E09\u65B9\u63D2\u4EF6\u4E4BClip\u751F\u517C\u5BB9\u4E4B\u5F0A\uFF09",
+        "Value": "\u8BB8\u5E76\u884C\u89E3\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u8A2D\u6E32\u67D3\u6548\u80FD\u4E4B\u914D\u7F6E\uFF0C\u5B9C\u76E1\u555F\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\u6548\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u6B64\u9009\u9879\u6050\u81F4\u7B2C\u4E09\u65B9\u63D2\u4EF6\u6240\u4F9B\u4E4B\u7247\u6BB5\u6216\u89E3\u7801\u5668\u751F\u517C\u5BB9\u4E4B\u60A3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20812,7 +20974,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u0639\u0631\u0636 \u062D\u0633\u0628 \u0627\u0644\u0637\u0628\u0642\u0627\u062A (\u0631\u0628\u0645\u0627 \u0623\u0633\u0631\u0639)",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u062A\u0642\u062F\u064A\u0645 \u062D\u0633\u0628 \u0627\u0644\u0637\u0628\u0642\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20884,7 +21046,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0627\u0644\u062A\u0632\u0627\u0645\u0646 \u0627\u0644\u0645\u062D\u0633\u0651\u0646 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u064B\u0627 (\u0645\u0648\u0635\u0649 \u0628\u0647)",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0639\u0627\u0631\u0636 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 (\u0645\u0648\u0635\u0649 \u0628\u0647)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20902,7 +21064,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u062E\u0644\u0627\u0637 \u0623\u0633\u0631\u0639 (\u0642\u062F \u064A\u0624\u062F\u064A \u0625\u0644\u0649 \u0645\u0634\u0627\u0643\u0644 \u0641\u064A \u0627\u0644\u062F\u0642\u0629)",
+        "Value": "\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629 \u0644\u0644\u062E\u0644\u0637 \u0627\u0644\u0633\u0631\u064A\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20911,7 +21073,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0641\u0627\u0635\u0644\u0629 (\u0646\u0635\u0641 \u0627\u0644\u0639\u0631\u0636) \u0644\u0644\u0641\u0635\u0644\u060C \u0645\u062B\u0644 0,1,2,3,4,5\u060C \u0627\u062A\u0631\u0643\u0647 \u0641\u0627\u0631\u063A\u064B\u0627 \u0644\u0644\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0641\u0648\u0627\u0635\u0644 (\u0646\u0635\u0641 \u0627\u0644\u0639\u0631\u0636) \u0644\u0644\u0641\u0635\u0644\u060C \u0645\u062B\u0644 0,1,2,3,4,5 \u0627\u062A\u0631\u0643\u0647 \u0641\u0627\u0631\u063A\u064B\u0627 \u0644\u0644\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20920,7 +21082,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0641\u0643 \u0627\u0644\u062A\u0634\u0641\u064A\u0631 \u0627\u0644\u0645\u062A\u0648\u0627\u0632\u064A (\u0642\u062F \u064A\u0633\u0628\u0628 \u0645\u0634\u0627\u0643\u0644 \u062A\u0648\u0627\u0641\u0642\u064A\u0629 \u0645\u0639 \u0645\u0642\u0627\u0637\u0639 \u0627\u0644\u0645\u0643\u0648\u0646\u0627\u062A \u0627\u0644\u0625\u0636\u0627\u0641\u064A\u0629 \u0627\u0644\u062A\u0627\u0628\u0639\u0629 \u0644\u062C\u0647\u0627\u062A \u062E\u0627\u0631\u062C\u064A\u0629)",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0641\u0643 \u0627\u0644\u062A\u0631\u0645\u064A\u0632 \u0627\u0644\u0645\u062A\u0648\u0627\u0632\u064A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20929,16 +21091,43 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629 \u0644\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u062D\u062C\u0645",
+        "Value": "\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629 \u0644\u0644\u062A\u062D\u062C\u064A\u0645",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u8868\u793A\u542F\u7528\u786C\u4EF6\u52A0\u901F\u6765\u6267\u884C\u7F29\u653E\u64CD\u4F5C",
+        "Comment": "\u786C\u4EF6\u52A0\u901F\u7F29\u653E",
         "DontTranslate": false
       },
       {
         "Id": "GeneralCodec_EnableMemoryCache_Desc",
         "Value": "\u064A\u0645\u0643\u0646 \u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0623\u0646 \u062A\u062E\u0641\u0641 \u0628\u0634\u0643\u0644 \u0641\u0639\u0627\u0644 \u0645\u0646 \u0627\u0644\u062D\u0645\u0644 \u063A\u064A\u0631 \u0627\u0644\u0636\u0631\u0648\u0631\u064A \u0627\u0644\u0646\u0627\u062A\u062C \u0639\u0646 \u0627\u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629 \u0644\u0625\u0637\u0627\u0631 \u0648\u0627\u062D\u062F.\r\u062A\u0633\u062A\u0647\u0644\u0643 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0645\u0633\u0627\u062D\u0629 \u0635\u063A\u064A\u0631\u0629 \u062C\u062F\u064B\u0627\u060C \u0648\u064A\u062A\u0645 \u0627\u0644\u062A\u062E\u0644\u0635 \u0645\u0646\u0647\u0627 \u0639\u0646\u062F \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\u0627\u0644\u0623\u062F\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0645\u064A\u0632\u0627\u062A \u0627\u0644\u062A\u064A \u062A\u0639\u0632\u0632 \u0623\u062F\u0627\u0621 \u0627\u0644\u0639\u0631\u0636\u060C \u064A\u064F\u0648\u0635\u0649 \u0628\u062A\u0641\u0639\u064A\u0644\u0647\u0627 \u062C\u0645\u064A\u0639\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0642\u062F \u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u062E\u064A\u0627\u0631 \u0625\u0644\u0649 \u0645\u0634\u0627\u0643\u0644 \u062A\u0648\u0627\u0641\u0642 \u0645\u0639 \u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0623\u0648 \u0648\u062D\u062F\u0627\u062A \u0641\u0643 \u0627\u0644\u062A\u0631\u0645\u064A\u0632 \u0627\u0644\u0645\u0642\u062F\u0645\u0629 \u0645\u0646 \u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23090,7 +23279,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "W\u00E4hlen Sie die GPU f\u00FCr Hardwarebeschleunigung beim Rendern/Bearbeiten aus",
+        "Value": "GPU f\u00FCr Hardwarebeschleunigung beim Rendern/Bearbeiten ausw\u00E4hlen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23453,7 +23642,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Nach Schichten rendern (m\u00F6glicherweise schneller)",
+        "Value": "Ebenenweises Rendern zulassen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23534,7 +23723,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Mit (halbbreiten) Kommas trennen, z.B. 0,1,2,3,4,5, bei Leerzeichen wird automatisch konfiguriert.",
+        "Value": "Mit Komma (halbe Breite) trennen, z. B. 0,1,2,3,4,5. Leer lassen f\u00FCr automatische Konfiguration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23543,7 +23732,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Schnelleren Mischer verwenden (kann zu Genauigkeitsproblemen f\u00FChren)",
+        "Value": "Hardwarebeschleunigte schnelle Mischung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23561,7 +23750,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Hardwarebeschleunigte Skalierung verwenden",
+        "Value": "Hardwarebeschleunigte Skalierung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23570,7 +23759,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Dynamische Optimierung der Parallelit\u00E4t aktivieren (empfohlen)",
+        "Value": "Automatische Renderer-Zuweisung erlauben (empfohlen)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23579,7 +23768,34 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Paralleles Dekodieren erlauben (kann zu Kompatibilit\u00E4tsproblemen mit Clips von Drittanbieter-Plugins f\u00FChren)",
+        "Value": "Paralleldekodierung erlauben",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Konfigurieren Sie die Funktionen zur Verbesserung der Renderleistung. Es wird empfohlen, alle zu aktivieren.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Warnung: Diese Option kann zu Kompatibilit\u00E4tsproblemen mit von Drittanbieter-Plugins bereitgestellten Segmenten oder Decodern f\u00FChren.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Leistung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25731,7 +25947,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "Seleccionar GPU para aceleraci\u00F3n por hardware al renderizar/editar",
+        "Value": "Seleccione la GPU para aceleraci\u00F3n por hardware durante el renderizado/edici\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26087,7 +26303,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Renderizar por capas (posiblemente m\u00E1s r\u00E1pido)",
+        "Value": "Permitir renderizado por capas",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26177,7 +26393,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Habilitar optimizaci\u00F3n din\u00E1mica concurrente (recomendado)",
+        "Value": "Permitir asignaci\u00F3n autom\u00E1tica del renderizador (recomendado)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26195,7 +26411,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Usar un mezclador m\u00E1s r\u00E1pido (puede causar problemas de precisi\u00F3n)",
+        "Value": "Mezcla r\u00E1pida acelerada por hardware",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26204,7 +26420,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Use comas (de medio ancho) para separar, por ejemplo 0,1,2,3,4,5; dejar vac\u00EDo para configuraci\u00F3n autom\u00E1tica.",
+        "Value": "Separe con comas (medio ancho), por ejemplo 0,1,2,3,4,5. Dejar vac\u00EDo se configurar\u00E1 autom\u00E1ticamente.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26213,7 +26429,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Permitir decodificaci\u00F3n en paralelo (puede causar problemas de compatibilidad con los clips de complementos de terceros)",
+        "Value": "Permitir decodificaci\u00F3n paralela",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26222,7 +26438,34 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Escalado con aceleraci\u00F3n de hardware",
+        "Value": "Escalado acelerado por hardware",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Configure las funciones que mejoran el rendimiento de renderizado. Se recomienda activarlas todas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "rendimiento",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Advertencia: Esta opci\u00F3n puede causar problemas de compatibilidad con fragmentos o decodificadores proporcionados por complementos de terceros.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28373,7 +28616,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "Seleziona GPU per l\u0027accelerazione hardware durante il rendering/modifica",
+        "Value": "Seleziona la GPU per l\u0027accelerazione hardware durante il rendering/modifica.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28738,7 +28981,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Rendering per layer (potenzialmente pi\u00F9 veloce)",
+        "Value": "Consenti rendering per layer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28801,7 +29044,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Utilizzare virgole (a met\u00E0 larghezza) per separare, ad esempio 0,1,2,3,4,5. Lasciare vuoto per configurazione automatica.",
+        "Value": "Usa virgole per separare, ad esempio 0,1,2,3,4,5. Lasciare vuoto per la configurazione automatica.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28828,7 +29071,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Utilizzare un miscelatore pi\u00F9 veloce (pu\u00F2 causare problemi di precisione)",
+        "Value": "Blend rapido con accelerazione hardware",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28846,7 +29089,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Ridimensionamento con accelerazione hardware",
+        "Value": "Ridimensionamento hardware accelerato",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28855,7 +29098,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Abilita ottimizzazione dinamica della concorrenza (consigliato)",
+        "Value": "Consenti l\u0027assegnazione automatica del renderer (consigliato)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28864,7 +29107,34 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Abilita decodifica parallela (pu\u00F2 causare problemi di compatibilit\u00E0 con i clip di plugin di terze parti)",
+        "Value": "Abilita decodifica parallela",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Prestazioni",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Configura le funzioni per migliorare le prestazioni di rendering, si consiglia di abilitarle tutte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Attenzione: questa opzione potrebbe causare problemi di compatibilit\u00E0 con i frammenti o i decoder forniti da plugin di terze parti.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31016,7 +31286,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "Wybierz GPU do przyspieszania sprz\u0119towego podczas renderowania/edycji",
+        "Value": "Wybierz GPU u\u017Cywane do przyspieszania sprz\u0119towego podczas renderowania/edycji",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31371,7 +31641,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Renderuj wed\u0142ug warstw (mo\u017Ce by\u0107 szybciej)",
+        "Value": "Zezwalaj na renderowanie warstwami",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31461,7 +31731,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "W\u0142\u0105cz dynamiczn\u0105 optymalizacj\u0119 wsp\u00F3\u0142bie\u017Cno\u015Bci (zalecane)",
+        "Value": "Zezwalaj na automatyczne przypisywanie renderera (zalecane)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31470,7 +31740,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "U\u017Cyj szybszego miksera (mo\u017Ce powodowa\u0107 problemy z dok\u0142adno\u015Bci\u0105)",
+        "Value": "Przyspieszane sprz\u0119towo szybkie mieszanie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31497,7 +31767,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "U\u017Cyj przecink\u00F3w (p\u00F3\u0142znakowych) do rozdzielenia, np. 0,1,2,3,4,5, pozostaw puste, aby automatycznie skonfigurowa\u0107.",
+        "Value": "U\u017Cyj przecink\u00F3w do oddzielenia, np. 0,1,2,3,4,5. Pozostawienie pustego pola spowoduje automatyczn\u0105 konfiguracj\u0119.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31506,7 +31776,34 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Zezwalaj na r\u00F3wnoleg\u0142e dekodowanie (mo\u017Ce powodowa\u0107 problemy zgodno\u015Bci z klipami wtyczek zewn\u0119trznych)",
+        "Value": "Zezwalaj na r\u00F3wnoleg\u0142e dekodowanie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "wydajno\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Konfiguruj funkcje poprawiaj\u0105ce wydajno\u015B\u0107 renderowania, zaleca si\u0119 w\u0142\u0105czenie wszystkich.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Ostrze\u017Cenie: Ta opcja mo\u017Ce powodowa\u0107 problemy ze zgodno\u015Bci\u0105 fragment\u00F3w lub dekoder\u00F3w dostarczanych przez wtyczki innych firm.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33658,7 +33955,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "Selecionar GPU para acelera\u00E7\u00E3o de hardware durante renderiza\u00E7\u00E3o/edi\u00E7\u00E3o",
+        "Value": "Selecione a GPU para acelera\u00E7\u00E3o de hardware durante renderiza\u00E7\u00E3o/edi\u00E7\u00E3o.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34022,7 +34319,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Renderizar por camadas (possivelmente mais r\u00E1pido)",
+        "Value": "Renderizar por camada",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34094,7 +34391,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Use v\u00EDrgulas (meia-largura) para separar, ex: 0,1,2,3,4,5. Deixe em branco para configura\u00E7\u00E3o autom\u00E1tica.",
+        "Value": "Use v\u00EDrgulas para separar, ex: 0,1,2,3,4,5. Deixe em branco para configurar automaticamente.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34103,7 +34400,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Ativar otimiza\u00E7\u00E3o din\u00E2mica de concorr\u00EAncia (recomendado)",
+        "Value": "Permitir atribui\u00E7\u00E3o autom\u00E1tica do renderizador (recomendado)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34139,7 +34436,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Permitir decodifica\u00E7\u00E3o paralela (pode causar problemas de compatibilidade com Clipes de plug-ins de terceiros)",
+        "Value": "Permitir decodifica\u00E7\u00E3o paralela",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34148,7 +34445,34 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Usar um misturador mais r\u00E1pido (pode causar problemas de precis\u00E3o)",
+        "Value": "Mistura r\u00E1pida acelerada por hardware",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Configure as funcionalidades para melhorar o desempenho da renderiza\u00E7\u00E3o. Recomenda-se ativar todas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Desempenho",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Aviso: Esta op\u00E7\u00E3o pode causar problemas de compatibilidade com fragmentos ou decodificadores fornecidos por plugins de terceiros.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36301,7 +36625,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 GPU \u0434\u043B\u044F \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0433\u043E \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0435/\u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 GPU, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u044B\u0439 \u0434\u043B\u044F \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0433\u043E \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0435/\u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36659,7 +36983,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "\u0420\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433 \u043F\u043E \u0441\u043B\u043E\u044F\u043C (\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E \u0431\u044B\u0441\u0442\u0440\u0435\u0435)",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043F\u043E\u0441\u043B\u043E\u0439\u043D\u044B\u0439 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36740,16 +37064,16 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u0437\u0430\u043F\u044F\u0442\u0443\u044E (\u043F\u043E\u043B\u0443\u0448\u0438\u0440\u0438\u043D\u043D\u0443\u044E) \u0434\u043B\u044F \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u044F, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, 0,1,2,3,4,5. \u0415\u0441\u043B\u0438 \u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C, \u0431\u0443\u0434\u0435\u0442 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u043E \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438.",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u0437\u0430\u043F\u044F\u0442\u0443\u044E (\u043F\u043E\u043B\u0443\u0448\u0438\u0440\u0438\u043D\u044B) \u0434\u043B\u044F \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u044F, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 0,1,2,3,4,5. \u041E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0443\u0441\u0442\u044B\u043C \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u53EA\u6709\u5728\u4E2D\u65E5\u97E9\u7B49\u5B58\u5728\u5168\u89D2\u548C\u534A\u89D2\u7B26\u53F7\u7684\u8BED\u8A00\u65F6\u52A0\u4E0A\u534A\u89D2\u7684\u6CE8\u91CA",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u043E\u043F\u0442\u0438\u043C\u0438\u0437\u0430\u0446\u0438\u044E \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u0438\u0437\u043C\u0430 (\u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u043D\u0434\u0435\u0440\u0435\u0440\u0430 (\u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36758,7 +37082,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u0431\u043E\u043B\u0435\u0435 \u0431\u044B\u0441\u0442\u0440\u044B\u0439 \u0441\u043C\u0435\u0441\u0438\u0442\u0435\u043B\u044C (\u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430\u043C \u0441 \u0442\u043E\u0447\u043D\u043E\u0441\u0442\u044C\u044E)",
+        "Value": "\u0410\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u0431\u044B\u0441\u0442\u0440\u043E\u0433\u043E \u0441\u043C\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36785,7 +37109,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u043E\u0435 \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 (\u043C\u043E\u0436\u0435\u0442 \u0432\u044B\u0437\u0432\u0430\u0442\u044C \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u044B \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u0438 \u0441 \u043A\u043B\u0438\u043F\u0430\u043C\u0438 \u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u043E\u0432)",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u043E\u0435 \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36794,7 +37118,34 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u0434\u043B\u044F \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F",
+        "Value": "\u0410\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "\u0424\u0443\u043D\u043A\u0446\u0438\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0432\u044B\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0432\u0441\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "\u041F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u044D\u0442\u0430 \u043E\u043F\u0446\u0438\u044F \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430\u043C \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u0438 \u0441 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430\u043C\u0438 \u0438\u043B\u0438 \u0434\u0435\u043A\u043E\u0434\u0435\u0440\u0430\u043C\u0438, \u043F\u0440\u0435\u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C\u044B\u043C\u0438 \u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u043C\u0438 \u043F\u043B\u0430\u0433\u0438\u043D\u0430\u043C\u0438.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38947,7 +39298,7 @@
       },
       {
         "Id": "Render_SelectAccel",
-        "Value": "\u0130\u015Fleme/d\u00FCzenleme s\u0131ras\u0131nda donan\u0131m h\u0131zland\u0131rma i\u00E7in kullan\u0131lacak GPU\u0027yu se\u00E7in",
+        "Value": "Olu\u015Fturma/d\u00FCzenleme s\u0131ras\u0131nda donan\u0131m h\u0131zland\u0131rma i\u00E7in kullan\u0131lacak GPU\u0027yu se\u00E7in",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39312,7 +39663,7 @@
       },
       {
         "Id": "Render_RenderByLayer",
-        "Value": "Katman baz\u0131nda render (muhtemelen daha h\u0131zl\u0131)",
+        "Value": "Katman baz\u0131nda olu\u015Fturmaya izin ver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39375,7 +39726,7 @@
       },
       {
         "Id": "Render_CoreAffinityOverride_Desc",
-        "Value": "Virg\u00FCl (yar\u0131m) kullanarak ay\u0131r\u0131n, \u00F6rne\u011Fin 0,1,2,3,4,5. Bo\u015F b\u0131rak\u0131l\u0131rsa otomatik olarak yap\u0131land\u0131r\u0131l\u0131r.",
+        "Value": "Virg\u00FCl (yar\u0131m geni\u015Flik) ile ay\u0131r\u0131n, \u00F6rne\u011Fin 0,1,2,3,4,5. Bo\u015F b\u0131rak\u0131l\u0131rsa otomatik olarak yap\u0131land\u0131r\u0131l\u0131r.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39384,7 +39735,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "Dinamik optimizasyon e\u015Fzamanl\u0131l\u0131\u011F\u0131n\u0131 etkinle\u015Ftir (\u00D6nerilen)",
+        "Value": "Otomatik i\u015Flemci atamas\u0131na izin ver (\u00F6nerilen)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39411,7 +39762,7 @@
       },
       {
         "Id": "Render_PreferApproximateMixture",
-        "Value": "Daha h\u0131zl\u0131 kar\u0131\u015Ft\u0131r\u0131c\u0131 kullan (hassasiyet sorunlar\u0131na neden olabilir)",
+        "Value": "Donan\u0131m H\u0131zland\u0131rma H\u0131zl\u0131 Kar\u0131\u015Ft\u0131rma",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39420,7 +39771,7 @@
       },
       {
         "Id": "Render_PreferHwAccelResizeProvider",
-        "Value": "Donan\u0131m h\u0131zland\u0131rmal\u0131 \u00F6l\u00E7ekleme kullan",
+        "Value": "Donan\u0131m h\u0131zland\u0131rmal\u0131 \u00F6l\u00E7ekleme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39429,7 +39780,7 @@
       },
       {
         "Id": "Render_PrepareInWorkerThreads",
-        "Value": "Paralel kod \u00E7\u00F6zmeye izin ver (\u00FC\u00E7\u00FCnc\u00FC taraf eklentilerinin Clip\u0027in uyumluluk sorunlar\u0131na yol a\u00E7mas\u0131na neden olabilir)",
+        "Value": "Paralel kod \u00E7\u00F6zmeye izin ver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39439,6 +39790,33 @@
       {
         "Id": "GeneralCodec_EnableDiskCache",
         "Value": "Disk kod \u00E7\u00F6zme \u00F6nbelle\u011Fini etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption",
+        "Value": "Performans",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
+        "Value": "Uyar\u0131: Bu se\u00E7enek, \u00FC\u00E7\u00FCnc\u00FC taraf eklentiler taraf\u0131ndan sa\u011Flanan par\u00E7alar veya kod \u00E7\u00F6z\u00FCc\u00FCler ile uyumluluk sorunlar\u0131na neden olabilir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ComposeOption_Desc",
+        "Value": "Render performans\u0131n\u0131 art\u0131ran \u00F6zellikleri yap\u0131land\u0131r\u0131n, t\u00FCm\u00FCn\u00FC etkinle\u015Ftirmeniz \u00F6nerilir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

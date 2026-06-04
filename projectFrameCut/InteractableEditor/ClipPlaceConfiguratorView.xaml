@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.InteractableEditor.ClipPlaceConfiguratorView">
+    <Border StrokeThickness="0" Padding="12">
+        <VerticalStackLayout Spacing="10">
+            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                <Label x:Name="SummaryLabel"
+                       FontSize="12"
+                       TextColor="#D0D0D0"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Start"/>
+                <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center" HorizontalOptions="End">
+                    <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AspectRatio}">
+                        <CheckBox x:Name="MaintainRatioCheck" CheckedChanged="OnMaintainRatioChanged" VerticalOptions="Center" />
+                        <Label Text="&#xe3f5;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}">
+                        <CheckBox x:Name="DisallowOutOfBoundsCheck" CheckedChanged="OnDisallowOutOfBoundsChanged" />
+                        <Label Text="&#xf54f;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <Border StrokeThickness="0"
+                    Padding="0"
+                    VerticalOptions="Fill"
+                    HorizontalOptions="Fill"
+                    HeightRequest="220">
+                <AbsoluteLayout x:Name="PlaceCanvas"
+                                SizeChanged="PlaceCanvas_SizeChanged"
+                                InputTransparent="False">
+                    <BoxView x:Name="PlaceViewport"
+                             Color="#222226"
+                             AbsoluteLayout.LayoutFlags="None" />
+
+                    <Border x:Name="ClipSelection"
+                            Stroke="Yellow"
+                            StrokeThickness="2"
+                            BackgroundColor="#22FFFF00"
+                            AbsoluteLayout.LayoutFlags="None"
+                            InputTransparent="False" />
+
+                    <BoxView x:Name="HandleTL"
+                             Color="Cyan"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             CornerRadius="2"
+                             AbsoluteLayout.LayoutFlags="None"
+                             InputTransparent="False" />
+
+                    <BoxView x:Name="HandleTR"
+                             Color="Cyan"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             CornerRadius="2"
+                             AbsoluteLayout.LayoutFlags="None"
+                             InputTransparent="False" />
+
+                    <BoxView x:Name="HandleBL"
+                             Color="Cyan"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             CornerRadius="2"
+                             AbsoluteLayout.LayoutFlags="None"
+                             InputTransparent="False" />
+
+                    <BoxView x:Name="HandleBR"
+                             Color="Cyan"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             CornerRadius="2"
+                             AbsoluteLayout.LayoutFlags="None"
+                             InputTransparent="False" />
+                </AbsoluteLayout>
+            </Border>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

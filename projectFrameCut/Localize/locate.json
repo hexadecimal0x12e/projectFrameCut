@@ -434,6 +434,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u65B0\u4F1A\u8BDD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "AppBrand",
         "Value": "projectFrameCut",
         "Mode": "ConstString",
@@ -1125,6 +1133,24 @@
         "DontTranslate": false
       },
       {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "\u5171 {n} \u4E2A\u9879\u76EE\u6A21\u677F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "CreatePage_UseTemplate",
         "Value": "\u4F7F\u7528\u6A21\u677F",
         "Mode": "ConstString",
@@ -1213,6 +1239,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u9884\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
         "Value": "\u9884\u89C8\u8F93\u5165",
         "Mode": "ConstString",
@@ -1239,6 +1273,14 @@
       {
         "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
         "Value": "\u6DFB\u52A0\u5230\u8F85\u8F68\u9053",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u7528\u6237",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1362,7 +1404,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u5DE6\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u5DE6\u8FB9\u6CA1\u6709\u53D7\u652F\u6301\u7684\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1370,7 +1412,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u53F3\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u53F3\u8FB9\u6CA1\u6709\u53D7\u652F\u6301\u7684\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1586,7 +1628,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u8981\u653E\u7F6E\u300C{name}\u300D:\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1879,7 +1921,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u5FFD\u7565\u6A21\u677F\u4F5C\u7528\u57DF\uFF08\u663E\u793A\u6240\u6709\u7684\u6A21\u677F\uFF09",
+        "Value": "\u663E\u793A\u6240\u6709\u7684\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4745,6 +4787,30 @@
         "DontTranslate": false
       },
       {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u6309\u6BD4\u4F8B\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u8D85\u51FA RelativeHeight\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u8D85\u51FA RelativeWidth\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "InteractableEditor_DefaultReferenceLineColor",
         "Value": "\u9ED8\u8BA4\u53C2\u8003\u7EBF\u989C\u8272",
         "Mode": "ConstString",
@@ -4763,6 +4829,14 @@
       {
         "Id": "InteractableEditor_EnableSnapping",
         "Value": "\u542F\u7528\u5438\u9644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u5173\u952E\u5E27",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6154,6 +6228,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u5F53\u524D\u5B57\u4F53\u300C{fontName}\u300D\u53EF\u80FD\u4E0D\u652F\u6301\u90E8\u5206\u5B57\u7B26\uFF1A{preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_CategoryAsset",
         "Value": "\u4F60\u7684\u7D20\u6750",
         "Mode": "ConstString",
@@ -6404,14 +6512,6 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "InteractableEditor_KeyFrame",
-        "Value": "\u5173\u952E\u5E27",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13773,6 +13873,277 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "New Chat",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n} project templates",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Preset",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "User",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Preparing preview...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} seconds per frame",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height exceeds RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width exceeds RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Keyframe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "The current font \u0022{fontName}\u0022 may not support some characters: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Generate Cache Manually...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Clean",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "This operation will delete all caches. This operation cannot be undone. Are you sure you want to continue?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "This operation will delete {n} caches of {duration}. This operation cannot be undone. Are you sure you want to continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Current directory: {path}\rDisk cache may take up a lot of disk space and has high read/write requirements on the disk.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Compress cache files to save space",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Last used:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Maximum cache size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Enter disk cache size (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Unlimited",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Select cache path",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Disk Cache Management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -21103,6 +21474,278 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u65B0\u6703\u8A71",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "\u5171 {n} \u500B\u5C08\u6848\u7BC4\u672C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u4F7F\u7528\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u6E96\u5099\u9810\u89BD...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} \u79D2\u6BCF\u5E40",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u8D85\u51FA RelativeHeight\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u8D85\u51FA RelativeWidth\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u95DC\u9375\u5E40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u7576\u524D\u5B57\u9AD4\u300C{fontName}\u300D\u53EF\u80FD\u4E0D\u652F\u63F4\u90E8\u5206\u5B57\u5143\uFF1A{preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u624B\u52D5\u751F\u6210\u5FEB\u53D6...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u6E05\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u522A\u9664\u6240\u6709\u5FEB\u53D6\uFF0C\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u4F60\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u76EE\u524D\u76EE\u9304\uFF1A{path}\r\u78C1\u789F\u5FEB\u53D6\u53EF\u80FD\u6703\u4F54\u7528\u78C1\u789F\u4E0A\u5927\u91CF\u7684\u7A7A\u9593\uFF0C\u4E26\u4E14\u5C0D\u78C1\u789F\u7684\u8B80\u5BEB\u8981\u6C42\u8F03\u9AD8\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u58D3\u7E2E\u5FEB\u53D6\u6A94\u6848\u4EE5\u7BC0\u7701\u7A7A\u9593",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u4E0A\u4E00\u6B21\u4F7F\u7528:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u5FEB\u53D6\u6700\u5927\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u8F38\u5165\u78C1\u789F\u5FEB\u53D6\u5927\u5C0F (GB)\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u9078\u64C7\u5FEB\u53D6\u8DEF\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u7121\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u78C1\u789F\u5FEB\u53D6\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u6B64\u64CD\u4F5C\u5C07\u522A\u9664{duration}\u7684 {n} \u500B\u5FEB\u53D6\uFF0C\u6B64\u64CD\u4F5C\u7121\u6CD5\u5FA9\u539F\uFF0C\u4F60\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -28444,6 +29087,277 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u65B0\u898F\u4F1A\u8A71",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n}\u500B\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u65E2\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u5229\u7528\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u6E96\u5099\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1}\u79D2/\u30D5\u30EC\u30FC\u30E0",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u304C RelativeHeight \u3092\u8D85\u3048\u3066\u3044\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u304C RelativeWidth \u3092\u8D85\u3048\u3066\u3044\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u30D5\u30A9\u30F3\u30C8\u300C{fontName}\u300D\u306F\u4E00\u90E8\u306E\u6587\u5B57\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u306A\u3044\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF1A{preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u624B\u52D5\u30AD\u30E3\u30C3\u30B7\u30E5\u751F\u6210...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6309\u94AE\u6587\u672C\uFF0C\u8868\u793A\u624B\u52A8\u751F\u6210\u7F13\u5B58\u7684\u64CD\u4F5C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u30AF\u30EA\u30A2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u3059\u3079\u3066\u306E\u30AD\u30E3\u30C3\u30B7\u30E5\u3092\u524A\u9664\u3057\u3001\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u7D9A\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3067{duration}\u306E {n} \u500B\u306E\u30AD\u30E3\u30C3\u30B7\u30E5\u304C\u524A\u9664\u3055\u308C\u3001\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u7D9A\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u73FE\u5728\u306E\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA: {path}\r\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u306F\u3001\u30C7\u30A3\u30B9\u30AF\u4E0A\u306E\u9818\u57DF\u3092\u5927\u91CF\u306B\u6D88\u8CBB\u3057\u3001\u8AAD\u307F\u66F8\u304D\u306B\u9AD8\u3044\u8CA0\u8377\u3092\u304B\u3051\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u30AD\u30E3\u30C3\u30B7\u30E5\u30D5\u30A1\u30A4\u30EB\u3092\u5727\u7E2E\u3057\u3066\u5BB9\u91CF\u3092\u7BC0\u7D04\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u524D\u56DE\u4F7F\u7528:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u30AD\u30E3\u30C3\u30B7\u30E5\u6700\u5927\u30B5\u30A4\u30BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u30B5\u30A4\u30BA\u3092\u5165\u529B (GB) :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u7121\u5236\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "VideoCacheManagePage\u7684MaxSize\u9009\u9879\uFF0C\u8868\u793A\u65E0\u9650\u5236",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u30AD\u30E3\u30C3\u30B7\u30E5\u30D1\u30B9\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -35766,6 +36680,278 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\uC0C8 \uB300\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "\uCD1D {n}\uAC1C\uC758 \uD504\uB85C\uC81D\uD2B8 \uD15C\uD50C\uB9BF",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\uD504\uB9AC\uC14B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\uC0AC\uC6A9\uC790",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uC900\uBE44 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} \uCD08/\uD504\uB808\uC784",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height\uAC00 RelativeHeight\uB97C \uCD08\uACFC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width\uAC00 RelativeWidth\uB97C \uCD08\uACFC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\uD0A4\uD504\uB808\uC784",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\uD604\uC7AC \uAE00\uAF34\u300C{fontName}\u300D\uC774(\uAC00) \uC77C\uBD80 \uBB38\uC790\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\uC218\uB3D9 \uCE90\uC2DC \uC0DD\uC131...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\uC815\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\uC774 \uC791\uC5C5\uC740 {duration}\uC758 {n}\uAC1C \uCE90\uC2DC\uB97C \uC0AD\uC81C\uD558\uBA70, \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uBAA8\uB4E0 \uCE90\uC2DC\uB97C \uC0AD\uC81C\uD558\uBA70 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\uD604\uC7AC \uB514\uB809\uD130\uB9AC: {path}\r\uB514\uC2A4\uD06C \uCE90\uC2DC\uB294 \uB514\uC2A4\uD06C\uC758 \uB9CE\uC740 \uACF5\uAC04\uC744 \uCC28\uC9C0\uD560 \uC218 \uC788\uC73C\uBA70, \uB514\uC2A4\uD06C \uC77D\uAE30/\uC4F0\uAE30 \uC694\uAD6C\uAC00 \uB192\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\uCE90\uC2DC \uD30C\uC77C\uC744 \uC555\uCD95\uD558\uC5EC \uACF5\uAC04 \uC808\uC57D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\uB9C8\uC9C0\uB9C9 \uC0AC\uC6A9:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\uB514\uC2A4\uD06C \uCE90\uC2DC \uD06C\uAE30 \uC785\uB825 (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\uCE90\uC2DC \uCD5C\uB300 \uD06C\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\uBB34\uC81C\uD55C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\uCE90\uC2DC \uACBD\uB85C \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\uB514\uC2A4\uD06C \uCE90\uC2DC \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -43082,6 +44268,278 @@
       {
         "Id": "DraftPage_AddClipView_AIPreview_Title",
         "Value": "Aper\u00E7u des contenus g\u00E9n\u00E9r\u00E9s par IA\r(Faites d\u00E9filer vers le bas pour voir plus d\u0027options)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Nouvelle conversation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n} mod\u00E8les de projet au total",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Pr\u00E9r\u00E9glage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "Utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Pr\u00E9paration de l\u0027aper\u00E7u...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} secondes par image",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height d\u00E9passe RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width d\u00E9passe RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Message d\u0027erreur indiquant que la somme de StartX et Width d\u00E9passe RelativeWidth.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Image cl\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "La police actuelle \u00AB{fontName}\u00BB peut ne pas prendre en charge certains caract\u00E8res : {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "G\u00E9n\u00E9rer manuellement le cache...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Nettoyer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Cette action supprimera tout le cache et ne peut pas \u00EAtre annul\u00E9e. Voulez-vous vraiment continuer ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Cette op\u00E9ration supprimera {n} caches de {duration}, cette op\u00E9ration est irr\u00E9versible, \u00EAtes-vous s\u00FBr de vouloir continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "R\u00E9pertoire actuel : {path}\rLe cache disque peut occuper beaucoup d\u0027espace sur le disque et n\u00E9cessite des performances de lecture/\u00E9criture \u00E9lev\u00E9es.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Compresser les fichiers cache pour \u00E9conomiser de l\u0027espace",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Derni\u00E8re utilisation :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Taille maximale du cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Illimit\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Saisir la taille du cache disque (Go) :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "S\u00E9lectionner le chemin du cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Gestion du cache disque",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50424,6 +51882,277 @@
         "ArgsComment": [],
         "Comment": "\u7FFB\u8BD1\u81EA\u73B0\u4EE3\u6C49\u8BED\u201C\u4F7F\u7528\u76F8\u540C\u7684\u63D0\u793A\u8BCD\u91CD\u65B0\u751F\u6210\u5185\u5BB9\u201D\uFF0C\u610F\u4E3A\u4FDD\u6301\u63D0\u793A\u8BCD\u4E0D\u53D8\uFF0C\u91CD\u65B0\u751F\u6210\u5185\u5BB9\u3002",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u65B0\u8C08",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "\u51E1{n}\u500B\u9805\u76EE\u6A21\u677F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u7528\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u9884\u5907\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "\u6BCF\u5E27{n:f1}\u79D2",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY\u4E0EHeight\u4E4B\u548C\u903ERelativeHeight\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u8207 Width \u4E4B\u548C\u8D85\u903E RelativeWidth\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u8981\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u4ECA\u4E4B\u5B57\u9AD4\u300C{fontName}\u300D\u6216\u672A\u80FD\u5168\u652F\u82E5\u5E72\u5B57\u7B26\uFF1A{preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u624B\u81EA\u751F\u6210\u7F13\u5B58...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u6E05\u6ECC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u6B64\u884C\u5C06\u5C3D\u9664\u7F13\u5B58\uFF0C\u4E0D\u53EF\u590D\u8FD8\uFF0C\u541B\u6B32\u7EED\u884C\u5426\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u6B64\u884C\u5C07\u522A\u9664{duration}\u4E4B{n}\u7B87\u7DE9\u5B58\uFF0C\u6B64\u8209\u4E0D\u53EF\u9006\uFF0C\u6C5D\u78BA\u6B32\u7E8C\u884C\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u4ECA\u4E4B\u76EE\u5F55\uFF1A{path}\r\u78C1\u76D8\u7F13\u5B58\u6216\u8017\u78C1\u76D8\u5927\u91CF\u7A7A\u95F4\uFF0C\u4E14\u8BFB\u5199\u8981\u6C42\u9887\u9AD8\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u538B\u7F29\u7F13\u5B58\u6587\u4EF6\u4EE5\u7701\u7A7A\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u524D\u6B21\u6240\u7528\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u8BF7\u5165\u78C1\u76D8\u7F13\u5B58\u4E4B\u5927\u5C0F\uFF08GB\uFF09\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u65E0\u7A77",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u64C7\u7DE9\u5B58\u8DEF\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u78C1\u789F\u7F13\u5B58\u50A8\u6CBB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u7F13\u5B58\u6700\u5927\u4E4B\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -57747,6 +59476,278 @@
       {
         "Id": "DraftPage_AddClipView_AIPreview_Title",
         "Value": "\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0645\u064F\u0646\u0634\u0623\u0629 \u0628\u0648\u0627\u0633\u0637\u0629 AI\r(\u0642\u0645 \u0628\u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0644\u0623\u0633\u0641\u0644 \u0644\u0631\u0624\u064A\u0629 \u0627\u0644\u0645\u0632\u064A\u062F \u0645\u0646 \u0627\u0644\u062E\u064A\u0627\u0631\u0627\u062A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "\u0625\u062C\u0645\u0627\u0644\u064A {n} \u0642\u0648\u0627\u0644\u0628 \u0645\u0634\u0631\u0648\u0639",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Translated as \u0027Total {n} project templates\u0027 in Arabic. Using plural form for templates.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u0645\u0633\u0628\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u0645\u0633\u062A\u062E\u062F\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u062A\u062D\u0636\u064A\u0631 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} \u062B\u0627\u0646\u064A\u0629 \u0644\u0643\u0644 \u0625\u0637\u0627\u0631",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u064A\u062A\u062C\u0627\u0648\u0632 RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u0627\u0644\u0625\u0637\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u064A\u062A\u062C\u0627\u0648\u0632 RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u0642\u062F \u0644\u0627 \u064A\u062F\u0639\u0645 \u0627\u0644\u062E\u0637 \u0627\u0644\u062D\u0627\u0644\u064A \u00AB{fontName}\u00BB \u0628\u0639\u0636 \u0627\u0644\u0623\u062D\u0631\u0641: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "Translation of \u0027\u5F53\u524D\u5B57\u4F53\u300C{fontName}\u300D\u53EF\u80FD\u4E0D\u652F\u6301\u90E8\u5206\u5B57\u7B26\uFF1A{preview}{suffix}\u0027 into Arabic",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u0625\u0646\u0634\u0627\u0621 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u064A\u062F\u0648\u064A\u064B\u0627...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A\u060C \u0648\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u060C \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u0645\u0633\u062D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0625\u0644\u0649 \u062D\u0630\u0641 {n} \u0645\u0646 \u0630\u0627\u0643\u0631\u0627\u062A \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0645\u062F\u0629 {duration}\u060C \u0648\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u060C \u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646\u0643 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A: {path}\r\u0642\u062F \u062A\u0633\u062A\u0647\u0644\u0643 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0642\u0631\u0635 \u0645\u0633\u0627\u062D\u0629 \u0643\u0628\u064A\u0631\u0629 \u0639\u0644\u0649 \u0627\u0644\u0642\u0631\u0635\u060C \u0648\u062A\u062A\u0637\u0644\u0628 \u0642\u0631\u0627\u0621\u0629 \u0648\u0643\u062A\u0627\u0628\u0629 \u0639\u0627\u0644\u064A\u0629.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u0636\u063A\u0637 \u0645\u0644\u0641\u0627\u062A \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u062A\u0648\u0641\u064A\u0631 \u0627\u0644\u0645\u0633\u0627\u062D\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u0622\u062E\u0631 \u0627\u0633\u062A\u062E\u062F\u0627\u0645:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u062D\u062C\u0645 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u0623\u062F\u062E\u0644 \u062D\u062C\u0645 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0642\u0631\u0635 (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u063A\u064A\u0631 \u0645\u062D\u062F\u0648\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u0627\u062E\u062A\u0631 \u0645\u0633\u0627\u0631 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u0625\u062F\u0627\u0631\u0629 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0642\u0631\u0635",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -65081,6 +67082,278 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Neuer Chat",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "Insgesamt {n} Projektvorlagen",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Voreinstellung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "Benutzer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} Sekunden pro Frame",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u00FCberschreitet RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u00FCberschreitet RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Schl\u00FCsselbild",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "Die aktuelle Schriftart\u300C{fontName}\u300Dunterst\u00FCtzt m\u00F6glicherweise einige Zeichen nicht: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Manuell Cache erstellen...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Bereinigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Diese Aktion l\u00F6scht alle Caches. Diese Aktion kann nicht r\u00FCckg\u00E4ngig gemacht werden. M\u00F6chten Sie wirklich fortfahren?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Diese Aktion l\u00F6scht {n} Cache von {duration}. Dieser Vorgang kann nicht r\u00FCckg\u00E4ngig gemacht werden. M\u00F6chten Sie wirklich fortfahren?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Aktuelles Verzeichnis: {path}\rDer Festplatten-Cache kann viel Speicherplatz auf der Festplatte beanspruchen und stellt hohe Anforderungen an die Lese- und Schreibgeschwindigkeit der Festplatte.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Cache-Dateien komprimieren, um Speicherplatz zu sparen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Letzter Zugriff:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Maximale Cache-Gr\u00F6\u00DFe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Festplatten-Cachegr\u00F6\u00DFe (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Cache-Pfad ausw\u00E4hlen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Unbegrenzt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Festplatten-Cache-Verwaltung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Vorschau wird vorbereitet...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -72400,6 +74673,278 @@
       {
         "Id": "DraftPage_AddClipView_AIPreview_Title",
         "Value": "Vista previa de material generado por IA\r(Despl\u00E1zate hacia abajo para ver m\u00E1s opciones)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Nueva conversaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n} plantillas de proyecto",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "Usuario",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Preestablecido",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Preparando vista previa...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} segundos por fotograma",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width excede RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "fotograma clave",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height supera RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "La fuente actual \u00AB{fontName}\u00BB puede no admitir algunos caracteres: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Limpiar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Generar cach\u00E9 manualmente...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Esta operaci\u00F3n eliminar\u00E1 todo el cach\u00E9, esta operaci\u00F3n no se puede deshacer, \u00BFest\u00E1s seguro de que deseas continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Directorio actual: {path}\rLa cach\u00E9 del disco puede ocupar mucho espacio en el disco y requiere una alta velocidad de lectura/escritura.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Esta operaci\u00F3n eliminar\u00E1 {n} cach\u00E9s de {duration}, y no se puede deshacer. \u00BFEst\u00E1s seguro de que deseas continuar?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u00DAltimo acceso:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Comprimir archivos de cach\u00E9 para ahorrar espacio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Tama\u00F1o m\u00E1ximo de cach\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Ilimitado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Tama\u00F1o de cach\u00E9 de disco (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Seleccionar ruta de cach\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Gesti\u00F3n de cach\u00E9 de disco",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -79734,6 +82279,278 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Nuova conversazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "Totale {n} modelli di progetto",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Predefinito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "Utente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} secondi per fotogramma",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height supera RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width supera RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "fotogramma chiave",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "Il carattere corrente \u00AB{fontName}\u00BB potrebbe non supportare alcuni caratteri: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Genera manualmente la cache...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Pulisci",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Questa operazione eliminer\u00E0 tutta la cache. Questa operazione non pu\u00F2 essere annullata. Sei sicuro di voler continuare?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Preparazione anteprima...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Directory corrente: {path}\rLa cache del disco potrebbe occupare molto spazio sul disco e richiede un\u0027elevata velocit\u00E0 di lettura/scrittura.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Questa operazione eliminer\u00E0 {n} cache di {duration}. Questa operazione \u00E8 irreversibile. Confermi di voler continuare?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Comprimi i file di cache per risparmiare spazio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Ultimo accesso:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Dimensione massima cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Inserisci dimensione cache disco (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Illimitato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Gestione cache disco",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Seleziona il percorso della cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -87061,6 +89878,278 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "Razem {n} szablon\u00F3w projekt\u00F3w",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Nowa rozmowa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Preset",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Przygotowywanie podgl\u0105du...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} sekund na klatk\u0119",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "U\u017Cytkownik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width przekracza RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height przekracza RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "Czcionka \u201E{fontName}\u201D mo\u017Ce nie obs\u0142ugiwa\u0107 niekt\u00F3rych znak\u00F3w: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Klatka kluczowa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "R\u0119czne generowanie pami\u0119ci podr\u0119cznej...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Wyczy\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Ta operacja usunie wszystkie pami\u0119ci podr\u0119czne. Tej operacji nie mo\u017Cna cofn\u0105\u0107. Czy na pewno chcesz kontynuowa\u0107?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Ta operacja usunie {n} plik\u00F3w pami\u0119ci podr\u0119cznej o czasie trwania {duration}. Tego dzia\u0142ania nie mo\u017Cna cofn\u0105\u0107. Czy na pewno chcesz kontynuowa\u0107?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Kompresuj pliki pami\u0119ci podr\u0119cznej, aby zaoszcz\u0119dzi\u0107 miejsce.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Bie\u017C\u0105cy katalog: {path}\rBuforowanie dysku mo\u017Ce zajmowa\u0107 du\u017Co miejsca na dysku i wymaga cz\u0119stego odczytu i zapisu.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Maksymalny rozmiar pami\u0119ci podr\u0119cznej",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Ostatnie u\u017Cycie:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Wprowad\u017A rozmiar pami\u0119ci podr\u0119cznej dysku (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Bez ogranicze\u0144",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Wybierz \u015Bcie\u017Ck\u0119 pami\u0119ci podr\u0119cznej",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Zarz\u0105dzanie pami\u0119ci\u0105 podr\u0119czn\u0105 dysku",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -94379,6 +97468,278 @@
       {
         "Id": "DraftPage_AddClipView_AIPreview_Regenerate_Hint",
         "Value": "Regenerar conte\u00FAdo com o mesmo prompt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Nova conversa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n} modelos de projeto",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "Predefini\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "Usu\u00E1rio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} segundos por quadro",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "Preparando visualiza\u00E7\u00E3o...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height excede RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width excede RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Quadro-chave",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "A fonte atual \u0022{fontName}\u0022 pode n\u00E3o suportar alguns caracteres: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Gerar cache manualmente...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Limpar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Esta a\u00E7\u00E3o remover\u00E1 todos os caches e n\u00E3o pode ser desfeita. Tem certeza de que deseja continuar?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Diret\u00F3rio atual: {path}\rO cache em disco pode ocupar muito espa\u00E7o no disco e exige alta taxa de leitura e grava\u00E7\u00E3o.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Esta opera\u00E7\u00E3o excluir\u00E1 {n} cache(s) de {duration}. Esta opera\u00E7\u00E3o n\u00E3o pode ser desfeita. Tem certeza de que deseja continuar?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u00DAltimo acesso:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "Comprimir arquivos de cache para economizar espa\u00E7o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Insira o tamanho do cache do disco (GB): ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Tamanho m\u00E1ximo do cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "Selecionar caminho de cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "Ilimitado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Gerenciamento de cache de disco",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -101713,6 +105074,278 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "\u041D\u043E\u0432\u044B\u0439 \u0447\u0430\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "{n} \u0448\u0430\u0431\u043B\u043E\u043D\u043E\u0432 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} \u0441\u0435\u043A/\u043A\u0430\u0434\u0440",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height \u043F\u0440\u0435\u0432\u044B\u0448\u0430\u0435\u0442 RelativeHeight.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width \u043F\u0440\u0435\u0432\u044B\u0448\u0430\u0435\u0442 RelativeWidth.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "\u043A\u043B\u044E\u0447\u0435\u0432\u043E\u0439 \u043A\u0430\u0434\u0440",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "\u0428\u0440\u0438\u0444\u0442 \u00AB{fontName}\u00BB \u043C\u043E\u0436\u0435\u0442 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C \u043D\u0435\u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "\u0421\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043A\u044D\u0448 \u0432\u0440\u0443\u0447\u043D\u0443\u044E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "\u042D\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u0443\u0434\u0430\u043B\u0438\u0442 \u0432\u0435\u0441\u044C \u043A\u044D\u0448, \u044D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "\u042D\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u0443\u0434\u0430\u043B\u0438\u0442 {n} \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u043A\u044D\u0448\u0430 \u0437\u0430 {duration}. \u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u043E. \u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "\u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u043A\u0430\u0442\u0430\u043B\u043E\u0433: {path}\r\u0414\u0438\u0441\u043A\u043E\u0432\u044B\u0439 \u043A\u044D\u0448 \u043C\u043E\u0436\u0435\u0442 \u0437\u0430\u043D\u0438\u043C\u0430\u0442\u044C \u043C\u043D\u043E\u0433\u043E \u043C\u0435\u0441\u0442\u0430 \u043D\u0430 \u0434\u0438\u0441\u043A\u0435 \u0438 \u043F\u0440\u0435\u0434\u044A\u044F\u0432\u043B\u044F\u0435\u0442 \u0432\u044B\u0441\u043E\u043A\u0438\u0435 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u044F \u043A \u0447\u0442\u0435\u043D\u0438\u044E/\u0437\u0430\u043F\u0438\u0441\u0438.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u0421\u0436\u0430\u0442\u044C \u0444\u0430\u0439\u043B\u044B \u043A\u044D\u0448\u0430 \u0434\u043B\u044F \u044D\u043A\u043E\u043D\u043E\u043C\u0438\u0438 \u043C\u0435\u0441\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "\u041C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440 \u043A\u044D\u0448\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "\u0411\u0435\u0437\u043B\u0438\u043C\u0438\u0442\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043F\u0443\u0442\u044C \u043A\u044D\u0448\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0438\u0441\u043A\u043E\u0432\u044B\u043C \u043A\u044D\u0448\u0435\u043C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0440\u0430\u0437\u043C\u0435\u0440 \u0434\u0438\u0441\u043A\u043E\u0432\u043E\u0433\u043E \u043A\u044D\u0448\u0430 (\u0413\u0411):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -109032,6 +112665,277 @@
       {
         "Id": "DraftPage_AddClipView_AIPreview_Title",
         "Value": "AI taraf\u0131ndan olu\u015Fturulan \u00F6\u011Feleri \u00F6nizle\r(daha fazla se\u00E7enek i\u00E7in a\u015Fa\u011F\u0131 kayd\u0131r\u0131n)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_NewChatDefaultTitle",
+        "Value": "Yeni Sohbet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PluginStyle",
+        "Value": "\u00D6n Ayar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "CreatePage_TemplateCount",
+        "Value": "Toplam {n} proje \u015Fablonu",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_UserStyle",
+        "Value": "kullan\u0131c\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_Preparing",
+        "Value": "\u00D6nizlemeye haz\u0131rlan\u0131yor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_LivePreview_SecondPerFrame",
+        "Value": "{n:f1} saniye/kare",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u8868\u793A\u6BCF\u5E27\u6240\u9700\u79D2\u6570\uFF0C\u6570\u503C\u4FDD\u7559\u4E00\u4F4D\u5C0F\u6570",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_HeightOverflow",
+        "Value": "StartY \u002B Height, RelativeHeight\u0027\u0131 a\u015F\u0131yor.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_KeyFrame",
+        "Value": "Anahtar kare",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ClipCropConfiguratorView_WidthOverflow",
+        "Value": "StartX \u002B Width RelativeWidth\u0027i a\u015Ft\u0131.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextServices_UnsupportGlyph",
+        "Value": "Yaz\u0131 tipi \u0027{fontName}\u0027 baz\u0131 karakterleri desteklemiyor olabilir: {preview}{suffix}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "fontName"
+          },
+          {
+            "Key": "string",
+            "Value": "preview"
+          },
+          {
+            "Key": "string",
+            "Value": "suffix"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "fontName",
+            "Value": ""
+          },
+          {
+            "Key": "preview",
+            "Value": ""
+          },
+          {
+            "Key": "suffix",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_BuildCache",
+        "Value": "Manuel \u00F6nbellek olu\u015Ftur...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Clean",
+        "Value": "Temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupWarn",
+        "Value": "Bu i\u015Flem, {duration} s\u00FCresindeki {n} \u00F6nbelle\u011Fi silecek. Bu i\u015Flem geri al\u0131namaz. Devam etmek istedi\u011Finizden emin misiniz?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "duration"
+          },
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "duration",
+            "Value": ""
+          },
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CleanupAllWarn",
+        "Value": "Bu i\u015Flem t\u00FCm \u00F6nbelle\u011Fi silecek, bu i\u015Flem geri al\u0131namaz, devam etmek istedi\u011Finize emin misiniz?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_CurrentPath",
+        "Value": "Mevcut dizin: {path}\rDisk \u00F6nbelle\u011Fi, diskte b\u00FCy\u00FCk miktarda yer kaplayabilir ve disk okuma/yazma gereksinimleri y\u00FCksektir.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_LastAccessIn",
+        "Value": "Son kullan\u0131m:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_EnableCompress",
+        "Value": "\u00D6nbellek dosyalar\u0131n\u0131 s\u0131k\u0131\u015Ft\u0131rarak yer kazan\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize",
+        "Value": "Maksimum \u00F6nbellek boyutu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_CustomMessage",
+        "Value": "Disk \u00F6nbellek boyutunu girin (GB):",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_SelectPath",
+        "Value": "\u00D6nbellek Yolunu Se\u00E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_Tile",
+        "Value": "Disk \u00D6nbelle\u011Fi Y\u00F6netimi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "VideoCacheManagePage_MaxSize_None",
+        "Value": "S\u0131n\u0131rs\u0131z",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

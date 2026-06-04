@@ -78,18 +78,25 @@ public partial class AboutSettingPage : ContentPage
         try
         {
             var renderType = typeof(Renderer).Assembly;
-            string renderHash = "";
+            var drawingType = typeof(Drawing.Base.IPicture).Assembly;
+            string renderHash = "", drawingHash = "", drawingCommit = "unknown";
             try
             {
+#pragma warning disable IL3000 // we have already detected that the assembly is not dynamic, so it's safe to get the location
                 renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
+                drawingHash = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? HashServices.ComputeFileHash(drawingType.Location) : "unknown";
+#pragma warning restore IL3000 
+                drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
+
             }
             catch { renderHash = "unknown"; }
 
             AppDetailVersionLabel.Text =
                 $"""
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
-                CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
                 {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
+                CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
+                Drawing library: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
                 Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;

@@ -4,6 +4,7 @@ using System.Text;
 
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Globalization;
 using System.Text.Json;
@@ -330,10 +331,29 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
             var startY = 0;
             var width = canvasWidth;
             var height = canvasHeight;
+            List<CropData>? cropList = null;
             TryGetParameter<int>(target, "StartX", out startX);
             TryGetParameter<int>(target, "StartY", out startY);
             TryGetParameter<int>(target, "Width", out width);
             TryGetParameter<int>(target, "Height", out height);
+            if (TryGetParameter<string>(target, "CropList", out var cropListJson) && !string.IsNullOrWhiteSpace(cropListJson))
+            {
+                cropList = JsonSerializer.Deserialize<List<CropData>>(cropListJson);
+                if (cropList is not null && cropList.Count > 1)
+                {
+                    cropList.Sort((a, b) => a.Index.CompareTo(b.Index));
+                }
+            }
+
+            if (cropList is not null && cropList.Count > 0)
+            {
+                var progress = GetProgress(target, targetFrame);
+                var crop = ResolveCrop(cropList, progress, startX, startY, width, height);
+                startX = crop.StartX;
+                startY = crop.StartY;
+                width = crop.Width;
+                height = crop.Height;
+            }
 
             startX = ScaleByCanvas(startX, target, canvasWidth, isWidth: true);
             startY = ScaleByCanvas(startY, target, canvasHeight, isWidth: false);
@@ -341,6 +361,54 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
             height = Math.Max(1, ScaleByCanvas(height, target, canvasHeight, isWidth: false));
 
             return WrapForCrop(input, width, height, -startX, -startY);
+        }
+
+        private static CropData ResolveCrop(List<CropData> cropList, double progress, int fallbackStartX, int fallbackStartY, int fallbackWidth, int fallbackHeight)
+        {
+            if (cropList.Count == 0)
+            {
+                return new CropData(progress, fallbackStartX, fallbackStartY, fallbackWidth, fallbackHeight);
+            }
+
+            if (cropList.Count == 1)
+            {
+                return cropList[0];
+            }
+
+            if (progress <= cropList[0].Index)
+            {
+                return cropList[0];
+            }
+
+            int lastIndex = cropList.Count - 1;
+            if (progress >= cropList[lastIndex].Index)
+            {
+                return cropList[lastIndex];
+            }
+
+            for (int i = 1; i < cropList.Count; i++)
+            {
+                var current = cropList[i];
+                if (progress <= current.Index)
+                {
+                    var previous = cropList[i - 1];
+                    double span = current.Index - previous.Index;
+                    if (span <= 0)
+                    {
+                        return current;
+                    }
+
+                    double t = (progress - previous.Index) / span;
+                    int x = (int)Math.Round(previous.StartX + (current.StartX - previous.StartX) * t);
+                    int y = (int)Math.Round(previous.StartY + (current.StartY - previous.StartY) * t);
+                    int w = (int)Math.Round(previous.Width + (current.Width - previous.Width) * t);
+                    int h = (int)Math.Round(previous.Height + (current.Height - previous.Height) * t);
+                    float angle = (float)(previous.Angle + (current.Angle - previous.Angle) * t);
+                    return new CropData(progress, x, y, w, h, angle);
+                }
+            }
+
+            return cropList[lastIndex];
         }
     }
 

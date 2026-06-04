@@ -1,4 +1,4 @@
-﻿
+
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Plugin;
@@ -129,8 +129,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p16.HasAlphaChannel,
                     a = p16.HasAlphaChannel ? new float[width * height] : null
                 };
@@ -153,8 +152,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p8.HasAlphaChannel,
                     a = p8.HasAlphaChannel ? new float[width * height] : null
                 };
@@ -217,8 +215,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(targetWidth, targetHeight)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                     a = new float[targetWidth * targetHeight]
                 };
@@ -248,8 +245,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(targetWidth, targetHeight)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                     a = new float[targetWidth * targetHeight]
                 };
@@ -311,6 +307,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(frame.Width, frame.Height)
                 {
+                    Tag = frame.Tag,
                     HasAlphaChannel = true,
                     a = new float[frame.Pixels]
                 };
@@ -337,6 +334,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(frame.Width, frame.Height)
                 {
+                    Tag = frame.Tag,
                     HasAlphaChannel = true,
                     a = new float[frame.Pixels]
                 };
@@ -408,8 +406,7 @@ namespace projectFrameCut.Render.Effect
 
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p16.HasAlphaChannel,
                     a = a
                 };
@@ -430,8 +427,7 @@ namespace projectFrameCut.Render.Effect
 
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p8.HasAlphaChannel,
                     a = a
                 };
@@ -491,8 +487,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p16.HasAlphaChannel,
                     a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -522,8 +517,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p8.HasAlphaChannel,
                     a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -597,8 +591,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p16.HasAlphaChannel,
                     a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -637,8 +630,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p8.HasAlphaChannel,
                     a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -728,8 +720,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p16.HasAlphaChannel,
                     a = p16.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -760,8 +751,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = p8.HasAlphaChannel,
                     a = p8.HasAlphaChannel ? new float[source.Pixels] : null
                 };
@@ -820,8 +810,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture16bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                     a = new float[source.Pixels]
                 };
@@ -845,8 +834,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var dst = new Picture8bpp(source.Width, source.Height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                     a = new float[source.Pixels]
                 };
@@ -950,3 +938,4 @@ namespace projectFrameCut.Render.Effect
 
     }
 }
+

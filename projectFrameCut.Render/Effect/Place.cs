@@ -183,8 +183,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -198,8 +197,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();

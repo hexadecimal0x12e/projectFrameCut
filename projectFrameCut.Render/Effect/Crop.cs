@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -279,6 +280,215 @@ namespace projectFrameCut.Render.Effect
         };
     }
 
+    public record struct CropData(double Index, int StartX, int StartY, int Width, int Height, float Angle = 0f);
+
+    internal static class CropEffectShared
+    {
+        public static List<CropData> ParseCropList(object? value)
+        {
+            if (value is null)
+            {
+                return new List<CropData>();
+            }
+
+            if (value is List<CropData> list)
+            {
+                return new List<CropData>(list);
+            }
+
+            if (value is CropData[] array)
+            {
+                return new List<CropData>(array);
+            }
+
+            if (value is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var json = element.GetString();
+                    return string.IsNullOrWhiteSpace(json)
+                        ? new List<CropData>()
+                        : JsonSerializer.Deserialize<List<CropData>>(json) ?? new List<CropData>();
+                }
+
+                return JsonSerializer.Deserialize<List<CropData>>(element.GetRawText()) ?? new List<CropData>();
+            }
+
+            if (value is string jsonString)
+            {
+                return string.IsNullOrWhiteSpace(jsonString)
+                    ? new List<CropData>()
+                    : JsonSerializer.Deserialize<List<CropData>>(jsonString) ?? new List<CropData>();
+            }
+
+            throw new ArgumentException("CropList parameter is invalid.", nameof(value));
+        }
+
+        public static CropData GetCropForProgress(IReadOnlyList<CropData> cropList, double progress)
+        {
+            if (cropList.Count == 0)
+            {
+                throw new ArgumentException("Crop list must not be empty.", nameof(cropList));
+            }
+
+            if (cropList.Count == 1)
+            {
+                return cropList[0];
+            }
+
+            if (progress <= cropList[0].Index)
+            {
+                return cropList[0];
+            }
+
+            int lastIndex = cropList.Count - 1;
+            if (progress >= cropList[lastIndex].Index)
+            {
+                return cropList[lastIndex];
+            }
+
+            for (int i = 1; i < cropList.Count; i++)
+            {
+                var current = cropList[i];
+                if (progress <= current.Index)
+                {
+                    var previous = cropList[i - 1];
+                    double span = current.Index - previous.Index;
+                    if (span <= 0)
+                    {
+                        return current;
+                    }
+
+                    double t = (progress - previous.Index) / span;
+                    return Lerp(previous, current, t);
+                }
+            }
+
+            return cropList[lastIndex];
+        }
+
+        public static CropData Lerp(CropData from, CropData to, double t)
+        {
+            int x = (int)Math.Round(from.StartX + (to.StartX - from.StartX) * t);
+            int y = (int)Math.Round(from.StartY + (to.StartY - from.StartY) * t);
+            int w = (int)Math.Round(from.Width + (to.Width - from.Width) * t);
+            int h = (int)Math.Round(from.Height + (to.Height - from.Height) * t);
+            float angle = (float)(from.Angle + (to.Angle - from.Angle) * t);
+            return new CropData(from.Index + (to.Index - from.Index) * t, x, y, w, h, angle);
+        }
+
+        public static CropData Scale(CropData crop, int targetWidth, int targetHeight, int relativeWidth, int relativeHeight)
+        {
+            if (relativeWidth <= 0 || relativeHeight <= 0 || (relativeWidth == targetWidth && relativeHeight == targetHeight))
+            {
+                return crop;
+            }
+
+            int x = (int)Math.Round((double)crop.StartX * targetWidth / relativeWidth);
+            int y = (int)Math.Round((double)crop.StartY * targetHeight / relativeHeight);
+            int w = (int)Math.Round((double)crop.Width * targetWidth / relativeWidth);
+            int h = (int)Math.Round((double)crop.Height * targetHeight / relativeHeight);
+            return new CropData(crop.Index, x, y, w, h, crop.Angle);
+        }
+
+        public static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new ArgumentException("Width and Height must be positive");
+            }
+
+            var requestedRect = new Rectangle(startX, startY, width, height);
+            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
+            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
+            }
+
+            return safeRect;
+        }
+
+        public static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, int sourceWidth, int sourceHeight)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new ArgumentException("Width and Height must be positive");
+            }
+
+            var requestedRect = new Rectangle(startX, startY, width, height);
+            var sourceRect = new Rectangle(0, 0, sourceWidth, sourceHeight);
+            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
+            }
+
+            return safeRect;
+        }
+
+        public static (float[] r, float[] g, float[] b, float[] a, bool sourceHasAlpha) ExtractFloatChannels(IPicture source)
+        {
+            if (source is IPicture<ushort> p16)
+            {
+                return (
+                    p16.r.Select(Convert.ToSingle).ToArray(),
+                    p16.g.Select(Convert.ToSingle).ToArray(),
+                    p16.b.Select(Convert.ToSingle).ToArray(),
+                    p16.a ?? Enumerable.Repeat(1f, p16.Pixels).ToArray(),
+                    p16.HasAlphaChannel && p16.a is not null
+                );
+            }
+
+            if (source is IPicture<byte> p8)
+            {
+                return (
+                    p8.r.Select(Convert.ToSingle).ToArray(),
+                    p8.g.Select(Convert.ToSingle).ToArray(),
+                    p8.b.Select(Convert.ToSingle).ToArray(),
+                    p8.a ?? Enumerable.Repeat(1f, p8.Pixels).ToArray(),
+                    p8.HasAlphaChannel && p8.a is not null
+                );
+            }
+
+            throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+        }
+
+        public static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a, bool keepAlpha)
+        {
+            if (source.BitPerPixel == 16)
+            {
+                var picture = new Picture16bpp(width, height)
+                {
+                    Tag = source.Tag,
+                    HasAlphaChannel = keepAlpha
+                };
+                picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
+                picture.g = g.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
+                picture.b = b.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
+                picture.a = keepAlpha ? a.Select(v => Math.Clamp(v, 0f, 1f)).ToArray() : null;
+                return picture;
+            }
+
+            if (source.BitPerPixel == 8)
+            {
+                var picture = new Picture8bpp(width, height)
+                {
+                    Tag = source.Tag,
+                    HasAlphaChannel = keepAlpha
+                };
+                picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
+                picture.g = g.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
+                picture.b = b.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
+                picture.a = keepAlpha ? a.Select(v => Math.Clamp(v, 0f, 1f)).ToArray() : null;
+                return picture;
+            }
+
+            throw new NotSupportedException($"Specific pixel-mode is not supported.");
+        }
+    }
+
+   
     public class CropEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
@@ -493,8 +703,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = keepAlpha
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -508,8 +717,7 @@ namespace projectFrameCut.Render.Effect
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    
-                    
+                    Tag = source.Tag,
                     HasAlphaChannel = keepAlpha
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
@@ -523,52 +731,5 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class CropEffectFactory : IEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        public string TypeName => "Crop";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
-        {
-            "StartX",
-            "StartY",
-            "Height",
-            "Width",
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"StartX", "int" },
-            {"StartY", "int" },
-            {"Height", "int" },
-            {"Width", "int" },
-            {"Angle", "float" },
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.ImageSharp => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.HwAcceleration => CropEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                EffectImplementType.IPicture => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
-        {
-            return CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
-        }
-    }
 }

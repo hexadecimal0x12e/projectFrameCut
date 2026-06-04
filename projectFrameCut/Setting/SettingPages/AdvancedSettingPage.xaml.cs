@@ -140,7 +140,7 @@ public partial class AdvancedSettingPage : ContentPage
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)

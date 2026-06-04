@@ -119,6 +119,8 @@ namespace projectFrameCut.ApplicationAPIBase.Project
 
         public string? DetailInfo { get; set; }
 
+        public string? ChangedClipID { get; set; } = null;
+
         public bool NoSave { get; set; } = false;
 
         public static string BuildChangeReason(ClipUpdateReason? reason, string? sourceName = null, string? details = null)

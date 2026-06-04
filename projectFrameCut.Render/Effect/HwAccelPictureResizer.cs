@@ -19,7 +19,7 @@ namespace projectFrameCut.Render.Effect
         private IComputer? _cachedComputer;
         private bool _computerResolved;
 
-        private static readonly CPUBilinearPictureResizer _cpuFallback = new();
+        private static readonly BilinearPictureResizer _cpuFallback = new();
 
         private IComputer? GetComputer()
         {

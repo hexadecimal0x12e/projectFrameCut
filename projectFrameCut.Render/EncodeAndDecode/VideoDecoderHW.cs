@@ -551,6 +551,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new byte[size],
                 g = new byte[size],
                 b = new byte[size],

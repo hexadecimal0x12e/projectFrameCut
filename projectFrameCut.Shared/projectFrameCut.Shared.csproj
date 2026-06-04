@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>net10.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -19,12 +19,15 @@
 		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing.Base\projectFrameCut.Drawing.Base.csproj" />
 		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing.Processing\projectFrameCut.Drawing.Processing.csproj" />
 	</ItemGroup>
-    <ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
 		<PackageReference Include="SixLabors.Fonts" Version="2.1.3" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
 		<PackageReference Include="System.IO.Hashing" Version="10.0.*" />
-    </ItemGroup>
+	</ItemGroup>
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+		<Exec Command="dotnet restore ..\projectFrameCut.sln" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" IgnoreExitCode="false" />
+	</Target>
 
 </Project>
