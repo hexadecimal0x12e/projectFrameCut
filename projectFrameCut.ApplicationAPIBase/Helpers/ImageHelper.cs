@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Formats.Png;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using projectFrameCut.Drawing.Base;
 
 
 
@@ -168,8 +166,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             //{
             //    Log(ex, $"Failed to save image to cache file path: {cachePath}. Will try to load from memory stream.");
                 var ms = new MemoryStream();
-                using var img = picture.SaveToSixLaborsImage(8, true, false);
-                img.SaveAsPng(ms);
+                picture.ToBitPerPixel(8).SaveToPng(ms);
                 var bytes = ms.ToArray();
                 return ImageSource.FromStream(() => new MemoryStream(bytes));
             //}
@@ -189,9 +186,8 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             if (Source.Disposed)
                 throw new ObjectDisposedException(nameof(IPictureImageSource));
 
-            var ms = new MemoryStream();
-            using var img = Source.SaveToSixLaborsImage(8, true, false);
-            img.SaveAsPng(ms);
+            using var ms = new MemoryStream();
+            Source.ToBitPerPixel(8).SaveToPng(ms);
             ms.Position = 0;
             return Task.FromResult<Stream>(ms);
         }

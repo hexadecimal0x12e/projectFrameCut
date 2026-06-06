@@ -1,7 +1,6 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
@@ -35,7 +34,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -83,39 +81,12 @@ namespace projectFrameCut.Render.Effect
         {
             var sw = Stopwatch.StartNew();
 
-            int origWidth = source.Width;
-            int origHeight = source.Height;
-
-            var img = source.SaveToSixLaborsImage();
-            img.Mutate(ctx => ctx.Rotate(Angle));
-
-            if (!ExpandCanvas && (img.Width != origWidth || img.Height != origHeight))
-            {
-                int cropX = Math.Max(0, (img.Width - origWidth) / 2);
-                int cropY = Math.Max(0, (img.Height - origHeight) / 2);
-                int cropW = Math.Min(img.Width - cropX, origWidth);
-                int cropH = Math.Min(img.Height - cropY, origHeight);
-                img.Mutate(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
-
-                if (img.Width < origWidth || img.Height < origHeight)
-                {
-                    int padLeft = (origWidth - img.Width) / 2;
-                    int padTop = (origHeight - img.Height) / 2;
-                    img.Mutate(ctx => ctx.Pad(origWidth, origHeight).Crop(new Rectangle(padLeft, padTop, origWidth, origHeight)));
-                }
-            }
-
-            IPicture result = Shared.PictureExtensions.ToPJFCPicture(img, source.BitPerPixel);
+            var result = RotationEffect.Process(source, Angle, ExpandCanvas);
 
             sw.Stop();
             _elapsed = sw.Elapsed;
             result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
             return result;
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
         }
 
         private PictureProcessStack GetProcessStack() => new PictureProcessStack
@@ -145,7 +116,7 @@ namespace projectFrameCut.Render.Effect
             { "ExpandCanvas", "bool" },
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -155,7 +126,6 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => RotationEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }, implementType),
                 EffectImplementType.IPicture => RotationEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }, implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

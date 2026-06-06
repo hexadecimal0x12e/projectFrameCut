@@ -13,7 +13,7 @@ projectFrameCut目标是成为一个强大，易上手且完全自由的视频�
 
 第三方库致谢
 
-项目使用了[FFmpeg](https://ffmpeg.org)和[SixLabors.ImageSharp](https://sixlabors.com/products/imagesharp/)及其系列库作为基本的帧提取和处理，使用了FFmpeg\_droidFix.AutoGen来调用FFmpeg。
+项目使用了[FFmpeg](https://ffmpeg.org)和[projectFrameCut.Drawing用了FFmpeg\_droidFix.AutoGen来调用FFmpeg。
 
 项目使用了[CommunityToolkit](https://github.com/CommunityToolkit/Maui)实现了大量的UI层功能。
 

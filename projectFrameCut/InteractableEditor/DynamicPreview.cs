@@ -1671,7 +1671,7 @@ public sealed class DynamicPreview : IDisposable
                     Directory.CreateDirectory(dir);
                 }
 
-                frame.SaveAsPng8bpp(diskPath, null);
+                frame.SaveToPng(diskPath);
                 TouchFallbackDiskEntry(diskPath);
                 TrimFallbackDiskCacheIfNeeded();
             }

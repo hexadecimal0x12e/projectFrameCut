@@ -27,7 +27,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = ["Horizontal", "Vertical"];
@@ -63,11 +62,6 @@ namespace projectFrameCut.Render.Effect
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
             return FlipEffect.Process(source, Horizontal, Vertical);
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
         }
     }
 

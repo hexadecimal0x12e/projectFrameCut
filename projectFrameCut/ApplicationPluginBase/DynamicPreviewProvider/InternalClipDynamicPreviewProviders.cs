@@ -155,7 +155,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         TouchDiskEntry(diskPath);
     }
 
-   
+
 
     private static void EnqueuePrefetch(VideoClip clip, VideoPrefetchContextKey contextKey, uint targetFrame)
     {
@@ -287,7 +287,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
                 Directory.CreateDirectory(dir);
             }
 
-            frame.SaveAsPng8bpp(diskPath, null);
+            frame.SaveToPng(diskPath);
             return true;
         }
         catch
@@ -896,7 +896,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
                 Directory.CreateDirectory(dir);
             }
 
-            frame.SaveAsPng8bpp(diskPath, null);
+            frame.SaveToPng(diskPath);
             return true;
         }
         catch

@@ -1420,8 +1420,7 @@ namespace projectFrameCut.Render.Rendering
                     //var clipLock = _clipEffectLocks.GetOrAdd(clip.Id, _ => new object());
                     //lock (clipLock)
                     {
-                        List<IPictureProcessStep> steps = new();
-                        bool lastIsProcessStep = false, effectsChanged = false;
+                        bool effectsChanged = false;
                         // Use pre-converted effects list from cache to avoid ToList() allocation
                         var effectCopy = _clipEffectsListCache.TryGetValue(clip.Id, out var cachedEffectsList)
                             ? new List<IEffect>(cachedEffectsList)
@@ -1429,11 +1428,6 @@ namespace projectFrameCut.Render.Rendering
                         foreach (var item in effects)
                         {
                             var computer = GetOrCreateComputer(item.NeedComputer);
-                            if (item.YieldProcessStep != lastIsProcessStep && steps.Count > 0)
-                            {
-                                frame = PictureProcesser.Process(steps, frame, _ppb);
-                                steps.Clear();
-                            }
 
                             try
                             {
@@ -1441,15 +1435,20 @@ namespace projectFrameCut.Render.Rendering
                                 {
                                     case EffectType.NormalEffect:
                                         if (item is not INormalEffect e) goto notdefined;
-                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, e, computer, TargetWidth, TargetHeight);
+                                        frame = e.Render(frame, computer, TargetWidth, TargetHeight);
                                         continue;
                                     case EffectType.ContinuousEffect:
                                         if (item is not IContinuousEffect c) goto notdefined;
-                                        EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, TargetWidth, TargetHeight);
+                                        if (c.EndPoint == 0 && c.EndPoint == 0)
+                                        {
+                                            c.StartPoint = (int)(clip.StartFrame);
+                                            c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
+                                        }
+                                        frame = c.Render(frame, targetFrame, computer, TargetWidth, TargetHeight);
                                         continue;
                                     case EffectType.BindableEffect:
                                         if (item is not IBindableArgumentEffect b) goto notdefined;
-                                        if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, TargetWidth, TargetHeight))
+                                        if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, b, computer, TargetWidth, TargetHeight))
                                         {
                                             effectCopy.Remove(item);
                                             effectsChanged = true;
@@ -1518,7 +1517,7 @@ namespace projectFrameCut.Render.Rendering
                             Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
                             if (item is IBindableArgumentEffect be)
                             {
-                                if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, be, computer, TargetWidth, TargetHeight))
+                                if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight))
                                 {
                                     effectCopy.Remove(item);
                                     effectsChanged = true;
@@ -1526,11 +1525,16 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else if (item is IContinuousEffect c)
                             {
-                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, TargetWidth, TargetHeight);
+                                if (c.EndPoint == 0 && c.EndPoint == 0)
+                                {
+                                    c.StartPoint = (int)(clip.StartFrame);
+                                    c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
+                                }
+                                frame = c.Render(frame, targetFrame, computer, TargetWidth, TargetHeight);
                             }
                             else if (item is INormalEffect n)
                             {
-                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, n, computer, TargetWidth, TargetHeight);
+                                frame = n.Render(frame, computer, TargetWidth, TargetHeight);
                             }
                             else if (item is IClipPositionProvider p)
                             {
@@ -1561,12 +1565,6 @@ namespace projectFrameCut.Render.Rendering
                                 throw new NotSupportedException($"The effect's ClipType {item.TypeOfEffect} {item.TypeName} of clip {clip.Id} is not supported by Render. Effect ID: {item.Id}");
                             }
 
-                        }
-
-
-                        if (steps.ListAny())
-                        {
-                            frame = PictureProcesser.Process(steps, frame, _ppb);
                         }
 
                         if (effectsChanged)
@@ -2045,11 +2043,6 @@ namespace projectFrameCut.Render.Rendering
 
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
                 _clipEffectsListCache.AddOrUpdate(item.Id, effectInstances.ToList(), (_, _) => effectInstances.ToList());
-                foreach (var effect in effectInstances)
-                {
-                    if (effect.YieldProcessStep == true && effect.NeedComputer is not null)
-                        throw new InvalidDataException("A effect can't both yield process step, and use a computer.");
-                }
 
                 Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
 

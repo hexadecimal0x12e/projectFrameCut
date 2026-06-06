@@ -8,6 +8,7 @@ using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -5033,7 +5034,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     try
                     {
-                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
+                        using var img = new Picture8bpp(clip.SourcePath);
                         aspect = (double)img.Width / img.Height;
                         return aspect > 0;
                     }
@@ -5056,7 +5057,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     try
                     {
-                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(asset.Path);
+                        using var img = new Picture8bpp(asset.Path);
                         aspect = (double)img.Width / img.Height;
                         return aspect > 0;
                     }

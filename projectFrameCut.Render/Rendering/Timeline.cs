@@ -152,32 +152,26 @@ namespace projectFrameCut.Render.Rendering
                     ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
                     ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
                     IPicture effected = srcFrame.Clip;
-                    List<IPictureProcessStep> steps = new();
-                    bool lastIsProcessStep = false;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
                     foreach (var effect in effectsList)
                     {
-                        if (effect.YieldProcessStep != lastIsProcessStep)
+                        if (effect is IContinuousEffect c)
                         {
-                            if (steps.Count > 0)
+                            if (c.EndPoint == 0 && c.EndPoint == 0)
                             {
-                                effected = PictureProcesser.Process(steps, effected, targetPPB);
-                                steps.Clear();
+                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame);
+                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.GetEffectiveDuration());
                             }
-                            lastIsProcessStep = effect.YieldProcessStep;
+                            effected = c.Render(effected, frameIndex, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
-                        if (effect is INormalEffect n)
+                        else if (effect is INormalEffect n)
                         {
-                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
-                        }
-                        else if (effect is IContinuousEffect c)
-                        {
-                            EffectProcessing.ProcessContinuousEffect(frameIndex, srcFrame.ParentClip, PluginManager.CreateComputer(effect.NeedComputer), ref effected, steps, ref lastIsProcessStep, effect, c, targetWidth, targetHeight);
+                            effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else if (effect is IBindableArgumentEffect b)
                         {
-                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
+                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
                         else if (effect is IClipPositionProvider p)
                         {
@@ -215,7 +209,6 @@ namespace projectFrameCut.Render.Rendering
                         if (AfterEffectCallback is not null)
                         {
                             IPicture d = effected;
-                            if (steps.Count > 0) d = PictureProcesser.Process(steps, effected, targetPPB);
                             int x = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
                             int y = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
                             if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
@@ -228,11 +221,6 @@ namespace projectFrameCut.Render.Rendering
                             }
                             AfterEffectCallback(effect, d);
                         }
-                    }
-                    if (steps.Count > 0)
-                    {
-                        effected = PictureProcesser.Process(steps, effected, targetPPB);
-                        steps.Clear();
                     }
 
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);

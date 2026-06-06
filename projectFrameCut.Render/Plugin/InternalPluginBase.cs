@@ -67,7 +67,7 @@ public class InternalPluginBase : IPluginBase
         {"Vignette", new(() => new VignetteEffect_IPicture()) },
         {"FadeOpacity", new(() => new FadeOpacityEffect_IPicture()) },
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
-        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_IPicture()) },
         {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
         {"AddMixture", new(() => new Compose.AddMixture()) },
         {"SubtractMixture", new(() => new Compose.SubtractMixture()) },

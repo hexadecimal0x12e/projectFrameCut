@@ -22,7 +22,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public string TypeName => "StraightLineMovementValueProducer";
 

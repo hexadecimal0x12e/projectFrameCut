@@ -23,6 +23,7 @@ using System.Text;
 using System.Text.Unicode;
 using TinyPinyin;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Services
 {
@@ -114,7 +115,7 @@ namespace projectFrameCut.Services
                     var vectorCanvas = engine.Layout(textEntry, fontFace);
                     var picture = VectorToIPicture.Convert(vectorCanvas, width, height, transparentBackground: true);
 
-                    picture.SaveAsPng(cachePath, resultPPB: 8);
+                    picture.SaveToPng(cachePath);
 
                     return ImageSource.FromFile(cachePath);
                 }

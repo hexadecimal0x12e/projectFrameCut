@@ -27,7 +27,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = ["Strength", "Radius"];
@@ -63,12 +62,6 @@ namespace projectFrameCut.Render.Effect
         {
             return VignetteEffect.Process(source, Strength, Radius);
         }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            return null;
-        }
-
     }
 
     public class VignetteEffectFactory : IEffectFactory

@@ -14,7 +14,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -1633,7 +1632,7 @@ public partial class DraftEffectBindingView : ContentView
             try
             {
                 using var stream = new MemoryStream();
-                await Task.Run(() => picture.SaveToSixLaborsImage().SaveAsPng(stream)); // Assuming SaveAsPng exists as extension
+                await Task.Run(() => picture.SaveToPng(stream));
                 stream.Position = 0;
                 var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
                 node.PreviewImage = imageSource;

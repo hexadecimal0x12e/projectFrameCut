@@ -10,7 +10,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
+using projectFrameCut.Drawing.Processing.Converting;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -37,6 +37,8 @@ using FFmpeg.AutoGen;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Text.FontHelper;
 using System.Text.Json.Serialization;
+using projectFrameCut.Drawing.Base;
+
 
 
 
@@ -560,7 +562,7 @@ public partial class TestPage : ContentPage
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";
-            outPic.SaveAsPng16bpp(path);
+            outPic.SaveToPng(path);
 
             ResultImage.Source = ImageSource.FromFile(path);
 
@@ -719,18 +721,18 @@ public partial class TestPage : ContentPage
                     f.Brightness[idx] = 1f;
                 }
             }
-            f.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+            f.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
 
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { text = $"Frame {i}" }];
                 var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
-                textFrame.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
-                var t = textFrame.ToHDRPicture(1, 5000);
+                textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                var t = textFrame.ToHDRPictureBySignal(5000);
                 Log(t.GetDiagnosticsInfo());
-                t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                t.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-                r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                r.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
@@ -757,9 +759,9 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.a
         };
-        fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16, true).ToPJFCPicture(16);
-        fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fThrowBrightness.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
+        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
             r = f.r,
@@ -767,7 +769,7 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.Brightness
         };
-        fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlpha.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
@@ -775,7 +777,7 @@ public partial class TestPage : ContentPage
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
         }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-        fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
             OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
@@ -802,7 +804,7 @@ public partial class TestPage : ContentPage
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            result.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -832,7 +834,7 @@ public partial class TestPage : ContentPage
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -860,21 +862,21 @@ public partial class TestPage : ContentPage
                 NormalizeBrightnessToRGBOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 OverlayMaskFromBrightnessOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 DiscardBrightnessChannelOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -888,7 +890,7 @@ public partial class TestPage : ContentPage
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    frame.SaveToSixLaborsImage().SaveAsPng(ms);
+                    frame.SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -914,7 +916,7 @@ public partial class TestPage : ContentPage
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });

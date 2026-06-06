@@ -219,19 +219,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
-#if DEBUG
-            var svg = SVGToVectorElement.ExportToSvg(vectorCanvas, targetWidth, targetHeight);
-            var tmpPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"textclip_{DateTime.Now:yyyyMMddHHmmss}.svg");
-            File.WriteAllText(tmpPath, svg);
-            LogDiagnostic($"SVG Exported to {tmpPath}");
-#endif
             var sourcePicture = VectorToIPicture.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true);
-
-#if DEBUG
-            sourcePicture.SaveToDisk(Path.ChangeExtension(tmpPath, ".png"), Drawing.Base.PictureExtensions.SharedPngPictureEncoder);
-#endif
-
-            var stack = new List<PictureProcessStack>
+            sourcePicture.ProcessStack = new List<PictureProcessStack>
                 {
                     new PictureProcessStack
                     {
@@ -244,9 +233,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                             { "FontPath", FontPath }
                         }
                     }
-                };
-
-            IPicture rendered = sourcePicture.ModifiyProcessStack(stack);
+                }; 
+            IPicture rendered = sourcePicture;
 
             if (targetPPB.Value != 16)
             {

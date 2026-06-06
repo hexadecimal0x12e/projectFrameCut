@@ -76,11 +76,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         [JsonIgnore]
         public string? NeedComputer { get; }
-        /// <summary>
-        /// Gets a value indicating whether the effect produces a rendered <see cref="IPicture"/> or a un-processed <see cref="IPictureProcessStep"/> to be used in the next step.
-        /// </summary>
-        [JsonIgnore]
-        public bool YieldProcessStep { get; }
 
 
         /// <summary>
@@ -157,15 +152,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the processed frame</returns>
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
 
-        /// <summary>
-        /// Generate some process step instead of rendering the picture directly.
-        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
-        /// </summary>
-        /// <param name="source">The input frame.</param>
-        /// <param name="targetWidth">Output canvas' width.</param>
-        /// <param name="targetHeight">Output canvas' height.</param>
-        /// <returns>the processed frame</returns>
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
     }
 
     public interface IColorAdjustEffect : INormalEffect
@@ -177,16 +163,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="computer"></param>
         /// <returns>the processed frame</returns>
         public IPicture Process(IPicture source, IComputer? computer);
-        /// <summary>
-        /// Yield a process step for adjusting the frame.
-        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns>the processed frame</returns>
-        public IPictureProcessStep GetStep(IPicture source);
-
         IPicture INormalEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) => Process(source, computer);
-        IPictureProcessStep INormalEffect.GetStep(IPicture source, int targetWidth, int targetHeight) => GetStep(source);
 
         bool IEffect.Enabled { get => true; set { } }
         int IEffect.RelativeWidth { get => -1; set { } }

@@ -1,14 +1,92 @@
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
+    public struct RgbColor(byte r, byte g, byte b)
+    {
+        public byte R { get; set; } = r;
+        public byte G { get; set; } = g;
+        public byte B { get; set; } = b;
+
+        public static readonly RgbColor Green = new(0, 255, 0);
+        public static readonly RgbColor Red = new(255, 0, 0);
+        public static readonly RgbColor Blue = new(0, 0, 255);
+        public static readonly RgbColor White = new(255, 255, 255);
+        public static readonly RgbColor Black = new(0, 0, 0);
+        public static readonly RgbColor Cyan = new(0, 255, 255);
+        public static readonly RgbColor Magenta = new(255, 0, 255);
+        public static readonly RgbColor Yellow = new(255, 255, 0);
+        public static readonly RgbColor Transparent = new(0, 0, 0);
+
+        public static RgbColor Parse(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+                return Green;
+
+            s = s.Trim();
+
+            if (s.StartsWith('#'))
+            {
+                var hex = s.AsSpan(1);
+                if (hex.Length == 3)
+                {
+                    byte rr = (byte)(HexToNibble(hex[0]) * 17);
+                    byte gg = (byte)(HexToNibble(hex[1]) * 17);
+                    byte bb = (byte)(HexToNibble(hex[2]) * 17);
+                    return new RgbColor(rr, gg, bb);
+                }
+                if (hex.Length >= 6)
+                {
+                    byte rr = (byte)(HexToNibble(hex[0]) << 4 | HexToNibble(hex[1]));
+                    byte gg = (byte)(HexToNibble(hex[2]) << 4 | HexToNibble(hex[3]));
+                    byte bb = (byte)(HexToNibble(hex[4]) << 4 | HexToNibble(hex[5]));
+                    return new RgbColor(rr, gg, bb);
+                }
+                return Green;
+            }
+
+            return s.ToLowerInvariant() switch
+            {
+                "green" => Green,
+                "red" => Red,
+                "blue" => Blue,
+                "white" => White,
+                "black" => Black,
+                "cyan" => Cyan,
+                "magenta" => Magenta,
+                "yellow" => Yellow,
+                "transparent" => Transparent,
+                _ => TryParseHex(s) ?? Green,
+            };
+        }
+
+        public override readonly string ToString() => $"#{R:X2}{G:X2}{B:X2}";
+
+        private static byte HexToNibble(char c) => c switch
+        {
+            >= '0' and <= '9' => (byte)(c - '0'),
+            >= 'a' and <= 'f' => (byte)(c - 'a' + 10),
+            >= 'A' and <= 'F' => (byte)(c - 'A' + 10),
+            _ => 0
+        };
+
+        private static RgbColor? TryParseHex(string s)
+        {
+            if (s.Length == 6 && s.All(c => Uri.IsHexDigit(c)))
+            {
+                byte rr = Convert.ToByte(s.Substring(0, 2), 16);
+                byte gg = Convert.ToByte(s.Substring(2, 2), 16);
+                byte bb = Convert.ToByte(s.Substring(4, 2), 16);
+                return new RgbColor(rr, gg, bb);
+            }
+            return null;
+        }
+    }
+
     public class SubjectMattingMaskGenerator : IBindableArgumentEffectValueProvider
     {
         public bool Enabled { get; set; } = true;
@@ -18,12 +96,11 @@ namespace projectFrameCut.Render.Effect
 
         public string? BindedArgumentProviderID { get; set; }
 
-        public Color KeyColor { get; set; } = Color.Green;
+        public RgbColor KeyColor { get; set; } = RgbColor.Green;
         public float Tolerance { get; set; } = 0.1f;
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public string TypeName => "SubjectMattingMaskGenerator";
 
@@ -45,7 +122,7 @@ namespace projectFrameCut.Render.Effect
             var effect = new SubjectMattingMaskGenerator();
             if (parameters.ContainsKey("KeyColor"))
             {
-                try { effect.KeyColor = Color.Parse(parameters["KeyColor"].ToString() ?? "Green"); } catch { }
+                try { effect.KeyColor = RgbColor.Parse(parameters["KeyColor"].ToString() ?? "Green"); } catch { }
             }
             if (parameters.ContainsKey("Tolerance"))
             {
@@ -58,43 +135,56 @@ namespace projectFrameCut.Render.Effect
 
         public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            using var srcImg = source.SaveToSixLaborsImage().CloneAs<Rgba32>();
-
-            var width = srcImg.Width;
-            var height = srcImg.Height;
+            var width = source.Width;
+            var height = source.Height;
             int pixelsCount = width * height;
 
             var r = new bool[pixelsCount];
             var g = new bool[pixelsCount];
             var b = new bool[pixelsCount];
 
-            var keyColorRgba = KeyColor.ToPixel<Rgba32>();
-            float toleranceSq = Tolerance * Tolerance * (255 * 255 * 3);
+            byte kr = KeyColor.R;
+            byte kg = KeyColor.G;
+            byte kb = KeyColor.B;
+            float toleranceSq = Tolerance * Tolerance * (255f * 255f * 3f);
 
-            srcImg.ProcessPixelRows(accessor =>
+            if (source is IPicture<byte> p8)
             {
-                for (int y = 0; y < accessor.Height; y++)
+                for (int i = 0; i < pixelsCount; i++)
                 {
-                    var row = accessor.GetRowSpan(y);
-                    int rowOffset = y * width;
-
-                    for (int x = 0; x < row.Length; x++)
-                    {
-                        var pixel = row[x];
-
-                        float distSq = (pixel.R - keyColorRgba.R) * (pixel.R - keyColorRgba.R) +
-                                       (pixel.G - keyColorRgba.G) * (pixel.G - keyColorRgba.G) +
-                                       (pixel.B - keyColorRgba.B) * (pixel.B - keyColorRgba.B);
-
-                        bool isSubject = distSq >= toleranceSq;
-
-                        int index = rowOffset + x;
-                        r[index] = isSubject;
-                        g[index] = isSubject;
-                        b[index] = isSubject;
-                    }
+                    float dr = p8.r[i] - kr;
+                    float dg = p8.g[i] - kg;
+                    float db = p8.b[i] - kb;
+                    float distSq = dr * dr + dg * dg + db * db;
+                    bool isSubject = distSq >= toleranceSq;
+                    r[i] = isSubject;
+                    g[i] = isSubject;
+                    b[i] = isSubject;
                 }
-            });
+            }
+            else if (source is IPicture<ushort> p16)
+            {
+                int u16kr = kr * 257;
+                int u16kg = kg * 257;
+                int u16kb = kb * 257;
+                float toleranceSq16 = Tolerance * Tolerance * (65535f * 65535f * 3f);
+
+                for (int i = 0; i < pixelsCount; i++)
+                {
+                    float dr = (int)p16.r[i] - u16kr;
+                    float dg = (int)p16.g[i] - u16kg;
+                    float db = (int)p16.b[i] - u16kb;
+                    float distSq = dr * dr + dg * dg + db * db;
+                    bool isSubject = distSq >= toleranceSq16;
+                    r[i] = isSubject;
+                    g[i] = isSubject;
+                    b[i] = isSubject;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
 
             return new BitMaskPicture
             {

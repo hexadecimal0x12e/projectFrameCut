@@ -21,7 +21,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
         public EffectImplementType ImplementType { get; set; } = EffectImplementType.ImageSharp;
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
@@ -53,12 +52,6 @@ namespace projectFrameCut.Render.Effect
 
             return PlaceEffect.Process(frame, startX, startY, targetWidth, targetHeight);
         }
-
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
-
 
         public bool IsValueValid(object value)
         {

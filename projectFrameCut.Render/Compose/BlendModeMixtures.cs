@@ -201,10 +201,7 @@ namespace projectFrameCut.Render.Compose
 
                 if (!HasValidChannels(basePicture) || !HasValidChannels(topPicture))
                 {
-                    var baseBpp = (int)basePicture.BitPerPixel;
-                    var topBpp = (int)topPicture.BitPerPixel;
-                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.HasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
-                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.HasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
+                    throw new InvalidDataException("Pictures are invalid.");
                 }
 
                 ExtractChannels(basePicture, out float[] baseR, out float[] baseG, out float[] baseB, out float[]? baseA);

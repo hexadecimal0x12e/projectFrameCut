@@ -17,7 +17,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MaxValue; set { } }
-        bool IEffect.YieldProcessStep { get => false; }
         EffectImplementType IEffect.ImplementType => EffectImplementType.HwAcceleration;
         EffectType IEffect.TypeOfEffect => EffectType.MixtureProvider;
     }

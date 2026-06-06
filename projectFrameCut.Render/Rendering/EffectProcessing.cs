@@ -33,60 +33,7 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
         }
 
-        public static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, INormalEffect item, IComputer? computer, int width, int height)
-        {
-            if (item.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = item.GetStep(frame, width, height);
-                    steps.Add(step);
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = item.Render(frame, computer, width, height);
-                }
-            }
-            else
-            {
-                frame = item.Render(frame, computer, width, height);
-            }
-        }
-
-        public static void ProcessContinuousEffect(uint targetFrame, IClip clip, IComputer? computer, ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IContinuousEffect c, int width, int height)
-        {
-            if (c.EndPoint == 0 && c.EndPoint == 0)
-            {
-                c.StartPoint = (int)(clip.StartFrame);
-                c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
-            }
-            if (c.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = c.GetStep(frame, targetFrame, width, height);
-                    steps.Add(step);
-
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for continuous effect {c.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = c.Render(frame, targetFrame, computer, width, height);
-                }
-
-            }
-            else
-            {
-                frame = c.Render(frame, targetFrame, computer, width, height);
-            }
-        }
-
-        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IBindableArgumentEffect item, IComputer? computer, int width, int height)
+        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, IBindableArgumentEffect item, IComputer? computer, int width, int height)
         {
             switch (item.EffectRole)
             {
@@ -161,62 +108,17 @@ namespace projectFrameCut.Render.Rendering
                         return mvproc.GenerateOnce;
                     }
                     break;
-                //case BindableArgumentEffectType.ResultGenerator:
-                //    if (item is IBindableArgumentEffectOneInputResultGenerator rg)
-                //    {
-                //        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                //        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                //        if (item.YieldProcessStep)
-                //        {
-                //            lastIsProcessStep = true;
-                //            try
-                //            {
-                //                var step = rg.GenerateResultStep(cachedValue, width, height);
-                //                steps.Add(step);
-                //                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                //            }
-                //            catch (Exception ex)
-                //            {
-                //                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                //                lastIsProcessStep = false;
-                //                frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //            }
-                //        }
-                //        else
-                //        {
-                //            frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //        }
-                //    }
-                //    break;
                 case BindableArgumentEffectType.OneInputResultGenerator:
                     if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(crg.BindedArgumentProviderID, "BindedArgumentProviderID");
                         var cachedValue = GetCachedValue(crg.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                        if (item.YieldProcessStep)
+                        if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
                         {
-                            lastIsProcessStep = true;
-                            try
-                            {
-                                if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
-                                {
-                                    crg.StartPoint = (int)(clip.StartFrame);
-                                    crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
-                                }
-                                var step = crg.GenerateResultStep(cachedValue, targetFrame, width, height);
-                                steps.Add(step);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                                lastIsProcessStep = false;
-                                frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                            }
+                            crg.StartPoint = (int)(clip.StartFrame);
+                            crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
                         }
-                        else
-                        {
-                            frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                        }
+                        frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
                     }
                     break;
                 default:

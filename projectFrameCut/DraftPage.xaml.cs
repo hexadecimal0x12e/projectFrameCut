@@ -32,7 +32,6 @@ using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.Effect;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Runtime;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
@@ -1594,7 +1593,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(ThumbTargetWidth * aspect);
                         var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
-                        resized.SaveAsPng16bpp(outPath, null);
+                        resized.SaveToPng(outPath);
                         resized.Dispose();
                         frame.Dispose();
                         LogDiagnostic($"Read the thumb for clip {clipId} in frame {f}.");

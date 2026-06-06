@@ -12,8 +12,4 @@ projectFrameCut의 목표는 강력하고, 배우기 쉬우며 완전히 자유�
 
 타사 라이브러리에 대한 감사
 
-이 프로젝트는 기본적인 프레임 추출 및 처리를 위해 [FFmpeg](https://ffmpeg.org)와 [SixLabors.ImageSharp](https://sixlabors.com/products/imagesharp/) 및 관련 라이브러리를 사용하며, FFmpeg 호출에는 `FFmpeg_droidFix.AutoGen`을 사용합니다.
-
-Windows 타겟에서는 하드웨어 가속을 위해 [ILGPU](https://github.com/m4rs-mt/ILGPU/)를 사용합니다.
-
-Android 타겟에서는 크래시 로그 처리를 위해 [Fishnet](https://github.com/Kyant0/Fishnet)을 사용합니다.
+이 프로젝트는 기본적인 프레임 추출 및 처리를 위해 [FFmpeg](https://ffmpeg.org)와 [projectFrameCut.Drawing

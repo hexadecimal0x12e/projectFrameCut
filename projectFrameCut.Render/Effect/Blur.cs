@@ -1,9 +1,6 @@
 using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,7 +25,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -63,55 +59,8 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            throw new NotImplementedException();
+            return BlurEffect.Process(source, Sigma);
         }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            return new BlurProcessStep(Sigma);
-        }
-    }
-
-    public class BlurProcessStep : IPictureProcessStep
-    {
-        private TimeSpan? _elapsed;
-        public string Name => "Blur";
-        public Dictionary<string, object?> Properties { get; set; } = new();
-
-        public float Sigma { get; }
-
-        public BlurProcessStep(float sigma)
-        {
-            Sigma = sigma;
-            Properties = new Dictionary<string, object?> { { nameof(Sigma), Sigma } };
-        }
-
-        public IPicture Process(IPicture source)
-        {
-            var sw = Stopwatch.StartNew();
-            var result = BlurEffect.Process(source, Sigma);
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-            return result;
-        }
-
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return ctx => ctx.GaussianBlur(Sigma);
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "Blur",
-            Operator = typeof(BlurProcessStep),
-            ProcessingFuncStackTrace = new StackTrace(true),
-
-            Properties = new Dictionary<string, object>
-            {
-                { nameof(Sigma), Sigma }
-            }
-        };
     }
 
     public class BlurEffectFactory : IEffectFactory
@@ -122,7 +71,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
         public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string> { { "Sigma", "float" } };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -132,7 +81,6 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 EffectImplementType.IPicture => BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

@@ -7,7 +7,6 @@ using Microsoft.Maui.Controls;
 using Path = System.IO.Path;
 using Image = Microsoft.Maui.Controls.Image;
 using projectFrameCut.Asset;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Linq;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Base;

@@ -234,26 +234,4 @@ namespace projectFrameCut.Shared
     /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
     public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
 
-    /// <summary>
-    /// Determines the method to degrade HDR image to SDR when the renderer or display does not support HDR.
-    /// </summary>
-    public enum HDRImageDegradeToSDRMode
-    {
-        /// <summary>
-        /// Normalize the pixels from the <see cref="IHDRPicture{T}.Brightness"/> channel to the range of RGB channels.
-        /// </summary>
-        NormalizeBrightnessToRGB,
-        /// <summary>
-        /// Overlay a black mask which has <see cref="IPicture{T}.a"/> channel from <see cref="IHDRPicture{T}.Brightness"/> to the RGB(A) channels.
-        /// </summary>
-        OverlayMaskFromBrightness,
-        /// <summary>
-        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away, and cast the remaining channels to an <see cref="Picture16bpp"/>.
-        /// </summary>
-        DiscardBrightnessChannel,
-        /// <summary>
-        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.BitPerPixel"/>.
-        /// </summary>
-        DisallowDowngrade
-    }
 }

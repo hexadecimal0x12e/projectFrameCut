@@ -25,7 +25,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = ["Amount"];
@@ -59,12 +58,6 @@ namespace projectFrameCut.Render.Effect
         {
             return SharpenEffect.Process(source, Amount);
         }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 
     public class SharpenEffectFactory : IEffectFactory

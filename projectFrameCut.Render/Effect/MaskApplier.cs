@@ -18,7 +18,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public string TypeName => "MaskApplier";
 
@@ -42,11 +41,6 @@ namespace projectFrameCut.Render.Effect
         }
 
         public bool IsValueValid(object value) => value is BitMaskPicture;
-
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
-        {
-            throw new NotSupportedException("MaskApplier does not support process step generation. Mask processing must be done through direct IPicture rendering.");
-        }
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }

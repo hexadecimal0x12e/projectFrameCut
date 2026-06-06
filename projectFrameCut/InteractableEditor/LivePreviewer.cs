@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls.PlatformConfiguration;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -8,7 +9,6 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp.Formats.Png;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,7 +72,7 @@ namespace projectFrameCut.LivePreview
                 autoCenterImplicitClip: true,
                 projectRelativeWidth: ProjectRelativeWidth,
                 projectRelativeHeight: ProjectRelativeHeight);
-            pic.SaveAsPng8bpp(destPath, encoder);
+            pic.ToBitPerPixel(8).SaveToPng(destPath);
             return destPath;
         }
 
@@ -282,11 +282,6 @@ namespace projectFrameCut.LivePreview
             LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {resultPath}");
             return resultPath;
         }
-
-        private static PngEncoder encoder = new()
-        {
-            BitDepth = PngBitDepth.Bit8,
-        };
 
         private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
         {

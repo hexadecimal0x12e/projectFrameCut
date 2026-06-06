@@ -15,7 +15,6 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Crop";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
-        public bool YieldProcessStep => true;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
         public int RelativeWidth { get; set; }
@@ -42,7 +41,7 @@ namespace projectFrameCut.Render.Effect
         public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
         {
             var crop = ResolveCrop(index, targetWidth, targetHeight);
-            return new CropProcessStep(crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle).Process(source);
+            return CropEffectShared.CropAndProcess(source, crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters)
@@ -72,12 +71,6 @@ namespace projectFrameCut.Render.Effect
             {
                 CropList.Sort((a, b) => a.Index.CompareTo(b.Index));
             }
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
-        {
-            var crop = ResolveCrop(index, targetWidth, targetHeight);
-            return new CropProcessStep(crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
         }
 
         private CropData ResolveCrop(uint index, int targetWidth, int targetHeight)
@@ -120,7 +113,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public string TypeName => "Crop";
         public string? BindedEffectGroupID { get; set; }
@@ -177,7 +169,7 @@ namespace projectFrameCut.Render.Effect
 
             if (Math.Abs(angle) > float.Epsilon)
             {
-                return new CropProcessStep(startX, startY, width, height, angle).Process(source);
+                return CropEffectShared.CropAndProcess(source, startX, startY, width, height, angle);
             }
 
             var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
@@ -258,15 +250,6 @@ namespace projectFrameCut.Render.Effect
                 CropList.Sort((a, b) => a.Index.CompareTo(b.Index));
             }
         }
-
-        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
-        {
-            var crop = CropList.Count > 0
-                ? CropEffectShared.GetCropForProgress(CropList, EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint))
-                : new CropData(0, StartX, StartY, Width, Height, Angle);
-            crop = CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
-            return new CropProcessStep(crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
-        }
     }
 
     public class CropEffectFactory : IEffectFactory
@@ -294,7 +277,7 @@ namespace projectFrameCut.Render.Effect
             {"Angle", "float" },
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -305,7 +288,6 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 EffectImplementType.HwAcceleration => CropEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
                 EffectImplementType.IPicture => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
@@ -314,7 +296,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
         {
-            return CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+            return CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), EffectImplementType.IPicture);
         }
     }
 
@@ -344,7 +326,7 @@ namespace projectFrameCut.Render.Effect
             { "CropList", "string" },
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -355,7 +337,6 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => BuildContinuous(parameters, EffectImplementType.ImageSharp),
                 EffectImplementType.HwAcceleration => BuildContinuousHw(parameters),
                 EffectImplementType.IPicture => BuildContinuous(parameters, EffectImplementType.IPicture),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
@@ -364,7 +345,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
         {
-            return BuildContinuous(parameters, EffectImplementType.ImageSharp);
+            return BuildContinuous(parameters, EffectImplementType.IPicture);
         }
 
         private static IEffect BuildContinuous(Dictionary<string, object>? parameters, EffectImplementType implementType)
