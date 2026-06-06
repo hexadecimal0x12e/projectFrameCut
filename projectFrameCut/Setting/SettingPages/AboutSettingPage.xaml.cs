@@ -95,8 +95,8 @@ public partial class AboutSettingPage : ContentPage
                 $"""
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
                 {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
-                CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
-                Drawing library: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
+                {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
+                {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
                 Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;

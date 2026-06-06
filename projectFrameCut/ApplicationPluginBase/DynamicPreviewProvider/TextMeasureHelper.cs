@@ -1,3 +1,6 @@
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Shared;
 using System.Text.Json;
@@ -17,9 +20,8 @@ internal static class TextMeasureHelper
         return MeasureBounds(entries);
     }
 
-    public static Rect MeasureBounds(IEnumerable<TextClipEntry> entries)
+    public static Rect MeasureBounds(IReadOnlyList<TextClipEntry> entries)
     {
-        var fontCollection = TextClip.GetFont();
         bool hasBounds = false;
         double minX = 0, minY = 0, maxX = 0, maxY = 0;
 
@@ -28,24 +30,20 @@ internal static class TextMeasureHelper
             if (string.IsNullOrEmpty(entry.text))
                 continue;
 
-            if (!fontCollection.TryGet(entry.fontFamily, out var family)
-                && !fontCollection.TryGet("HarmonyOS_Sans_SC_Regular", out family))
+            if (!TextClipFontRegistry.TryGetFont(entry.fontFamily, out var primaryFont) || primaryFont is null)
             {
-                family = fontCollection.Families.FirstOrDefault();
-                if (family == default)
+                var fallbackName = TextClipFontRegistry.FallbackFamilyName;
+                if (fallbackName is null || !TextClipFontRegistry.TryGetFont(fallbackName, out primaryFont) || primaryFont is null)
                     continue;
             }
-            var font = family.CreateFont(entry.fontSize, entry.fontStyle);
-            var dpi = entry.dpi ?? 72f;
-            var strokePadding = entry.strokeWidth ?? 0f;
 
             double left, top, right, bottom;
             if (entry.UseVerticalLayout)
             {
                 var glyphCount = entry.text.Count(c => c is not '\n' and not '\r');
                 if (glyphCount <= 0) glyphCount = 1;
-                var emSize = entry.fontSize * (dpi / 72f);
-                var strokeExtra = strokePadding * 2f;
+                var emSize = entry.fontSize;
+                var strokeExtra = (entry.strokeWidth ?? 0f) * 2f;
                 var w = emSize + strokeExtra;
                 var h = glyphCount * emSize * entry.lineSpacing + strokeExtra;
 
@@ -54,13 +52,13 @@ internal static class TextMeasureHelper
 
                 switch (entry.horizontalAlignment)
                 {
-                    case SixLabors.Fonts.HorizontalAlignment.Center: originX -= w / 2d; break;
-                    case SixLabors.Fonts.HorizontalAlignment.Right: originX -= w; break;
+                    case ClipHorizontalAlignment.Center: originX -= w / 2d; break;
+                    case ClipHorizontalAlignment.Right: originX -= w; break;
                 }
                 switch (entry.verticalAlignment)
                 {
-                    case SixLabors.Fonts.VerticalAlignment.Center: originY -= h / 2d; break;
-                    case SixLabors.Fonts.VerticalAlignment.Bottom: originY -= h; break;
+                    case ClipVerticalAlignment.Center: originY -= h / 2d; break;
+                    case ClipVerticalAlignment.Bottom: originY -= h; break;
                 }
 
                 left = originX;
@@ -70,26 +68,29 @@ internal static class TextMeasureHelper
             }
             else
             {
-                var textOpts = new SixLabors.ImageSharp.Drawing.Processing.RichTextOptions(font)
+                var textEntry = new TextEntry
                 {
-                    Dpi = dpi,
-                    KerningMode = entry.applyKerning ? SixLabors.Fonts.KerningMode.Standard : SixLabors.Fonts.KerningMode.None,
-                    LineSpacing = entry.lineSpacing,
-                    HorizontalAlignment = entry.horizontalAlignment,
-                    VerticalAlignment = entry.verticalAlignment,
-                    Origin = new SixLabors.ImageSharp.PointF(entry.x, entry.y),
+                    Text = entry.text,
+                    FontName = entry.fontFamily,
+                    FontSize = entry.fontSize / 1000f,
+                    LineSpacing = entry.lineSpacing - 1f,
+                    Alignment = entry.horizontalAlignment switch
+                    {
+                        ClipHorizontalAlignment.Center => Drawing.Text.Entry.TextAlignment.Center,
+                        ClipHorizontalAlignment.Right => Drawing.Text.Entry.TextAlignment.Right,
+                        _ => Drawing.Text.Entry.TextAlignment.Left,
+                    },
                 };
-                if (entry.wrappingWidth.HasValue)
-                {
-                    textOpts.WrappingLength = entry.wrappingWidth.Value;
-                }
+                var engine = new NormalTypesettingEngine();
+                var (widthNorm, heightNorm) = engine.Measure(textEntry, primaryFont);
+                var measuredW = widthNorm * 1000f;
+                var measuredH = heightNorm * 1000f;
+                var strokeInflate = Math.Max(0f, entry.strokeWidth ?? 0f) * 0.5f;
 
-                var measured = SixLabors.Fonts.TextMeasurer.MeasureBounds(entry.text, textOpts);
-                var strokeInflate = Math.Max(0f, strokePadding) * 0.5f;
-                left = measured.X - strokeInflate;
-                top = measured.Y - strokeInflate;
-                right = measured.X + measured.Width + strokeInflate;
-                bottom = measured.Y + measured.Height + strokeInflate;
+                left = entry.x - strokeInflate;
+                top = entry.y - strokeInflate;
+                right = entry.x + measuredW + strokeInflate;
+                bottom = entry.y + measuredH + strokeInflate;
             }
 
             if (right <= left) right = left + 1d;
@@ -168,5 +169,4 @@ internal static class TextMeasureHelper
         }
         return clip.TextEntries;
     }
-
 }

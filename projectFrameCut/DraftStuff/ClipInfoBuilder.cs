@@ -1718,17 +1718,17 @@ namespace projectFrameCut.DraftStuff
             stack.Children.Add(glyphWarning);
 
 
-            var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { SixLabors.Fonts.FontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, SixLabors.Fonts.FontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, SixLabors.Fonts.FontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, SixLabors.Fonts.FontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
+            var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { ClipFontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, ClipFontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, ClipFontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, ClipFontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
             stylePicker.SelectedIndexChanged += (s, ev) =>
             {
                 if (stylePicker.SelectedItem is string sel)
                 {
                     var fs = sel switch
                     {
-                        var v when v == PPLocalizedResources.TextOption_Style_Bold => SixLabors.Fonts.FontStyle.Bold,
-                        var v when v == PPLocalizedResources.TextOption_Style_Italic => SixLabors.Fonts.FontStyle.Italic,
-                        var v when v == PPLocalizedResources.TextOption_Style_BoldItalic => SixLabors.Fonts.FontStyle.BoldItalic,
-                        _ => SixLabors.Fonts.FontStyle.Regular,
+                        var v when v == PPLocalizedResources.TextOption_Style_Bold => ClipFontStyle.Bold,
+                        var v when v == PPLocalizedResources.TextOption_Style_Italic => ClipFontStyle.Italic,
+                        var v when v == PPLocalizedResources.TextOption_Style_BoldItalic => ClipFontStyle.BoldItalic,
+                        _ => ClipFontStyle.Regular,
                     };
                     onChanged?.Invoke(idx, e with { fontStyle = fs });
                 }
@@ -1798,30 +1798,30 @@ namespace projectFrameCut.DraftStuff
                 },
                 ColumnSpacing = 6
             };
-            var hAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_HorizonOption, ItemsSource = new[] { PPLocalizedResources.TextOption_HorizonOption_Left, PPLocalizedResources.TextOption_HorizonOption_Center, PPLocalizedResources.TextOption_HorizonOption_Right }, SelectedItem = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => PPLocalizedResources.TextOption_HorizonOption_Left, SixLabors.Fonts.HorizontalAlignment.Center => PPLocalizedResources.TextOption_HorizonOption_Center, SixLabors.Fonts.HorizontalAlignment.Right => PPLocalizedResources.TextOption_HorizonOption_Right, _ => PPLocalizedResources.TextOption_HorizonOption_Left, } };
+            var hAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_HorizonOption, ItemsSource = new[] { PPLocalizedResources.TextOption_HorizonOption_Left, PPLocalizedResources.TextOption_HorizonOption_Center, PPLocalizedResources.TextOption_HorizonOption_Right }, SelectedItem = e.horizontalAlignment switch { ClipHorizontalAlignment.Left => PPLocalizedResources.TextOption_HorizonOption_Left, ClipHorizontalAlignment.Center => PPLocalizedResources.TextOption_HorizonOption_Center, ClipHorizontalAlignment.Right => PPLocalizedResources.TextOption_HorizonOption_Right, _ => PPLocalizedResources.TextOption_HorizonOption_Left, } };
             hAlignPicker.SelectedIndexChanged += (s, ev) =>
             {
                 if (hAlignPicker.SelectedItem is string sel)
                 {
-                    SixLabors.Fonts.HorizontalAlignment ha = sel switch
+                    ClipHorizontalAlignment ha = sel switch
                     {
-                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Center => SixLabors.Fonts.HorizontalAlignment.Center,
-                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Right => SixLabors.Fonts.HorizontalAlignment.Right,
-                        _ => SixLabors.Fonts.HorizontalAlignment.Left,
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Center => ClipHorizontalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Right => ClipHorizontalAlignment.Right,
+                        _ => ClipHorizontalAlignment.Left,
                     };
                     onChanged?.Invoke(idx, e with { horizontalAlignment = ha });
                 }
             };
-            var vAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_VerticalOption, ItemsSource = new[] { PPLocalizedResources.TextOption_VerticalOption_Top, PPLocalizedResources.TextOption_VerticalOption_Center, PPLocalizedResources.TextOption_VerticalOption_Bottom }, SelectedItem = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => PPLocalizedResources.TextOption_VerticalOption_Top, SixLabors.Fonts.VerticalAlignment.Center => PPLocalizedResources.TextOption_VerticalOption_Center, SixLabors.Fonts.VerticalAlignment.Bottom => PPLocalizedResources.TextOption_VerticalOption_Bottom, _ => PPLocalizedResources.TextOption_VerticalOption_Top, } };
+            var vAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_VerticalOption, ItemsSource = new[] { PPLocalizedResources.TextOption_VerticalOption_Top, PPLocalizedResources.TextOption_VerticalOption_Center, PPLocalizedResources.TextOption_VerticalOption_Bottom }, SelectedItem = e.verticalAlignment switch { ClipVerticalAlignment.Top => PPLocalizedResources.TextOption_VerticalOption_Top, ClipVerticalAlignment.Center => PPLocalizedResources.TextOption_VerticalOption_Center, ClipVerticalAlignment.Bottom => PPLocalizedResources.TextOption_VerticalOption_Bottom, _ => PPLocalizedResources.TextOption_VerticalOption_Top, } };
             vAlignPicker.SelectedIndexChanged += (s, ev) =>
             {
                 if (vAlignPicker.SelectedItem is string sel)
                 {
-                    SixLabors.Fonts.VerticalAlignment va = sel switch
+                    ClipVerticalAlignment va = sel switch
                     {
-                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => SixLabors.Fonts.VerticalAlignment.Center,
-                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Bottom => SixLabors.Fonts.VerticalAlignment.Bottom,
-                        _ => SixLabors.Fonts.VerticalAlignment.Top,
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => ClipVerticalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Bottom => ClipVerticalAlignment.Bottom,
+                        _ => ClipVerticalAlignment.Top,
                     };
                     onChanged?.Invoke(idx, e with { verticalAlignment = va });
                 }
@@ -2290,7 +2290,7 @@ namespace projectFrameCut.DraftStuff
                         text = "",
                         x = 0,
                         y = 0,
-                        fontFamily = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.FirstOrDefault().Name ?? "Arial",
+                        fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial",
                         fontSize = 24f,
                         r = 65535,
                         g = 65535,

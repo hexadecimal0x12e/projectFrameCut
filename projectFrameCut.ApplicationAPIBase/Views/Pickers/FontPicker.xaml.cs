@@ -1,4 +1,3 @@
-using SixLabors.Fonts;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Drawing.Text.FontHelper;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -18,11 +18,7 @@ public class FontItem : INotifyPropertyChanged
 
     public string Path { get; set; } = "";
 
-    public FontFileInfo? InnerItem { get; set; }
-
-    public FontCollection? InnerFont { get; set; }
-
-    public FontFamily InnerFamily { get; set; }
+    public FontFace? InnerFont { get; set; }
 
     private string? _displayName;
 

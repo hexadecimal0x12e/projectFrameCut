@@ -11,8 +11,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using projectFrameCut.ApplicationAPIBase.Helpers;
-using SixLabors.Fonts;
-using Font = SixLabors.Fonts.Font;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -40,7 +42,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         protected virtual string DefaultText => "拼音";
 
-        protected virtual float DefaultFontSize => 64f;
+        protected virtual float DefaultFontSize => 120f;
 
         protected virtual float DefaultPinyinFontSizeRatio => 0.4f;
 
@@ -80,9 +82,9 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var color = ParseColorOrFallback(colorText, Colors.White);
             var pinyinColor = ParseColorOrFallback(pinyinColorText, color);
 
-            var font = ResolveFont(fontFamily, fontSize);
-            var pinyinFont = ResolveFont(fontFamily, pinyinFontSize);
-            var pinyinBlockHeight = MeasureTextHeight(pinyinFont, "Ag");
+            var font = ResolveFontFace(fontFamily);
+            var pinyinFont = ResolveFontFace(fontFamily);
+            var pinyinBlockHeight = pinyinFont is not null ? MeasureTextHeight(pinyinFont, "Ag", pinyinFontSize) : pinyinFontSize;
             var hasHanCharacters = text.Any(IsHanCharacter);
             var baseLineY = hasHanCharacters
                 ? (int)Math.Ceiling(pinyinBlockHeight + Math.Max(8f, pinyinFontSize * 0.18f))
@@ -102,8 +104,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     var isKnown = rawPinyin.Length > 0 && rawPinyin != c.ToString();
                     if (isKnown)
                     {
-                        var estCharWidth = MeasureTextWidth(font, c.ToString());
-                        var estPinyinWidth = MeasureTextWidth(pinyinFont, rawPinyin);
+                        var estCharWidth = MeasureTextWidth(font!, c.ToString(), fontSize);
+                        var estPinyinWidth = MeasureTextWidth(pinyinFont!, rawPinyin, pinyinFontSize);
                         var columnWidth = (int)Math.Ceiling(Math.Max(estCharWidth, estPinyinWidth)) + charSpacing;
                         var centerX = currentX + columnWidth / 2;
 
@@ -114,7 +116,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                             y = 0,
                             fontFamily = fontFamily,
                             fontSize = pinyinFontSize,
-                            horizontalAlignment = SixLabors.Fonts.HorizontalAlignment.Center,
+                            horizontalAlignment = ClipHorizontalAlignment.Center,
                             r = (ushort)Math.Round(pinyinColor.Red * 65535),
                             g = (ushort)Math.Round(pinyinColor.Green * 65535),
                             b = (ushort)Math.Round(pinyinColor.Blue * 65535),
@@ -128,7 +130,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                             y = baseLineY,
                             fontFamily = fontFamily,
                             fontSize = fontSize,
-                            horizontalAlignment = SixLabors.Fonts.HorizontalAlignment.Center,
+                            horizontalAlignment = ClipHorizontalAlignment.Center,
                             r = (ushort)Math.Round(color.Red * 65535),
                             g = (ushort)Math.Round(color.Green * 65535),
                             b = (ushort)Math.Round(color.Blue * 65535),
@@ -139,7 +141,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     }
                     else
                     {
-                        var estWidth = (int)Math.Ceiling(MeasureTextWidth(font, c.ToString())) + charSpacing;
+                        var estWidth = (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
                         entries.Add(new TextClipEntry
                         {
                             text = c.ToString(),
@@ -159,7 +161,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 {
                     var estWidth = c == ' '
                         ? (int)Math.Ceiling(fontSize * 0.35f) + charSpacing
-                        : (int)Math.Ceiling(MeasureTextWidth(font, c.ToString())) + charSpacing;
+                        : (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
 
                     entries.Add(new TextClipEntry
                     {
@@ -322,21 +324,11 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)),
                 DefaultFontSize);
 
-            var scaleX = (double)TargetWidth / currentRect.TargetWidth;
             var scaleY = (double)TargetHeight / currentRect.TargetHeight;
-            if (double.IsNaN(scaleX) || double.IsInfinity(scaleX) || scaleX <= 0)
+            if (double.IsNaN(scaleY) || double.IsInfinity(scaleY) || scaleY <= 0)
                 return new Dictionary<string, string>(_parameters);
 
-            double scale = scaleX;
-            if (!isInRatio && !double.IsNaN(scaleY) && !double.IsInfinity(scaleY) && scaleY > 0)
-            {
-                if (Math.Abs(scaleX - scaleY) > 0.0001)
-                {
-                    scale = (scaleX + scaleY) / 2d;
-                }
-            }
-
-            var updatedSize = (float)(currentFontSize * scale);
+            var updatedSize = (float)(currentFontSize * scaleY);
             if (updatedSize > 0)
             {
                 _parameters[SizeKey] = updatedSize.ToString(CultureInfo.InvariantCulture);
@@ -383,15 +375,15 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var (width, height) = EstimateEntrySize(entry);
             var left = entry.horizontalAlignment switch
             {
-                SixLabors.Fonts.HorizontalAlignment.Center => entry.x - width / 2f,
-                SixLabors.Fonts.HorizontalAlignment.Right => entry.x - width,
+                ClipHorizontalAlignment.Center => entry.x - width / 2f,
+                ClipHorizontalAlignment.Right => entry.x - width,
                 _ => entry.x
             };
 
             var top = entry.verticalAlignment switch
             {
-                SixLabors.Fonts.VerticalAlignment.Center => entry.y - height / 2f,
-                SixLabors.Fonts.VerticalAlignment.Bottom => entry.y - height,
+                ClipVerticalAlignment.Center => entry.y - height / 2f,
+                ClipVerticalAlignment.Bottom => entry.y - height,
                 _ => entry.y
             };
 
@@ -402,11 +394,25 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         {
             var text = entry.text ?? string.Empty;
             var fontSize = entry.fontSize > 0 ? entry.fontSize : 24f;
-            var font = ResolveFont(entry.fontFamily ?? "Arial", fontSize);
-            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
-            var width = Math.Max(1, (int)Math.Ceiling(rect.Width));
-            var height = Math.Max(1, (int)Math.Ceiling(rect.Height));
-            return (width, height);
+            var font = ResolveFontFace(entry.fontFamily ?? "Arial");
+            if (font is not null)
+            {
+                var textEntry = new TextEntry
+                {
+                    Text = text,
+                    FontName = font.FamilyName,
+                    FontSize = fontSize / 1000f,
+                    LineSpacing = 0f,
+                };
+                var engine = new NormalTypesettingEngine();
+                var (widthNorm, heightNorm) = engine.Measure(textEntry, font);
+                var width = Math.Max(1, (int)Math.Ceiling(widthNorm * 1000f));
+                var height = Math.Max(1, (int)Math.Ceiling(heightNorm * 1000f));
+                return (width, height);
+            }
+            var fallbackWidth = Math.Max(1, (int)Math.Round(text.Length * fontSize * 0.6f));
+            var fallbackHeight = Math.Max(1, (int)Math.Round(fontSize * 1.2f));
+            return (fallbackWidth, fallbackHeight);
         }
 
         private static (float Width, float Height) MeasureEntries(TextClipEntry[] entries)
@@ -480,47 +486,50 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return false;
         }
 
-        private static Font ResolveFont(string fontFamily, float fontSize)
+        private static FontFace? ResolveFontFace(string fontFamily)
         {
-            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var family))
-            {
-                return family.CreateFont(fontSize);
-            }
+            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var face))
+                return face;
 
-            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFamily))
-            {
-                return fallbackFamily.CreateFont(fontSize);
-            }
+            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFace))
+                return fallbackFace;
 
-            var systemFamily = SystemFonts.Families.FirstOrDefault();
-            if (systemFamily != default)
-            {
-                return systemFamily.CreateFont(fontSize);
-            }
-
-            return SystemFonts.CreateFont("Arial", fontSize);
+            TextClipFontRegistry.TryGetFont("Arial", out var registryFont);
+            return registryFont;
         }
 
-        private static float MeasureTextWidth(Font font, string text)
+        private static float MeasureTextWidth(FontFace font, string text, float fontSize)
         {
             if (string.IsNullOrEmpty(text))
-            {
-                return Math.Max(1f, font.Size);
-            }
+                return Math.Max(1f, fontSize);
 
-            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
-            return Math.Max(1f, rect.Width);
+            var entry = new TextEntry
+            {
+                Text = text,
+                FontName = font.FamilyName,
+                FontSize = fontSize / 100f,
+                LineSpacing = 0f,
+            };
+            var engine = new NormalTypesettingEngine();
+            var (width, _) = engine.Measure(entry, font);
+            return Math.Max(1f, width * 100f);
         }
 
-        private static float MeasureTextHeight(Font font, string text)
+        private static float MeasureTextHeight(FontFace font, string text, float fontSize)
         {
             if (string.IsNullOrEmpty(text))
-            {
-                return Math.Max(1f, font.Size);
-            }
+                return Math.Max(1f, fontSize);
 
-            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
-            return Math.Max(1f, rect.Height);
+            var entry = new TextEntry
+            {
+                Text = text,
+                FontName = font.FamilyName,
+                FontSize = fontSize / 100f,
+                LineSpacing = 0f,
+            };
+            var engine = new NormalTypesettingEngine();
+            var (_, height) = engine.Measure(entry, font);
+            return Math.Max(1f, height * 100f);
         }
 
         private static Color ParseColorOrFallback(string? value, Color fallback)

@@ -488,7 +488,14 @@ namespace projectFrameCut.Shared
             ArgumentNullException.ThrowIfNull(picture);
             lock (picture)
             {
-                picture.ProcessStack = stack;
+                if(stack.Count == 1)
+                {
+                    picture.ProcessStack = [.. picture.ProcessStack, stack.First()];
+                }
+                else
+                {
+                    picture.ProcessStack = stack;
+                }
                 return picture;
             }
         }

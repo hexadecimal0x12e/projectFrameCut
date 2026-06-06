@@ -246,7 +246,7 @@ public class InternalPluginBase : IPluginBase
     {
         try
         {
-            TextClip.GetFont(); //build font cache
+            TextClipFontRegistry.Initialize();
         }
         catch (Exception ex)
         {

@@ -4,10 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Drawing.Processing;
 
 namespace projectFrameCut.Shared
 {
@@ -140,7 +136,7 @@ namespace projectFrameCut.Shared
         // Font
         public string fontFamily { get; set; }
         public float fontSize { get; set; }
-        public FontStyle fontStyle { get; init; } = FontStyle.Regular;
+        public ClipFontStyle fontStyle { get; init; } = ClipFontStyle.Regular;
         public bool UseVerticalLayout { get; set; } = false;
         public bool KeepNonCJKTextAsHorizontal { get; set; } = false;
 
@@ -151,8 +147,8 @@ namespace projectFrameCut.Shared
         public float? a { get; set; }
 
         // Alignment and wrapping
-        public HorizontalAlignment horizontalAlignment { get; init; } = HorizontalAlignment.Left;
-        public VerticalAlignment verticalAlignment { get; init; } = VerticalAlignment.Top;
+        public ClipHorizontalAlignment horizontalAlignment { get; init; } = ClipHorizontalAlignment.Left;
+        public ClipVerticalAlignment verticalAlignment { get; init; } = ClipVerticalAlignment.Top;
         public float? wrappingWidth { get; init; } = null; // when set, enables wrapping within this width
 
         // Layout and metrics

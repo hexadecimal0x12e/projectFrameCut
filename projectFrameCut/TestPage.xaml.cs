@@ -35,6 +35,10 @@ using System.Text.Json.Serialization.Metadata;
 using System.Text;
 using FFmpeg.AutoGen;
 using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Text.FontHelper;
+using System.Text.Json.Serialization;
+
+
 
 
 
@@ -87,12 +91,12 @@ public partial class TestPage : ContentPage
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
-        TextClip.GetFont(true);
+        TextClipFontRegistry.Initialize();
         _ = LoadFontPickerAsync();
 
         TextPicker.SelectedFontChanged += async (s, e) =>
         {
-            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerItem, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
 
         };
     }
@@ -1225,12 +1229,15 @@ public partial class TestPage : ContentPage
 
     private async void TestFontPropReaderButton_Clicked(object sender, EventArgs e)
     {
-        var info = TextHelper.ReadFontFileInfo(@"C:\Windows\Fonts\msyhbd.ttc");
-        await DisplayAlertAsync(Title, JsonSerializer.Serialize(info, new JsonSerializerOptions
+        var info = TextHelper.CreateFontInfo("1",@"C:\Windows\Fonts\msyhbd.ttc");
+        foreach (var item in info)
         {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(item.InnerFont, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            }), "ok");
+        }
     }
     #endregion
 

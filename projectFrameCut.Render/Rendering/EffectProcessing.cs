@@ -1,11 +1,12 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -235,10 +236,23 @@ namespace projectFrameCut.Render.Rendering
             string fontFamily = "Arial";
             float padding = 10; // 距离边缘的边距
 
-            // 测量文本尺寸
-            var font = SystemFonts.CreateFont(fontFamily, fontSize, FontStyle.Regular);
-            var textOptions = new TextOptions(font);
-            var textSize = TextMeasurer.MeasureSize(watermarkText, textOptions);
+            // 测量文本尺寸（通过 NormalTypesettingEngine）
+            float measuredWidth = watermarkText.Length * fontSize * 0.6f;
+            float measuredHeight = fontSize;
+            if (TextClipFontRegistry.TryGetFont(fontFamily, out var fontFace) && fontFace is not null)
+            {
+                var measureEntry = new TextEntry
+                {
+                    Text = watermarkText,
+                    FontName = fontFamily,
+                    FontSize = fontSize / MathF.Min(src.Width, src.Height),
+                    LineSpacing = 0f,
+                };
+                var engine = new NormalTypesettingEngine();
+                var (w, h) = engine.Measure(measureEntry, fontFace);
+                measuredWidth = w * MathF.Min(src.Width, src.Height);
+                measuredHeight = h * MathF.Min(src.Width, src.Height);
+            }
 
             var wtmkClip = new TextClip
             {
@@ -250,11 +264,11 @@ namespace projectFrameCut.Render.Rendering
                     new TextClipEntry
                     {
                         text = watermarkText,
-                        x = (int)(src.Width - textSize.Width - padding),
-                        y = (int)(src.Height - textSize.Height - padding),
+                        x = (int)(src.Width - measuredWidth - padding),
+                        y = (int)(src.Height - measuredHeight - padding),
                         fontFamily = fontFamily,
                         fontSize = fontSize,
-                        fontStyle = FontStyle.Regular,
+                        fontStyle = ClipFontStyle.Regular,
                         r = 65535,
                         g = 65535,
                         b = 65535,
