@@ -13,17 +13,14 @@
 		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
 		<Title>codename 'projectFrameCut'</Title>
+
+		<RestoreSources>$(RestoreSources);..\..\projectFrameCut.Drawing\nupkg</RestoreSources>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing\projectFrameCut.Drawing.csproj" />
-	</ItemGroup>
-	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
-		<PackageReference Include="System.IO.Hashing" Version="10.0.*" />
+		<PackageReference Include="projectFrameCut.Drawing" Version="1.0.0" />
 	</ItemGroup>
-	<Target Name="PreBuild" BeforeTargets="Restore">
-		<Exec Command="dotnet restore ..\projectFrameCut.sln" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" IgnoreExitCode="false" />
-	</Target>
+
 
 </Project>

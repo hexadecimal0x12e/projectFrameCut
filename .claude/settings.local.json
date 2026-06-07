@@ -19,7 +19,9 @@
       "Bash(xargs grep -l \"projectFrameCut.Drawing\" --include=\"*.cs\")",
       "Read(//mnt/d/**)",
       "Read(//d//**)",
-      "Bash(dotnet test *)"
+      "Bash(dotnet test *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Item *)"
     ],
     "deny": [
       "Bash(Select-*)",

@@ -19,6 +19,8 @@ projectFrameCut的各个部分使用的是分离的许可证：
 你可以给你的修改版本使用另一个名字。
 
 # 关于projectFrameCut里的第三方库
+项目使用了projectFrameCut.Drawing作为核心的图形处理、文本渲染和特效的实际实现。
+
 项目使用了[FFmpeg](https://ffmpeg.org)和`projectFrameCut.Drawing`作为基本的帧提取和处理，使用了FFmpeg\_droidFix.AutoGen来调用FFmpeg。
 
 项目使用了[CommunityToolkit](https://github.com/CommunityToolkit/Maui)实现了大量的UI层功能。
