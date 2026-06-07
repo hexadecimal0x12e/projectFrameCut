@@ -24,7 +24,7 @@ namespace projectFrameCut.Benchmarker
                 var sw = Stopwatch.StartNew();
                 if (instance is IContinuousEffect c)
                 {
-                    c.Render(src, 0, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
+                    c.Render(src, 0f, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
                 }
                 else
                 {

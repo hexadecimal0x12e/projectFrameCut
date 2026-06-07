@@ -36,6 +36,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
             { "ProgressPlacer", () => new Effect.ProgressPlacerEffectBundle() },
             { "ProgressCrop", () => new Effect.ProgressCropEffectBundle() },
+            { "TextFadeIn", () => new Effect.TextFadeInEffectBundle() },
         };
 
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>

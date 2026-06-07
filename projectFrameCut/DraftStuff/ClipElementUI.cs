@@ -203,6 +203,7 @@ namespace projectFrameCut.DraftStuff
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text,
             _ => EffectTarget.Video
         };
 

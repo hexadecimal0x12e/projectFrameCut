@@ -76,7 +76,8 @@ public class InternalPluginBase : IPluginBase
         {"OverlayBlendMixture", new(() => new Compose.OverlayBlendMixture()) },
         {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
         {"LightenMixture", new(() => new Compose.LightenMixture()) },
-        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) }
+        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) },
+        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -94,6 +95,7 @@ public class InternalPluginBase : IPluginBase
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
         {"Jitter", new JitterContinuousEffectFactory()},
         {"ProgressPlacer", new ProgressPlacerFactory()},
+        {"TextFadeIn", new Effect.TextFadeInContinuousEffectFactory()},
         {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
         {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
         {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},

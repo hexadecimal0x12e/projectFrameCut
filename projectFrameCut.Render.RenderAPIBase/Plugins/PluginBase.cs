@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 5;
+        public const int CurrentPluginAPIVersion = 6;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -124,11 +124,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an blank IEffect instance from the given id.
         /// </summary>
+        /// <remarks>
+        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectProvider"/>
+        /// </remarks>
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
 
         /// <summary>
         /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
+        /// <remarks>
+        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectFactoryProvider"/>
+        /// </remarks>
         public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
 
         /// <summary>

@@ -115,6 +115,34 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         // ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
+        /// 将字体 SubfamilyName（如 "Regular"、"Bold"）本地化为当前语言的显示名称。
+        /// </summary>
+        private static string LocalizeFontStyleName(string subfamilyName)
+        {
+            if (string.IsNullOrWhiteSpace(subfamilyName))
+                return subfamilyName ?? string.Empty;
+
+            var loc = Localized;
+
+            return subfamilyName.Trim() switch
+            {
+                string s when s.Equals("Regular", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Regular,
+                string s when s.Equals("Bold", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Bold,
+                string s when s.Equals("Italic", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Italic,
+                string s when s.Equals("Light", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Light,
+                string s when s.Equals("Medium", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Medium,
+                string s when s.Equals("SemiBold", StringComparison.OrdinalIgnoreCase) || s.Equals("DemiBold", StringComparison.OrdinalIgnoreCase) || s.Equals("Semibold", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_SemiBold,
+                string s when s.Equals("ExtraBold", StringComparison.OrdinalIgnoreCase) || s.Equals("Extra Bold", StringComparison.OrdinalIgnoreCase) || s.Equals("Black", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_ExtraBold,
+                string s when s.Equals("Thin", StringComparison.OrdinalIgnoreCase) || s.Equals("Hairline", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Thin,
+                string s when s.Equals("ExtraLight", StringComparison.OrdinalIgnoreCase) || s.Equals("Extra Light", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_ExtraLight,
+                string s when s.Equals("Heavy", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Heavy,
+                string s when s.Equals("Book", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Book,
+                string s when s.Equals("Normal", StringComparison.OrdinalIgnoreCase) => loc.FontPicker_FontStyle_Normal,
+                _ => subfamilyName.Trim(),
+            };
+        }
+
+        /// <summary>
         /// 检测 <see cref="FontFace"/> 中是否存在指定字符的字形（Glyph）。
         /// </summary>
         public static bool FontContainsGlyph(FontFace font, char character)
@@ -303,14 +331,17 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         {
             try
             {
+                bool ttcTried = false, ttfTried = false;
                 if (Path.GetExtension(path).ToLower() == "ttc") goto ttc;
+            ttf:
                 try
                 {
+                    ttfTried = true;
                     var face = Drawing.Text.FontHelper.FontFace.Load(path);
                     return [new FontItem
                     {
                         FontName = face.FamilyName,
-                        DisplayName = $"{face.DisplayName} {face.SubfamilyName}",
+                        DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
                         Path = path,
                         PrimaryLanguageTag = face.DisplayName,
                         Category = category,
@@ -319,17 +350,18 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                 }
                 catch
                 {
-                    goto ttc;
+                    if (!ttcTried) goto ttc;
                 }
 
             ttc:
                 try
                 {
+                    ttcTried = true;
                     var faces = Drawing.Text.FontHelper.FontCollection.Load(path);
                     return faces.Select(c => c.Load()).Select(face => new FontItem
                     {
                         FontName = face.FamilyName,
-                        DisplayName = $"{face.DisplayName} {face.SubfamilyName}",
+                        DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
                         Path = path,
                         PrimaryLanguageTag = face.DisplayName,
                         Category = category,
@@ -338,7 +370,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                 }
                 catch
                 {
-
+                    if (!ttfTried) goto ttf;
                 }
                 return Enumerable.Empty<FontItem>();
             }

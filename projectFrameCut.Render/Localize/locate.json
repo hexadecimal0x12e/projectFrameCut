@@ -127,6 +127,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Add_Effect_None",
+        "Value": "\u6CA1\u6709\u4EFB\u4F55\u53EF\u7528\u7684\u6548\u679C\u3002\u8BF7\u68C0\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Add_Effect_Select",
         "Value": "\u9009\u62E9\u4E00\u4E2A\u6548\u679C",
         "Mode": "ConstString",
@@ -1874,8 +1882,32 @@
         "DontTranslate": false
       },
       {
-        "Id": "Add_Effect_None",
-        "Value": "\u6CA1\u6709\u4EFB\u4F55\u53EF\u7528\u7684\u6548\u679C\u3002\u8BF7\u68C0\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
+        "Id": "Effect_TextEffect",
+        "Value": "\u6587\u672C\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u6587\u672C\u8FDE\u7EED\u6027\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u641C\u7D22\u6548\u679C\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u6240\u6709\u7C7B\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

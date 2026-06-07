@@ -33,14 +33,15 @@ namespace projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider
         /// <returns></returns>
         public bool IsAvailable(IEffect target, Type typeOfInput);
         /// <summary>
-        /// Modify the <paramref name="input"/> view to meet the requirement of the target effect, and return the modified preview. 
+        /// Modify the <paramref name="input"/> view to meet the requirement of the target effect, and return the modified preview.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="input"></param>
         /// <param name="canvasWidth"></param>
         /// <param name="canvasHeight"></param>
         /// <param name="targetFrame"></param>
+        /// <param name="progress">A value between 0 and 1 indicating the current progress of the effect.</param>
         /// <returns></returns>
-        public View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame);
+        public View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress);
     }
 }

@@ -3440,9 +3440,16 @@ namespace projectFrameCut.DraftStuff
             }
 
             var cards = new List<EffectBundleCardItem>();
-            foreach (var kvp in bundlesFactories.Select(c => (c.Value(), c)).Where(c =>
-                (target == EffectTarget.NotSpecified || (c.Item1.Target.HasFlag(target) && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)))
-                && (!hideKeyFramedBundles || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider))).Select(c => c.c).OrderBy(k => k.Key))
+            foreach (var kvp in bundlesFactories
+                                .Select(c => (c.Value(), c))
+                                .Where(c =>
+                                    target == EffectTarget.NotSpecified
+                                    || target == EffectTarget.Text
+                                       ? (c.Item1.Target.HasFlag(EffectTarget.Video) || c.Item1.Target.HasFlag(EffectTarget.Text))
+                                       : c.Item1.Target.HasFlag(target)
+                                    && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)
+                                    && (!hideKeyFramedBundles || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider)))
+                                .Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;
                 try
@@ -3485,6 +3492,14 @@ namespace projectFrameCut.DraftStuff
             const double cardHeight = 160;
             const double cardMargin = 6;
 
+            // ─── Collect unique categories for filter ───
+            var allCategories = cards
+                .Select(c => c.EffectTypeName)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+
             var flex = new FlexLayout
             {
                 Wrap = FlexWrap.Wrap,
@@ -3494,16 +3509,81 @@ namespace projectFrameCut.DraftStuff
                 AlignContent = FlexAlignContent.Start
             };
 
-            BindableLayout.SetItemsSource(flex, cards);
-            BindableLayout.SetEmptyView(flex, new Border
+            // Filter state
+            string? filterSearchText = null;
+            string? filterCategory = null;
+
+            void ApplyFilter()
             {
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center,
-                Content = new Label
+                IEnumerable<EffectBundleCardItem> filtered = cards;
+
+                if (!string.IsNullOrWhiteSpace(filterSearchText))
                 {
-                    Text = PPLocalizedResources.Add_Effect_None,
-                    FontSize = 25,
+                    var lower = filterSearchText.ToLowerInvariant();
+                    filtered = filtered.Where(c =>
+                        c.Title.Contains(lower, StringComparison.OrdinalIgnoreCase) ||
+                        c.Description.Contains(lower, StringComparison.OrdinalIgnoreCase) ||
+                        c.BundleTypeName.Contains(lower, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (!string.IsNullOrWhiteSpace(filterCategory))
+                {
+                    filtered = filtered.Where(c => c.EffectTypeName == filterCategory);
+                }
+
+                BindableLayout.SetItemsSource(flex, filtered.ToList());
+            }
+
+            // ─── Search bar ───
+            var searchBar = new SearchBar
+            {
+                Placeholder = PPLocalizedResources.Effect_Add_Search
+            };
+            searchBar.TextChanged += (_, e) =>
+            {
+                filterSearchText = e.NewTextValue;
+                ApplyFilter();
+            };
+
+            // ─── Category filter picker ───
+            var categoryPicker = new Picker
+            {
+                WidthRequest = 130
+            };
+            categoryPicker.Items.Add(PPLocalizedResources.Effect_Add_Search_Any);
+            foreach (var cat in allCategories)
+            {
+                categoryPicker.Items.Add(cat);
+            }
+            categoryPicker.SelectedIndexChanged += (_, _) =>
+            {
+                filterCategory = categoryPicker.SelectedIndex <= 0 ? null : categoryPicker.Items[categoryPicker.SelectedIndex];
+                ApplyFilter();
+            };
+
+            // ─── Filter bar ───
+            var filterBar = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
                 },
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            filterBar.Add(new Border
+            {
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Margin = new Thickness(0, 0, 8, 0),
+                Content = searchBar
+            }, 0, 0);
+            filterBar.Add(categoryPicker, 1, 0);
+
+            BindableLayout.SetItemsSource(flex, cards);
+            BindableLayout.SetEmptyView(flex, new Label
+            {
+                Text = PPLocalizedResources.Add_Effect_None,
+                FontSize = 18,
             });
             BindableLayout.SetItemTemplate(flex, new DataTemplate(() =>
             {
@@ -3708,6 +3788,7 @@ namespace projectFrameCut.DraftStuff
                         Opacity = 0.7,
                         FontSize = 13
                     },
+                    filterBar,
                     flex
                 }
             };

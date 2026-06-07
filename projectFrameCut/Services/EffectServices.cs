@@ -84,6 +84,8 @@ namespace projectFrameCut.Services
                     Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
                     Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
                     Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
+                    Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
                 if (!haveSubFix)

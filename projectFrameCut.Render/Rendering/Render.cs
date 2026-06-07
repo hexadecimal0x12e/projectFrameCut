@@ -1408,12 +1408,11 @@ namespace projectFrameCut.Render.Rendering
                                         continue;
                                     case EffectType.ContinuousEffect:
                                         if (item is not IContinuousEffect c) goto notdefined;
-                                        if (c.EndPoint == 0 && c.EndPoint == 0)
-                                        {
-                                            c.StartPoint = (int)(clip.StartFrame);
-                                            c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
-                                        }
-                                        frame = c.Render(frame, targetFrame, computer, TargetWidth, TargetHeight);
+                                        int scopedStart = c.IsScoped ? c.StartPoint : (int)clip.StartFrame;
+                                        int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
+                                        if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
+                                        float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                                        frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                                         continue;
                                     case EffectType.BindableEffect:
                                         if (item is not IBindableArgumentEffect b) goto notdefined;
@@ -1458,6 +1457,12 @@ namespace projectFrameCut.Render.Rendering
                                             targetPos = pos1;
                                         }
                                         continue;
+
+                                    case EffectType.MixtureProvider:
+                                    case EffectType.SpeedVarianceProvider:
+                                    case EffectType.TextEffect:
+                                    case EffectType.ContinuousTextEffect:
+                                        continue; //they've processed somewhere else
                                     default:
                                         goto notdefined;
                                 }
@@ -1500,12 +1505,11 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else if (item is IContinuousEffect c)
                             {
-                                if (c.EndPoint == 0 && c.EndPoint == 0)
-                                {
-                                    c.StartPoint = (int)(clip.StartFrame);
-                                    c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
-                                }
-                                frame = c.Render(frame, targetFrame, computer, TargetWidth, TargetHeight);
+                                int scopedStart = c.IsScoped ? c.StartPoint : (int)clip.StartFrame;
+                                int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
+                                if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
+                                float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                                frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                             }
                             else if (item is INormalEffect n)
                             {
@@ -1534,6 +1538,10 @@ namespace projectFrameCut.Render.Rendering
                                 {
                                     targetPos = new(x, y, w, h, false);
                                 }
+                            }
+                            else if(item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect)
+                            {
+
                             }
                             else
                             {

@@ -1,13 +1,21 @@
-using projectFrameCut.Drawing.Base;
-using projectFrameCut.Shared;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
-    public interface IContinuousEffect : IEffect
+    public interface ITextEffect : IEffect
+    {
+        /// <summary>
+        /// Process the input text clip's entries.
+        /// </summary>
+        /// <returns>the updated entries.</returns>
+        public TextClipEntry[] Process(TextClipEntry[] source);
+
+        string? IEffect.NeedComputer => null;
+        EffectType IEffect.TypeOfEffect => EffectType.TextEffect;
+    }
+    public interface IContinuousTextEffect : IEffect
     {
         /// <summary>
         /// Represents the start point of the effect inside this Clip.
@@ -27,25 +35,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public bool IsScoped { get; set; }
 
         /// <summary>
-        /// Render the effect on the source picture to produce a new picture with the target width and height.
+        /// Process the input text clip's entries.
         /// </summary>
-        /// <param name="source">The input frame.</param>
+        /// <param name="source">The input text entries.</param>
         /// <param name="progress">A value between 0 and 1 indicating the current progress of the effect.</param>
-        /// <param name="computer">A provided computer for accelerated computing.</param>
-        /// <param name="targetWidth">Output canvas' width.</param>
-        /// <param name="targetHeight">Output canvas' height.</param>
-        /// <returns>the processed frame</returns>
-        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight);
+        /// <returns>the updated entries.</returns>
+        public TextClipEntry[] Process(TextClipEntry[] source, float progress);
 
-        /// <summary>
-        /// If you'd like to initialize the effect before use, override it.
-        /// </summary>
-        public new virtual void Initialize()
-        {
-        }
-
-        EffectType IEffect.TypeOfEffect => EffectType.ContinuousEffect;
-
+        string? IEffect.NeedComputer => null;
+        EffectType IEffect.TypeOfEffect => EffectType.ContinuousTextEffect;
     }
-
 }

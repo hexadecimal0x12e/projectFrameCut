@@ -168,7 +168,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         bool IEffect.Enabled { get => true; set { } }
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
-        int IEffect.Index { get => int.MinValue; set => Logger.Log("ColorAdjustment should always be first one to render and it's index should not be changed.", "warn"); }
+        int IEffect.Index { get => int.MinValue; set { } }
 
     }
 

@@ -21,7 +21,8 @@
       "Read(//d//**)",
       "Bash(dotnet test *)",
       "PowerShell(Test-Path *)",
-      "PowerShell(Get-Item *)"
+      "PowerShell(Get-Item *)",
+      "PowerShell(splc-edit *)"
     ],
     "deny": [
       "Bash(Select-*)",

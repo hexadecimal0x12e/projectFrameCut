@@ -21,7 +21,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
                 && typeof(View).IsAssignableFrom(typeOfInput);
         }
 
-        public abstract View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame);
+        public abstract View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress);
 
         protected static bool TryGetParameter<T>(IEffect target, string key, out T value)
         {
@@ -79,24 +79,6 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
             };
         }
 
-        protected static double GetProgress(IEffect target, uint targetFrame)
-        {
-            if (target is not IContinuousEffect continuous)
-            {
-                return 1d;
-            }
-
-            var total = continuous.EndPoint - continuous.StartPoint;
-            if (total <= 0)
-            {
-                return 1d;
-            }
-
-            var current = (int)targetFrame - continuous.StartPoint;
-            var progress = (double)current / total;
-            return Math.Clamp(progress, 0d, 1d);
-        }
-
         protected static int ScaleByCanvas(int value, IEffect target, int canvasSize, bool isWidth)
         {
             var relative = isWidth ? target.RelativeWidth : target.RelativeHeight;
@@ -129,7 +111,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Blur";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -158,7 +140,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
             return base.IsAvailable(target, typeOfInput) && typeof(Image).IsAssignableFrom(typeOfInput);
         }
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is Image image)
             {
@@ -173,7 +155,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Jitter";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -208,7 +190,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "ZoomIn";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -227,7 +209,6 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
             var goalScaleY = Math.Max(1d, (double)canvasHeight / targetY);
             var goalScale = Math.Min(8d, Math.Max(goalScaleX, goalScaleY));
 
-            var progress = GetProgress(target, targetFrame);
             var scale = 1d + (goalScale - 1d) * progress;
 
             visual.AnchorX = 0.5;
@@ -241,7 +222,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Place";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -266,7 +247,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Rotation";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -284,7 +265,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Resize";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -325,7 +306,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Crop";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             var startX = 0;
             var startY = 0;
@@ -347,8 +328,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
 
             if (cropList is not null && cropList.Count > 0)
             {
-                var progress = GetProgress(target, targetFrame);
-                var crop = ResolveCrop(cropList, progress, startX, startY, width, height);
+                var crop = ResolveCrop(cropList, (double)progress, startX, startY, width, height);
                 startX = crop.StartX;
                 startY = crop.StartY;
                 width = crop.Width;
@@ -416,7 +396,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Flip";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -438,7 +418,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Sharpen";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             return input;
         }
@@ -448,7 +428,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "Vignette";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             return input;
         }
@@ -458,7 +438,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "FadeOpacity";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             if (input is not VisualElement visual)
             {
@@ -476,7 +456,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "PointPlacer";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             return input;
         }
@@ -486,7 +466,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "StraightLineMovementValueProducer";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             return input;
         }
@@ -496,7 +476,7 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
     {
         public override string TypeName => "SubjectMattingMaskGenerator";
 
-        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame)
+        public override View Generate(IEffect target, View input, Type typeOfInput, int canvasWidth, int canvasHeight, uint targetFrame, float progress)
         {
             return input;
         }

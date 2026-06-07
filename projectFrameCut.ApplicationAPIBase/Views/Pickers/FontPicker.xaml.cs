@@ -209,7 +209,7 @@ public partial class FontPicker : ContentView
         if (FontsSource?.Any(f => f.IsFavorite) == true)
             categories.Insert(0, FavoritesCategory);
 
-        _categoryList = ["All", .. categories];
+        _categoryList = [LocalizedResources.APIBaseLocalizedResources.Localized.FontPicker_CategoryPicker_Any, .. categories];
 
         CategoryPicker.ItemsSource = _categoryList;
 

@@ -786,7 +786,20 @@ public sealed class DynamicPreview : IDisposable
                 var provider = ResolveEffectProvider(effect, generatedView.GetType());
                 if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
                 {
-                    generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex);
+                    float previewProgress;
+                    if (effect is IContinuousEffect c && c.IsScoped)
+                    {
+                        int span = c.EndPoint - c.StartPoint;
+                        previewProgress = span > 0 ? Math.Clamp(((float)frameIndex - c.StartPoint) / span, 0f, 1f) : 1f;
+                    }
+                    else
+                    {
+                        float effectDuration = clip.GetEffectiveDuration();
+                        previewProgress = effectDuration > 0
+                            ? Math.Clamp(((float)frameIndex - clip.StartFrame) / effectDuration, 0f, 1f)
+                            : 1f;
+                    }
+                    generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex, previewProgress);
                 }
                 else
                 {
@@ -1279,11 +1292,11 @@ public sealed class DynamicPreview : IDisposable
         };
     }
 
-    private static View ApplyEffectPreview(View input, IEffect effect, IEffectDynamicPreviewProvider provider, int targetWidth, int targetHeight, uint frameIndex)
+    private static View ApplyEffectPreview(View input, IEffect effect, IEffectDynamicPreviewProvider provider, int targetWidth, int targetHeight, uint frameIndex, float progress)
     {
         try
         {
-            return provider.Generate(effect, input, input.GetType(), targetWidth, targetHeight, frameIndex) ?? input;
+            return provider.Generate(effect, input, input.GetType(), targetWidth, targetHeight, frameIndex, progress) ?? input;
         }
         catch
         {

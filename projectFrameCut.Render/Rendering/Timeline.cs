@@ -158,12 +158,11 @@ namespace projectFrameCut.Render.Rendering
                     {
                         if (effect is IContinuousEffect c)
                         {
-                            if (c.EndPoint == 0 && c.EndPoint == 0)
-                            {
-                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame);
-                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.GetEffectiveDuration());
-                            }
-                            effected = c.Render(effected, frameIndex, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            int scopedStart = c.IsScoped ? c.StartPoint : (int)srcFrame.ParentClip.StartFrame;
+                            int scopedEnd = c.IsScoped ? c.EndPoint : (int)(srcFrame.ParentClip.StartFrame + srcFrame.ParentClip.GetEffectiveDuration());
+                            if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
+                            float continuousProgress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                            effected = c.Render(effected, continuousProgress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else if (effect is INormalEffect n)
                         {
@@ -197,9 +196,10 @@ namespace projectFrameCut.Render.Rendering
                                 clipPos = new(x, y, w, h, false);
                             }
                         }
-                        else if (effect is IMixture or ISpeedVarianceProvider)
+                        else if (effect is IMixture or ISpeedVarianceProvider //these will be processed later; skip here
+                                        or ITextEffect or IContinuousTextEffect) //these are processed inside TextClip
                         {
-                            //these will be processed later; skip here
+                            
                         }
                         else
                         {

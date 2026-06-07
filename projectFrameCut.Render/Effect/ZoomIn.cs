@@ -26,8 +26,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
-
-
+        public bool IsScoped { get; set; }
         public int TargetX { get; init; }
         public int TargetY { get; init; }
 
@@ -38,15 +37,11 @@ namespace projectFrameCut.Render.Effect
         };
 
 
-        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int localIndex = (int)index - StartPoint;
-            double totalFrames = (double)(EndPoint - StartPoint);
-            double progress = totalFrames <= 0 ? 0.0 : (double)localIndex / totalFrames;
-            if (progress < 0.0) progress = 0.0;
-            if (progress > 1.0) progress = 1.0;
+            double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 
-            int currentWidth = (int)Math.Round(source.Width + (TargetX - source.Width) * progress);
+            int currentWidth = (int)Math.Round(source.Width + (TargetX - source.Width) * clampedProgress);
             int currentHeight = (int)Math.Round(source.Height + (TargetY - source.Height) * progress);
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
@@ -76,6 +71,7 @@ namespace projectFrameCut.Render.Effect
                 Enabled = this.Enabled,
                 StartPoint = this.StartPoint,
                 EndPoint = this.EndPoint,
+                IsScoped = this.IsScoped,
             };
         }
 

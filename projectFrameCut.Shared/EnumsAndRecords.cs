@@ -49,6 +49,8 @@ namespace projectFrameCut.Shared
         ClipPositionProvider,
         ContinuousClipPositionProvider,
         MixtureProvider,
+        TextEffect,
+        ContinuousTextEffect,
         NotSpecified = -1,
     }
 
@@ -61,10 +63,12 @@ namespace projectFrameCut.Shared
         SpeedVariance = 8,
         Mixture = 16,
         ColorAdjustment = 32,
+        Text = 64,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
         IsNotVisibleInNewEffectSelector = 1 << 18,
+        InternalUse = 1 << 19,
     }
 
     public enum BindableArgumentEffectType

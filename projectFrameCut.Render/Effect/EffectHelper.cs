@@ -20,14 +20,6 @@ namespace projectFrameCut.Render.Effect
             return (double)(index - startPoint) / (endPoint - startPoint);
         }
 
-        public static double GetContinuesEffectProgress(this IContinuousEffect effect, uint index)
-        {
-            if (effect.EndPoint <= effect.StartPoint) return 1.0;
-            if (index < effect.StartPoint) return 0.0;
-            if (index >= effect.EndPoint) return 1.0;
-            return (double)(index - effect.StartPoint) / (effect.EndPoint - effect.StartPoint);
-        }
-
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)

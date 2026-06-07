@@ -21,6 +21,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
+        public bool IsScoped { get; set; }
         public int StartX { get; init; }
         public int StartY { get; init; }
         public int Height { get; init; }
@@ -38,9 +39,9 @@ namespace projectFrameCut.Render.Effect
             { "CropList", JsonSerializer.Serialize(CropList) },
         };
 
-        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var crop = ResolveCrop(index, targetWidth, targetHeight);
+            var crop = ResolveCrop(progress, targetWidth, targetHeight);
             return CropEffectShared.CropAndProcess(source, crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
         }
 
@@ -62,6 +63,7 @@ namespace projectFrameCut.Render.Effect
                 Enabled = Enabled,
                 StartPoint = StartPoint,
                 EndPoint = EndPoint,
+                IsScoped = IsScoped,
             };
         }
 
@@ -73,10 +75,10 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        private CropData ResolveCrop(uint index, int targetWidth, int targetHeight)
+        private CropData ResolveCrop(float progress, int targetWidth, int targetHeight)
         {
             CropData crop = CropList.Count > 0
-                ? CropEffectShared.GetCropForProgress(CropList, EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint))
+                ? CropEffectShared.GetCropForProgress(CropList, Math.Clamp(progress, 0.0, 1.0))
                 : new CropData(0, StartX, StartY, Width, Height, Angle);
 
             return CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
@@ -93,6 +95,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
+        public bool IsScoped { get; set; }
 
         public int StartX { get; init; }
         public int StartY { get; init; }
@@ -136,7 +139,7 @@ namespace projectFrameCut.Render.Effect
             { "CropList", "string" },
         };
 
-        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
             int startX = StartX;
             int startY = StartY;
@@ -146,7 +149,7 @@ namespace projectFrameCut.Render.Effect
 
             if (CropList.Count > 0)
             {
-                var crop = CropEffectShared.GetCropForProgress(CropList, EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint));
+                var crop = CropEffectShared.GetCropForProgress(CropList, Math.Clamp(progress, 0.0, 1.0));
                 crop = CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
                 startX = crop.StartX;
                 startY = crop.StartY;
@@ -246,6 +249,7 @@ namespace projectFrameCut.Render.Effect
                 Enabled = Enabled,
                 StartPoint = StartPoint,
                 EndPoint = EndPoint,
+                IsScoped = IsScoped,
             };
         }
 
