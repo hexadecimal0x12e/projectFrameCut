@@ -8,7 +8,6 @@ using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
 using Microsoft.Maui.Controls.Shapes;
 using System;
 using System.Collections.Generic;
@@ -53,7 +52,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         protected virtual string DefaultText => "Text";
 
-        protected virtual float DefaultFontSize => 50f;
+        protected virtual float DefaultFontSize => 120f;
 
         public string BasicText
         {
@@ -79,9 +78,9 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
             var colorText = GetOrDefault(ColorKey, "#FFFFFF");
             var color = ParseColorOrFallback(colorText, Colors.White);
-            var fontStyle = ParseFontStyle(GetOrDefault(FontStyleKey, SixLabors.Fonts.FontStyle.Regular.ToString()), SixLabors.Fonts.FontStyle.Regular);
-            var horizontalAlignment = ParseHorizontalAlignment(GetOrDefault(HorizontalAlignmentKey, SixLabors.Fonts.HorizontalAlignment.Left.ToString()), SixLabors.Fonts.HorizontalAlignment.Left);
-            var verticalAlignment = ParseVerticalAlignment(GetOrDefault(VerticalAlignmentKey, SixLabors.Fonts.VerticalAlignment.Top.ToString()), SixLabors.Fonts.VerticalAlignment.Top);
+            var fontStyle = ParseFontStyle(GetOrDefault(FontStyleKey, ClipFontStyle.Regular.ToString()), ClipFontStyle.Regular);
+            var horizontalAlignment = ParseHorizontalAlignment(GetOrDefault(HorizontalAlignmentKey, ClipHorizontalAlignment.Left.ToString()), ClipHorizontalAlignment.Left);
+            var verticalAlignment = ParseVerticalAlignment(GetOrDefault(VerticalAlignmentKey, ClipVerticalAlignment.Top.ToString()), ClipVerticalAlignment.Top);
             var wrappingWidth = ParseNullableFloat(GetOrDefault(WrappingWidthKey, string.Empty));
             var applyKerning = ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true);
             var lineSpacing = ParseFloat(GetOrDefault(LineSpacingKey, 1f.ToString(CultureInfo.InvariantCulture)), 1f);
@@ -129,7 +128,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var currentText = GetOrDefault(TextKey, DefaultText);
             var currentFont = GetOrDefault(FontKey, "Arial");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
-            var currentFontStyle = ParseFontStyle(GetOrDefault(FontStyleKey, SixLabors.Fonts.FontStyle.Regular.ToString()), SixLabors.Fonts.FontStyle.Regular);
+            var currentFontStyle = ParseFontStyle(GetOrDefault(FontStyleKey, ClipFontStyle.Regular.ToString()), ClipFontStyle.Regular);
             var glyphWarning = new Label
             {
                 TextColor = Colors.OrangeRed,
@@ -218,13 +217,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             UpdateGlyphWarning();
 
             panel.AddSlider(SizeKey, PPLocalizedResources.TextOption_Size, 50, 500, fontSize, eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
-            panel.AddPicker(FontStyleKey, PPLocalizedResources.TextOption_Style, new[] { SixLabors.Fonts.FontStyle.Regular.ToString(), SixLabors.Fonts.FontStyle.Bold.ToString(), SixLabors.Fonts.FontStyle.Italic.ToString(), SixLabors.Fonts.FontStyle.BoldItalic.ToString() }, currentFontStyle.ToString());
+            panel.AddPicker(FontStyleKey, PPLocalizedResources.TextOption_Style, new[] { ClipFontStyle.Regular.ToString(), ClipFontStyle.Bold.ToString(), ClipFontStyle.Italic.ToString(), ClipFontStyle.BoldItalic.ToString() }, currentFontStyle.ToString());
             panel.AddCustomChild(PPLocalizedResources.TextOption_Color, invoker => BuildColorPickerField(
                 ColorKey,
                 GetOrDefault(ColorKey, "#FFFFFF"),
                 invoker), ColorKey, GetOrDefault(ColorKey, "#FFFFFF"));
-            panel.AddPicker(HorizontalAlignmentKey, PPLocalizedResources.TextOption_HorizonOption, new[] { SixLabors.Fonts.HorizontalAlignment.Left.ToString(), SixLabors.Fonts.HorizontalAlignment.Center.ToString(), SixLabors.Fonts.HorizontalAlignment.Right.ToString() }, GetOrDefault(HorizontalAlignmentKey, SixLabors.Fonts.HorizontalAlignment.Left.ToString()));
-            panel.AddPicker(VerticalAlignmentKey, PPLocalizedResources.TextOption_VerticalOption, new[] { SixLabors.Fonts.VerticalAlignment.Top.ToString(), SixLabors.Fonts.VerticalAlignment.Center.ToString(), SixLabors.Fonts.VerticalAlignment.Bottom.ToString() }, GetOrDefault(VerticalAlignmentKey, SixLabors.Fonts.VerticalAlignment.Top.ToString()));
+            panel.AddPicker(HorizontalAlignmentKey, PPLocalizedResources.TextOption_HorizonOption, new[] { ClipHorizontalAlignment.Left.ToString(), ClipHorizontalAlignment.Center.ToString(), ClipHorizontalAlignment.Right.ToString() }, GetOrDefault(HorizontalAlignmentKey, ClipHorizontalAlignment.Left.ToString()));
+            panel.AddPicker(VerticalAlignmentKey, PPLocalizedResources.TextOption_VerticalOption, new[] { ClipVerticalAlignment.Top.ToString(), ClipVerticalAlignment.Center.ToString(), ClipVerticalAlignment.Bottom.ToString() }, GetOrDefault(VerticalAlignmentKey, ClipVerticalAlignment.Top.ToString()));
             panel.AddEntry(WrappingWidthKey, PPLocalizedResources.TextOption_WrapW, GetOrDefault(WrappingWidthKey, string.Empty), PPLocalizedResources.TextOption_WrapW_Hint);
             panel.AddSwitch(ApplyKerningKey, PPLocalizedResources.TextOption_Kerning, ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true));
             panel.AddEntry(LineSpacingKey, PPLocalizedResources.TextOption_LineSpacing, GetOrDefault(LineSpacingKey, 1f.ToString(CultureInfo.InvariantCulture)), "1.0");
@@ -261,13 +260,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     _parameters[ColorKey] = args.Value?.ToString() ?? "#FFFFFF";
                     break;
                 case FontStyleKey:
-                    _parameters[FontStyleKey] = ParseFontStyle(args.Value?.ToString(), SixLabors.Fonts.FontStyle.Regular).ToString();
+                    _parameters[FontStyleKey] = ParseFontStyle(args.Value?.ToString(), ClipFontStyle.Regular).ToString();
                     break;
                 case HorizontalAlignmentKey:
-                    _parameters[HorizontalAlignmentKey] = ParseHorizontalAlignment(args.Value?.ToString(), SixLabors.Fonts.HorizontalAlignment.Left).ToString();
+                    _parameters[HorizontalAlignmentKey] = ParseHorizontalAlignment(args.Value?.ToString(), ClipHorizontalAlignment.Left).ToString();
                     break;
                 case VerticalAlignmentKey:
-                    _parameters[VerticalAlignmentKey] = ParseVerticalAlignment(args.Value?.ToString(), SixLabors.Fonts.VerticalAlignment.Top).ToString();
+                    _parameters[VerticalAlignmentKey] = ParseVerticalAlignment(args.Value?.ToString(), ClipVerticalAlignment.Top).ToString();
                     break;
                 case WrappingWidthKey:
                     _parameters[WrappingWidthKey] = args.Value?.ToString() ?? string.Empty;
@@ -340,23 +339,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)),
                 DefaultFontSize);
 
-            var scaleX = (double)TargetWidth / currentRect.TargetWidth;
             var scaleY = (double)TargetHeight / currentRect.TargetHeight;
-            if (double.IsNaN(scaleX) || double.IsInfinity(scaleX) || scaleX <= 0)
+            if (double.IsNaN(scaleY) || double.IsInfinity(scaleY) || scaleY <= 0)
             {
                 return new Dictionary<string, string>(_parameters);
             }
 
-            double scale = scaleX;
-            if (!isInRatio && !double.IsNaN(scaleY) && !double.IsInfinity(scaleY) && scaleY > 0)
-            {
-                if (Math.Abs(scaleX - scaleY) > 0.0001)
-                {
-                    scale = (scaleX + scaleY) / 2d;
-                }
-            }
-
-            var updatedSize = (float)(currentFontSize * scale);
+            var updatedSize = (float)(currentFontSize * scaleY);
             if (updatedSize > 0)
             {
                 _parameters[SizeKey] = updatedSize.ToString(CultureInfo.InvariantCulture);
@@ -475,19 +464,19 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
         }
 
-        private static SixLabors.Fonts.FontStyle ParseFontStyle(string? value, SixLabors.Fonts.FontStyle fallback)
+        private static ClipFontStyle ParseFontStyle(string? value, ClipFontStyle fallback)
         {
-            return Enum.TryParse<SixLabors.Fonts.FontStyle>(value, true, out var parsed) ? parsed : fallback;
+            return Enum.TryParse<ClipFontStyle>(value, true, out var parsed) ? parsed : fallback;
         }
 
-        private static SixLabors.Fonts.HorizontalAlignment ParseHorizontalAlignment(string? value, SixLabors.Fonts.HorizontalAlignment fallback)
+        private static ClipHorizontalAlignment ParseHorizontalAlignment(string? value, ClipHorizontalAlignment fallback)
         {
-            return Enum.TryParse<SixLabors.Fonts.HorizontalAlignment>(value, true, out var parsed) ? parsed : fallback;
+            return Enum.TryParse<ClipHorizontalAlignment>(value, true, out var parsed) ? parsed : fallback;
         }
 
-        private static SixLabors.Fonts.VerticalAlignment ParseVerticalAlignment(string? value, SixLabors.Fonts.VerticalAlignment fallback)
+        private static ClipVerticalAlignment ParseVerticalAlignment(string? value, ClipVerticalAlignment fallback)
         {
-            return Enum.TryParse<SixLabors.Fonts.VerticalAlignment>(value, true, out var parsed) ? parsed : fallback;
+            return Enum.TryParse<ClipVerticalAlignment>(value, true, out var parsed) ? parsed : fallback;
         }
 
         private static Color ParseColorOrFallback(string? value, Color fallback)
@@ -648,6 +637,6 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         protected override string DefaultText => "Title";
 
-        protected override float DefaultFontSize => 64f;
+        protected override float DefaultFontSize => 140f;
     }
 }

@@ -18,11 +18,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Asset;
 using Path = System.IO.Path;
 using RenderITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Processing.Resizing;
 
 namespace projectFrameCut.InteractableEditor;
 
@@ -1137,8 +1140,8 @@ public sealed class DynamicPreview : IDisposable
         if (!fullRender)
         {
             var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
-            var needsDeepCopy = sourceColorAdjustEffects is { Count: > 0 };
-            if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: needsDeepCopy))
+            var needsClone = sourceColorAdjustEffects is { Count: > 0 };
+            if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: needsClone))
             {
                 if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                     && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
@@ -1468,7 +1471,7 @@ public sealed class DynamicPreview : IDisposable
         if (s_fallbackFrameCache.TryGetValue(key, out var cached))
         {
             cached.Touch();
-            frame = deepCopy ? cached.Frame.DeepCopy() : cached.Frame;
+            frame = deepCopy ? cached.Frame.Clone() : cached.Frame;
             return true;
         }
 
@@ -1524,7 +1527,7 @@ public sealed class DynamicPreview : IDisposable
         }
 
         cached.Touch();
-        var source = cached.Frame.DeepCopy();
+        var source = cached.Frame.Clone();
         var resized = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
         if (ReferenceEquals(resized, source))
         {
@@ -1668,7 +1671,7 @@ public sealed class DynamicPreview : IDisposable
                     Directory.CreateDirectory(dir);
                 }
 
-                frame.SaveAsPng8bpp(diskPath, null);
+                frame.SaveToPng(diskPath);
                 TouchFallbackDiskEntry(diskPath);
                 TrimFallbackDiskCacheIfNeeded();
             }
@@ -1774,7 +1777,7 @@ public sealed class DynamicPreview : IDisposable
     {
         public CachedFallbackFrame(IPicture frame)
         {
-            Frame = frame.DeepCopy();
+            Frame = frame.Clone();
             Frame.CanBeDisposed = false;
             Touch();
         }

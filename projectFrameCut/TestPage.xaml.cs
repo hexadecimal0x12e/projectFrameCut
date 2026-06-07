@@ -10,7 +10,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
+using projectFrameCut.Drawing.Processing.Converting;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -34,6 +34,14 @@ using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
 using System.Text;
 using FFmpeg.AutoGen;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Text.FontHelper;
+using System.Text.Json.Serialization;
+using projectFrameCut.Drawing.Base;
+
+
+
+
 
 
 
@@ -85,12 +93,12 @@ public partial class TestPage : ContentPage
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
-        TextClip.GetFont(true);
+        TextClipFontRegistry.Initialize();
         _ = LoadFontPickerAsync();
 
         TextPicker.SelectedFontChanged += async (s, e) =>
         {
-            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerItem, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
 
         };
     }
@@ -198,7 +206,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region openGL test
-    private projectFrameCut.Shared.Picture16bpp srcA, srcB;
+    private Picture16bpp srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
@@ -212,11 +220,11 @@ public partial class TestPage : ContentPage
             Task.WaitAll([
                 Task.Run(() =>
                 {
-                    srcA = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
+                    srcA = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
                 Task.Run(() =>
                 {
-                    srcB = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
+                    srcB = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
             ]);
 
@@ -544,7 +552,7 @@ public partial class TestPage : ContentPage
             Debug.WriteLine("Waiting for convertor done...");
             Task.WaitAll(RConvertor, GConvertor, BConvertor);
             Debug.WriteLine("Writing result...");
-            var outPic = new projectFrameCut.Shared.Picture16bpp(srcA.Width, srcA.Height)
+            var outPic = new Picture16bpp(srcA.Width, srcA.Height)
             {
                 r = uOutR,
                 g = uOutG,
@@ -554,7 +562,7 @@ public partial class TestPage : ContentPage
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";
-            outPic.SaveAsPng16bpp(path);
+            outPic.SaveToPng(path);
 
             ResultImage.Source = ImageSource.FromFile(path);
 
@@ -713,18 +721,18 @@ public partial class TestPage : ContentPage
                     f.Brightness[idx] = 1f;
                 }
             }
-            f.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+            f.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
 
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { text = $"Frame {i}" }];
                 var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
-                textFrame.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
-                var t = textFrame.ToHDRPicture(1, 5000);
+                textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
-                t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                t.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-                r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                r.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
@@ -751,9 +759,9 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.a
         };
-        fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16, true).ToPJFCPicture(16);
-        fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fThrowBrightness.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
+        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
             r = f.r,
@@ -761,7 +769,7 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.Brightness
         };
-        fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlpha.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
@@ -769,7 +777,7 @@ public partial class TestPage : ContentPage
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
         }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-        fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
             OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
@@ -796,7 +804,7 @@ public partial class TestPage : ContentPage
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            result.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -813,7 +821,7 @@ public partial class TestPage : ContentPage
             StartX = 250,
             StartY = 180
         };
-        ResizeEffect_ImageSharp r = new()
+        ResizeEffect_IPicture r = new()
         {
             Height = 300,
             Width = 1000,
@@ -822,11 +830,11 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -854,21 +862,21 @@ public partial class TestPage : ContentPage
                 NormalizeBrightnessToRGBOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 OverlayMaskFromBrightnessOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 DiscardBrightnessChannelOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -882,7 +890,7 @@ public partial class TestPage : ContentPage
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    frame.SaveToSixLaborsImage().SaveAsPng(ms);
+                    frame.SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -904,11 +912,11 @@ public partial class TestPage : ContentPage
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -1019,8 +1027,8 @@ public partial class TestPage : ContentPage
         .AddSwitch("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
         .AddButton("testButton", "Click me!")
-        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef","ghijklm"))
-        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef222","ghijklm111"))
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef", "ghijklm"))
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef222", "ghijklm111"))
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
@@ -1223,12 +1231,15 @@ public partial class TestPage : ContentPage
 
     private async void TestFontPropReaderButton_Clicked(object sender, EventArgs e)
     {
-        var info = TextHelper.ReadFontFileInfo(@"C:\Windows\Fonts\msyhbd.ttc");
-        await DisplayAlertAsync(Title, JsonSerializer.Serialize(info, new JsonSerializerOptions
+        var info = TextHelper.CreateFontInfo("1", @"C:\Windows\Fonts\msyhbd.ttc");
+        foreach (var item in info)
         {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(item.InnerFont, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            }), "ok");
+        }
     }
     #endregion
 

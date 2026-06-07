@@ -12,7 +12,7 @@ projectFrameCut 的目標是成為一款強大、易上手且完全自由的影�
 
 第三方程式庫與致謝
 
-本專案使用 FFmpeg 與 SixLabors.ImageSharp（及相關程式庫）做為基本的影格抽取與處理，並使用 FFmpeg_droidFix.AutoGen 呼叫 FFmpeg。
+本專案使用 FFmpeg 與 projectFrameCut.Drawing用 FFmpeg_droidFix.AutoGen 呼叫 FFmpeg。
 
 針對 Windows 平台，我們也使用 ILGPU 做硬體加速。
 

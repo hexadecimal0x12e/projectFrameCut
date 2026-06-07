@@ -25,7 +25,6 @@ public partial class RenderSettingPage : ContentPage
     Dictionary<EffectImplementType, string> LocalizedImplementTypes = new Dictionary<EffectImplementType, string>
     {
             { EffectImplementType.NotSpecified , SettingLocalizedResources.RenderEffectImplement_NotSpecified },
-            { EffectImplementType.ImageSharp , SettingLocalizedResources.RenderEffectImplement_ImageSharp },
             { EffectImplementType.HwAcceleration , SettingLocalizedResources.RenderEffectImplement_HwAcceleration },
             { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
     };

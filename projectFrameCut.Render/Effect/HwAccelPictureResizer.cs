@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -18,7 +19,7 @@ namespace projectFrameCut.Render.Effect
         private IComputer? _cachedComputer;
         private bool _computerResolved;
 
-        private static readonly CPUBilinearPictureResizer _cpuFallback = new();
+        private static readonly BilinearPictureResizer _cpuFallback = new();
 
         private IComputer? GetComputer()
         {
@@ -62,11 +63,11 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public Picture16bpp Resize(Picture16bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IPicture<ushort> Resize(IPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (Picture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -173,11 +174,11 @@ namespace projectFrameCut.Render.Effect
             return (Picture16bpp)result!;
         }
 
-        public Picture8bpp Resize(Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IPicture<byte> Resize(IPicture<byte> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (Picture8bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -284,11 +285,11 @@ namespace projectFrameCut.Render.Effect
             return (Picture8bpp)result!;
         }
 
-        public HDRPicture16bpp Resize(HDRPicture16bpp source, int targetWidth, int targetHeight, bool preserveAspect)
+        public IHDRPicture<ushort> Resize(IHDRPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
             if (computer == null)
-                return _cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+                return (HDRPicture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)

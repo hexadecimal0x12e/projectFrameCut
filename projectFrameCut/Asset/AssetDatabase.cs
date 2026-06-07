@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Maui.Alerts;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Asset
 {
@@ -186,7 +187,7 @@ namespace projectFrameCut.Asset
                             var vid = PluginManager.CreateVideoSource(sourcePath);
                             asset.Duration = vid.TotalFrames;
                             asset.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
+                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
                         }
                         catch (Exception ex)
                         {
@@ -215,7 +216,7 @@ namespace projectFrameCut.Asset
                         }
                         try
                         {
-                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
+                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U, false).SaveToPng(thumbnailPath);
                         }
                         catch
                         {
@@ -238,7 +239,7 @@ namespace projectFrameCut.Asset
                     }
                 case AssetType.Font:
                     {
-                        TextServices.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
+                        TextServices.GenerateFontThumbnail(sourcePath).SaveToPng(thumbnailPath);
                         var t = new Thread(TextServices.LoadFonts)
                         {
                             Priority = ThreadPriority.BelowNormal,

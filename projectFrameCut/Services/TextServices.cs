@@ -1,18 +1,21 @@
 ﻿using Kawazu;
+using Microsoft.Maui.Controls;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
-using Microsoft.Maui.Controls;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
-using SixLabors.Fonts.Unicode;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Drawing.Vector;
+using projectFrameCut.Drawing.Vector.ImportExport;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -20,20 +23,14 @@ using System.Text;
 using System.Text.Unicode;
 using TinyPinyin;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using Color = SixLabors.ImageSharp.Color;
-using Font = SixLabors.Fonts.Font;
-using HorizontalAlignment = SixLabors.Fonts.HorizontalAlignment;
-using PointF = SixLabors.ImageSharp.PointF;
-using VerticalAlignment = SixLabors.Fonts.VerticalAlignment;
-using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Services
 {
     public static class TextServices
     {
         #region thumb
-        public static Shared.IPicture GenerateFontThumbnail(string fontPath)
+        public static Drawing.Base.IPicture GenerateFontThumbnail(string fontPath)
         {
             if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
             {
@@ -42,19 +39,21 @@ namespace projectFrameCut.Services
 
             try
             {
-                // 直接从字体文件 name 表 + OS/2 Unicode Range 读取语言，不再依赖命名猜测
-                var info = ReadFontFileInfo(fontPath);
-                FontCollection collection = new FontCollection();
-                FontFamily family = collection.Add(fontPath);
-                Image<Rgba64> canvas = new(640, 480);
-                canvas.Mutate((ctx) =>
+                using var fontFace = FontFace.Load(fontPath);
+                string sampleText = GetSampleText(TextHelper.FromLanguageCode("en"));
+                var textEntry = new TextEntry
                 {
-                    ctx.Fill(Color.White);
-                    string sampleText = GetSampleText(info.PrimaryLanguage);
-                    Font font = family.CreateFont(72, FontStyle.Regular);
-                    ctx.DrawText(sampleText, font, Color.Black, new PointF(10, 240));
-                });
-                return new Picture8bpp(canvas);
+                    Text = sampleText,
+                    FontName = fontFace.FamilyName,
+                    FontSize = 72f / 640f,
+                    X = 10f / 640f,
+                    Y = 240f / 480f,
+                    FillR = 0, FillG = 0, FillB = 0, FillA = 1f,
+                };
+                var engine = new NormalTypesettingEngine();
+                var vectorCanvas = engine.Layout(textEntry, fontFace);
+                var picture = VectorToIPicture.Convert(vectorCanvas, 640, 480, transparentBackground: false);
+                return picture.ToBitPerPixel(8);
             }
             catch
             {
@@ -87,36 +86,36 @@ namespace projectFrameCut.Services
 
                 try
                 {
-                    Font font = null!;
-                    try
+                    FontFace? fontFace = item.InnerFont;
+                    if (fontFace is null && !string.IsNullOrEmpty(item.Path) && File.Exists(item.Path))
                     {
-                        if (!TryResolveFontFamily(item, out var family))
-                        {
-                            throw new InvalidOperationException("Font not available.");
-                        }
-                        font = family.CreateFont(fontSize);
-                    }
-                    catch
-                    {
-                        font = TextClip.FontsCache.TryGet(item.FontName, out var family) ? family.CreateFont(fontSize) : throw new InvalidOperationException("Font not available.");
+                        fontFace = FontFace.Load(item.Path);
                     }
 
+                    if (fontFace is null)
+                        return null;
 
-                    // 当未指定 sample 时，优先使用 FontItem.PrimaryLanguageTag 判断语言，
-                    // 再尝试从字体文件直接读取（如果能找到路径的话）。
                     string effectiveSample = sample ?? ResolveSampleText(item);
 
-                    var options = new DrawingOptions();
-                    using var img = new Image<Rgba32>(width, height);
-                    img.Mutate(ctx =>
+                    var textEntry = new TextEntry
                     {
-                        ctx.Fill(Color.Transparent);
-                        var location = new PointF(10, height / 2f - fontSize / 2f);
-                        ctx.DrawText(options, effectiveSample, font, isDark ? Color.White : Color.Black, location);
-                    });
+                        Text = effectiveSample,
+                        FontName = fontFace.FamilyName,
+                        FontSize = fontSize / MathF.Min(width, height),
+                        X = 10f / width,
+                        Y = (height / 2f - fontSize / 2f) / height,
+                        FillR = 0, FillG = 0, FillB = 0, FillA = 1f,
+                    };
+                    if (isDark)
+                    {
+                        textEntry.FillR = textEntry.FillG = textEntry.FillB = 65535;
+                    }
 
-                    img.SaveAsPng(cachePath);
-                    img.Dispose();
+                    var engine = new NormalTypesettingEngine();
+                    var vectorCanvas = engine.Layout(textEntry, fontFace);
+                    var picture = VectorToIPicture.Convert(vectorCanvas, width, height, transparentBackground: true);
+
+                    picture.SaveToPng(cachePath);
 
                     return ImageSource.FromFile(cachePath);
                 }
@@ -126,7 +125,7 @@ namespace projectFrameCut.Services
                 }
                 return null;
             });
-#pragma warning restore CS8603 
+#pragma warning restore CS8603
         }
         /// <summary>
         /// 根据 FontItem.PrimaryLanguageTag 选出合适的样本文字。
@@ -156,34 +155,11 @@ namespace projectFrameCut.Services
             LoadedFonts.Clear();
             foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
             {
-                var info = TextHelper.ReadFontFileInfo(f);
-                var fontCollection = new FontCollection();
-                FontFamily family;
-                try
+                foreach (var info in TextHelper.CreateFontInfo(LocalizedResources.SimpleLocalizerBaseGeneratedHelper.Localized.TextServices_FontCatagory_YourAsset, f))
                 {
-                    family = fontCollection.Add(f);
+                    LoadedFonts.TryAdd(info.InnerFont?.FamilyName ?? Path.GetFileNameWithoutExtension(f), info);
                 }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Failed to add font to collection: {f}");
-                    continue;
-                }
-                if (string.IsNullOrWhiteSpace(family.Name))
-                {
-                    continue;
-                }
-                LoadedFonts.TryAdd(info.EnglishName, new FontItem
-                {
-                    InnerItem = info,
-                    InnerFont = fontCollection,
-                    InnerFamily = family,
-                    Category = Localized.TextServices_FontCatagory_YourAsset,
-                    DisplayName = info.DisplayName,
-                    PrimaryLanguageTag = TextHelper.ToLanguageCode(info.PrimaryLanguage, true),
-                    FontName = info.EnglishName,
-                    Path = f
-
-                });
+               
 
             }
             foreach (var item in TextHelper.BuildSystemFontItems(category: Localized.TextServices_FontCatagory_System))
@@ -200,12 +176,13 @@ namespace projectFrameCut.Services
                 return string.Empty;
             }
 
-            if (!TryResolveFont(fontName, fontSize, out var font))
+            var fontFace = TryResolveFontFace(fontName);
+            if (fontFace is null)
             {
                 return string.Empty;
             }
 
-            var missing = TextHelper.GetMissingGlyphs(font, text).Distinct().ToArray();
+            var missing = TextHelper.GetMissingGlyphs(fontFace, text).Distinct().ToArray();
             if (missing.Length == 0)
             {
                 return string.Empty;
@@ -216,41 +193,31 @@ namespace projectFrameCut.Services
             return Localized.TextServices_UnsupportGlyph(fontName, preview, suffix);
         }
 
-        private static bool TryResolveFont(string fontName, float fontSize, out Font font)
+        private static FontFace? TryResolveFontFace(string fontName)
         {
-            font = default!;
-
             if (LoadedFonts.TryGetValue(fontName, out var item))
             {
-                if (TryCreateFontFromItem(item, fontSize, out font))
+                if (item.InnerFont is not null)
+                    return item.InnerFont;
+
+                if (!string.IsNullOrWhiteSpace(item.Path) && File.Exists(item.Path))
                 {
-                    return true;
+                    try { return FontFace.Load(item.Path); }
+                    catch { }
                 }
             }
 
-            if (TextClip.GetFont().TryGet(fontName, out var family))
-            {
-                font = family.CreateFont(fontSize);
-                return true;
-            }
-
-            return false;
+            TextClipFontRegistry.TryGetFont(fontName, out var registryFont);
+            return registryFont;
         }
 
-        public static bool TryResolveFontFamily(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item, out SixLabors.Fonts.FontFamily family)
+        public static bool TryResolveFontFamily(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item, out FontFace? fontFace)
         {
-            family = default;
+            fontFace = null;
 
-            if (!string.IsNullOrWhiteSpace(item.InnerFamily.Name))
+            if (item.InnerFont is not null)
             {
-                family = item.InnerFamily;
-                return true;
-            }
-
-            var collectionFamily = item.InnerFont?.Families.FirstOrDefault();
-            if (collectionFamily is { } fromCollection && !string.IsNullOrWhiteSpace(fromCollection.Name))
-            {
-                family = fromCollection;
+                fontFace = item.InnerFont;
                 return true;
             }
 
@@ -258,33 +225,13 @@ namespace projectFrameCut.Services
             {
                 try
                 {
-                    var collection = new FontCollection();
-                    var pathFamily = collection.Add(item.Path);
-                    if (string.IsNullOrWhiteSpace(pathFamily.Name))
-                    {
-                        return false;
-                    }
-
-                    family = pathFamily;
+                    fontFace = FontFace.Load(item.Path);
                     return true;
                 }
                 catch (Exception ex)
                 {
                     Log(ex, $"TryResolveFontFamily('{item.FontName}')");
                 }
-            }
-
-            return false;
-        }
-
-        private static bool TryCreateFontFromItem(FontItem item, float fontSize, out Font font)
-        {
-            font = default!;
-
-            if (TryResolveFontFamily(item, out var family))
-            {
-                font = family.CreateFont(fontSize);
-                return true;
             }
 
             return false;

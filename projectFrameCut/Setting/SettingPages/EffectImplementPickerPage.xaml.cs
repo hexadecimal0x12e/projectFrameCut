@@ -25,9 +25,15 @@ namespace projectFrameCut.Setting.SettingPages
             new Dictionary<EffectImplementType, string>
             {
                 { EffectImplementType.NotSpecified , SettingLocalizedResources.RenderEffectImplement_NotSpecified },
-                { EffectImplementType.ImageSharp , SettingLocalizedResources.RenderEffectImplement_ImageSharp },
                 { EffectImplementType.HwAcceleration , SettingLocalizedResources.RenderEffectImplement_HwAcceleration },
                 { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
+                { EffectImplementType.Custom1 , "Custom #1"},
+                { EffectImplementType.Custom2 , "Custom #2"},
+                { EffectImplementType.Custom3 , "Custom #3"},
+                { EffectImplementType.Custom4 , "Custom #4"},
+                { EffectImplementType.Custom5 , "Custom #5"},
+                { EffectImplementType.None , SettingLocalizedResources.RenderEffectImplement_NotApplicable},
+
             };
 
 

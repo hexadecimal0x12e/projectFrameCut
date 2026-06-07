@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Shared;
 using System;
@@ -45,7 +46,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
 
             // Fallback - a single default entry
-            var f = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.FirstOrDefault().Name ?? "Arial";
+            var f = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial";
             return new List<TextClipEntry>
             {
                 new TextClipEntry
@@ -122,7 +123,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                             text = "",
                             x = 0,
                             y = 0,
-                            fontFamily = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.FirstOrDefault().Name ?? "Arial",
+                            fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial",
                             fontSize = 24f,
                             r = 65535,
                             g = 65535,

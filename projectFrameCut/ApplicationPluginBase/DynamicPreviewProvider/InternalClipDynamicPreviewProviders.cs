@@ -11,8 +11,11 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading;
 using projectFrameCut.Render.Transform;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using RenderITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 
@@ -152,7 +155,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         TouchDiskEntry(diskPath);
     }
 
-   
+
 
     private static void EnqueuePrefetch(VideoClip clip, VideoPrefetchContextKey contextKey, uint targetFrame)
     {
@@ -274,7 +277,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         return false;
     }
 
-    private static bool TryPersistFrameToDisk(projectFrameCut.Shared.IPicture frame, string diskPath)
+    private static bool TryPersistFrameToDisk(projectFrameCut.Drawing.Base.IPicture frame, string diskPath)
     {
         try
         {
@@ -284,7 +287,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
                 Directory.CreateDirectory(dir);
             }
 
-            frame.SaveAsPng8bpp(diskPath, null);
+            frame.SaveToPng(diskPath);
             return true;
         }
         catch
@@ -698,7 +701,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
         {
             cached.Touch();
             TouchDiskEntry(cached.DiskPath);
-            frame = cached.Frame.DeepCopy();
+            frame = cached.Frame.Clone();
             return true;
         }
 
@@ -739,7 +742,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
         }
 
         cached.Touch();
-        using var source = cached.Frame.DeepCopy();
+        using var source = cached.Frame.Clone();
         var resized = source.Resize(targetWidth, targetHeight, preserveAspect: true);
         if (ReferenceEquals(resized, source))
         {
@@ -854,7 +857,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
 
     private static void CacheFrame(TransformSourceFrameCacheKey key, IPicture frame, string? diskPath)
     {
-        _sourceFrameCache[key] = new CachedSourceFrame(frame.DeepCopy(), diskPath);
+        _sourceFrameCache[key] = new CachedSourceFrame(frame.Clone(), diskPath);
         TouchDiskEntry(diskPath);
         TrimCacheIfNeeded();
         TrimDiskCacheIfNeeded();
@@ -893,7 +896,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
                 Directory.CreateDirectory(dir);
             }
 
-            frame.SaveAsPng8bpp(diskPath, null);
+            frame.SaveToPng(diskPath);
             return true;
         }
         catch

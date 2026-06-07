@@ -15,7 +15,13 @@
       "PowerShell(Select-Object *)",
       "PowerShell(Select-String -Pattern \"error|Error|错误\")",
       "Bash(dir *)",
-      "WebFetch(domain:www.nuget.org)"
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(xargs grep -l \"projectFrameCut.Drawing\" --include=\"*.cs\")",
+      "Read(//mnt/d/**)",
+      "Read(//d//**)",
+      "Bash(dotnet test *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Item *)"
     ],
     "deny": [
       "Bash(Select-*)",

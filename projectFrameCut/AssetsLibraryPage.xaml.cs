@@ -17,6 +17,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Base;
 
 
 #if WINDOWS
@@ -27,8 +29,6 @@ using Windows.Storage;
 #if iDevices
 using Foundation;
 using UIKit;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-
 #endif
 
 namespace projectFrameCut;
@@ -298,7 +298,7 @@ public partial class AssetsLibraryPage : ContentPage
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(AssetThumbTargetWidth * aspect);
                         var resized = frame.Resize(AssetThumbTargetWidth, targetHeight, false);
-                        resized.SaveAsPng16bpp(outPath, null);
+                        resized.SaveToPng(outPath);
                         resized.Dispose();
                         frame.Dispose();
                         LogDiagnostic($"Generated per-asset thumb for {assetId} at frame {f}.");

@@ -59,15 +59,15 @@ public class InternalPluginBase : IPluginBase
     {
         {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
         {"Place",  new(() => new PlaceEffect_HwAccel())},
-        {"Crop",  new(() => new CropEffect_ImageSharp())},
-        {"Resize",  new(() => new ResizeEffect_ImageSharp())},
-        {"Blur",  new(() => new BlurEffect_ImageSharp())},
+        {"Crop",  new(() => new CropEffect_IPicture())},
+        {"Resize",  new(() => new ResizeEffect_IPicture())},
+        {"Blur",  new(() => new BlurEffect_IPicture())},
         {"Flip", new(() => new FlipEffect_IPicture()) },
         {"Sharpen", new(() => new SharpenEffect_IPicture()) },
         {"Vignette", new(() => new VignetteEffect_IPicture()) },
         {"FadeOpacity", new(() => new FadeOpacityEffect_IPicture()) },
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
-        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_IPicture()) },
         {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
         {"AddMixture", new(() => new Compose.AddMixture()) },
         {"SubtractMixture", new(() => new Compose.SubtractMixture()) },
@@ -123,7 +123,7 @@ public class InternalPluginBase : IPluginBase
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
         {"Jitter", new(() => new JitterEffect()) },
         {"ProgressPlacer", new(() => new ProgressPlacer()) },
-        {"Crop", new(() => new ProgressCropper_ImageSharp()) }
+        {"Crop", new(() => new ProgressCropper_IPicture()) }
     };
 
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -246,7 +246,7 @@ public class InternalPluginBase : IPluginBase
     {
         try
         {
-            TextClip.GetFont(); //build font cache
+            TextClipFontRegistry.Initialize();
         }
         catch (Exception ex)
         {

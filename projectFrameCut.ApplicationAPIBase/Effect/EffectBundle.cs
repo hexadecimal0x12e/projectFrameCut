@@ -85,7 +85,7 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// The name of the output anchor.
         /// </summary>
         /// <remarks>
-        /// Keep it blank except the output of this effect is not <see cref="projectFrameCut.Shared.IPicture"/>
+        /// Keep it blank except the output of this effect is not <see cref="projectFrameCut.Drawing.Base.IPicture"/>
         /// </remarks>
         public string OutputAnchorDisplayName { get; }
 

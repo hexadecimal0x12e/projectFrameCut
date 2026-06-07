@@ -7,13 +7,15 @@ using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
-using Font = SixLabors.Fonts.Font;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -46,7 +48,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         protected virtual string DefaultText => "Hello world";
 
-        protected virtual float DefaultFontSize => 56f;
+        protected virtual float DefaultFontSize => 110f;
 
         protected virtual float DefaultTranslationSizeRatio => 0.62f;
 
@@ -105,7 +107,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 return [sourceEntry];
             }
 
-            var sourceHeight = MeasureTextHeight(ResolveFont(fontFamily, fontSize), sourceText);
+            var sourceHeight = MeasureTextHeight(ResolveFontFace(fontFamily)!, sourceText, fontSize);
             var translationY = (int)Math.Ceiling(sourceHeight + Math.Max(0, lineSpacing));
             var translationEntry = new TextClipEntry
             {
@@ -329,20 +331,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             var currentFontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
 
-            var scaleX = (double)TargetWidth / currentRect.TargetWidth;
             var scaleY = (double)TargetHeight / currentRect.TargetHeight;
-            if (double.IsNaN(scaleX) || double.IsInfinity(scaleX) || scaleX <= 0)
+            if (double.IsNaN(scaleY) || double.IsInfinity(scaleY) || scaleY <= 0)
             {
                 return new Dictionary<string, string>(_parameters);
             }
 
-            var scale = scaleX;
-            if (!isInRatio && !double.IsNaN(scaleY) && !double.IsInfinity(scaleY) && scaleY > 0 && Math.Abs(scaleX - scaleY) > 0.0001)
-            {
-                scale = (scaleX + scaleY) / 2d;
-            }
-
-            var updatedSize = (float)(currentFontSize * scale);
+            var updatedSize = (float)(currentFontSize * scaleY);
             if (updatedSize > 0)
             {
                 _parameters[SizeKey] = updatedSize.ToString(CultureInfo.InvariantCulture);
@@ -525,15 +520,15 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var (width, height) = EstimateEntrySize(entry);
             var left = entry.horizontalAlignment switch
             {
-                SixLabors.Fonts.HorizontalAlignment.Center => entry.x - width / 2f,
-                SixLabors.Fonts.HorizontalAlignment.Right => entry.x - width,
+                ClipHorizontalAlignment.Center => entry.x - width / 2f,
+                ClipHorizontalAlignment.Right => entry.x - width,
                 _ => entry.x
             };
 
             var top = entry.verticalAlignment switch
             {
-                SixLabors.Fonts.VerticalAlignment.Center => entry.y - height / 2f,
-                SixLabors.Fonts.VerticalAlignment.Bottom => entry.y - height,
+                ClipVerticalAlignment.Center => entry.y - height / 2f,
+                ClipVerticalAlignment.Bottom => entry.y - height,
                 _ => entry.y
             };
 
@@ -575,36 +570,33 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        private static Font ResolveFont(string fontFamily, float fontSize)
+        private static FontFace? ResolveFontFace(string fontFamily)
         {
-            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var family))
-            {
-                return family.CreateFont(fontSize);
-            }
+            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var face))
+                return face;
 
-            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFamily))
-            {
-                return fallbackFamily.CreateFont(fontSize);
-            }
+            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFace))
+                return fallbackFace;
 
-            var systemFamily = SystemFonts.Families.FirstOrDefault();
-            if (systemFamily != default)
-            {
-                return systemFamily.CreateFont(fontSize);
-            }
-
-            return SystemFonts.CreateFont("Arial", fontSize);
+            TextClipFontRegistry.TryGetFont("Arial", out var registryFont);
+            return registryFont;
         }
 
-        private static float MeasureTextHeight(Font font, string text)
+        private static float MeasureTextHeight(FontFace font, string text, float fontSize)
         {
             if (string.IsNullOrEmpty(text))
-            {
-                return Math.Max(1f, font.Size);
-            }
+                return Math.Max(1f, fontSize);
 
-            var rect = TextMeasurer.MeasureBounds(text, new TextOptions(font));
-            return Math.Max(1f, rect.Height);
+            var entry = new TextEntry
+            {
+                Text = text,
+                FontName = font.FamilyName,
+                FontSize = fontSize / 100f,
+                LineSpacing = 0f,
+            };
+            var engine = new NormalTypesettingEngine();
+            var (_, height) = engine.Measure(entry, font);
+            return Math.Max(1f, height * 100f);
         }
     }
 }

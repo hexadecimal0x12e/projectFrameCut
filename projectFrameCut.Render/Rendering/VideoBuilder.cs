@@ -185,7 +185,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
             {
-                OnPreviewGenerated?.Invoke(this, frame.DeepCopy());
+                OnPreviewGenerated?.Invoke(this, frame.Clone());
                 countSinceLastPreview = 0;
             }
 

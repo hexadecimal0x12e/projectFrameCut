@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -200,10 +201,7 @@ namespace projectFrameCut.Render.Compose
 
                 if (!HasValidChannels(basePicture) || !HasValidChannels(topPicture))
                 {
-                    var baseBpp = (int)basePicture.BitPerPixel;
-                    var topBpp = (int)topPicture.BitPerPixel;
-                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.HasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
-                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.HasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
+                    throw new InvalidDataException("Pictures are invalid.");
                 }
 
                 ExtractChannels(basePicture, out float[] baseR, out float[] baseG, out float[] baseB, out float[]? baseA);
@@ -482,16 +480,13 @@ namespace projectFrameCut.Render.Compose
         public EffectTarget Target => EffectTarget.Mixture;
         public List<string> ParametersNeeded { get; } = ["MixtureType"];
         public Dictionary<string, string> ParametersType { get; } = new() { { "MixtureType", "string" } };
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
 
         public string MixtureType { get; init; } = "Add";
         public string TypeName => MixtureType + "Mixture";
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType != EffectImplementType.NotSpecified)
-                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
-
             var p = parameters ?? new Dictionary<string, object>();
             var mixtureType = p.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
 

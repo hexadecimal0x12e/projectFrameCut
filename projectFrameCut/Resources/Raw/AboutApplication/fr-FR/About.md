@@ -12,8 +12,4 @@ Le but de projectFrameCut est de devenir une application d'édition vidéo puiss
 
 Bibliothèques tierces et remerciements
 
-Ce projet utilise FFmpeg et SixLabors.ImageSharp (et les bibliothèques associées) pour l'extraction et le traitement des images, et utilise FFmpeg_droidFix.AutoGen pour appeler FFmpeg.
-
-Pour la cible Windows, nous utilisons également ILGPU pour l'accélération matérielle.
-
-Sur Android, nous utilisons Fishnet pour le rapport de crash.
+Ce projet utilise FFmpeg et projectFrameCut.Drawing

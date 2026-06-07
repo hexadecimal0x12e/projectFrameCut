@@ -1,9 +1,9 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace projectFrameCut.Render.Effect
@@ -25,7 +25,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = ["Amount"];
@@ -57,27 +56,7 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.SharpenPicture(source, Amount, "Sharpen", typeof(SharpenEffect_IPicture));
-            sw.Stop();
-            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-            {
-                Elapsed = sw.Elapsed,
-                OperationDisplayName = "Sharpen",
-                Operator = typeof(SharpenEffect_IPicture),
-                ProcessingFuncStackTrace = new StackTrace(true),
-                StepUsed = null,
-                Properties = new Dictionary<string, object>
-                {
-                    { nameof(Amount), Amount }
-                }
-            }).ToList();
-            return result;
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
+            return SharpenEffect.Process(source, Amount);
         }
     }
 
@@ -92,7 +71,7 @@ namespace projectFrameCut.Render.Effect
             { "Amount", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp, EffectImplementType.IPicture];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture, EffectImplementType.IPicture];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -102,7 +81,6 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => SharpenEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 EffectImplementType.IPicture => SharpenEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

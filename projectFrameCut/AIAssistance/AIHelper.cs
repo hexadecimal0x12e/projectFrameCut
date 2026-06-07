@@ -1,7 +1,6 @@
 ﻿using OpenAI.Images;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.ClientModel;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.AIAssistance
 {
@@ -790,7 +789,7 @@ namespace projectFrameCut.AIAssistance
             try
             {
                 using var stream = new MemoryStream();
-                picture.SaveToSixLaborsImage().SaveAsPng(stream);
+                picture.SaveToPng(stream);
                 var base64Data = Convert.ToBase64String(stream.ToArray());
                 return $"data:image/png;base64,{base64Data}";
             }

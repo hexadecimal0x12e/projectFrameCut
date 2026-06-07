@@ -27,7 +27,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
         bool IEffect.Enabled { get => false; set { } } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
         string? IEffect.NeedComputer => null;
-        bool IEffect.YieldProcessStep => false;
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MaxValue; set { } }
@@ -124,15 +123,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             { "Ratio", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType != EffectImplementType.NotSpecified)
-            {
-                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
-            }
-
             parameters ??= new Dictionary<string, object> { { "Ratio", 1f } };
             if (!parameters.ContainsKey("Ratio"))
             {

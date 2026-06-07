@@ -140,7 +140,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 {
                     EffectImplementType.HwAcceleration => 0,
                     EffectImplementType.IPicture => 1,
-                    EffectImplementType.ImageSharp => 2,
                     EffectImplementType.NotSpecified => 100,
                     _ => 50,
                 };

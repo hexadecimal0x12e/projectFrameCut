@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -20,8 +21,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; set; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; set; } = EffectImplementType.IPicture;
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
 
@@ -50,14 +50,8 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            return EffectHelper.PlacePicture(frame, startX, startY, targetWidth, targetHeight, "PointPlacer", GetType());
+            return PlaceEffect.Process(frame, startX, startY, targetWidth, targetHeight);
         }
-
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
-
 
         public bool IsValueValid(object value)
         {
@@ -85,7 +79,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.IPicture };
 
 
         public string? ID { get; set; }
@@ -108,7 +102,7 @@ namespace projectFrameCut.Render.Effect
 
             if (e is PointPlacer pointPlacer)
             {
-                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.ImageSharp : implementType;
+                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType;
             }
 
             if (e is IBindableArgumentEffect be)

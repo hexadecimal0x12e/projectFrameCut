@@ -1,9 +1,8 @@
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,7 +30,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => "PlaceComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -102,7 +100,7 @@ namespace projectFrameCut.Render.Effect
 
             if (computer is null)
             {
-                return EffectHelper.PlacePicture(source, startX, startY, targetWidth, targetHeight, "Place", typeof(PlaceEffect_HwAccel));
+                return PlaceEffect.Process(source, startX, startY, targetWidth, targetHeight);
             }
 
             var sw = Stopwatch.StartNew();
@@ -149,10 +147,6 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
 
         private static (float[] r, float[] g, float[] b, float[] a) ExtractFloatChannels(IPicture source)
         {
@@ -211,6 +205,7 @@ namespace projectFrameCut.Render.Effect
 
             throw new NotSupportedException($"Specific pixel-mode is not supported.");
         }
+
     }
 
     public class PlaceEffectFactory : IEffectFactory

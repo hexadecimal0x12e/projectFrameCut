@@ -12,7 +12,7 @@ The goal of projectFrameCut is to become a powerful, easy-to-learn, and complete
 
 Third-party libraries and acknowledgements
 
-This project uses FFmpeg and SixLabors.ImageSharp (and related libraries) for frame extraction and processing, and uses FFmpeg_droidFix.AutoGen to call FFmpeg.
+This project uses FFmpeg and projectFrameCut.Drawing for frame extraction and processing, and uses FFmpeg_droidFix.AutoGen to call FFmpeg.
 
 For the Windows target we also use ILGPU for hardware acceleration.
 

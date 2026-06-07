@@ -7,6 +7,7 @@ using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -27,7 +28,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.ViewModels;
 
@@ -3006,7 +3007,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                             var vid = PluginManager.CreateVideoSource(localPath);
                             item.Duration = vid.TotalFrames;
                             item.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
+                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
                             item.ThumbnailPath = thumbnailPath;
                             break;
                         }

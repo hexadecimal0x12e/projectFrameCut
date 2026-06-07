@@ -179,7 +179,7 @@ namespace projectFrameCut
             try
             {
                 ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                ProgramCommit = new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().ToArray());
+                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
                 AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
             }
             catch { }
@@ -350,7 +350,7 @@ namespace projectFrameCut
                 builder.UseMauiApp<App>()
                        .UseMauiCommunityToolkit(options =>
                        {
-                           options.SetShouldEnableSnackbarOnWindows(true);
+                           options.SetShouldEnableSnackbarOnWindows(false);
                        })
 #if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
                        .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>

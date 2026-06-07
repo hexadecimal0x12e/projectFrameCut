@@ -32,7 +32,6 @@ using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.Effect;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Runtime;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
@@ -48,8 +47,10 @@ using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
-
+using CommunityToolkit.Maui.Extensions;
 
 
 #if WINDOWS
@@ -73,11 +74,6 @@ using projectFrameCut.MetalAccelerater;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
-using Android.Content.Res;
-using CommunityToolkit.Maui.Extensions;
-using Google.Android.Material.Chip;
-using Java.Nio.Channels;
-
 #endif
 
 namespace projectFrameCut;
@@ -1597,7 +1593,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(ThumbTargetWidth * aspect);
                         var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
-                        resized.SaveAsPng16bpp(outPath, null);
+                        resized.SaveToPng(outPath);
                         resized.Dispose();
                         frame.Dispose();
                         LogDiagnostic($"Read the thumb for clip {clipId} in frame {f}.");

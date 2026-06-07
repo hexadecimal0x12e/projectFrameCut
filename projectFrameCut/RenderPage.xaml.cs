@@ -16,7 +16,6 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Plugin;
-using SixLabors.ImageSharp;
 using projectFrameCut.Services;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -25,11 +24,13 @@ using System.Runtime.InteropServices;
 
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
 using System.Reflection;
+using projectFrameCut.Drawing.Base;
+
 
 
 
@@ -67,7 +68,7 @@ public partial class RenderPage : ContentPage
     public bool running;
 
 
-    // ÈÕÖ¾»º³åÇø
+    // ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     private readonly StringBuilder _logBuffer = new StringBuilder();
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
     private System.Timers.Timer? _logUpdateTimer;
@@ -392,7 +393,7 @@ public partial class RenderPage : ContentPage
         {
             var batch = new StringBuilder();
             int count = 0;
-            const int maxBatchSize = 50; // Ã¿´Î×î¶à´¦Àí 50 ÌõÈÕÖ¾
+            const int maxBatchSize = 50; // Ã¿ï¿½ï¿½ï¿½ï¿½à´¦ï¿½ï¿½ 50 ï¿½ï¿½ï¿½ï¿½Ö¾
 
             while (count < maxBatchSize && _logQueue.TryDequeue(out var logEntry))
             {
@@ -1679,8 +1680,8 @@ public class RenderPageViewModel : INotifyPropertyChanged
                     {
                         _width = parts[0];
                         _height = parts[1];
-                        OnPropertyChanged(nameof(Width));   // ÐÞÕý
-                        OnPropertyChanged(nameof(Height));  // ÐÞÕý
+                        OnPropertyChanged(nameof(Width));   // ï¿½ï¿½ï¿½ï¿½
+                        OnPropertyChanged(nameof(Height));  // ï¿½ï¿½ï¿½ï¿½
                     }
                 }
             }

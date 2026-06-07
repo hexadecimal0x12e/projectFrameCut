@@ -3,6 +3,8 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {

@@ -17,7 +17,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.RelativeHeight { get => -1; set { } }
 
         string? IEffect.NeedComputer => null;
-        bool IEffect.YieldProcessStep => false;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
         EffectType IEffect.TypeOfEffect => EffectType.ClipPositionProvider;
     }
@@ -39,7 +38,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.RelativeHeight { get => -1; set { } }
 
         string? IEffect.NeedComputer => null;
-        bool IEffect.YieldProcessStep => false;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
         EffectType IEffect.TypeOfEffect => EffectType.ContinuousClipPositionProvider;
 

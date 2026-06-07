@@ -6,6 +6,7 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -13,7 +14,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -22,7 +22,7 @@ using System.Text.Json;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Color = Microsoft.Maui.Graphics.Color;
 using Image = Microsoft.Maui.Controls.Image;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
 
@@ -1632,7 +1632,7 @@ public partial class DraftEffectBindingView : ContentView
             try
             {
                 using var stream = new MemoryStream();
-                await Task.Run(() => picture.SaveToSixLaborsImage().SaveAsPng(stream)); // Assuming SaveAsPng exists as extension
+                await Task.Run(() => picture.SaveToPng(stream));
                 stream.Position = 0;
                 var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
                 node.PreviewImage = imageSource;

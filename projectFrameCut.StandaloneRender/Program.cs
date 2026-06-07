@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -370,7 +371,7 @@ namespace projectFrameCut.StandaloneRender
 
                 ILGPUPlugin.accelerators = accelerators;
 
-                if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") IPicture.PictureResizer = new Render.Effect.HwAccelPictureResizer();
+                if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.HwAccelPictureResizer();
                 return 0;
 
             }

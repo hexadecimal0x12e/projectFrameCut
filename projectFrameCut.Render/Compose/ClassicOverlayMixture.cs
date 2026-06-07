@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -92,10 +93,7 @@ namespace projectFrameCut.Render.Compose
 
                 if (!HasValidChannels(basePicture) || !HasValidChannels(topPicture))
                 {
-                    var baseBpp = (int)basePicture.BitPerPixel;
-                    var topBpp = (int)topPicture.BitPerPixel;
-                    try { basePicture = basePicture.SaveToSixLaborsImage(baseBpp, saveAlpha: basePicture.HasAlphaChannel).ToPJFCPicture(baseBpp); } catch { }
-                    try { topPicture = topPicture.SaveToSixLaborsImage(topBpp, saveAlpha: topPicture.HasAlphaChannel).ToPJFCPicture(topBpp); } catch { }
+                    throw new InvalidDataException("Pictures are invalid.");
                 }
 
                 bool baseHasHdrBrightness = TryGetHdrBrightness(basePicture, out float[]? baseBrightness, out float baseMaximumBrightness);
@@ -127,28 +125,6 @@ namespace projectFrameCut.Render.Compose
 
                 sw.Stop();
                 procStack.Elapsed = sw.Elapsed;
-
-#if DEBUG
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    var id = Guid.NewGuid();
-                    LogDiagnostic(
-                        $"""
-                        Overlay operation {id},
-                        base:
-                        {basePicture.GetDiagnosticsInfo()}
-
-                        top:
-                        {topPicture.GetDiagnosticsInfo()}
-                        result:
-                        {result.GetDiagnosticsInfo()}
-                        """
-                        );
-                    basePicture.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-base.png"));
-                    topPicture.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-top.png"));
-                    result.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-result.png"));
-                }
-#endif
 
                 return result;
             }

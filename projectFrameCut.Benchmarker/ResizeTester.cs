@@ -1,3 +1,6 @@
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Shared;
 using System.Diagnostics;
@@ -11,7 +14,7 @@ public class ResizeTester
     public void TestResize()
     {
         var source = Picture8bpp.GenerateSolidColor(1920, 1080, 255, 0, 0, null);
-        var target = source.Resize(1280, 720);
+        var target = source.Resize(1280, 720, false);
         Assert.IsNotNull(target);
         Assert.AreEqual(1280, target.Width);
         Assert.AreEqual(720, target.Height);
@@ -50,7 +53,7 @@ public class ResizeTester
     {
         var src = TestRunner<projectFrameCut.Render.Effect.ResizeEffect_HwAccel>.MakeNoise(srcWidth, srcHeight);
         Stopwatch stopwatch = Stopwatch.StartNew();
-        var resizer =  new projectFrameCut.Render.Effect.ResizeEffect_HwAccel() { Width = destWidth, Height = destHeight, PreserveAspectRatio = !forceResize };
+        var resizer = new projectFrameCut.Render.Effect.ResizeEffect_HwAccel() { Width = destWidth, Height = destHeight, PreserveAspectRatio = !forceResize };
         var computer = PluginManager.CreateComputer(resizer.NeedComputer);
         for (var i = 0; i < 10; i++)
         {

@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -28,18 +29,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="targetHeight"></param>
         /// <returns>the processed frame</returns>
         public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight);
-
-        /// <summary>
-        /// Get the processing step for this effect on the source picture to produce a process step with the target width and height.
-        /// </summary>
-        /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
-        /// </remarks>
-        /// <param name="source"></param>
-        /// <param name="targetWidth"></param>
-        /// <param name="targetHeight"></param>
-        /// <returns></returns>
-        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight);
 
         /// <summary>
         /// If you'd like to initialize the effect before use, override it.

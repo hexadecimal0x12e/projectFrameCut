@@ -25,8 +25,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Angle", 0f },
         };
 
-        public List<string> ParametersNeeded => CropEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => CropEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => CropEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => CropEffect_IPicture.ParametersType;
 
         public string TypeName => "Crop";
         public bool IsNormalEffect => true;

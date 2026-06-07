@@ -167,7 +167,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 cacheHitCount++;
                 using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
-                if (!fs.TryLoadVfd(out picture))
+                if(!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(fs, out picture))
                 {
                     picture = null;
                     return false;
@@ -195,7 +195,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 cacheHitCount++;
                 using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
-                if (!fs.TryLoadVfd(out picture))
+                if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(fs, out picture))
                 {
                     picture = null;
                     return false;
@@ -223,7 +223,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 cacheHitCount++;
                 using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
-                if (!fs.TryLoadVfd(out picture))
+                if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(fs, out picture))
                 {
                     picture = null;
                     return false;
@@ -245,7 +245,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (File.Exists(path)) return;
 
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            picture.SaveAsVfd(fs, EnableCompression);
+            picture.Save(fs, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
 
             EnforceCacheSizeLimit();
         }
@@ -257,7 +257,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (File.Exists(path)) return;
 
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            picture.SaveAsVfd(fs, EnableCompression);
+            picture.Save(fs, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
 
             EnforceCacheSizeLimit();
         }
@@ -269,7 +269,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (File.Exists(path)) return;
 
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
-            picture.SaveAsVfd(fs, EnableCompression);
+            picture.Save(fs, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
 
             EnforceCacheSizeLimit();
         }

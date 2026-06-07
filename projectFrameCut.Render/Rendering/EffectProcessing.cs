@@ -1,11 +1,12 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,62 +33,7 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
         }
 
-        public static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, INormalEffect item, IComputer? computer, int width, int height)
-        {
-            if (item.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = item.GetStep(frame, width, height);
-                    steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = item.Render(frame, computer, width, height);
-                }
-            }
-            else
-            {
-                frame = item.Render(frame, computer, width, height);
-            }
-        }
-
-        public static void ProcessContinuousEffect(uint targetFrame, IClip clip, IComputer? computer, ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IContinuousEffect c, int width, int height)
-        {
-            if (c.EndPoint == 0 && c.EndPoint == 0)
-            {
-                c.StartPoint = (int)(clip.StartFrame);
-                c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
-            }
-            if (c.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = c.GetStep(frame, targetFrame, width, height);
-                    steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {c.Name}({c.TypeName}) : {step.GetProcessStack()}");
-
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for continuous effect {c.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = c.Render(frame, targetFrame, computer, width, height);
-                }
-
-            }
-            else
-            {
-                frame = c.Render(frame, targetFrame, computer, width, height);
-            }
-        }
-
-        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IBindableArgumentEffect item, IComputer? computer, int width, int height)
+        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, IBindableArgumentEffect item, IComputer? computer, int width, int height)
         {
             switch (item.EffectRole)
             {
@@ -162,63 +108,17 @@ namespace projectFrameCut.Render.Rendering
                         return mvproc.GenerateOnce;
                     }
                     break;
-                //case BindableArgumentEffectType.ResultGenerator:
-                //    if (item is IBindableArgumentEffectOneInputResultGenerator rg)
-                //    {
-                //        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                //        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                //        if (item.YieldProcessStep)
-                //        {
-                //            lastIsProcessStep = true;
-                //            try
-                //            {
-                //                var step = rg.GenerateResultStep(cachedValue, width, height);
-                //                steps.Add(step);
-                //                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                //            }
-                //            catch (Exception ex)
-                //            {
-                //                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                //                lastIsProcessStep = false;
-                //                frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //            }
-                //        }
-                //        else
-                //        {
-                //            frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //        }
-                //    }
-                //    break;
                 case BindableArgumentEffectType.OneInputResultGenerator:
                     if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(crg.BindedArgumentProviderID, "BindedArgumentProviderID");
                         var cachedValue = GetCachedValue(crg.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                        if (item.YieldProcessStep)
+                        if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
                         {
-                            lastIsProcessStep = true;
-                            try
-                            {
-                                if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
-                                {
-                                    crg.StartPoint = (int)(clip.StartFrame);
-                                    crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
-                                }
-                                var step = crg.GenerateResultStep(cachedValue, targetFrame, width, height);
-                                steps.Add(step);
-                                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                                lastIsProcessStep = false;
-                                frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                            }
+                            crg.StartPoint = (int)(clip.StartFrame);
+                            crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
                         }
-                        else
-                        {
-                            frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                        }
+                        frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
                     }
                     break;
                 default:
@@ -238,10 +138,23 @@ namespace projectFrameCut.Render.Rendering
             string fontFamily = "Arial";
             float padding = 10; // 距离边缘的边距
 
-            // 测量文本尺寸
-            var font = SystemFonts.CreateFont(fontFamily, fontSize, FontStyle.Regular);
-            var textOptions = new TextOptions(font);
-            var textSize = TextMeasurer.MeasureSize(watermarkText, textOptions);
+            // 测量文本尺寸（通过 NormalTypesettingEngine）
+            float measuredWidth = watermarkText.Length * fontSize * 0.6f;
+            float measuredHeight = fontSize;
+            if (TextClipFontRegistry.TryGetFont(fontFamily, out var fontFace) && fontFace is not null)
+            {
+                var measureEntry = new TextEntry
+                {
+                    Text = watermarkText,
+                    FontName = fontFamily,
+                    FontSize = fontSize / MathF.Min(src.Width, src.Height),
+                    LineSpacing = 0f,
+                };
+                var engine = new NormalTypesettingEngine();
+                var (w, h) = engine.Measure(measureEntry, fontFace);
+                measuredWidth = w * MathF.Min(src.Width, src.Height);
+                measuredHeight = h * MathF.Min(src.Width, src.Height);
+            }
 
             var wtmkClip = new TextClip
             {
@@ -253,11 +166,11 @@ namespace projectFrameCut.Render.Rendering
                     new TextClipEntry
                     {
                         text = watermarkText,
-                        x = (int)(src.Width - textSize.Width - padding),
-                        y = (int)(src.Height - textSize.Height - padding),
+                        x = (int)(src.Width - measuredWidth - padding),
+                        y = (int)(src.Height - measuredHeight - padding),
                         fontFamily = fontFamily,
                         fontSize = fontSize,
-                        fontStyle = FontStyle.Regular,
+                        fontStyle = ClipFontStyle.Regular,
                         r = 65535,
                         g = 65535,
                         b = 65535,

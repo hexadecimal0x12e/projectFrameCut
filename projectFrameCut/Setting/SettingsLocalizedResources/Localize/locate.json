@@ -2384,7 +2384,7 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u5173\u4E8E\u6548\u679C\u5B9E\u73B0\u5668\uFF1A\r- \u0027IPicture CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u5F00\u9500\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u51C6\u786E\r- \u0027SixLabors.ImageSharp CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u51C6\u786E\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u4F1A\u9020\u6210\u5927\u91CF\u7684\u5F00\u9500\r- \u0027GPU \u786C\u4EF6\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F83\u9AD8\u7684\u6027\u80FD\u548C\u76F8\u5BF9\u8F83\u5C0F\u7684\u5F00\u9500",
+        "Value": "\u5173\u4E8E\u6548\u679C\u5B9E\u73B0\u5668\uFF1A\r- \u0027IPicture CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u5F00\u9500\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u51C6\u786E\r- \u0027GPU \u786C\u4EF6\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F83\u9AD8\u7684\u6027\u80FD\u548C\u76F8\u5BF9\u8F83\u5C0F\u7684\u5F00\u9500\r- \u0027\u4E0D\u9002\u7528\u0027 \u8868\u793A\u6B64\u6548\u679C\u4E0D\u9700\u8981\u4F7F\u7528\u6548\u679C\u5B9E\u73B0\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2396,15 +2396,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU\u5B9E\u73B0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018SixLabors.ImageSharp\u2019",
         "DontTranslate": false
       },
       {
@@ -2434,6 +2425,14 @@
       {
         "Id": "RenderEffectImplement_Unknown",
         "Value": "\u672A\u77E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "\u4E0D\u9002\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4166,15 +4165,6 @@
       {
         "Id": "RenderEffectImplement_Custom",
         "Value": "Custom",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU implementation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6844,15 +6834,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU\u5BE6\u73FE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_RenderEffectImplement",
         "Value": "\u6548\u679C\u5BE6\u73FE\u5668",
         "Mode": "ConstString",
@@ -9511,15 +9492,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU\u5B9F\u88C5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u300CSixLabors.ImageSharp\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
         "DontTranslate": false
       },
       {
@@ -12187,15 +12159,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU \uAD6C\uD604",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u0027SixLabors.ImageSharp\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_RenderEffectImplement",
         "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30",
         "Mode": "ConstString",
@@ -14846,15 +14809,6 @@
       {
         "Id": "RenderEffectImplement_Custom",
         "Value": "Personnalis\u00E9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp impl\u00E9mentation CPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17517,15 +17471,6 @@
       {
         "Id": "RenderEffectImplement_Custom",
         "Value": "\u81EA\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU\u4E4B\u5B9E\u4F5C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20680,15 +20625,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp \u062A\u0646\u0641\u064A\u0630 \u0648\u062D\u062F\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "RenderEffectImplement_IPicture",
         "Value": "\u062A\u0646\u0641\u064A\u0630 IPicture \u0628\u0648\u0627\u0633\u0637\u0629 \u0648\u062D\u062F\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629",
         "Mode": "ConstString",
@@ -23349,15 +23285,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU-Implementierung",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "RenderEffectImplement_IPicture",
         "Value": "IPicture CPU-Implementierung",
         "Mode": "ConstString",
@@ -26010,15 +25937,6 @@
       {
         "Id": "RenderEffectImplement_HwAcceleration",
         "Value": "Aceleraci\u00F3n por hardware de GPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp implementaci\u00F3n de CPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28687,15 +28605,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "Implementazione CPU SixLabors.ImageSharp",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "RenderEffectImplement_IPicture",
         "Value": "Implementazione IPicture CPU",
         "Mode": "ConstString",
@@ -31356,15 +31265,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp implementacja CPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "RenderEffectImplement_IPicture",
         "Value": "Implementacja IPicture CPU",
         "Mode": "ConstString",
@@ -34018,15 +33918,6 @@
       {
         "Id": "RenderEffectImplement_HwAcceleration",
         "Value": "Acelera\u00E7\u00E3o de hardware da GPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp implementa\u00E7\u00E3o de CPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36696,15 +36587,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "\u0420\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F SixLabors.ImageSharp \u0434\u043B\u044F CPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "RenderEffectImplement_IPicture",
         "Value": "\u0420\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F IPicture \u043D\u0430 CPU",
         "Mode": "ConstString",
@@ -39362,15 +39244,6 @@
       {
         "Id": "RenderEffectImplement_HwAcceleration",
         "Value": "GPU Donan\u0131m H\u0131zland\u0131rma",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderEffectImplement_ImageSharp",
-        "Value": "SixLabors.ImageSharp CPU Uygulamas\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

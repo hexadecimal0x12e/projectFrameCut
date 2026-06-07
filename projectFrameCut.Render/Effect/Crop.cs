@@ -1,18 +1,15 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class CropEffect_ImageSharp : INormalEffect
+    public class CropEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -38,8 +35,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -66,7 +62,7 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Crop";
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.Except(OptionalParameters).All(parameters.ContainsKey))
@@ -82,7 +78,7 @@ namespace projectFrameCut.Render.Effect
 
             float angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f;
 
-            return new CropEffect_ImageSharp
+            return new CropEffect_IPicture
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),
@@ -96,41 +92,12 @@ namespace projectFrameCut.Render.Effect
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-            => Crop(source, StartX, StartY, Width, Height, targetWidth, targetHeight);
-
-        public IPicture Crop(IPicture source, int startX, int startY, int width, int height, int targetWidth, int targetHeight)
         {
-            throw new NotImplementedException();
-        }
+            int startX = StartX;
+            int startY = StartY;
+            int width = Width;
+            int height = Height;
 
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return imgCtx =>
-            {
-                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, imgCtx.GetCurrentSize());
-                if (Math.Abs(Angle) <= float.Epsilon)
-                {
-                    return imgCtx.Crop(safeRect);
-                }
-
-                float centerX = safeRect.X + safeRect.Width / 2f;
-                float centerY = safeRect.Y + safeRect.Height / 2f;
-                var transformBuilder = new AffineTransformBuilder()
-                    .AppendTranslation(new Vector2(-centerX, -centerY))
-                    .AppendRotationDegrees(-Angle)
-                    .AppendTranslation(new Vector2(centerX, centerY));
-
-                return imgCtx.Transform(transformBuilder).Crop(safeRect);
-            };
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            int startX = StartX, startY = StartY, width = Width, height = Height;
-            if (width <= 0 || height <= 0)
-            {
-                throw new ArgumentException("Width and Height must be positive");
-            }
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
                 startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
@@ -139,150 +106,17 @@ namespace projectFrameCut.Render.Effect
                 height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
             }
 
-
-            return new CropProcessStep(startX, startY, width, height, Angle);
+            return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
         }
 
-        private static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
+        [Obsolete("Use Render directly instead.")]
+        public IPicture Crop(IPicture source, int startX, int startY, int width, int height, int targetWidth, int targetHeight)
         {
-            if (width <= 0 || height <= 0)
-            {
-                throw new ArgumentException("Width and Height must be positive");
-            }
-
-            var requestedRect = new Rectangle(startX, startY, width, height);
-            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
-            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
-            if (safeRect.Width <= 0 || safeRect.Height <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
-            }
-
-            return safeRect;
+            return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
         }
 
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; }
-    }
-
-    public class CropProcessStep : IPictureProcessStep
-    {
-        private TimeSpan? _elapsed;
-        public string Name => "Crop";
-        public Dictionary<string, object?> Properties { get; set; } = new();
-
-        public int StartX { get; init; }
-        public int StartY { get; init; }
-        public int Width { get; init; }
-        public int Height { get; init; }
-        public float Angle { get; init; }
-
-        public CropProcessStep(int startX, int startY, int width, int height, float angle = 0f)
-        {
-            StartX = startX;
-            StartY = startY;
-            Width = width;
-            Height = height;
-            Angle = angle;
-            Properties = new Dictionary<string, object?>
-            {
-                { nameof(StartX), StartX },
-                { nameof(StartY), StartY },
-                { nameof(Width), Width },
-                { nameof(Height), Height },
-                { nameof(Angle), Angle }
-            };
-        }
-
-        public IPicture Process(IPicture source)
-        {
-            var sw = Stopwatch.StartNew();
-            IPicture result;
-            if (Math.Abs(Angle) <= float.Epsilon)
-            {
-                result = EffectHelper.CropPicture(source, StartX, StartY, Width, Height, "Crop", typeof(CropProcessStep));
-            }
-            else
-            {
-                var img = source.SaveToSixLaborsImage();
-                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, img.Size);
-                float centerX = safeRect.X + safeRect.Width / 2f;
-                float centerY = safeRect.Y + safeRect.Height / 2f;
-                var transformBuilder = new AffineTransformBuilder()
-                    .AppendTranslation(new Vector2(-centerX, -centerY))
-                    .AppendRotationDegrees(-Angle)
-                    .AppendTranslation(new Vector2(centerX, centerY));
-
-                var transformed = img.Clone(ctx => ctx.Transform(transformBuilder).Crop(safeRect));
-                result = (int)source.BitPerPixel switch
-                {
-                    8 => new Picture8bpp(transformed),
-                    16 => new Picture16bpp(transformed),
-                    _ => throw new NotSupportedException("Specific pixel-mode is not supported.")
-                };
-            }
-
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
-            return result;
-        }
-
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return imgCtx =>
-            {
-                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, imgCtx.GetCurrentSize());
-                if (Math.Abs(Angle) <= float.Epsilon)
-                {
-                    return imgCtx.Crop(safeRect);
-                }
-
-                float centerX = safeRect.X + safeRect.Width / 2f;
-                float centerY = safeRect.Y + safeRect.Height / 2f;
-                var transformBuilder = new AffineTransformBuilder()
-                    .AppendTranslation(new Vector2(-centerX, -centerY))
-                    .AppendRotationDegrees(-Angle)
-                    .AppendTranslation(new Vector2(centerX, centerY));
-
-                return imgCtx.Transform(transformBuilder).Crop(safeRect);
-            };
-        }
-
-        private static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
-        {
-            if (width <= 0 || height <= 0)
-            {
-                throw new ArgumentException("Width and Height must be positive");
-            }
-
-            var requestedRect = new Rectangle(startX, startY, width, height);
-            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
-            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
-            if (safeRect.Width <= 0 || safeRect.Height <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
-            }
-
-            return safeRect;
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "Crop",
-            Operator = typeof(CropProcessStep),
-            ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
-            Properties = new Dictionary<string, object>
-            {
-                { nameof(StartX), StartX },
-                { nameof(StartY), StartY },
-                { nameof(Width), Width },
-                { nameof(Height), Height },
-                { nameof(Angle), Angle }
-            }
-        };
     }
 
     public record struct CropData(double Index, int StartX, int StartY, int Width, int Height, float Angle = 0f);
@@ -396,40 +230,254 @@ namespace projectFrameCut.Render.Effect
             return new CropData(crop.Index, x, y, w, h, crop.Angle);
         }
 
-        public static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
+        public static (int X, int Y, int Width, int Height) BuildSafeCropRect(int startX, int startY, int width, int height, int sourceWidth, int sourceHeight)
         {
             if (width <= 0 || height <= 0)
             {
                 throw new ArgumentException("Width and Height must be positive");
             }
 
-            var requestedRect = new Rectangle(startX, startY, width, height);
-            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
-            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
-            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            int maxX = Math.Max(0, startX);
+            int maxY = Math.Max(0, startY);
+            int maxW = Math.Min(width, sourceWidth - maxX);
+            int maxH = Math.Min(height, sourceHeight - maxY);
+
+            if (maxW <= 0 || maxH <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
             }
 
-            return safeRect;
+            return (maxX, maxY, maxW, maxH);
         }
 
-        public static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, int sourceWidth, int sourceHeight)
+        public static IPicture CropAndProcess(IPicture source, int startX, int startY, int width, int height, float angle)
         {
+            // Validate inputs early
             if (width <= 0 || height <= 0)
+                throw new ArgumentException("Width and Height must be positive.");
+
+            // When the crop rect falls completely outside the source, return a transparent
+            // canvas of the requested crop size rather than throwing at the Drawing layer.
+            if (startX >= source.Width || startY >= source.Height ||
+                startX + width <= 0 || startY + height <= 0)
             {
-                throw new ArgumentException("Width and Height must be positive");
+                return CreateTransparent(width, height, source.BitPerPixel);
             }
 
-            var requestedRect = new Rectangle(startX, startY, width, height);
-            var sourceRect = new Rectangle(0, 0, sourceWidth, sourceHeight);
-            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
-            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            var safe = BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
+            if (Math.Abs(angle) <= float.Epsilon)
             {
-                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
+                return CropEffect.Process(source, safe.X, safe.Y, safe.Width, safe.Height);
+            }
+            else
+            {
+                return source switch
+                {
+                    IPicture<byte> p8 => CropAndRotate(p8, startX, startY, width, height, angle),
+                    IPicture<ushort> p16 => CropAndRotate(p16, startX, startY, width, height, angle),
+                    _ => throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}"),
+                };
+            }
+        }
+
+        private static IPicture<byte> CropAndRotate(IPicture<byte> src, int startX, int startY, int width, int height, float angle)
+        {
+            var safe = BuildSafeCropRect(startX, startY, width, height, src.Width, src.Height);
+            int outW = safe.Width, outH = safe.Height;
+            int pixels = outW * outH;
+
+            float cx = safe.X + safe.Width / 2f;
+            float cy = safe.Y + safe.Height / 2f;
+            float angleRad = angle * MathF.PI / 180f;
+            float cosA = MathF.Cos(angleRad);
+            float sinA = MathF.Sin(angleRad);
+
+            var result = new Picture8bpp(outW, outH)
+            {
+                r = GC.AllocateUninitializedArray<byte>(pixels),
+                g = GC.AllocateUninitializedArray<byte>(pixels),
+                b = GC.AllocateUninitializedArray<byte>(pixels),
+                a = src.HasAlphaChannel && src.a != null
+                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                HasAlphaChannel = src.HasAlphaChannel,
+                Tag = src.Tag,
+            };
+
+            int srcW = src.Width, srcH = src.Height;
+
+            for (int oy = 0; oy < outH; oy++)
+            {
+                int dstRowStart = oy * outW;
+                for (int ox = 0; ox < outW; ox++)
+                {
+                    float rx = safe.X + ox - cx;
+                    float ry = safe.Y + oy - cy;
+
+                    float sx = cosA * rx - sinA * ry + cx;
+                    float sy = sinA * rx + cosA * ry + cy;
+
+                    int idx = dstRowStart + ox;
+                    if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
+                    {
+                        SampleBilinear(src, sx, sy, out byte rr, out byte gg, out byte bb);
+                        result.r[idx] = rr;
+                        result.g[idx] = gg;
+                        result.b[idx] = bb;
+                    }
+                    // out-of-bounds pixels stay 0 (black/transparent)
+                }
             }
 
-            return safeRect;
+            if (result.a != null && src.a != null)
+            {
+                for (int oy = 0; oy < outH; oy++)
+                {
+                    int dstRowStart = oy * outW;
+                    for (int ox = 0; ox < outW; ox++)
+                    {
+                        float rx = safe.X + ox - cx;
+                        float ry = safe.Y + oy - cy;
+                        float sx = cosA * rx - sinA * ry + cx;
+                        float sy = sinA * rx + cosA * ry + cy;
+                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
+                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static IPicture<ushort> CropAndRotate(IPicture<ushort> src, int startX, int startY, int width, int height, float angle)
+        {
+            var safe = BuildSafeCropRect(startX, startY, width, height, src.Width, src.Height);
+            int outW = safe.Width, outH = safe.Height;
+            int pixels = outW * outH;
+
+            float cx = safe.X + safe.Width / 2f;
+            float cy = safe.Y + safe.Height / 2f;
+            float angleRad = angle * MathF.PI / 180f;
+            float cosA = MathF.Cos(angleRad);
+            float sinA = MathF.Sin(angleRad);
+
+            var result = new Picture16bpp(outW, outH)
+            {
+                r = GC.AllocateUninitializedArray<ushort>(pixels),
+                g = GC.AllocateUninitializedArray<ushort>(pixels),
+                b = GC.AllocateUninitializedArray<ushort>(pixels),
+                a = src.HasAlphaChannel && src.a != null
+                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                HasAlphaChannel = src.HasAlphaChannel,
+                Tag = src.Tag,
+            };
+
+            int srcW = src.Width, srcH = src.Height;
+
+            for (int oy = 0; oy < outH; oy++)
+            {
+                int dstRowStart = oy * outW;
+                for (int ox = 0; ox < outW; ox++)
+                {
+                    float rx = safe.X + ox - cx;
+                    float ry = safe.Y + oy - cy;
+                    float sx = cosA * rx - sinA * ry + cx;
+                    float sy = sinA * rx + cosA * ry + cy;
+
+                    int idx = dstRowStart + ox;
+                    if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
+                    {
+                        SampleBilinear(src, sx, sy, out ushort rr, out ushort gg, out ushort bb);
+                        result.r[idx] = rr;
+                        result.g[idx] = gg;
+                        result.b[idx] = bb;
+                    }
+                }
+            }
+
+            if (result.a != null && src.a != null)
+            {
+                for (int oy = 0; oy < outH; oy++)
+                {
+                    int dstRowStart = oy * outW;
+                    for (int ox = 0; ox < outW; ox++)
+                    {
+                        float rx = safe.X + ox - cx;
+                        float ry = safe.Y + oy - cy;
+                        float sx = cosA * rx - sinA * ry + cx;
+                        float sy = sinA * rx + cosA * ry + cy;
+                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
+                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static void SampleBilinear(IPicture<byte> src, float x, float y, out byte r, out byte g, out byte b)
+        {
+            int x0 = (int)MathF.Floor(x); if (x < 0f) x0--;
+            int y0 = (int)MathF.Floor(y); if (y < 0f) y0--;
+            int x1 = x0 + 1;
+            int y1 = y0 + 1;
+            float fx = x - x0;
+            float fy = y - y0;
+            int w = src.Width, h = src.Height;
+            if (x0 < 0) x0 = 0; if (x1 >= w) x1 = w - 1;
+            if (y0 < 0) y0 = 0; if (y1 >= h) y1 = h - 1;
+            int i00 = y0 * w + x0, i10 = y0 * w + x1, i01 = y1 * w + x0, i11 = y1 * w + x1;
+            float w00 = (1f - fx) * (1f - fy), w10 = fx * (1f - fy), w01 = (1f - fx) * fy, w11 = fx * fy;
+            r = (byte)Math.Clamp((int)(src.r[i00] * w00 + src.r[i10] * w10 + src.r[i01] * w01 + src.r[i11] * w11 + 0.5f), 0, 255);
+            g = (byte)Math.Clamp((int)(src.g[i00] * w00 + src.g[i10] * w10 + src.g[i01] * w01 + src.g[i11] * w11 + 0.5f), 0, 255);
+            b = (byte)Math.Clamp((int)(src.b[i00] * w00 + src.b[i10] * w10 + src.b[i01] * w01 + src.b[i11] * w11 + 0.5f), 0, 255);
+        }
+
+        private static void SampleBilinear(IPicture<ushort> src, float x, float y, out ushort r, out ushort g, out ushort b)
+        {
+            int x0 = (int)MathF.Floor(x); if (x < 0f) x0--;
+            int y0 = (int)MathF.Floor(y); if (y < 0f) y0--;
+            int x1 = x0 + 1;
+            int y1 = y0 + 1;
+            float fx = x - x0;
+            float fy = y - y0;
+            int w = src.Width, h = src.Height;
+            if (x0 < 0) x0 = 0; if (x1 >= w) x1 = w - 1;
+            if (y0 < 0) y0 = 0; if (y1 >= h) y1 = h - 1;
+            int i00 = y0 * w + x0, i10 = y0 * w + x1, i01 = y1 * w + x0, i11 = y1 * w + x1;
+            float w00 = (1f - fx) * (1f - fy), w10 = fx * (1f - fy), w01 = (1f - fx) * fy, w11 = fx * fy;
+            r = (ushort)Math.Clamp((int)(src.r[i00] * w00 + src.r[i10] * w10 + src.r[i01] * w01 + src.r[i11] * w11 + 0.5f), 0, 65535);
+            g = (ushort)Math.Clamp((int)(src.g[i00] * w00 + src.g[i10] * w10 + src.g[i01] * w01 + src.g[i11] * w11 + 0.5f), 0, 65535);
+            b = (ushort)Math.Clamp((int)(src.b[i00] * w00 + src.b[i10] * w10 + src.b[i01] * w01 + src.b[i11] * w11 + 0.5f), 0, 65535);
+        }
+
+        private static float SampleBilinearAlpha(IPicture<byte> src, float x, float y)
+        {
+            if (src.a == null) return 1f;
+            int x0 = (int)MathF.Floor(x); if (x < 0f) x0--;
+            int y0 = (int)MathF.Floor(y); if (y < 0f) y0--;
+            int x1 = x0 + 1;
+            int y1 = y0 + 1;
+            float fx = x - x0, fy = y - y0;
+            int w = src.Width, h = src.Height;
+            if (x0 < 0) x0 = 0; if (x1 >= w) x1 = w - 1;
+            if (y0 < 0) y0 = 0; if (y1 >= h) y1 = h - 1;
+            int i00 = y0 * w + x0, i10 = y0 * w + x1, i01 = y1 * w + x0, i11 = y1 * w + x1;
+            return src.a[i00] * (1f - fx) * (1f - fy) + src.a[i10] * fx * (1f - fy) + src.a[i01] * (1f - fx) * fy + src.a[i11] * fx * fy;
+        }
+
+        private static float SampleBilinearAlpha(IPicture<ushort> src, float x, float y)
+        {
+            if (src.a == null) return 1f;
+            int x0 = (int)MathF.Floor(x); if (x < 0f) x0--;
+            int y0 = (int)MathF.Floor(y); if (y < 0f) y0--;
+            int x1 = x0 + 1;
+            int y1 = y0 + 1;
+            float fx = x - x0, fy = y - y0;
+            int w = src.Width, h = src.Height;
+            if (x0 < 0) x0 = 0; if (x1 >= w) x1 = w - 1;
+            if (y0 < 0) y0 = 0; if (y1 >= h) y1 = h - 1;
+            int i00 = y0 * w + x0, i10 = y0 * w + x1, i01 = y1 * w + x0, i11 = y1 * w + x1;
+            return src.a[i00] * (1f - fx) * (1f - fy) + src.a[i10] * fx * (1f - fy) + src.a[i01] * (1f - fx) * fy + src.a[i11] * fx * fy;
         }
 
         public static (float[] r, float[] g, float[] b, float[] a, bool sourceHasAlpha) ExtractFloatChannels(IPicture source)
@@ -491,9 +539,36 @@ namespace projectFrameCut.Render.Effect
 
             throw new NotSupportedException($"Specific pixel-mode is not supported.");
         }
+
+        public static IPicture CreateTransparent(int width, int height, IPicture.PicturePixelMode bitPerPixel)
+        {
+            int pixels = width * height;
+            if (bitPerPixel == IPicture.PicturePixelMode.UShortPicture)
+            {
+                return new Picture16bpp(width, height)
+                {
+                    r = new ushort[pixels],
+                    g = new ushort[pixels],
+                    b = new ushort[pixels],
+                    a = new float[pixels],
+                    HasAlphaChannel = true,
+                };
+            }
+            else
+            {
+                return new Picture8bpp(width, height)
+                {
+                    r = new byte[pixels],
+                    g = new byte[pixels],
+                    b = new byte[pixels],
+                    a = new float[pixels],
+                    HasAlphaChannel = true,
+                };
+            }
+        }
     }
 
-   
+
     public class CropEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
@@ -519,7 +594,6 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -599,13 +673,19 @@ namespace projectFrameCut.Render.Effect
 
             if (Math.Abs(Angle) > float.Epsilon)
             {
-                return new CropProcessStep(startX, startY, width, height, Angle).Process(source);
+                return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
             }
 
-            var safeRect = BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
+            if (startX >= source.Width || startY >= source.Height ||
+                startX + width <= 0 || startY + height <= 0)
+            {
+                return CropEffectShared.CreateTransparent(width, height, source.BitPerPixel);
+            }
+
+            var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
             if (computer is null)
             {
-                return EffectHelper.CropPicture(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height, "Crop", typeof(CropEffect_HwAccel));
+                return CropEffect.Process(source, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height);
             }
 
             var sw = Stopwatch.StartNew();
@@ -650,29 +730,6 @@ namespace projectFrameCut.Render.Effect
                 }
             }).ToList();
             return result;
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, int sourceWidth, int sourceHeight)
-        {
-            if (width <= 0 || height <= 0)
-            {
-                throw new ArgumentException("Width and Height must be positive");
-            }
-
-            var requestedRect = new Rectangle(startX, startY, width, height);
-            var sourceRect = new Rectangle(0, 0, sourceWidth, sourceHeight);
-            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
-            if (safeRect.Width <= 0 || safeRect.Height <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
-            }
-
-            return safeRect;
         }
 
         private static (float[] r, float[] g, float[] b, float[] a, bool sourceHasAlpha) ExtractFloatChannels(IPicture source)
