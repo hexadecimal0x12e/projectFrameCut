@@ -350,7 +350,7 @@ namespace projectFrameCut
                 builder.UseMauiApp<App>()
                        .UseMauiCommunityToolkit(options =>
                        {
-                           options.SetShouldEnableSnackbarOnWindows(true);
+                           options.SetShouldEnableSnackbarOnWindows(false);
                        })
 #if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
                        .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>

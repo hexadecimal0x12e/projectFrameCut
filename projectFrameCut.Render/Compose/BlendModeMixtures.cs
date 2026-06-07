@@ -480,16 +480,13 @@ namespace projectFrameCut.Render.Compose
         public EffectTarget Target => EffectTarget.Mixture;
         public List<string> ParametersNeeded { get; } = ["MixtureType"];
         public Dictionary<string, string> ParametersType { get; } = new() { { "MixtureType", "string" } };
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
 
         public string MixtureType { get; init; } = "Add";
         public string TypeName => MixtureType + "Mixture";
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType != EffectImplementType.NotSpecified)
-                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
-
             var p = parameters ?? new Dictionary<string, object>();
             var mixtureType = p.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
 

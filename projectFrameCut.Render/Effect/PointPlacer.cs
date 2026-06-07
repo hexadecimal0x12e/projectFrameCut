@@ -21,7 +21,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType { get; set; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; set; } = EffectImplementType.IPicture;
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
 
@@ -79,7 +79,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.IPicture };
 
 
         public string? ID { get; set; }
@@ -102,7 +102,7 @@ namespace projectFrameCut.Render.Effect
 
             if (e is PointPlacer pointPlacer)
             {
-                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.ImageSharp : implementType;
+                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType;
             }
 
             if (e is IBindableArgumentEffect be)

@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Plugin
 {
@@ -499,25 +500,34 @@ namespace projectFrameCut.Render.Plugin
 
         private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
         {
             if (computerType is null) return null;
             if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
                 return cachedComputer;
 
+            return GetComputerInternal(computerType, forceCreate);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
+        private static IComputer GetComputerInternal(string computerType, bool forceCreate)
+        {
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
                 {
-                    var computer = plugin.ComputerCreator(computerType);
-                    if (computer != null)
+                    if (plugin.ComputerProvider.TryGetValue(computerType, out var creator))
                     {
-                        if (forceCreate)
+                        var computer = creator();
+                        if (computer != null)
                         {
-                            return computer;
+                            if (forceCreate)
+                            {
+                                return computer;
+                            }
+                            return ComputerCache.GetOrAdd(computerType, computer);
                         }
-
-                        return ComputerCache.GetOrAdd(computerType, computer);
                     }
                 }
                 catch
@@ -527,6 +537,5 @@ namespace projectFrameCut.Render.Plugin
             }
             throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
         }
-
     }
 }

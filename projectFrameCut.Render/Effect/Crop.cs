@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class CropEffect_ImageSharp : INormalEffect
+    public class CropEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -62,7 +62,7 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Crop";
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.Except(OptionalParameters).All(parameters.ContainsKey))
@@ -78,7 +78,7 @@ namespace projectFrameCut.Render.Effect
 
             float angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f;
 
-            return new CropEffect_ImageSharp
+            return new CropEffect_IPicture
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),
@@ -92,8 +92,24 @@ namespace projectFrameCut.Render.Effect
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-            => Crop(source, StartX, StartY, Width, Height, targetWidth, targetHeight);
+        {
+            int startX = StartX;
+            int startY = StartY;
+            int width = Width;
+            int height = Height;
 
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
+            {
+                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)Width * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
+            }
+
+            return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
+        }
+
+        [Obsolete("Use Render directly instead.")]
         public IPicture Crop(IPicture source, int startX, int startY, int width, int height, int targetWidth, int targetHeight)
         {
             return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
@@ -236,9 +252,22 @@ namespace projectFrameCut.Render.Effect
 
         public static IPicture CropAndProcess(IPicture source, int startX, int startY, int width, int height, float angle)
         {
+            // Validate inputs early
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException("Width and Height must be positive.");
+
+            // When the crop rect falls completely outside the source, return a transparent
+            // canvas of the requested crop size rather than throwing at the Drawing layer.
+            if (startX >= source.Width || startY >= source.Height ||
+                startX + width <= 0 || startY + height <= 0)
+            {
+                return CreateTransparent(width, height, source.BitPerPixel);
+            }
+
+            var safe = BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
             if (Math.Abs(angle) <= float.Epsilon)
             {
-                return CropEffect.Process(source, startX, startY, width, height);
+                return CropEffect.Process(source, safe.X, safe.Y, safe.Width, safe.Height);
             }
             else
             {
@@ -510,9 +539,36 @@ namespace projectFrameCut.Render.Effect
 
             throw new NotSupportedException($"Specific pixel-mode is not supported.");
         }
+
+        public static IPicture CreateTransparent(int width, int height, IPicture.PicturePixelMode bitPerPixel)
+        {
+            int pixels = width * height;
+            if (bitPerPixel == IPicture.PicturePixelMode.UShortPicture)
+            {
+                return new Picture16bpp(width, height)
+                {
+                    r = new ushort[pixels],
+                    g = new ushort[pixels],
+                    b = new ushort[pixels],
+                    a = new float[pixels],
+                    HasAlphaChannel = true,
+                };
+            }
+            else
+            {
+                return new Picture8bpp(width, height)
+                {
+                    r = new byte[pixels],
+                    g = new byte[pixels],
+                    b = new byte[pixels],
+                    a = new float[pixels],
+                    HasAlphaChannel = true,
+                };
+            }
+        }
     }
 
-   
+
     public class CropEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
@@ -618,6 +674,12 @@ namespace projectFrameCut.Render.Effect
             if (Math.Abs(Angle) > float.Epsilon)
             {
                 return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
+            }
+
+            if (startX >= source.Width || startY >= source.Height ||
+                startX + width <= 0 || startY + height <= 0)
+            {
+                return CropEffectShared.CreateTransparent(width, height, source.BitPerPixel);
             }
 
             var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);

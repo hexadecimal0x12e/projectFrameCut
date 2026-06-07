@@ -200,8 +200,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     // NOTE: an earlier version of this log accidentally used
                     // `targetWidth` for both dimensions, which made the reported
                     // height nonsensical on non-square canvases.
-                    Log($"TextClip {this.Name}: Require size {targetWidth}*{targetHeight} (avg per char {targetWidth / entry.text.Length}*{targetHeight / entry.text.Length}), fonts actual size:{measuredWidth * targetWidth}*{measuredHeight * targetHeight} (avg per char {measuredWidth * targetWidth / entry.text.Length}*{measuredHeight * targetHeight / entry.text.Length})");
-                    Log(textEntry.ToString());
+                    //Log($"TextClip {this.Name}: Require size {targetWidth}*{targetHeight} (avg per char {targetWidth / entry.text.Length}*{targetHeight / entry.text.Length}), fonts actual size:{measuredWidth * targetWidth}*{measuredHeight * targetHeight} (avg per char {measuredWidth * targetWidth / entry.text.Length}*{measuredHeight * targetHeight / entry.text.Length})");
+                    //Log(textEntry.ToString());
                     var layout = engine.Layout(textEntry, primaryFont);
 
                     // VectorToIPicture maps glyph position X via 'width' but glyph shape X

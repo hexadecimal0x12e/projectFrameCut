@@ -23,8 +23,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "PreserveAspectRatio", true },
         };
 
-        public List<string> ParametersNeeded => ResizeEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => ResizeEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => ResizeEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => ResizeEffect_IPicture.ParametersType;
 
         public string TypeName => "Resize";
         public bool IsNormalEffect => true;

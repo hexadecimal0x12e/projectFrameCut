@@ -123,15 +123,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             { "Ratio", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType != EffectImplementType.NotSpecified)
-            {
-                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
-            }
-
             parameters ??= new Dictionary<string, object> { { "Ratio", 1f } };
             if (!parameters.ContainsKey("Ratio"))
             {

@@ -1075,7 +1075,7 @@ namespace projectFrameCut.DraftStuff
                             RelativeWidth = page.ProjectInfo.RelativeWidth,
                             RelativeHeight = page.ProjectInfo.RelativeHeight,
                             ExpandCanvas = existingRotation?.ExpandCanvas ?? false,
-                            ImplementType = existingRotation?.ImplementType ?? EffectImplementType.ImageSharp,
+                            ImplementType = existingRotation?.ImplementType ?? EffectImplementType.IPicture,
                             Id = string.IsNullOrWhiteSpace(existingRotation?.Id) ? InternalRotationID : existingRotation.Id
                         };
                     }

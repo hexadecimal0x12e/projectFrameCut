@@ -283,10 +283,10 @@ namespace projectFrameCut.Render.Rendering
                 result = ClassicOverlayMixture.Default
                                .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
-                if (PictureProcesser.SaveDiagResult)
+                if (MyLoggerExtensions.SaveDiagResult)
                 {
                     var opId = Guid.NewGuid();
-                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
+                    File.WriteAllText(Path.Combine(MyLoggerExtensions.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
                 }
                 return result;
             }

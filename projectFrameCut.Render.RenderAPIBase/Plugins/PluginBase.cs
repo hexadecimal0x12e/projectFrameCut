@@ -244,11 +244,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru, EffectImplementType implementType = EffectImplementType.NotSpecified)
         {
+#pragma warning disable CS0618 // we need to handle fallback for deprecated implement types for compatibility, but we don't want to have Obsolete warning in the main logic.
+            if (implementType == EffectImplementType.ImageSharp_Deprecated) implementType = EffectImplementType.IPicture;
+            if (stru.ImplementType == EffectImplementType.ImageSharp_Deprecated) stru.ImplementType = EffectImplementType.IPicture;
+#pragma warning restore CS0618 
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
                 effect.BindedEffectGroupID = s.BindedEffectGroupID;
-                if(effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
+                if (effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
                 {
                     effect.RelativeWidth = s.RelativeWidth;
                     effect.RelativeHeight = s.RelativeHeight;

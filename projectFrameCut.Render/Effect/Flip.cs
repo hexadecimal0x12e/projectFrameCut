@@ -27,7 +27,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = ["Horizontal", "Vertical"];
 
@@ -41,7 +41,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))

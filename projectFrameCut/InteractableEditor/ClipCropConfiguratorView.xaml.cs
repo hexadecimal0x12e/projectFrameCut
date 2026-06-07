@@ -316,7 +316,7 @@ public partial class ClipCropConfiguratorView : ContentView
         Angle = ReadFloatParameter(effect.Parameters, "Angle", 0f);
     }
 
-    public void LoadFromEffect(CropEffect_ImageSharp? effect) => LoadFromEffect((IEffect?)effect);
+    public void LoadFromEffect(CropEffect_IPicture? effect) => LoadFromEffect((IEffect?)effect);
 
     public void LoadFromEffect(CropEffect_HwAccel? effect) => LoadFromEffect((IEffect?)effect);
 

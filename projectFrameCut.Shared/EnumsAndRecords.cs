@@ -80,9 +80,11 @@ namespace projectFrameCut.Shared
 
     public enum EffectImplementType
     {
+        None = -1,
         NotSpecified,
         IPicture,
-        ImageSharp,
+        [Obsolete("ImageSharp-based effects are deprecated and this enum is kept for backward compatibility only. Please use IPicture-based implementations instead.", false)]
+        ImageSharp_Deprecated,
         HwAcceleration,
         Custom1,
         Custom2,

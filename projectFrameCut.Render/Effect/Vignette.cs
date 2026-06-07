@@ -76,7 +76,7 @@ namespace projectFrameCut.Render.Effect
             { "Radius", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp, EffectImplementType.IPicture];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture, EffectImplementType.IPicture];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -86,7 +86,6 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => VignetteEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 EffectImplementType.IPicture => VignetteEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

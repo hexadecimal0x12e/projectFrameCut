@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class BlurEffect_ImageSharp : INormalEffect
+    public class BlurEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -25,7 +25,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -40,7 +40,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -52,7 +52,7 @@ namespace projectFrameCut.Render.Effect
             {
                 sigma = Convert.ToSingle(val);
             }
-            return new BlurEffect_ImageSharp { Sigma = sigma, ImplementType = implementType };
+            return new BlurEffect_IPicture { Sigma = sigma, ImplementType = implementType };
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -81,7 +81,7 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.IPicture => BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => BlurEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
@@ -90,7 +90,7 @@ namespace projectFrameCut.Render.Effect
         {
             parameters ??= new Dictionary<string, object> { { "Sigma", 0f } };
             if (!parameters.ContainsKey("Sigma")) parameters["Sigma"] = 0f;
-            return BlurEffect_ImageSharp.FromParametersDictionary(parameters);
+            return BlurEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

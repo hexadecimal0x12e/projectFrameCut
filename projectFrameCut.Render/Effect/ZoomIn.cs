@@ -17,7 +17,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; }
 
@@ -118,7 +118,6 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
                 EffectImplementType.IPicture => BuildWithType(implementType, parameters),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

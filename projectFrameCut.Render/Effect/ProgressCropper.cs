@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ProgressCropper_ImageSharp : IContinuousEffect
+    public class ProgressCropper_IPicture : IContinuousEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Crop";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
         public int RelativeWidth { get; set; }
@@ -47,7 +47,7 @@ namespace projectFrameCut.Render.Effect
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);
-            return new ProgressCropper_ImageSharp
+            return new ProgressCropper_IPicture
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),
@@ -172,6 +172,12 @@ namespace projectFrameCut.Render.Effect
                 return CropEffectShared.CropAndProcess(source, startX, startY, width, height, angle);
             }
 
+            if (startX >= source.Width || startY >= source.Height ||
+                startX + width <= 0 || startY + height <= 0)
+            {
+                return CropEffectShared.CreateTransparent(width, height, source.BitPerPixel);
+            }
+
             var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
             if (computer is null)
             {
@@ -289,14 +295,14 @@ namespace projectFrameCut.Render.Effect
             return implementType switch
             {
                 EffectImplementType.HwAcceleration => CropEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                EffectImplementType.IPicture => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => CropEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
         {
-            return CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), EffectImplementType.IPicture);
+            return CropEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), EffectImplementType.IPicture);
         }
     }
 
@@ -358,7 +364,7 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
             if (!parameters.ContainsKey("CropList")) parameters["CropList"] = "[]";
 
-            return new ProgressCropper_ImageSharp
+            return new ProgressCropper_IPicture
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),

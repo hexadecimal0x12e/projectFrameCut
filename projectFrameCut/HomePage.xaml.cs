@@ -1356,16 +1356,15 @@ public partial class HomePage : ContentPage
         if (SettingsManager.IsBoolSettingTrue("render_SaveCheckpoint"))
         {
             Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-            PictureProcesser.SaveDiagResult = true;
-            PictureProcesser.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+            MyLoggerExtensions.SaveDiagResult = true;
+            MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
 
         }
         else
         {
-            PictureProcesser.SaveDiagResult = false;
+            MyLoggerExtensions.SaveDiagResult = false;
         }
         IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-        //PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
         PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
         PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
         var vfdCahceDir = SettingsManager.GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
