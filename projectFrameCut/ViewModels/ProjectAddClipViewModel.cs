@@ -3378,23 +3378,30 @@ public class TextStyleItemViewModel
     {
         get
         {
-            var sample = SampleText ?? "AaBbYyZz";
-            TextClip t = new TextClip
+            try
             {
-                Id = Id,
-                Name = Id,
-                TextEntries = new List<TextClipEntry>
+                var sample = SampleText ?? "AaBbYyZz";
+                TextClip t = new TextClip
                 {
-                    ActualTemplate with { text = sample }
-                }
-            };
+                    Id = Id,
+                    Name = Id,
+                    TextEntries = new List<TextClipEntry>
+                    {
+                        ActualTemplate with { text = sample }
+                    }
+                };
 
-            var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
-            var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
-            var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
+                var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
+                var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
+                var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-            return img.ToImageSource();
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                return img.ToImageSource();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
     public bool ShouldInSubtrack { get; set; } = false;
@@ -3419,40 +3426,47 @@ public class TextStyleProviderItemViewModel
     {
         get
         {
-            var entries = Provider.BuildEntries();
-            if (entries.Length == 0)
+            try
             {
-                entries = new[]
+                var entries = Provider.BuildEntries();
+                if (entries.Length == 0)
                 {
-                    new TextClipEntry
+                    entries = new[]
                     {
-                        text = BasicText ?? "AaBbYyZz",
-                        x = 0,
-                        y = 0,
-                        fontFamily = "Arial",
-                        fontSize = 36,
-                        r = 65535,
-                        g = 65535,
-                        b = 65535,
-                        a = 1f
-                    }
+                        new TextClipEntry
+                        {
+                            text = BasicText ?? "AaBbYyZz",
+                            x = 0,
+                            y = 0,
+                            fontFamily = "Arial",
+                            fontSize = 36,
+                            r = 65535,
+                            g = 65535,
+                            b = 65535,
+                            a = 1f
+                        }
+                    };
+                }
+
+                TextClip t = new TextClip
+                {
+                    Id = Id,
+                    Name = Id,
+                    TextEntries = entries.ToList()
                 };
+
+                var maxFontSize = entries.Max(e => e.fontSize > 0 ? e.fontSize : 36f);
+                var sample = entries.OrderByDescending(e => e.text?.Length ?? 0).FirstOrDefault()?.text ?? BasicText ?? "AaBbYyZz";
+                var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
+                var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
+
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                return img.ToImageSource();
             }
-
-            TextClip t = new TextClip
+            catch
             {
-                Id = Id,
-                Name = Id,
-                TextEntries = entries.ToList()
-            };
-
-            var maxFontSize = entries.Max(e => e.fontSize > 0 ? e.fontSize : 36f);
-            var sample = entries.OrderByDescending(e => e.text?.Length ?? 0).FirstOrDefault()?.text ?? BasicText ?? "AaBbYyZz";
-            var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
-            var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
-
-            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-            return img.ToImageSource();
+                return null;
+            }
         }
     }
 

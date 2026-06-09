@@ -40,31 +40,44 @@ internal static class TextMeasureHelper
             double left, top, right, bottom;
             if (entry.UseVerticalLayout)
             {
-                var glyphCount = entry.text.Count(c => c is not '\n' and not '\r');
-                if (glyphCount <= 0) glyphCount = 1;
-                var emSize = entry.fontSize;
-                var strokeExtra = (entry.strokeWidth ?? 0f) * 2f;
-                var w = emSize + strokeExtra;
-                var h = glyphCount * emSize * entry.lineSpacing + strokeExtra;
+                var cleanText = entry.text.Replace("\r", "");
+                var textEntry = new TextEntry
+                {
+                    Text = cleanText,
+                    FontName = entry.fontFamily,
+                    FontSize = entry.fontSize / 1000f,
+                    LineSpacing = entry.lineSpacing - 1f,
+                    Alignment = entry.horizontalAlignment switch
+                    {
+                        ClipHorizontalAlignment.Center => Drawing.Text.Entry.TextAlignment.Center,
+                        ClipHorizontalAlignment.Right => Drawing.Text.Entry.TextAlignment.Right,
+                        _ => Drawing.Text.Entry.TextAlignment.Left,
+                    },
+                };
+                var verticalEngine = new VerticalTypesettingEngine();
+                var (widthNorm, heightNorm) = verticalEngine.Measure(textEntry, primaryFont);
+                var measuredW = widthNorm * 1000f;
+                var measuredH = heightNorm * 1000f;
+                var strokeInflate = Math.Max(0f, entry.strokeWidth ?? 0f) * 0.5f;
 
                 double originX = entry.x;
                 double originY = entry.y;
 
                 switch (entry.horizontalAlignment)
                 {
-                    case ClipHorizontalAlignment.Center: originX -= w / 2d; break;
-                    case ClipHorizontalAlignment.Right: originX -= w; break;
+                    case ClipHorizontalAlignment.Center: originX -= measuredW / 2d; break;
+                    case ClipHorizontalAlignment.Right: originX -= measuredW; break;
                 }
                 switch (entry.verticalAlignment)
                 {
-                    case ClipVerticalAlignment.Center: originY -= h / 2d; break;
-                    case ClipVerticalAlignment.Bottom: originY -= h; break;
+                    case ClipVerticalAlignment.Center: originY -= measuredH / 2d; break;
+                    case ClipVerticalAlignment.Bottom: originY -= measuredH; break;
                 }
 
-                left = originX;
-                top = originY;
-                right = originX + w;
-                bottom = originY + h;
+                left = originX - strokeInflate;
+                top = originY - strokeInflate;
+                right = originX + measuredW + strokeInflate;
+                bottom = originY + measuredH + strokeInflate;
             }
             else
             {

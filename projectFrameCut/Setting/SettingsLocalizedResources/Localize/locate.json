@@ -126,8 +126,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Advanced_Globalization",
-        "Value": "\u672C\u5730\u5316/\u5168\u7403\u5316",
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "\u6587\u672C\u548C\u672C\u5730\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -236,6 +236,14 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018IPicture\u2019",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "\u6392\u7248\u5F15\u64CE\u8BCA\u65AD\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2109,6 +2117,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_AntiAliasMode",
+        "Value": "\u9ED8\u8BA4\u6297\u952F\u9F7F\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "\u7981\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "\u97F3\u9891\u5408\u6210\u7F13\u51B2\u533A\u5927\u5C0F\r(\u8D8A\u5927\u5408\u6210\u97F3\u9891\u7684\u901F\u5EA6\u8D8A\u5FEB\uFF1B\u8D8A\u5C0F\u5408\u6210\u97F3\u9891\u7684\u7CBE\u5EA6\u53EF\u80FD\u66F4\u9AD8)",
         "Mode": "ConstString",
@@ -2407,6 +2431,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "\u4E0D\u9002\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "RenderEffectImplement_NotSpecified",
         "Value": "\u81EA\u52A8",
         "Mode": "ConstString",
@@ -2431,8 +2463,16 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderEffectImplement_NotApplicable",
-        "Value": "\u4E0D\u9002\u7528",
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u5149\u6805\u5316\u77E2\u91CF\u56FE\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u4F7F\u7528\u6E32\u67D3\u7BA1\u7EBF\u5904\u7406\u6548\u679C\uFF0C\u800C\u4E0D\u662F\u5C31\u5730\u5904\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

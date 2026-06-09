@@ -36,6 +36,14 @@ public partial class RenderSettingPage : ContentPage
 
     };
 
+    Dictionary<string,string> AntiAliasModeMapping = new Dictionary<string, string>
+    {
+        { SettingLocalizedResources.Render_AntiAliasMode_None, "none" },
+        { "SSAA 2x", "ssaa2x" },
+        { "SSAA 4x", "ssaa4x" },
+        { "SSAA 8x", "ssaa8x" },
+    };
+
     string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
     string[] framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
     string[] encodings = new[] { "h264", "h265/hevc", "av1" };
@@ -129,6 +137,7 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_ComposeOption, SettingLocalizedResources.Render_ComposeOption_Desc))
             .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider, IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
             .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
+            .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x") , null)
             .AddSeparator()
             .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
             .AddCheckbox("render_prepareInWorkerThreads", SettingLocalizedResources.Render_PrepareInWorkerThreads, IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true))
@@ -400,6 +409,12 @@ public partial class RenderSettingPage : ContentPage
                     }
                     BuildPPB();
                     break;
+                case "render_preferredAntiAliasMode":
+                    {
+                        var mode = AntiAliasModeMapping.TryGetValue(args.Value as string, out var aaMode) ? aaMode : "ssaa4x";
+                        WriteSetting(args.Id, mode);
+                        break;  
+                    }
                 default:
                     if (args.Value != null)
                     {

@@ -9,8 +9,10 @@ using projectFrameCut.Render.Effect;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
-    public class TextClip : IClip
+    public class TextClip : IVectorContentClip
     {
+        public static bool DiagMode = false;
+
         public required string Id { get; init; }
         public Guid IdAsGUID
         {
@@ -55,17 +57,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<string, IPicture> textFrameCache = new(StringComparer.Ordinal);
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        public VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight)
         {
-            var entriesToRender = ResolveTextEntriesForRender();
+            var entriesToRender = ResolveTextEntriesForRender(frameIndex);
             var entriesForTarget = BuildEntriesForTargetSize(entriesToRender, targetWidth, targetHeight);
-            string serializedEntries = JsonSerializer.Serialize(entriesForTarget, JsonSerializerOptions.Web);
-            string cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, serializedEntries);
-
-            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
-            {
-                return cachedFrame;
-            }
 
             var vectorCanvas = new VectorPicture();
             float uniformScale = Math.Min(targetWidth, targetHeight);
@@ -75,12 +70,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (string.IsNullOrEmpty(entry.text))
                     continue;
 
+                entry.text = entry.text.Replace("\r\n", "\n").Replace('\r', '\n');
+
                 if (!TextClipFontRegistry.TryGetFont(entry.fontFamily, out var primaryFont) || primaryFont is null)
                 {
                     var fallbackName = TextClipFontRegistry.FallbackFamilyName;
                     if (fallbackName is null || !TextClipFontRegistry.TryGetFont(fallbackName, out primaryFont) || primaryFont is null)
                         continue;
                 }
+
+                if (primaryFont is null || !entry.text.Any(c => !char.IsControl(c) && c != ' ' && primaryFont.CanDisplayTheChar(c)))
+                {
+                    Log($"TextClip {this.Name}: No valid font found (or no glyph is supported) for entry with text '{entry.text}' and font '{entry.fontFamily}'.", "warn");
+
+                }
+
 
                 // Compute baseline offset: in Y-down coordinates, the glyph body
                 // starts at YMin (negative = above baseline) and ends at YMax (positive).
@@ -133,15 +137,46 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     var cleanText = entry.text.Replace("\r", "");
                     var verticalEngine = new VerticalTypesettingEngine();
                     var verticalLayout = verticalEngine.Layout(
-                        cleanText, primaryFont,
-                        normalizedFontSize: normFontSize,
-                        x: entry.x / (float)targetWidth,
-                        y: entry.y / (float)targetHeight + baselineOffset,
-                        lineSpacing: entry.lineSpacing,
-                        keepNonCjkHorizontal: entry.KeepNonCJKTextAsHorizontal,
-                        fillR: entry.r, fillG: entry.g, fillB: entry.b, fillA: entry.a ?? 1f,
-                        strokeR: entry.strokeR, strokeG: entry.strokeG, strokeB: entry.strokeB,
-                        strokeThickness: entry.strokeWidth ?? 0f);
+                        new TextEntry
+                        {
+                            FontName = primaryFont.UniqueName,
+                            Text = entry.text,
+                            FontSize = normFontSize,
+                            X = entry.x / (float)targetWidth,
+                            Y = entry.y / (float)targetHeight + baselineOffset,
+                            Rotation = entry.rotation * MathF.PI / 180f,
+                            FillR = entry.r,
+                            FillG = entry.g,
+                            FillB = entry.b,
+                            FillA = entry.a ?? 1f,
+                            StrokeR = entry.strokeR,
+                            StrokeG = entry.strokeG,
+                            StrokeB = entry.strokeB,
+                            StrokeThickness = entry.strokeWidth ?? 0f,
+                            StrokeA = (entry.strokeWidth ?? 0f) > 0f ? 1f : 0f,
+                            LineSpacing = entry.lineSpacing - 1f,
+                            Alignment = entry.horizontalAlignment switch
+                            {
+                                ClipHorizontalAlignment.Center => Drawing.Text.Entry.TextAlignment.Center,
+                                ClipHorizontalAlignment.Right => Drawing.Text.Entry.TextAlignment.Right,
+                                _ => Drawing.Text.Entry.TextAlignment.Left,
+                            },
+                            ExtraData = new Dictionary<string, object> { { "keepNonCjkHorizontal", entry.KeepNonCJKTextAsHorizontal } }
+                        }
+                        , primaryFont);
+                    //cleanText, primaryFont,
+                    //normalizedFontSize: normFontSize,
+                    //x: entry.x / (float)targetWidth,
+                    //y: entry.y / (float)targetHeight + baselineOffset,
+                    //lineSpacing: entry.lineSpacing,
+                    //keepNonCjkHorizontal: entry.KeepNonCJKTextAsHorizontal,
+                    //fillR: entry.r, fillG: entry.g, fillB: entry.b, fillA: entry.a ?? 1f,
+                    //strokeR: entry.strokeR, strokeG: entry.strokeG, strokeB: entry.strokeB,
+                    //strokeThickness: entry.strokeWidth ?? 0f);
+                    if (verticalLayout.Elements.Count == 0)
+                    {
+                        verticalLayout.Elements.Add(ShapeCanvasElement.DrawRectangle(1f, 1f).WithPosition(entry.x, entry.y).WithFill(128 * 257, 0, 128 * 257));
+                    }
 
                     // Apply overall rotation on the whole vertical block
                     if (Math.Abs(entry.rotation) > 0.0001f)
@@ -151,9 +186,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
                             el.Rotation += rad;
                     }
 
-                    // Compensate Y advances on portrait canvases where position Y maps
-                    // via 'height' but glyph shape Y maps via 'min(width,height)'.
-                    float yCompensation = uniformScale / (float)targetHeight;
+                    // Compensate Y advances on portrait canvases: the typesetting engine
+                    // computes advances in height-normalised space (1.0 = targetHeight)
+                    // but VectorToIPicture maps RelativeY via uniformScale = min(w,h).
+                    // On portrait canvases uniformScale == targetWidth < targetHeight,
+                    // so cursor Y must be stretched to keep per-character advance correct.
+                    float yCompensation = (float)targetHeight / uniformScale;
                     if (Math.Abs(yCompensation - 1f) > 0.0001f)
                     {
                         foreach (var el in verticalLayout.Elements)
@@ -168,7 +206,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     var textEntry = new TextEntry
                     {
                         Text = entry.text,
-                        FontName = entry.fontFamily,
+                        FontName = primaryFont.UniqueName,
                         FontSize = normFontSize,
                         X = entry.x / (float)targetWidth,
                         Y = entry.y / (float)targetHeight + baselineOffset,
@@ -192,22 +230,35 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         LayerIndex = 0,
                     };
 
-                    var engine = new NormalTypesettingEngine();
+                    var engine = new NormalTypesettingEngine()
+                    {
+                        DebugMode = DiagMode,
+                    };
                     (var measuredWidth, var measuredHeight) = engine.Measure(textEntry, primaryFont);
+                    if (measuredWidth <= 0f || measuredHeight <= 0f)
+                    {
+                        Log($"TextClip {this.Name}: text {textEntry.Text} measured an invalid size {measuredWidth}*{measuredHeight}.", "warn");
+                    }
                     // reported sizes are in normalised 0..1 space — multiply by the
                     // appropriate canvas dimension to compare against the
                     // "avg per char" values in targetWidth/targetHeight (pixels).
                     // NOTE: an earlier version of this log accidentally used
                     // `targetWidth` for both dimensions, which made the reported
                     // height nonsensical on non-square canvases.
-                    //Log($"TextClip {this.Name}: Require size {targetWidth}*{targetHeight} (avg per char {targetWidth / entry.text.Length}*{targetHeight / entry.text.Length}), fonts actual size:{measuredWidth * targetWidth}*{measuredHeight * targetHeight} (avg per char {measuredWidth * targetWidth / entry.text.Length}*{measuredHeight * targetHeight / entry.text.Length})");
-                    //Log(textEntry.ToString());
+
                     var layout = engine.Layout(textEntry, primaryFont);
+                    if (layout.Elements.Count == 0)
+                    {
+                        layout.Elements.Add(ShapeCanvasElement.DrawRectangle(measuredWidth, measuredHeight).WithPosition(entry.x, entry.y).WithFill(128 * 257, 0, 128 * 257));
+                    }
 
                     // VectorToIPicture maps glyph position X via 'width' but glyph shape X
-                    // via 'min(width,height)' (UseUniformScale). Compensate so pixel advance
-                    // matches pixel glyph width on non-square canvases.
-                    float xCompensation = uniformScale / (float)targetWidth;
+                    // via 'min(width,height)' (UseUniformScale). The engine computes
+                    // advances in height-normalised space (1.0 = targetHeight) but the
+                    // rasteriser maps RelativeX through uniformScale = min(w,h), so
+                    // on non-square canvases the cursor must be adjusted to keep the
+                    // per-character pixel advance correct.
+                    float xCompensation = (float)targetHeight / uniformScale;
                     if (Math.Abs(xCompensation - 1f) > 0.0001f)
                     {
                         foreach (var el in layout.Elements)
@@ -219,7 +270,24 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
-            var sourcePicture = VectorToIPicture.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true);
+            return vectorCanvas;
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            var entriesToRender = ResolveTextEntriesForRender(frameIndex);
+            var entriesForTarget = BuildEntriesForTargetSize(entriesToRender, targetWidth, targetHeight);
+            string serializedEntries = JsonSerializer.Serialize(entriesForTarget, JsonSerializerOptions.Web);
+            string cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, serializedEntries);
+
+            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            {
+                return cachedFrame;
+            }
+
+            var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
+
+            var sourcePicture = VectorToIPicture.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true, aaMode: ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
             sourcePicture.ProcessStack = new List<PictureProcessStack>
                 {
                     new PictureProcessStack
@@ -233,7 +301,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                             { "FontPath", FontPath }
                         }
                     }
-                }; 
+                };
             IPicture rendered = sourcePicture;
 
             if (targetPPB.Value != 16)
@@ -279,6 +347,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public AntiAliasMode? ClipAntiAliasMode { get; set; }
 
         /// <summary>
         /// Initializes the font registry. Kept for backward compatibility.
@@ -345,7 +414,30 @@ namespace projectFrameCut.Render.ClipsAndTracks
             textFrameCache.Clear();
         }
 
-        private IReadOnlyList<TextClipEntry> ResolveTextEntriesForRender()
+        private IReadOnlyList<TextClipEntry> ResolveTextEntriesForRender(uint targetFrame)
+        {
+            var raw = GetRawEntries();
+            foreach (var item in EffectsInstances?.Where(c => c is ITextEffect or IContinuousTextEffect) ?? [])
+            {
+                if (item is ITextEffect)
+                {
+                    raw = ((ITextEffect)item).Process(raw.ToArray());
+
+                }
+                else if (item is IContinuousTextEffect cte)
+                {
+                    if (cte.IsScoped)
+                    {
+                        if (targetFrame < cte.StartPoint || targetFrame > cte.EndPoint)
+                            continue;
+                    }
+                    raw = cte.Process(raw.ToArray(), targetFrame / ((IClip)this).GetEffectiveDuration());
+                }
+            }
+            return raw;
+        }
+
+        private IReadOnlyList<TextClipEntry> GetRawEntries()
         {
             if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
             {
@@ -449,8 +541,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
                    (c >= '\uFF00' && c <= '\uFFEF');    // Halfwidth and Fullwidth Forms
         }
 
-        [Obsolete("No longer needed - use VerticalTypesettingEngine instead.")]
-        private static void DrawVerticalText(object canvas, TextClipEntry entry, object font, object brush, object? pen, bool hasStroke) { }
 
     }
 

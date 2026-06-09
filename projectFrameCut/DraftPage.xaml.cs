@@ -7775,7 +7775,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         await previewer.UpdateDraft(d);
         DynamicPreviewProvider.SetClips(previewer.Clips);
 
-        var currentX = PlayheadLine.TranslationX - TrackHeadLayout.Width;
+        var currentX = PlayheadLine.TranslationX - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
         if (currentX < 0) currentX = 0;
         var duration = PixelToFrame(currentX);
         _currentFrame = duration;

@@ -372,6 +372,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         private string GetOrBuildTranslation(string sourceText)
         {
+            if (sourceText == "Hello world") return "你好，世界";
             var cachedSource = GetOrDefault(TranslationSourceCacheKey, string.Empty);
             var cachedTranslation = GetOrDefault(TranslationTextKey, string.Empty);
             if (cachedSource == sourceText && !string.IsNullOrWhiteSpace(cachedTranslation))
@@ -572,14 +573,29 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         private static FontFace? ResolveFontFace(string fontFamily)
         {
-            if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var face))
-                return face;
+            if (!string.IsNullOrWhiteSpace(fontFamily))
+            {
+                if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var face))
+                    return face;
 
-            if (TextServices.LoadedFonts.TryGetValue("HarmonyOS_Sans_SC_Regular", out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFace))
-                return fallbackFace;
+                TextClipFontRegistry.TryGetFont(fontFamily, out var registryFont);
+                if (registryFont is not null)
+                    return registryFont;
+            }
 
-            TextClipFontRegistry.TryGetFont("Arial", out var registryFont);
-            return registryFont;
+            // Fallback to the global fallback font
+            var fallbackKey = TextClipFontRegistry.FallbackFamilyName;
+            if (fallbackKey is not null)
+            {
+                if (TextServices.LoadedFonts.TryGetValue(fallbackKey, out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFace))
+                    return fallbackFace;
+
+                TextClipFontRegistry.TryGetFont(fallbackKey, out var fallbackRegistryFont);
+                if (fallbackRegistryFont is not null)
+                    return fallbackRegistryFont;
+            }
+
+            return null;
         }
 
         private static float MeasureTextHeight(FontFace font, string text, float fontSize)

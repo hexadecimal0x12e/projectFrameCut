@@ -418,6 +418,18 @@ namespace projectFrameCut.DraftStuff
                 }
                 if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
                 clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
+                if (clipInstance is IVectorContentClip vc && clipInstance.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr && !string.IsNullOrEmpty(aaStr))
+                {
+                    var aaProp = typeof(IVectorContentClip).GetProperty("ClipAntiAliasMode");
+                    if (aaProp != null)
+                    {
+                        var aaType = Nullable.GetUnderlyingType(aaProp.PropertyType) ?? aaProp.PropertyType;
+                        if (Enum.TryParse(aaType, aaStr, ignoreCase: true, out var aaMode))
+                        {
+                            aaProp.SetValue(vc, aaMode);
+                        }
+                    }
+                }
                 if (clipInstance is null) throw new NullReferenceException();
                 clipsList.Add(clipInstance);
 

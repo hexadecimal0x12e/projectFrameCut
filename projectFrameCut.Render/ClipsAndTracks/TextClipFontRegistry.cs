@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Text.FontHelper;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace projectFrameCut.Render.ClipsAndTracks;
 
@@ -12,10 +13,18 @@ public static class TextClipFontRegistry
 
     private static readonly HashSet<string> FontPaths = new(StringComparer.OrdinalIgnoreCase);
 
-    public static void Initialize()
+    public static void Initialize(IEnumerable<FontFace>? sysFonts = null)
     {
-        if (_initialized)
-            return;
+        if (sysFonts?.Any() ?? false)
+        {
+            foreach (var font in sysFonts.Where(font => font is not null))
+            {
+                var fontKey = font.UniqueName ?? $"{font.FamilyName} {font.SubfamilyName}";
+                Fonts.TryAdd(fontKey, font);
+            }
+        }
+
+        if (_initialized) return;
 
         lock (InitLock)
         {
@@ -93,15 +102,15 @@ public static class TextClipFontRegistry
         try
         {
             var fontFace = FontFace.Load(path);
-            var familyName = fontFace.FamilyName;
+            var fontKey = fontFace.UniqueName ?? $"{fontFace.FamilyName} {fontFace.SubfamilyName}";
 
-            if (string.IsNullOrWhiteSpace(familyName))
+            if (string.IsNullOrWhiteSpace(fontKey))
             {
                 fontFace.Dispose();
                 return;
             }
 
-            Fonts.AddOrUpdate(familyName,
+            Fonts.AddOrUpdate(fontKey,
                 _ => fontFace,
                 (_, existing) =>
                 {
@@ -111,11 +120,11 @@ public static class TextClipFontRegistry
 
             if (_fallbackFamilyName is null)
             {
-                _fallbackFamilyName = familyName;
+                _fallbackFamilyName = fontKey;
             }
-            else if (string.Equals(familyName, "HarmonyOS_Sans_SC_Regular", StringComparison.OrdinalIgnoreCase))
+            else if (fontFace.FamilyName.Contains("HarmonyOS_Sans_SC", StringComparison.OrdinalIgnoreCase))
             {
-                _fallbackFamilyName = familyName;
+                _fallbackFamilyName = fontKey;
             }
         }
         catch

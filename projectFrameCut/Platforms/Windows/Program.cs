@@ -402,14 +402,22 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
+                    appInfo = Setting.SettingPages.DiagnosticSettingPage.GetAppInfo(false, false);
+                }
+                catch
+                {
                     appInfo =
 $"""
 {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
 Assembly: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}
 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+
+OS version: {Environment.OSVersion}
+CLR Version:{Environment.Version}
+Command line: {Environment.CommandLine}
+Current directory: {Environment.CurrentDirectory}
 """;
                 }
-                catch { }
                 var content =
 $"""
 Exception type: {ex.GetType().Name}
@@ -426,10 +434,6 @@ Exception data:
 
 Environment:
 {appInfo}
-OS version: {Environment.OSVersion}
-CLR Version:{Environment.Version}
-Command line: {Environment.CommandLine}
-Current directory: {Environment.CurrentDirectory}
 
 (report ended here)
 """;

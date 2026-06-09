@@ -29,16 +29,9 @@ using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
 using projectFrameCut.Render.EncodeAndDecode;
 using FFmpeg.AutoGen.Native;
-
-
-
-
-
-
-
-
-
-
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.Drawing.Text.FontHelper;
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
@@ -50,8 +43,6 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-using System.Text.RegularExpressions;
-using projectFrameCut.Helper;
 
 #endif
 
@@ -481,22 +472,12 @@ namespace projectFrameCut
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
-//                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
-//                    {
-//                        string[][] paths = { Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly), Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly), TextHelper.ScanSystemFont().ToArray() };
-//                        foreach (var item in paths.SelectMany(c => c))
-//                        {
-//                            try
-//                            {
-//#if WINDOWS
-//                                //HelperProgram.UpdateStatus($"Loading font: {item}");
-//#endif
-//                                var info = TextHelper.ReadFontFileInfo(item);
-//                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
-//                            }
-//                            catch { }
-//                        }
-//                    }
+                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
+                    {
+
+                        TextServices.LoadFonts();
+                        TextClipFontRegistry.Initialize(TextServices.LoadedFonts.Values.Select(c => c.InnerFont).Where(c => c is not null));
+                    }
 
                 }
                 catch

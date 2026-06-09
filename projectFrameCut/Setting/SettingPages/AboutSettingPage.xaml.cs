@@ -79,13 +79,14 @@ public partial class AboutSettingPage : ContentPage
         {
             var renderType = typeof(Renderer).Assembly;
             var drawingType = typeof(Drawing.Base.IPicture).Assembly;
-            string renderHash = "", drawingHash = "", drawingCommit = "unknown";
+            string renderHash = "", drawingHash = "", drawingCommit = "unknown", drawingBuild = "?";
             try
             {
 #pragma warning disable IL3000 // we have already detected that the assembly is not dynamic, so it's safe to get the location
                 renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
                 drawingHash = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? HashServices.ComputeFileHash(drawingType.Location) : "unknown";
-#pragma warning restore IL3000 
+                drawingBuild  = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? File.GetLastWriteTime(drawingType.Location).ToString("yyyyMMddHHmmss") : "?";
+#pragma warning restore IL3000
                 drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
 
             }
@@ -96,7 +97,7 @@ public partial class AboutSettingPage : ContentPage
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
                 {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
                 {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
-                {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
+                {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit} {drawingBuild}) hash:{drawingHash}
                 Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;

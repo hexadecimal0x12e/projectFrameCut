@@ -340,10 +340,9 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                     var face = Drawing.Text.FontHelper.FontFace.Load(path);
                     return [new FontItem
                     {
-                        FontName = face.FamilyName,
+                        FontName = face.UniqueName ?? $"{face.FamilyName} {face.SubfamilyName}",
                         DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
                         Path = path,
-                        PrimaryLanguageTag = face.DisplayName,
                         Category = category,
                         InnerFont = face,
                     }];
@@ -360,10 +359,9 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                     var faces = Drawing.Text.FontHelper.FontCollection.Load(path);
                     return faces.Select(c => c.Load()).Select(face => new FontItem
                     {
-                        FontName = face.FamilyName,
+                        FontName = face.UniqueName ?? $"{face.FamilyName} {face.SubfamilyName}",
                         DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
                         Path = path,
-                        PrimaryLanguageTag = face.DisplayName,
                         Category = category,
                         InnerFont = face
                     });

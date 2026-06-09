@@ -35,6 +35,10 @@ using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Drawing.Vector.ImportExport;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 
 
 
@@ -120,16 +124,7 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
-            if (!IsFontLoaded)
-            {
-                var t = new Thread(TextServices.LoadFonts)
-                {
-                    Priority = ThreadPriority.BelowNormal,
-                    IsBackground = true
-                };
-                t.Start();
-                IsFontLoaded = true;
-            }
+
 #if WINDOWS
             try
             {
@@ -1375,6 +1370,11 @@ public partial class HomePage : ContentPage
         IVideoSource.EnableMemoryCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
         IVideoSource.EnableDiskCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
         ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
+        IVectorContentClip.GlobalDefaultAntiAliasMode = SettingsManager.GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
+        NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && SettingsManager.IsBoolSettingTrue("diag_TypesettingEngineDiagMode"); 
+        TextClip.DiagMode = SettingsManager.IsBoolSettingTrue("diag_TypesettingEngineDiagMode"); 
+        DynamicPreview.DisableVectorPreviewPaths = SettingsManager.IsBoolSettingTrue("render_DisallowVectorClipToMAUIPathInPreview");
+        DynamicPreview.DisableEffectDynamicPreview = SettingsManager.IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 

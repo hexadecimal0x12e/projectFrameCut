@@ -48,11 +48,14 @@ namespace projectFrameCut.Services
                     FontSize = 72f / 640f,
                     X = 10f / 640f,
                     Y = 240f / 480f,
-                    FillR = 0, FillG = 0, FillB = 0, FillA = 1f,
+                    FillR = 0,
+                    FillG = 0,
+                    FillB = 0,
+                    FillA = 1f,
                 };
                 var engine = new NormalTypesettingEngine();
                 var vectorCanvas = engine.Layout(textEntry, fontFace);
-                var picture = VectorToIPicture.Convert(vectorCanvas, 640, 480, transparentBackground: false);
+                var picture = VectorToIPicture.Convert(vectorCanvas, 640, 480, transparentBackground: false, aaMode: AntiAliasMode.SSAA8x);
                 return picture.ToBitPerPixel(8);
             }
             catch
@@ -77,7 +80,7 @@ namespace projectFrameCut.Services
             {
                 var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
 
-                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", isDark ? "dark" : "light", $"{item.FontName}.png");
+                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", isDark ? "dark" : "light", $"{item.FontName.Replace(':', '_')}.png");
                 if (File.Exists(cachePath))
                 {
                     return ImageSource.FromFile(cachePath);
@@ -96,24 +99,26 @@ namespace projectFrameCut.Services
                         return null;
 
                     string effectiveSample = sample ?? ResolveSampleText(item);
-
+                    var engine = new NormalTypesettingEngine();
                     var textEntry = new TextEntry
                     {
                         Text = effectiveSample,
                         FontName = fontFace.FamilyName,
                         FontSize = fontSize / MathF.Min(width, height),
-                        X = 10f / width,
-                        Y = (height / 2f - fontSize / 2f) / height,
-                        FillR = 0, FillG = 0, FillB = 0, FillA = 1f,
+                        X = 0,
+                        Y = 0,
+                        FillR = 0,
+                        FillG = 0,
+                        FillB = 0,
+                        FillA = 1f,
                     };
+                    textEntry.Y = engine.Measure(textEntry, fontFace).height;
                     if (isDark)
                     {
                         textEntry.FillR = textEntry.FillG = textEntry.FillB = 65535;
                     }
-
-                    var engine = new NormalTypesettingEngine();
                     var vectorCanvas = engine.Layout(textEntry, fontFace);
-                    var picture = VectorToIPicture.Convert(vectorCanvas, width, height, transparentBackground: true);
+                    var picture = VectorToIPicture.Convert(vectorCanvas, width, height, transparentBackground: true, aaMode: AntiAliasMode.SSAA8x);
 
                     picture.SaveToPng(cachePath);
 
@@ -157,9 +162,9 @@ namespace projectFrameCut.Services
             {
                 foreach (var info in TextHelper.CreateFontInfo(LocalizedResources.SimpleLocalizerBaseGeneratedHelper.Localized.TextServices_FontCatagory_YourAsset, f))
                 {
-                    LoadedFonts.TryAdd(info.InnerFont?.FamilyName ?? Path.GetFileNameWithoutExtension(f), info);
+                    LoadedFonts.TryAdd(info.FontName, info);
                 }
-               
+
 
             }
             foreach (var item in TextHelper.BuildSystemFontItems(category: Localized.TextServices_FontCatagory_System))
@@ -188,8 +193,8 @@ namespace projectFrameCut.Services
                 return string.Empty;
             }
 
-            var preview = string.Join(", ", missing.Take(6).Select(codePoint => $"U+{codePoint:X4}"));
-            var suffix = missing.Length > 6 ? "..." : string.Empty;
+            var preview = string.Join(", ", missing.Take(10).Select(c => ((char)c).ToString()));
+            var suffix = missing.Length > 10 ? "..." : string.Empty;
             return Localized.TextServices_UnsupportGlyph(fontName, preview, suffix);
         }
 

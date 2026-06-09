@@ -575,6 +575,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Effect_Add_Search",
+        "Value": "\u641C\u7D22\u6548\u679C\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u6240\u6709\u7C7B\u578B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Effect_Add_Title",
         "Value": "\u6DFB\u52A0\u6548\u679C",
         "Mode": "ConstString",
@@ -593,6 +609,14 @@
       {
         "Id": "Effect_ContinuousEffect",
         "Value": "\u8FDE\u7EED\u6027\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u6587\u672C\u8FDE\u7EED\u6027\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -723,6 +747,14 @@
       {
         "Id": "Effect_Sharpen_Amount",
         "Value": "\u6570\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u6587\u672C\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1882,32 +1914,32 @@
         "DontTranslate": false
       },
       {
-        "Id": "Effect_TextEffect",
-        "Value": "\u6587\u672C\u6548\u679C",
+        "Id": "General_VectorClip",
+        "Value": "\u77E2\u91CF\u56FE\u5F62",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Effect_ContinuousTextEffect",
-        "Value": "\u6587\u672C\u8FDE\u7EED\u6027\u6548\u679C",
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u6297\u952F\u9F7F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Effect_Add_Search",
-        "Value": "\u641C\u7D22\u6548\u679C\u540D\u79F0",
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u9ED8\u8BA4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Effect_Add_Search_Any",
-        "Value": "\u6240\u6709\u7C7B\u578B",
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u65E0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

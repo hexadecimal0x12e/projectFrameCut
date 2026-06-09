@@ -26,6 +26,7 @@ namespace projectFrameCut.Shared
                 {
                     exc = ex;
                     exc.Data["OriginalStacktrace"] = ex.StackTrace;
+                    done = true;
                 }
                 finally
                 {
@@ -64,6 +65,7 @@ namespace projectFrameCut.Shared
                 {
                     exc = ex;
                     exc.Data["OriginalStacktrace"] = ex.StackTrace;
+                    done = true;
                 }
                 finally
                 {
@@ -102,6 +104,7 @@ namespace projectFrameCut.Shared
                 {
                     exc = ex;
                     exc.Data["OriginalStacktrace"] = ex.StackTrace;
+                    done = true;
                 }
                 finally
                 {

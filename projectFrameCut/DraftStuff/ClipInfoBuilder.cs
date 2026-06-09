@@ -626,7 +626,26 @@ namespace projectFrameCut.DraftStuff
                     pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
                 )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))));
+                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))))
+            .AppendWhen(TargetInstance is IVectorContentClip vc,
+                c =>
+                {
+                    string currentVectorAaLabel = "默认";
+                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr)
+                    {
+                        currentVectorAaLabel = aaStr switch
+                        {
+                            "None" => PPLocalizedResources.General_VectorClip_AAMode_None,
+                            "SSAA2x" => "SSAA 2x",
+                            "SSAA4x" => "SSAA 4x",
+                            "SSAA8x" => "SSAA 8x",
+                            _ => "默认"
+                        };
+                    }
+
+                    c.AddText(new SingleLineLabel(PPLocalizedResources.General_VectorClip, 20))
+                     .AddPicker("vectorAntiAliasMode", PPLocalizedResources.General_VectorClip_AAMode, new[] { PPLocalizedResources.General_VectorClip_AAMode_Default, PPLocalizedResources.General_VectorClip_AAMode_None, "SSAA 2x", "SSAA 4x", "SSAA 8x" }, currentVectorAaLabel);
+                });
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -754,6 +773,21 @@ namespace projectFrameCut.DraftStuff
                         clip.ClipColor = e.Value?.ToString();
                     }
                     clip.ApplyClipColor();
+                    handler?.Invoke(s, e);
+                    return;
+                }
+
+                if (e.Id == "vectorAntiAliasMode")
+                {
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["VectorAntiAliasMode"] = (e.Value?.ToString()) switch
+                    {
+                        var t when t == PPLocalizedResources.General_VectorClip_AAMode_None => "None",
+                        "SSAA 2x" => "SSAA2x",
+                        "SSAA 4x" => "SSAA4x",
+                        "SSAA 8x" => "SSAA8x",
+                        _ => ""
+                    };
                     handler?.Invoke(s, e);
                     return;
                 }
@@ -2097,12 +2131,12 @@ namespace projectFrameCut.DraftStuff
             }
 
             var providerPpb = styleProvider.BuildPropertyPanel();
-            TryUseDialogFontPicker(providerPpb, styleProvider);
             var providerHost = new PropertyPanelBuilder();
             providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
             providerHost.AddSeparator();
+            TryUseDialogFontPicker(providerPpb, styleProvider, (s) => HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", s, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : "")));
             providerHost.AddFromAnother(providerPpb, styleProvider);
-            providerHost.PropertyChanged += (s, e) =>
+            void HandlePanelChange(object? s, PropertyPanelPropertyChangedEventArgs e)
             {
                 if (s is not ITextClipStyleProvider provider) return;
                 (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
@@ -2119,11 +2153,13 @@ namespace projectFrameCut.DraftStuff
                     clip.ExtraData["TextEntries"] = updatedEntries.ToList();
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
                 }
-            };
+            }
+            ;
+            providerHost.PropertyChanged += HandlePanelChange;
 
             return providerHost.BuildWithScrollView();
 
-            void TryUseDialogFontPicker(PropertyPanelBuilder providerPanel, ITextClipStyleProvider provider)
+            void TryUseDialogFontPicker(PropertyPanelBuilder providerPanel, ITextClipStyleProvider provider, Action<string> fontChangedCallback)
             {
                 const string fontFamilyKey = "FontFamily";
                 if (!providerPanel.Components.TryGetValue(fontFamilyKey, out var rawComponent) || rawComponent is not Picker fontPicker)
@@ -2176,7 +2212,7 @@ namespace projectFrameCut.DraftStuff
                     if (font == null) return;
 
                     selectFontButton.Text = font.DisplayName;
-                    PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(providerPanel, fontFamilyKey, font.FontName);
+                    fontChangedCallback(font.FontName);
                     page.Dispatcher.Dispatch(async () => await page.HidePopup());
                 };
 
@@ -2291,7 +2327,7 @@ namespace projectFrameCut.DraftStuff
                         text = "",
                         x = 0,
                         y = 0,
-                        fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial",
+                        fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.UniqueName ?? TextClipFontRegistry.FallbackFamilyName ?? "Arial",
                         fontSize = 24f,
                         r = 65535,
                         g = 65535,
@@ -2366,7 +2402,7 @@ namespace projectFrameCut.DraftStuff
                         text = "",
                         x = 0,
                         y = 0,
-                        fontFamily = "Arial",
+                        fontFamily = TextClipFontRegistry.FallbackFamilyName ?? "Arial",
                         fontSize = 24f,
                         r = 65535,
                         g = 65535,

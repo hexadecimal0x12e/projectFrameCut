@@ -46,7 +46,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
 
             // Fallback - a single default entry
-            var f = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial";
+            var f = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.UniqueName ?? TextClipFontRegistry.FallbackFamilyName ?? "Arial";
             return new List<TextClipEntry>
             {
                 new TextClipEntry
@@ -123,7 +123,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                             text = "",
                             x = 0,
                             y = 0,
-                            fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.FamilyName ?? "Arial",
+                            fontFamily = TextClipFontRegistry.GetAllFonts().FirstOrDefault()?.UniqueName ?? TextClipFontRegistry.FallbackFamilyName ?? "Arial",
                             fontSize = 24f,
                             r = 65535,
                             g = 65535,

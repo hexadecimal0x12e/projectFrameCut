@@ -26,6 +26,10 @@ using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Vector;
+using Microsoft.Maui.Controls.Shapes;
+using ShapesPath = Microsoft.Maui.Controls.Shapes.Path;
+using MauiPoint = Microsoft.Maui.Graphics.Point;
 
 namespace projectFrameCut.InteractableEditor;
 
@@ -104,7 +108,17 @@ public sealed class DynamicPreview : IDisposable
 
     public IClip[]? Clips => _clips;
 
-    public bool DisableEffectDynamicPreview { get; set; } = false;
+    /// <summary>
+    /// When true, all effects will be rendered in the Rendering pipeline 
+    /// and then the clip will be placed in canvas.
+    /// </summary>
+    public static bool DisableEffectDynamicPreview { get; set; } = false;
+
+    /// <summary>
+    /// When true, IVectorContentClip clips fall back to bitmap rasterization
+    /// instead of being converted to MAUI Path elements. Default false (vector Path mode enabled).
+    /// </summary>
+    public static bool DisableVectorPreviewPaths { get; set; } = false;
 
     /// <summary>
     /// Divisor for preview resolution. 1 = full resolution, 2 = half, etc.
@@ -359,15 +373,6 @@ public sealed class DynamicPreview : IDisposable
                 semaphore.Release();
             }
         }
-    }
-
-    /// <summary>
-    /// Synchronous overload for backward compatibility. Prefer <see cref="PrepareRequestsAsync"/>.
-    /// </summary>
-    public IReadOnlyList<PreparedPreview> PrepareRequests(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
-    {
-        return PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, checkVersion, prepareVersion, token)
-            .GetAwaiter().GetResult();
     }
 
     private static int ResolveCanvasSize(double canvasSize, int cachedSize, int fallbackSize)
@@ -700,24 +705,38 @@ public sealed class DynamicPreview : IDisposable
         }
         else if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
         {
-            try
+            if (clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
             {
-                var projectRelativeWidth = _previewer?.ProjectRelativeWidth > 0 ? _previewer.ProjectRelativeWidth : canvasWidth;
-                var projectRelativeHeight = _previewer?.ProjectRelativeHeight > 0 ? _previewer.ProjectRelativeHeight : canvasHeight;
-                DynamicPreviewRenderContext.Set(new DynamicPreviewRenderContext.State(
-                    Math.Max(1, projectRelativeWidth),
-                    Math.Max(1, projectRelativeHeight),
-                    Math.Max(1, targetWidth),
-                    Math.Max(1, targetHeight)));
-                generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                try
+                {
+                    generatedView = BuildVectorPreviewView(vectorClip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                }
+                catch (Exception ex)
+                {
+                    message = $"Failed to generate vector preview: {ex.Message}";
+                }
             }
-            catch (Exception ex)
+            else
             {
-                message = $"Failed to generate dynamic preview: {ex.Message}";
-            }
-            finally
-            {
-                DynamicPreviewRenderContext.Set(null);
+                try
+                {
+                    var projectRelativeWidth = _previewer?.ProjectRelativeWidth > 0 ? _previewer.ProjectRelativeWidth : canvasWidth;
+                    var projectRelativeHeight = _previewer?.ProjectRelativeHeight > 0 ? _previewer.ProjectRelativeHeight : canvasHeight;
+                    DynamicPreviewRenderContext.Set(new DynamicPreviewRenderContext.State(
+                        Math.Max(1, projectRelativeWidth),
+                        Math.Max(1, projectRelativeHeight),
+                        Math.Max(1, targetWidth),
+                        Math.Max(1, targetHeight)));
+                    generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                }
+                catch (Exception ex)
+                {
+                    message = $"Failed to generate dynamic preview: {ex.Message}";
+                }
+                finally
+                {
+                    DynamicPreviewRenderContext.Set(null);
+                }
             }
         }
         else
@@ -1783,6 +1802,380 @@ public sealed class DynamicPreview : IDisposable
             }
         }
     }
+
+    #region Vector to MAUI Path conversion
+
+    private static View BuildVectorPreviewView(
+        IVectorContentClip vectorClip,
+        int canvasWidth, int canvasHeight,
+        int targetWidth, int targetHeight,
+        uint frameIndex)
+    {
+        var clipW = vectorClip.TargetWidth > 0 ? vectorClip.TargetWidth : Math.Max(1, canvasWidth);
+        var clipH = vectorClip.TargetHeight > 0 ? vectorClip.TargetHeight : Math.Max(1, canvasHeight);
+
+        var vectorPicture = vectorClip.GetVectorPictureRelativeToStartPointOfSource(vectorClip.GetRelativeFrameIndex(frameIndex) ?? vectorClip.GetEffectiveDuration(), clipW, clipH);
+
+        var container = new AbsoluteLayout
+        {
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+        };
+
+        var elements = vectorPicture.Elements;
+        if (elements is null || elements.Count == 0)
+            return container;
+
+        var sortedElements = elements.OrderBy(e => e.LayerIndex);
+
+        foreach (var element in sortedElements)
+        {
+            var segments = element.Draw();
+            if (segments is null || segments.Length == 0)
+                continue;
+
+            float scaleX, scaleY, originX, originY;
+            if (element.UseUniformScale)
+            {
+                float us = Math.Min(clipW, clipH);
+                scaleX = us;
+                scaleY = us;
+                originX = element.BaseX * clipW + element.RelativeX * us;
+                originY = element.BaseY * clipH + element.RelativeY * us;
+            }
+            else
+            {
+                scaleX = clipW;
+                scaleY = clipH;
+                originX = element.RelativeX * clipW;
+                originY = element.RelativeY * clipH;
+            }
+
+            float cosA = 0, sinA = 0;
+            bool hasRotation = MathF.Abs(element.Rotation) > 0.0001f;
+            if (hasRotation)
+            {
+                cosA = MathF.Cos(element.Rotation);
+                sinA = MathF.Sin(element.Rotation);
+            }
+
+            foreach (var segment in segments)
+            {
+                if (segment is null) continue;
+#if WINDOWS
+                var device = new Microsoft.Graphics.Canvas.CanvasDevice();
+                var maxSize = device.MaximumBitmapSizeInPixels;
+                if (scaleX > maxSize || scaleY > maxSize)
+                {
+                    Log($"Skipping vector segment with scaleX={scaleX} and scaleY={scaleY} exceeding device limit of {maxSize}", "error");
+                    throw new ArgumentOutOfRangeException($"Cannot create CanvasImageSource sized {scaleX} x {scaleY}; MaximumBitmapSizeInPixels for this device is {maxSize}"); //we need to handle it here, as the exception thrown from inside the geometry creation code is not catchable and will crash the app without any logs otherwise
+                }
+#endif
+                var path = CreatePathFromSegment(segment, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                if (path is not null)
+                    container.Children.Add(path);
+            }
+        }
+
+        return container;
+    }
+
+    private static ShapesPath? CreatePathFromSegment(
+        VectorSegment segment,
+        float scaleX, float scaleY,
+        float originX, float originY,
+        bool hasRotation, float cosA, float sinA)
+    {
+        Geometry? geometry = null;
+
+        switch (segment)
+        {
+            case StraightLineVectorSegment s:
+                geometry = CreateLineGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case RoundedRectangleVectorSegment s:
+                geometry = CreateRoundedRectGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case RectangleVectorSegment s:
+                geometry = CreateRectGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case EllipseVectorSegment s:
+                geometry = CreateEllipseGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case CubicBezierVectorSegment s:
+                geometry = CreateCubicBezierGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case QuadraticBezierVectorSegment s:
+                geometry = CreateQuadraticBezierGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case ArcVectorSegment s:
+                geometry = CreateArcGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case PolygonVectorSegment s:
+                geometry = CreatePolygonGeometry(s.Points, s.Holes, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+            case PolylineVectorSegment s:
+                geometry = CreatePolylineGeometry(s.Points, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA);
+                break;
+        }
+
+        if (geometry is null) return null;
+
+        bool hasFill = segment.FillA > 0;
+        bool hasStroke = segment.Thickness > 0 && segment.StrokeA > 0;
+
+        return new ShapesPath
+        {
+            Data = geometry,
+            Fill = hasFill
+                ? new SolidColorBrush(Color.FromRgba(segment.FillR / 65535f, segment.FillG / 65535f, segment.FillB / 65535f, segment.FillA))
+                : null,
+            Stroke = hasStroke
+                ? new SolidColorBrush(Color.FromRgba(segment.StrokeR / 65535f, segment.StrokeG / 65535f, segment.StrokeB / 65535f, segment.StrokeA))
+                : null,
+            StrokeThickness = hasStroke ? segment.Thickness : 0,
+        };
+    }
+
+    private static MauiPoint NToP(float nx, float ny, float scaleX, float scaleY, float originX, float originY, bool rot, float cosA, float sinA)
+    {
+        if (rot)
+        {
+            float rx = nx * cosA - ny * sinA;
+            float ry = nx * sinA + ny * cosA;
+            return new MauiPoint(rx * scaleX + originX, ry * scaleY + originY);
+        }
+        return new MauiPoint(nx * scaleX + originX, ny * scaleY + originY);
+    }
+
+    private static Geometry CreateLineGeometry(StraightLineVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        var start = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA);
+        var end = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA);
+
+        var figure = new PathFigure { StartPoint = start, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new LineSegment { Point = end });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateRectGeometry(RectangleVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        if (!rot)
+        {
+            var topLeft = NToP(s.X, s.Y, sx, sy, ox, oy, false, 0, 0);
+            return new RectangleGeometry
+            {
+                Rect = new Rect(topLeft.X, topLeft.Y, s.Width * sx, s.Height * sy)
+            };
+        }
+
+        var p0 = NToP(s.X, s.Y, sx, sy, ox, oy, true, cosA, sinA);
+        var p1 = NToP(s.X + s.Width, s.Y, sx, sy, ox, oy, true, cosA, sinA);
+        var p2 = NToP(s.X + s.Width, s.Y + s.Height, sx, sy, ox, oy, true, cosA, sinA);
+        var p3 = NToP(s.X, s.Y + s.Height, sx, sy, ox, oy, true, cosA, sinA);
+
+        return BuildPolygonPathGeometry([p0, p1, p2, p3], closeFigure: true);
+    }
+
+    private static Geometry CreateRoundedRectGeometry(RoundedRectangleVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        float nX = s.X, nY = s.Y, nW = s.Width, nH = s.Height;
+        float r = Math.Min(s.CornerRadius, Math.Min(nW, nH) * 0.5f);
+
+        if (!rot)
+        {
+            var pg = new PathGeometry();
+            var figure = new PathFigure { IsClosed = true, IsFilled = true };
+
+            float pxR = r * sx, pyR = r * sy;
+            var c0 = NToP(nX + r, nY, sx, sy, ox, oy, false, 0, 0);
+            var c1 = NToP(nX + nW - r, nY, sx, sy, ox, oy, false, 0, 0);
+            var c2 = NToP(nX + nW, nY + r, sx, sy, ox, oy, false, 0, 0);
+            var c3 = NToP(nX + nW, nY + nH - r, sx, sy, ox, oy, false, 0, 0);
+            var c4 = NToP(nX + nW - r, nY + nH, sx, sy, ox, oy, false, 0, 0);
+            var c5 = NToP(nX + r, nY + nH, sx, sy, ox, oy, false, 0, 0);
+            var c6 = NToP(nX, nY + nH - r, sx, sy, ox, oy, false, 0, 0);
+            var c7 = NToP(nX, nY + r, sx, sy, ox, oy, false, 0, 0);
+
+            figure.StartPoint = c0;
+            figure.Segments.Add(new LineSegment { Point = c1 });
+            figure.Segments.Add(new ArcSegment { Point = c2, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c3 });
+            figure.Segments.Add(new ArcSegment { Point = c4, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c5 });
+            figure.Segments.Add(new ArcSegment { Point = c6, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c7 });
+            figure.Segments.Add(new ArcSegment { Point = c0, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+
+            pg.Figures.Add(figure);
+            return pg;
+        }
+
+        // Rotated: approximate as 4-corner polygon (corner rounding is secondary for preview)
+        var p0 = NToP(nX, nY, sx, sy, ox, oy, true, cosA, sinA);
+        var p1 = NToP(nX + nW, nY, sx, sy, ox, oy, true, cosA, sinA);
+        var p2 = NToP(nX + nW, nY + nH, sx, sy, ox, oy, true, cosA, sinA);
+        var p3 = NToP(nX, nY + nH, sx, sy, ox, oy, true, cosA, sinA);
+        return BuildPolygonPathGeometry([p0, p1, p2, p3], closeFigure: true);
+    }
+
+    private static Geometry CreateEllipseGeometry(EllipseVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        var center = NToP(s.X, s.Y, sx, sy, ox, oy, rot, cosA, sinA);
+        return new EllipseGeometry
+        {
+            Center = center,
+            RadiusX = s.RadiusX * sx,
+            RadiusY = s.RadiusY * sy,
+        };
+    }
+
+    private static Geometry CreateCubicBezierGeometry(CubicBezierVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        var p1 = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA);
+        var p2 = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA);
+        var p3 = NToP(s.X3, s.Y3, sx, sy, ox, oy, rot, cosA, sinA);
+        var p4 = NToP(s.X4, s.Y4, sx, sy, ox, oy, rot, cosA, sinA);
+
+        var figure = new PathFigure { StartPoint = p1, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new BezierSegment { Point1 = p2, Point2 = p3, Point3 = p4 });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateQuadraticBezierGeometry(QuadraticBezierVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        var p1 = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA);
+        var p2 = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA);
+        var p3 = NToP(s.X3, s.Y3, sx, sy, ox, oy, rot, cosA, sinA);
+
+        var figure = new PathFigure { StartPoint = p1, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new QuadraticBezierSegment { Point1 = p2, Point2 = p3 });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateArcGeometry(ArcVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        float startAngle = s.StartAngle;
+        float endAngle = s.StartAngle + s.SweepAngle;
+
+        // Compute start/end in normalized space
+        float startNX = s.X + s.RadiusX * MathF.Cos(startAngle);
+        float startNY = s.Y + s.RadiusY * MathF.Sin(startAngle);
+        float endNX = s.X + s.RadiusX * MathF.Cos(endAngle);
+        float endNY = s.Y + s.RadiusY * MathF.Sin(endAngle);
+
+        var startPt = NToP(startNX, startNY, sx, sy, ox, oy, rot, cosA, sinA);
+        var endPt = NToP(endNX, endNY, sx, sy, ox, oy, rot, cosA, sinA);
+
+        bool isLargeArc = MathF.Abs(s.SweepAngle) > MathF.PI;
+        var sweepDir = s.SweepAngle >= 0 ? SweepDirection.Clockwise : SweepDirection.CounterClockwise;
+
+        var figure = new PathFigure { StartPoint = startPt, IsClosed = false };
+        figure.Segments.Add(new ArcSegment
+        {
+            Point = endPt,
+            Size = new Size(s.RadiusX * sx, s.RadiusY * sy),
+            RotationAngle = 0,
+            IsLargeArc = isLargeArc,
+            SweepDirection = sweepDir,
+        });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreatePolygonGeometry(Drawing.Vector.Point[] points, Drawing.Vector.Point[][]? holes,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        if (points is null || points.Length == 0)
+            return null!;
+
+        var pg = new PathGeometry();
+        if (holes is { Length: > 0 })
+            pg.FillRule = FillRule.EvenOdd;
+
+        var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA)).ToArray();
+        var mainFigure = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
+        if (pts.Length > 1)
+        {
+            var segPoints = new PointCollection();
+            for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+            mainFigure.Segments.Add(new PolyLineSegment { Points = segPoints });
+        }
+        pg.Figures.Add(mainFigure);
+
+        if (holes is not null)
+        {
+            foreach (var hole in holes)
+            {
+                if (hole is null || hole.Length == 0) continue;
+                var holePts = hole.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA)).ToArray();
+                var holeFigure = new PathFigure { StartPoint = holePts[0], IsClosed = true, IsFilled = true };
+                if (holePts.Length > 1)
+                {
+                    var holeSegPoints = new PointCollection();
+                    for (int i = 1; i < holePts.Length; i++) holeSegPoints.Add(holePts[i]);
+                    holeFigure.Segments.Add(new PolyLineSegment { Points = holeSegPoints });
+                }
+                pg.Figures.Add(holeFigure);
+            }
+        }
+
+        return pg;
+    }
+
+    private static Geometry CreatePolylineGeometry(Drawing.Vector.Point[] points,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA)
+    {
+        if (points is null || points.Length < 2)
+            return null!;
+
+        var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA)).ToArray();
+        var figure = new PathFigure { StartPoint = pts[0], IsClosed = false, IsFilled = false };
+        var segPoints = new PointCollection();
+        for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+        figure.Segments.Add(new PolyLineSegment { Points = segPoints });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry BuildPolygonPathGeometry(IReadOnlyList<MauiPoint> pts, bool closeFigure)
+    {
+        if (pts.Count == 0) return null!;
+
+        var figure = new PathFigure { StartPoint = pts[0], IsClosed = closeFigure, IsFilled = closeFigure };
+        if (pts.Count > 1)
+        {
+            var segPoints = new PointCollection();
+            for (int i = 1; i < pts.Count; i++) segPoints.Add(pts[i]);
+            figure.Segments.Add(new PolyLineSegment { Points = segPoints });
+        }
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    #endregion
 
     public sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 

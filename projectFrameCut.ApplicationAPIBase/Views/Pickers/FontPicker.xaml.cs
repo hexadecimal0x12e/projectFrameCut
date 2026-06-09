@@ -28,12 +28,12 @@ public class FontItem : INotifyPropertyChanged
         set => _displayName = value;
     }
 
-    public string? PrimaryLanguageTag { get; set; }
+    public string? PrimaryLanguageTag => InnerFont?.PrimaryLanguageTag;
 
-    public string Category { get; set; }
+    public string Category { get; set; } = "Unknown";
 
-    private ImageSource _previewImageSource;
-    public ImageSource PreviewImageSource
+    private ImageSource? _previewImageSource;
+    public ImageSource? PreviewImageSource
     {
         get => _previewImageSource;
         set
@@ -327,7 +327,7 @@ public partial class FontPicker : ContentView
             if (item.PreviewImageSource != null || string.IsNullOrWhiteSpace(item.FontName))
                 continue;
 
-            var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName}.png");
+            var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName.Replace(':', '_')}.png");
             if (File.Exists(cachePath))
                 updates.Add((item, cachePath));
         }
