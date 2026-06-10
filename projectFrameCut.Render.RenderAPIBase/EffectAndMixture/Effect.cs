@@ -71,6 +71,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int Index { get; set; }
 
         /// <summary>
+        /// Get whether this effect is reorderable in the effect stack. If false, the effect will be rendered in a fixed position in the final effect stack.
+        /// </summary>
+        public bool IsReorderable { get; }
+
+        /// <summary>
         /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
         /// Or be null indicates this effect does not need a specific computer.
         /// </summary>

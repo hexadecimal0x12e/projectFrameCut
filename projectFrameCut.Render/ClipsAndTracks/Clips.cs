@@ -435,7 +435,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
     }
 
-    public class PhotoClip : IClip
+    public class PhotoClip : IImmutableContentClip
     {
         public required string Id { get; init; }
         public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
@@ -479,7 +479,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.EnterProcessContext().Resize(targetWidth, targetHeight, forceResize).Result.ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
@@ -512,7 +512,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint? GetClipLength() => Duration;
     }
 
-    public class SolidColorClip : IClip
+    public class SolidColorClip : IImmutableContentClip
     {
         public required string Id { get; init; }
         public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
@@ -570,17 +570,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
+        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
         {
-            var width = ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth);
-            var height = ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight);
-            return Picture16bpp.GenerateSolidColor(width, height, R, G, B, A);
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
-        {
-            16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), R, G, B, A),
-            8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+            16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, A),
+            8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
             _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
         };
 

@@ -23,6 +23,7 @@ namespace projectFrameCut.Render.Compose
         public string TypeName => "ClassicOverlayMixture";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => EnableApproximatePath ? ApproximateComputerId : ComputerId;
+        public bool IsReorderable => true;
         public string Name { get; set; }
         public string Id { get; set; }
         public Dictionary<string, object> Parameters { get; set; }
@@ -239,9 +240,10 @@ namespace projectFrameCut.Render.Compose
                 {
                     int srcRow = y * basePicture.Width;
                     int dstRow = y * targetWidth;
-                    
-                    // Process RGB channels normally
-                    for (int x = 0; x < basePicture.Width; x++)
+
+                    // SIMD downconvert 16bpp → 8bpp RGB (divide by 257) inline since it involves arithmetic
+                    int w = basePicture.Width;
+                    for (int x = 0; x < w; x++)
                     {
                         int srcIdx = srcRow + x;
                         int dstIdx = dstRow + x;
@@ -250,15 +252,10 @@ namespace projectFrameCut.Render.Compose
                         outB[dstIdx] = (byte)(p16.b[srcIdx] / 257);
                     }
 
-                    // Batch process alpha channel with SIMD
                     if (p16.HasAlphaChannel && p16.a is not null)
-                    {
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
                     else
-                    {
-                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
                 return;
             }
@@ -269,26 +266,17 @@ namespace projectFrameCut.Render.Compose
                 {
                     int srcRow = y * basePicture.Width;
                     int dstRow = y * targetWidth;
-                    
-                    // Process RGB channels normally
-                    for (int x = 0; x < basePicture.Width; x++)
-                    {
-                        int srcIdx = srcRow + x;
-                        int dstIdx = dstRow + x;
-                        outR[dstIdx] = p8.r[srcIdx];
-                        outG[dstIdx] = p8.g[srcIdx];
-                        outB[dstIdx] = p8.b[srcIdx];
-                    }
+                    int w = basePicture.Width;
 
-                    // Batch process alpha channel with SIMD
+                    SIMDAlphaProcessor.CopyBytesRgb(
+                        p8.r, p8.g, p8.b,
+                        outR, outG, outB,
+                        srcRow, dstRow, w);
+
                     if (p8.HasAlphaChannel && p8.a is not null)
-                    {
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
                     else
-                    {
-                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
             }
         }
@@ -309,40 +297,24 @@ namespace projectFrameCut.Render.Compose
                 {
                     int srcRow = y * basePicture.Width;
                     int dstRow = y * targetWidth;
-                    
-                    // Process RGB channels normally
-                    for (int x = 0; x < basePicture.Width; x++)
-                    {
-                        int srcIdx = srcRow + x;
-                        int dstIdx = dstRow + x;
-                        outR[dstIdx] = p16.r[srcIdx];
-                        outG[dstIdx] = p16.g[srcIdx];
-                        outB[dstIdx] = p16.b[srcIdx];
-                    }
+                    int w = basePicture.Width;
 
-                    // Batch process alpha channel with SIMD
+                    SIMDAlphaProcessor.CopyUshortsRgb(
+                        p16.r, p16.g, p16.b,
+                        outR, outG, outB,
+                        srcRow, dstRow, w);
+
                     if (p16.HasAlphaChannel && p16.a is not null)
-                    {
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
                     else
-                    {
-                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
-                    // Batch process brightness with SIMD if needed
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                        {
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, basePicture.Width);
-                        }
+                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
                         else
-                        {
-                            SIMDAlphaProcessor.EstimateBrightnessFromUshort(
-                                p16.r, p16.g, p16.b,
-                                outBrightness, basePicture.Width);
-                        }
+                            SIMDAlphaProcessor.EstimateBrightnessFromUshort(p16.r, p16.g, p16.b, outBrightness, w);
                     }
                 }
                 return;
@@ -354,42 +326,25 @@ namespace projectFrameCut.Render.Compose
                 {
                     int srcRow = y * basePicture.Width;
                     int dstRow = y * targetWidth;
-                    
-                    // Process RGB channels normally
-                    for (int x = 0; x < basePicture.Width; x++)
-                    {
-                        int srcIdx = srcRow + x;
-                        int dstIdx = dstRow + x;
-                        outR[dstIdx] = (ushort)(p8.r[srcIdx] * 257);
-                        outG[dstIdx] = (ushort)(p8.g[srcIdx] * 257);
-                        outB[dstIdx] = (ushort)(p8.b[srcIdx] * 257);
-                    }
+                    int w = basePicture.Width;
 
-                    // Batch process alpha channel with SIMD
+                    SIMDAlphaProcessor.UpconvertBytesToUshortsRgb(
+                        p8.r, p8.g, p8.b,
+                        outR, outG, outB,
+                        srcRow, dstRow, w);
+
                     if (p8.HasAlphaChannel && p8.a is not null)
-                    {
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
                     else
-                    {
-                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, basePicture.Width);
-                    }
+                        SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
-                    // Batch process brightness with SIMD if needed
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                        {
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, basePicture.Width);
-                        }
+                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
                         else
-                        {
-                            // Estimate brightness from 16-bit RGB in outR/outG/outB
-                            // Create view into the current row for SIMD processing
                             SIMDAlphaProcessor.EstimateBrightnessFromUshortOffset(
-                                outR, outG, outB, dstRow,
-                                outBrightness, dstRow, basePicture.Width);
-                        }
+                                outR, outG, outB, dstRow, outBrightness, dstRow, w);
                     }
                 }
             }

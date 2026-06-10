@@ -77,6 +77,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u5149\u6805\u5316\u77E2\u91CF\u56FE\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u4F7F\u7528\u6E32\u67D3\u7BA1\u7EBF\u5904\u7406\u6548\u679C\uFF0C\u800C\u4E0D\u662F\u5C31\u5730\u5904\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Advanced_DontPanicOnUnhandledException",
         "Value": "\u8BD5\u56FE\u5728\u51FA\u73B0\u5168\u5C40\u672A\u5904\u7406\u5F02\u5E38\u65F6\u633D\u6551\u7A0B\u5E8F\uFF08\u53EF\u80FD\u9020\u6210\u540E\u7EED\u7A0B\u5E8F\u4E0D\u7A33\u5B9A\uFF09",
         "Mode": "ConstString",
@@ -120,14 +136,6 @@
       {
         "Id": "Advanced_FixDraft_Info",
         "Value": "\u8FD9\u4F1A\u5C1D\u8BD5\u4FEE\u590D/\u5347\u7EA7\u6240\u6709\u7684\u9879\u76EE\u7684\u914D\u7F6E\uFF0C\u4E0D\u4F1A\u5F71\u54CD\u4F60\u7684\u8349\u7A3F\u3002\u8981\u7EE7\u7EED\u5417\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Advanced_TextAndGlobalization",
-        "Value": "\u6587\u672C\u548C\u672C\u5730\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -224,6 +232,14 @@
       {
         "Id": "Advanced_TestCodec",
         "Value": "\u6D4B\u8BD5\u7F16\u89E3\u7801\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "\u6587\u672C\u548C\u672C\u5730\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2093,6 +2109,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_AllowEffectOutOfOrder",
+        "Value": "\u5141\u8BB8\u91CD\u6392\u6548\u679C\u6765\u52A0\u901F\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_AndroidHwAccleImpType",
         "Value": "\u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
         "Mode": "ConstString",
@@ -2215,7 +2239,15 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u5141\u8BB8\u81EA\u52A8\u5206\u914D\u6E32\u67D3\u5668\uFF08\u63A8\u8350\uFF09",
+        "Value": "\u5141\u8BB8\u81EA\u52A8\u5206\u914D\u6E32\u67D3\u5668\u5230\u5408\u9002\u7684\u5904\u7406\u5668\u6838\u5FC3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableBatchProcess",
+        "Value": "\u786C\u4EF6\u52A0\u901F\u6548\u679C\u6279\u5904\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2463,16 +2495,16 @@
         "DontTranslate": false
       },
       {
-        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
-        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u5149\u6805\u5316\u77E2\u91CF\u56FE\u5F62",
+        "Id": "Render_ForceImpType_ForceHwAccel",
+        "Value": "\u5F3A\u5236\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u5B9E\u73B0\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Advanced_DisallowViewBasedEffectInPreview",
-        "Value": "\u5728\u52A8\u6001\u9884\u89C8\u4E2D\u4F7F\u7528\u6E32\u67D3\u7BA1\u7EBF\u5904\u7406\u6548\u679C\uFF0C\u800C\u4E0D\u662F\u5C31\u5730\u5904\u7406",
+        "Id": "Render_ForceImpType_ForceIPicture",
+        "Value": "\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4231,7 +4263,7 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "About effect renderer implementations:\r- \u0027IPicture CPU Implementation\u0027 offers minimal overhead but may be less accurate\r- \u0027SixLabors.ImageSharp CPU Implementation\u0027 provides high accuracy but may incur significant overhead\r- \u0027GPU Hardware Acceleration\u0027 delivers higher performance with relatively lower overhead",
+        "Value": "About the effect implementer:\r- \u0027IPicture CPU Implementation\u0027 provides minimal overhead, but it may be inaccurate\r- \u0027GPU Hardware Acceleration\u0027 provides higher performance and relatively lower overhead\r- \u0027Not applicable\u0027 indicates that this effect does not require an effect implementer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5136,6 +5168,87 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "Rasterize vector graphics in dynamic preview",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "Use render pipeline for effects in dynamic preview instead of in-place processing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "Text and Localization",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "Typesetting Engine Diagnostic Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "Default Anti-Aliasing Settings",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "Not applicable",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AllowEffectOutOfOrder",
+        "Value": "[MISSING:Render_AllowEffectOutOfOrder]",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-added placeholder",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableBatchProcess",
+        "Value": "[MISSING:Render_EnableBatchProcess]",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-added placeholder",
         "DontTranslate": false
       }
     ],
@@ -6893,7 +7006,7 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u95DC\u65BC\u6548\u679C\u5BE6\u4F5C\u5668\uFF1A\r- \u0027IPicture CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u958B\u92B7\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u6E96\u78BA\r- \u0027SixLabors.ImageSharp CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u6E96\u78BA\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u6703\u9020\u6210\u5927\u91CF\u7684\u958B\u92B7\r- \u0027GPU \u786C\u9AD4\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F03\u9AD8\u7684\u6548\u80FD\u548C\u76F8\u5C0D\u8F03\u5C0F\u7684\u958B\u92B7",
+        "Value": "\u95DC\u65BC\u6548\u679C\u5BE6\u73FE\u5668\uFF1A\r- \u0027IPicture CPU\u5BE6\u73FE\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u958B\u92B7\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u6E96\u78BA\r- \u0027GPU \u786C\u9AD4\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F03\u9AD8\u7684\u6027\u80FD\u548C\u76F8\u5C0D\u8F03\u5C0F\u7684\u958B\u92B7\r- \u0027\u4E0D\u9069\u7528\u0027 \u8868\u793A\u6B64\u6548\u679C\u4E0D\u9700\u8981\u4F7F\u7528\u6548\u679C\u5BE6\u73FE\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7793,6 +7906,68 @@
       {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u8B66\u544A\uFF1A\u6B64\u9078\u9805\u53EF\u80FD\u5C0E\u81F4\u7531\u7B2C\u4E09\u65B9\u5916\u639B\u7A0B\u5F0F\u63D0\u4F9B\u7684\u7247\u6BB5\u6216\u89E3\u78BC\u5668\u7522\u751F\u76F8\u5BB9\u6027\u554F\u984C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "\u5728\u52D5\u614B\u9810\u89BD\u4E2D\u4F7F\u7528\u6E32\u67D3\u7BA1\u7DDA\u8655\u7406\u6548\u679C\uFF0C\u800C\u4E0D\u662F\u5C31\u5730\u8655\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "\u6587\u5B57\u8207\u672C\u5730\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "\u6392\u7248\u5F15\u64CE\u8A3A\u65B7\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "\u9810\u8A2D\u6297\u92F8\u9F52\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "\u505C\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "\u5728\u52D5\u614B\u9810\u89BD\u4E2D\u5149\u67F5\u5316\u77E2\u91CF\u5716\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "\u4E0D\u9069\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9554,11 +9729,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u52B9\u679C\u5B9F\u88C5\u5668\u306B\u3064\u3044\u3066\uFF1A\r- \u0027IPicture CPU\u5B9F\u88C5\u0027 \u306F\u6700\u5C0F\u9650\u306E\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u6B63\u78BA\u3067\u306A\u3044\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027SixLabors.ImageSharp CPU\u5B9F\u88C5\u0027 \u306F\u9AD8\u3044\u6B63\u78BA\u6027\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u5927\u304D\u306A\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u751F\u3058\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027GPU\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u0027 \u306F\u6BD4\u8F03\u7684\u9AD8\u3044\u30D1\u30D5\u30A9\u30FC\u30DE\u30F3\u30B9\u3068\u76F8\u5BFE\u7684\u306B\u5C0F\u3055\u3044\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -10462,6 +10637,87 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u3068\u30ED\u30FC\u30AB\u30EA\u30BC\u30FC\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: {\\\u0022Value\\\u0022: \\\u0022\u30C6\u30AD\u30B9\u30C8\u3068\u30ED\u30FC\u30AB\u30EA\u30BC\u30FC\u30B7\u30E7\u30F3\\\u0022, \\\u0022Comment\\\u0022: \\\u0022\\\u0022}",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "\u52D5\u7684\u30D7\u30EC\u30D3\u30E5\u30FC\u3067\u30D9\u30AF\u30BF\u30FC\u30B0\u30E9\u30D5\u30A3\u30C3\u30AF\u3092\u30E9\u30B9\u30BF\u30E9\u30A4\u30BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "\u52D5\u7684\u30D7\u30EC\u30D3\u30E5\u30FC\u3067\u306F\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u3067\u30A8\u30D5\u30A7\u30AF\u30C8\u3092\u51E6\u7406\u3057\u3001\u305D\u306E\u5834\u51E6\u7406\u306F\u884C\u3044\u307E\u305B\u3093",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AllowEffectOutOfOrder",
+        "Value": "[MISSING:Render_AllowEffectOutOfOrder]",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-added placeholder",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableBatchProcess",
+        "Value": "[MISSING:Render_EnableBatchProcess]",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-added placeholder",
         "DontTranslate": false
       }
     ],
@@ -12218,11 +12474,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30\uC5D0 \uAD00\uD558\uC5EC:\r- \u0027IPicture CPU \uAD6C\uD604\u0027\uC740 \uCD5C\uC18C\uD55C\uC758 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD558\uC9C0\uB9CC \uC815\uD655\uD558\uC9C0 \uC54A\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027SixLabors.ImageSharp CPU \uAD6C\uD604\u0027\uC740 \uB9E4\uC6B0 \uB192\uC740 \uC815\uD655\uC131\uC744 \uC81C\uACF5\uD558\uC9C0\uB9CC \uC0C1\uB2F9\uD55C \uC624\uBC84\uD5E4\uB4DC\uB97C \uC720\uBC1C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027GPU \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\u0027\uC740 \uC0C1\uB300\uC801\uC73C\uB85C \uB192\uC740 \uC131\uB2A5\uACFC \uBE44\uAD50\uC801 \uC801\uC740 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD569\uB2C8\uB2E4.",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -13121,6 +13377,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -14875,11 +15194,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u00C0 propos des impl\u00E9mentations d\u0027effets de rendu :\r- \u0027Impl\u00E9mentation IPicture CPU\u0027 offre la plus petite surcharge, mais peut manquer de pr\u00E9cision\r- \u0027Impl\u00E9mentation SixLabors.ImageSharp CPU\u0027 offre une grande pr\u00E9cision, mais peut entra\u00EEner une surcharge importante\r- \u0027Acc\u00E9l\u00E9ration mat\u00E9rielle GPU\u0027 offre des performances \u00E9lev\u00E9es avec une surcharge relativement faible",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -15780,6 +16099,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -17537,11 +17919,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u592B\u6548\u679C\u5B9E\u73B0\u4E4B\u6CD5\uFF1A\n- \u2018IPicture CPU \u4E4B\u6CD5\u2019 \u8017\u6700\u5FAE\uFF0C\u7136\u5176\u6216\u4E0D\u7CBE\u3002\n- \u2018SixLabors.ImageSharp CPU \u4E4B\u672F\u2019 \u7CBE\u751A\u9AD8\uFF0C\u7136\u5176\u6216\u81F4\u5DE8\u8017\u3002\n- \u2018GPU \u786C\u4F53\u8F85\u7B97\u2019 \u6548\u8F83\u9AD8\uFF0C\u800C\u8017\u76F8\u5BF9\u4E3A\u8F7B\u3002",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u5C06\u73B0\u4EE3\u6280\u672F\u672F\u8BED\u4E0E\u5BF9\u6BD4\u8BF4\u660E\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u8868\u8FF0\uFF0C\u4F7F\u7528\u2018\u592B\u2019\u5F00\u7BC7\u603B\u8D77\uFF0C\u2018\u7136\u2019\u8868\u8F6C\u6298\uFF0C\u2018\u800C\u2019\u8868\u8F7B\u5FAE\u5BF9\u6BD4\uFF0C\u529B\u6C42\u6587\u96C5\u7B80\u7EC3\u4E14\u8868\u610F\u6E05\u6670\u3002",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -18445,6 +18827,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -20648,11 +21093,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u062D\u0648\u0644 \u0645\u064F\u0646\u0641\u0630 \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A:\r- \u0027\u062A\u0646\u0641\u064A\u0630 IPicture \u0628\u0648\u0627\u0633\u0637\u0629 \u0648\u062D\u062F\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629\u0027 \u064A\u0648\u0641\u0631 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649 \u0645\u0646 \u0627\u0644\u0646\u0641\u0642\u0627\u062A \u0648\u0644\u0643\u0646\u0647 \u0642\u062F \u0644\u0627 \u064A\u0643\u0648\u0646 \u062F\u0642\u064A\u0642\u064B\u0627\r- \u0027\u062A\u0646\u0641\u064A\u0630 SixLabors.ImageSharp \u0628\u0648\u0627\u0633\u0637\u0629 \u0648\u062D\u062F\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629\u0027 \u064A\u0648\u0641\u0631 \u062F\u0642\u0629 \u0639\u0627\u0644\u064A\u0629 \u0648\u0644\u0643\u0646\u0647 \u0642\u062F \u064A\u062A\u0633\u0628\u0628 \u0641\u064A \u0646\u0641\u0642\u0627\u062A \u0643\u0628\u064A\u0631\u0629\r- \u0027\u0627\u0644\u062A\u0633\u0631\u064A\u0639 \u0628\u0648\u0627\u0633\u0637\u0629 \u0648\u062D\u062F\u0629 \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0631\u0633\u0648\u0645\u0627\u062A\u0027 \u064A\u0648\u0641\u0631 \u0623\u062F\u0627\u0621\u064B \u0623\u0639\u0644\u0649 \u0648\u0646\u0641\u0642\u0627\u062A \u0646\u0633\u0628\u064A\u0629 \u0623\u0642\u0644",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -21108,6 +21553,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -23308,11 +23816,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "Informationen zur Effekt-Implementierung:\r- \u0027IPicture CPU-Implementierung\u0027 bietet den geringsten Aufwand, ist aber m\u00F6glicherweise ungenau.\r- \u0027SixLabors.ImageSharp CPU-Implementierung\u0027 bietet hohe Genauigkeit, kann jedoch erheblichen Aufwand verursachen.\r- \u0027GPU-Hardwarebeschleunigung\u0027 bietet h\u00F6here Leistung bei relativ geringem Aufwand.",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -23767,6 +24275,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -25967,11 +26538,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "Acerca de los implementadores de efectos de renderizado:\r- \u0027Implementaci\u00F3n IPicture CPU\u0027 ofrece el menor consumo, pero puede no ser precisa.\r- \u0027Implementaci\u00F3n SixLabors.ImageSharp CPU\u0027 ofrece una alta precisi\u00F3n, pero puede generar un consumo significativo.\r- \u0027Aceleraci\u00F3n por hardware GPU\u0027 proporciona un rendimiento superior con un consumo relativamente bajo.",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -26428,6 +26999,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -28628,11 +29262,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "Informazioni sugli implementatori degli effetti di rendering:\r- \u0027Implementazione IPicture CPU\u0027 fornisce il minimo sovraccarico, ma potrebbe non essere accurata\r- \u0027Implementazione SixLabors.ImageSharp CPU\u0027 fornisce un\u0027elevata accuratezza, ma pu\u00F2 causare un notevole sovraccarico\r- \u0027Accelerazione hardware GPU\u0027 offre prestazioni elevate con un sovraccarico relativamente basso",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -29088,6 +29722,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -31288,11 +31985,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "O implementacji efekt\u00F3w renderowania:\r- \u0027Implementacja IPicture CPU\u0027 oferuje najmniejsze obci\u0105\u017Cenie, ale mo\u017Ce by\u0107 niedok\u0142adna.\r- \u0027Implementacja SixLabors.ImageSharp CPU\u0027 zapewnia wysok\u0105 dok\u0142adno\u015B\u0107, ale mo\u017Ce powodowa\u0107 znaczne obci\u0105\u017Cenie.\r- \u0027Przyspieszenie sprz\u0119towe GPU\u0027 oferuje wy\u017Csz\u0105 wydajno\u015B\u0107 przy stosunkowo ma\u0142ym obci\u0105\u017Ceniu.",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -31748,6 +32445,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -33948,11 +34708,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "Sobre os implementadores de efeitos de renderiza\u00E7\u00E3o:\r- \u0027Implementa\u00E7\u00E3o IPicture CPU\u0027 oferece o menor custo, mas pode n\u00E3o ser precisa\r- \u0027Implementa\u00E7\u00E3o SixLabors.ImageSharp CPU\u0027 oferece alta precis\u00E3o, mas pode causar um custo significativo\r- \u0027Acelera\u00E7\u00E3o por hardware GPU\u0027 oferece desempenho mais alto e custo relativamente menor",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -34408,6 +35168,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -36610,11 +37433,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "\u041E \u0440\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430:\r- \u0027\u0420\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F IPicture \u043D\u0430 CPU\u0027 \u043E\u0431\u0435\u0441\u043F\u0435\u0447\u0438\u0432\u0430\u0435\u0442 \u043C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u044B\u0435 \u043D\u0430\u043A\u043B\u0430\u0434\u043D\u044B\u0435 \u0440\u0430\u0441\u0445\u043E\u0434\u044B, \u043D\u043E \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043D\u0435\u0442\u043E\u0447\u043D\u043E\u0439\r- \u0027\u0420\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F SixLabors.ImageSharp \u043D\u0430 CPU\u0027 \u043E\u0431\u0435\u0441\u043F\u0435\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u044B\u0441\u043E\u043A\u0443\u044E \u0442\u043E\u0447\u043D\u043E\u0441\u0442\u044C, \u043D\u043E \u043C\u043E\u0436\u0435\u0442 \u0441\u043E\u0437\u0434\u0430\u0432\u0430\u0442\u044C \u0437\u043D\u0430\u0447\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043D\u0430\u043A\u043B\u0430\u0434\u043D\u044B\u0435 \u0440\u0430\u0441\u0445\u043E\u0434\u044B\r- \u0027\u0410\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u043D\u0430 GPU\u0027 \u043E\u0431\u0435\u0441\u043F\u0435\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u044B\u0441\u043E\u043A\u0443\u044E \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043D\u0435\u0431\u043E\u043B\u044C\u0448\u0438\u0445 \u043D\u0430\u043A\u043B\u0430\u0434\u043D\u044B\u0445 \u0440\u0430\u0441\u0445\u043E\u0434\u0430\u0445",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -37072,6 +37895,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ],
@@ -39274,11 +40160,11 @@
       },
       {
         "Id": "RenderEffectImplement_Hint",
-        "Value": "Efek uygulay\u0131c\u0131lar\u0131 hakk\u0131nda:\r- \u0027IPicture CPU uygulamas\u0131\u0027 en d\u00FC\u015F\u00FCk y\u00FCk\u00FC sa\u011Flar, ancak do\u011Fru olmayabilir\r- \u0027SixLabors.ImageSharp CPU uygulamas\u0131\u0027 y\u00FCksek do\u011Fruluk sa\u011Flar, ancak \u00F6nemli y\u00FCk olu\u015Fturabilir\r- \u0027GPU donan\u0131m h\u0131zland\u0131rmas\u0131\u0027 daha y\u00FCksek performans ve nispeten daha d\u00FC\u015F\u00FCk y\u00FCk sunar",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       },
       {
@@ -39734,6 +40620,69 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_AntiAliasMode_None",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotApplicable",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TypesettingEngineDiagMode",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowViewBasedEffectInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_TextAndGlobalization",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_DisallowVectorClipToMAUIPathInPreview",
+        "Value": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: Retry failed after 4 tries. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)",
         "DontTranslate": false
       }
     ]

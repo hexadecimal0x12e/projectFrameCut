@@ -31,6 +31,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => "PlaceComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {

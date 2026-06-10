@@ -61,6 +61,7 @@ public partial class SetupPage : ContentPage
 
 #endif
         SettingsManager.WriteSetting("ui_ShowWelcomePage", "false");
+        MainSettingsPage.SyncSettingToModules();
         await Navigation.PushAsync(new HomePage());
     }
 

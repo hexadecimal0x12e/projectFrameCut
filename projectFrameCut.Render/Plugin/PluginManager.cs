@@ -56,10 +56,6 @@ namespace projectFrameCut.Render.Plugin
                 if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
                 loadedPlugins.Add(plugin.PluginID, plugin);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
-#if DEBUG
-                Logger.Log(PluginMetadata.GetWhatProvided(plugin));
-
-#endif
             }
 
 
@@ -234,19 +230,35 @@ namespace projectFrameCut.Render.Plugin
 
         public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, EffectImplementType type = EffectImplementType.NotSpecified)
         {
+            IEffect effect = null!;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                var effect = plugin.EffectCreator(stru, type);
-                effect.Index = stru.Index;
-                effect.Enabled = stru.Enabled;
-                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
                 try
                 {
+                    effect = plugin.EffectCreator(stru, type);
+                }
+                catch
+                {
+                    try
+                    {
+                        effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
+                        throw;
+                    }
+                }
+                try
+                {
+                    effect.Index = stru.Index;
+                    effect.Enabled = stru.Enabled;
+                    effect.BindedEffectGroupID = stru.BindedEffectGroupID;
                     effect.Initialize();
                 }
                 catch (Exception ex)
                 {
-                    Log(ex, $"Init effect {effect.Name}", effect);
+                    Log(ex, $"Init effect {effect?.Name}/{stru.TypeName}", effect);
                     throw;
                 }
                 return effect;

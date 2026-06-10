@@ -23,7 +23,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
-            { "Crop", () => new Effect.CropEffectBundle() },
+            { "Crop", () => new Effect.CropEffectBundle() }, 
             { "Place", () => new Effect.PlaceEffectBundle() },
             { "Resize", () => new Effect.ResizeEffectBundle() },
             { "Flip", () => new Effect.FlipEffectBundle() },
@@ -61,7 +61,7 @@ namespace projectFrameCut.ApplicationPluginBase
         public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider => new Dictionary<string, IEffectDynamicPreviewProvider>
         {
             //{ "Blur", new BlurEffectDynamicPreviewProvider() },
-            { "Crop", new CropEffectDynamicPreviewProvider() },
+            //{ "Crop", new CropEffectDynamicPreviewProvider() },
             { "Jitter", new JitterEffectDynamicPreviewProvider() },
             { "Place", new PlaceEffectDynamicPreviewProvider() },
             { "PointPlacer", new PointPlacerEffectDynamicPreviewProvider() },

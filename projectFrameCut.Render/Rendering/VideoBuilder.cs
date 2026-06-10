@@ -210,15 +210,19 @@ namespace projectFrameCut.Render.Rendering
             GC.SuppressFinalize(this);
         }
 
-        public Thread Build()
+        public Thread Build(int[]? threadAffinityMask = null)
         {
             if (BlockWrite)
             {
                 Log($"[VideoWriter] Working in sync-writing mode.");
-                return new(() => { }    );
+                return new(() => { });
             }
             return new Thread(() =>
             {
+                if (threadAffinityMask.ArrayAny())
+                {
+                    ThreadAffinityHelper.SetCurrentThreadAffinity(threadAffinityMask);
+                }
                 Volatile.Write(ref buildStarted, true);
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
@@ -250,7 +254,7 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        public void Finish(Func<uint, IPicture> regenerator, uint totalFrames = 0)
+        public void Finish(Func<uint, IPicture> regenerator, uint totalFrames = 0, Action<uint, float>? onWritingProgressUpdate = null)
         {
             running = false;
             WaitForBuildThreadToStop();
@@ -263,7 +267,8 @@ namespace projectFrameCut.Render.Rendering
                 if (Cache.ContainsKey(currentIndex))
                 {
                     writer.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
-                    Log($"[VideoBuilder] Frame #{currentIndex} added.");
+                    if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
+                    if (onWritingProgressUpdate is not null) onWritingProgressUpdate(currentIndex, (float)currentIndex / totalFrames);
                     currentIndex++;
                     continue;
                 }

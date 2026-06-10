@@ -253,9 +253,9 @@ public partial class DiagnosticSettingPage : ContentPage
 
         }
         catch { }
-        string renderHash = "unknown", drawingHash = "unknown", programDate = "?";
+        string renderHash = "unknown", drawingHash = "unknown", programDate = "?", drawingDate = "?", drawingCommit = "?";
         var renderType = typeof(Renderer).Assembly;
-        var drawingType = typeof(IPicture).Assembly;
+        var drawingType = typeof(Drawing.Base.IPicture).Assembly;
         var appType = typeof(MauiProgram).Assembly;
 
         try
@@ -275,6 +275,7 @@ public partial class DiagnosticSettingPage : ContentPage
                 drawingHash = "unknown";
 
             }
+
             try
             {
                 programDate = !appType.IsDynamic && Path.Exists(appType.Location) ? File.GetLastWriteTime(appType.Location).ToString("yyyy-MM-dd HH:mm:ss") : "unknown";
@@ -284,6 +285,21 @@ public partial class DiagnosticSettingPage : ContentPage
             {
                 programDate = "?";
             }
+            try
+            {
+                drawingDate = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? File.GetLastWriteTime(drawingType.Location).ToString("yyyy-MM-dd HH:mm:ss") : "unknown";
+
+            }
+            catch
+            {
+                drawingDate = "?";
+            }
+            try
+            {
+                drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
+
+            }
+            catch { drawingCommit = "unknown"; }
         }
         catch { }
 
@@ -294,7 +310,7 @@ public partial class DiagnosticSettingPage : ContentPage
             IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
             {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} on {programDate} 
             {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
-            {drawingType.GetName().Name}: v{drawingType.GetName().Version} hash:{drawingHash}
+            {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit.Substring(0, 8)} {drawingDate}) hash:{drawingHash}
 
             AppDataPath: {MauiProgram.BasicDataPath}
             UserDataPath: {MauiProgram.DataPath}

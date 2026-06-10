@@ -5,6 +5,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -21,6 +22,7 @@ namespace projectFrameCut.Render.Effect
 
         private static readonly BilinearPictureResizer _cpuFallback = new();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private IComputer? GetComputer()
         {
             if (!_computerResolved)
@@ -31,6 +33,7 @@ namespace projectFrameCut.Render.Effect
             return _cachedComputer;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static (int destW, int destH) ComputeDestSize(
             int sourceW, int sourceH, int targetW, int targetH, bool preserveAspect)
         {
@@ -63,6 +66,7 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<ushort> Resize(IPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
@@ -174,6 +178,7 @@ namespace projectFrameCut.Render.Effect
             return (Picture16bpp)result!;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<byte> Resize(IPicture<byte> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
@@ -285,6 +290,7 @@ namespace projectFrameCut.Render.Effect
             return (Picture8bpp)result!;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IHDRPicture<ushort> Resize(IHDRPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var computer = GetComputer();
@@ -407,6 +413,7 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static float[] InterpolateBrightness(
             float[] srcBrightness, int srcW, int srcH, int dstW, int dstH)
         {

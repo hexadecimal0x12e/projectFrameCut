@@ -83,7 +83,14 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     {"OverlayBlendComputer", new(() => new VulkanBlendOverlayBlendComputer()) },
                     {"DarkenComputer", new(() => new VulkanBlendDarkenComputer()) },
                     {"LightenComputer", new(() => new VulkanBlendLightenComputer()) },
-                    {"DifferenceComputer", new(() => new VulkanBlendDifferenceComputer()) }
+                    {"DifferenceComputer", new(() => new VulkanBlendDifferenceComputer()) },
+                    {"OpacityComputer", new(() => new VulkanOpacityComputer()) },
+                    {"VignetteComputer", new(() => new VulkanVignetteComputer()) },
+                    {"FlipComputer", new(() => new VulkanFlipComputer()) },
+                    {"SharpenComputer", new(() => new VulkanSharpenComputer()) },
+                    {"RotationComputer", new(() => new VulkanRotationComputer()) },
+                    {"BlurComputer", new(() => new VulkanBlurComputer()) },
+                    {"ColorAdjustmentComputer", new(() => new VulkanColorAdjustmentComputer()) }
                 };
             }
             else
@@ -102,7 +109,14 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer()) },
                     {"DarkenComputer", new(() => new BlendDarkenComputer()) },
                     {"LightenComputer", new(() => new BlendLightenComputer()) },
-                    {"DifferenceComputer", new(() => new BlendDifferenceComputer()) }
+                    {"DifferenceComputer", new(() => new BlendDifferenceComputer()) },
+                    {"OpacityComputer", new(() => new OpacityComputer()) },
+                    {"VignetteComputer", new(() => new VignetteComputer()) },
+                    {"FlipComputer", new(() => new FlipComputer()) },
+                    {"SharpenComputer", new(() => new SharpenComputer()) },
+                    {"RotationComputer", new(() => new RotationComputer()) },
+                    {"BlurComputer", new(() => new BlurComputer()) },
+                    {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer()) }
                 };
             }
         }

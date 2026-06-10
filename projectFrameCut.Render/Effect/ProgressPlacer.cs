@@ -27,6 +27,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public bool Enabled { get; set; } = true;
+        public bool IsReorderable => true;
         public string? BindedEffectGroupID { get; set; }
 
         public List<ProgressData> ProgressList { get; set; } = new List<ProgressData>();

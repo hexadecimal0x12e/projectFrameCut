@@ -519,29 +519,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return scaled;
         }
 
-        /// <summary>
-        /// Returns true for characters in CJK Unified Ideographs, Hiragana, Katakana,
-        /// Hangul, Bopomofo and related blocks that are naturally square in vertical layout.
-        /// </summary>
-        private static bool IsCjkCharacter(char c)
-        {
-            return (c >= '\u2E80' && c <= '\u2EFF') ||  // CJK Radicals Supplement
-                   (c >= '\u2F00' && c <= '\u2FDF') ||  // Kangxi Radicals
-                   (c >= '\u3000' && c <= '\u303F') ||  // CJK Symbols and Punctuation
-                   (c >= '\u3040' && c <= '\u309F') ||  // Hiragana
-                   (c >= '\u30A0' && c <= '\u30FF') ||  // Katakana
-                   (c >= '\u3100' && c <= '\u312F') ||  // Bopomofo
-                   (c >= '\u3200' && c <= '\u32FF') ||  // Enclosed CJK Letters and Months
-                   (c >= '\u3300' && c <= '\u33FF') ||  // CJK Compatibility
-                   (c >= '\u3400' && c <= '\u4DBF') ||  // CJK Extension A
-                   (c >= '\u4E00' && c <= '\u9FFF') ||  // CJK Unified Ideographs
-                   (c >= '\uAC00' && c <= '\uD7AF') ||  // Hangul Syllables
-                   (c >= '\uF900' && c <= '\uFAFF') ||  // CJK Compatibility Ideographs
-                   (c >= '\uFE30' && c <= '\uFE4F') ||  // CJK Compatibility Forms
-                   (c >= '\uFF00' && c <= '\uFFEF');    // Halfwidth and Fullwidth Forms
-        }
-
 
     }
 
+    public class ImmutableContentTextClip : TextClip, IImmutableVectorContentClip
+    {
+        public VectorPicture GetVectorPicture(int requiredWidth, int requiredHeight)
+            => base.GetVectorPictureRelativeToStartPointOfSource(0U, requiredHeight, requiredHeight);
+    }
 }

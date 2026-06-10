@@ -15,6 +15,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Crop";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public bool IsReorderable => true;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
         public int RelativeWidth { get; set; }
@@ -117,6 +118,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
         public string TypeName => "Crop";
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;

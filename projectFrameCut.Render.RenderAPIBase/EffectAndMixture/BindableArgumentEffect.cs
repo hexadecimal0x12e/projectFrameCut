@@ -29,6 +29,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual bool IsValueValid(object value) => true;
 
         EffectType IEffect.TypeOfEffect => EffectType.BindableEffect;
+        bool IEffect.IsReorderable => false; // reorder a IBindableArgumentEffect may cause the binding relationship to break, so we set it to false by default. 
 
     }
 

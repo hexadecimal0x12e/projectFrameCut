@@ -2,7 +2,7 @@
   "profiles": {
     "Test render": {
       "commandName": "Project",
-      "commandLineArgs": " render  \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\示例项目1.pjfc\" \"-output=C:\\Users\\azert\\Documents\\cliTest-{CurrentTime}.mov\" \"-output_options=2560,1440,60,AV_PIX_FMT_YUV420P,libx264\" \"-assetDbFile=d:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=2\" \"-FFmpegLibraryPath=D:\\azert\\Downloads\\ffmpeg-8.1-full_build-shared\\bin\" \"-VideoFrameDiskCacheRoot=C:\\Users\\azert\\AppData\\Local\\Packages\\hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y\\LocalCache\\VideoFrameCache\" -preferHwAccelDecoder=true -prepareInWorker=true -ApproximateMixture=true -enableThreadAffinity=true"
+      "commandLineArgs": " render  \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\示例项目1.pjfc\" \"-output=C:\\Users\\azert\\Documents\\cliTest-{CurrentTime}.mov\" \"-output_options=3840,2160,60,AV_PIX_FMT_YUV420P,libx264\" \"-assetDbFile=d:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=2\" \"-FFmpegLibraryPath=D:\\azert\\Downloads\\ffmpeg-8.1-full_build-shared\\bin\" \"-VideoFrameDiskCacheRoot=C:\\Users\\azert\\AppData\\Local\\Packages\\hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y\\LocalCache\\VideoFrameCache\" -preferHwAccelDecoder=true -prepareInWorker=true -ApproximateMixture=true -enableThreadAffinity=true -ForcePreferToType=HwAcceleration"
     },
     "Instrumentation": {
       "commandName": "Project",

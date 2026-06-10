@@ -489,21 +489,6 @@ public partial class RenderPage : ContentPage
 #endif
                 if (_cts.IsCancellationRequested) return;
 
-                try
-                {
-                    await ComposeAudio(vm, audOutputPath);
-
-                }
-                catch (Exception ex)
-                {
-
-                    Log(ex, "compose audio", this);
-                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
-                    return;
-                }
-                if (_cts.IsCancellationRequested) return;
-
                 var mtdDict = new Dictionary<string, string>
                 {
                     { "title", _project.ProjectName ?? "Project" },
@@ -527,6 +512,21 @@ public partial class RenderPage : ContentPage
                     return;
                 }
 
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await ComposeAudio(vm, audOutputPath);
+
+                }
+                catch (Exception ex)
+                {
+
+                    Log(ex, "compose audio", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
                 if (_cts.IsCancellationRequested) return;
 
                 double targetFps = double.Parse(vm.Framerate);
@@ -553,12 +553,22 @@ public partial class RenderPage : ContentPage
 
 
                 if (_cts.IsCancellationRequested) return;
+                SetSubProg("FinalEncoding");
 
                 await Task.Run(async () =>
                 {
                     try
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true, mtdDict);
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict);
+                        if (!SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                        {
+                            try
+                            {
+                                File.Delete(vidOutputPath);
+                                File.Delete(audOutputPath);
+                            }
+                            catch { }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -587,7 +597,7 @@ public partial class RenderPage : ContentPage
                         catch { }
                     }
 #else
-                    await Task.Run(() => File.Move(compOutputPath, resultPath));
+                    //await Task.Run(() => File.Move(compOutputPath, resultPath));
 
 #endif
 #if WINDOWS
@@ -694,7 +704,7 @@ public partial class RenderPage : ContentPage
             var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
 
-            int[] CPUAffinityOverride = Array.Empty<int>();
+            int[] CPUAffinityOverride = Array.Empty<int>(), preparerAffinityCpuIndexes = [];
             bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
             if (EnableThreadAffinity)
             {
@@ -717,6 +727,8 @@ public partial class RenderPage : ContentPage
                     }
                 }
                 catch { }
+                preparerAffinityCpuIndexes = CPUAffinityOverride.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(CPUAffinityOverride).ToArray() : [];
+
             }
             int parallelThreadCount = CPUAffinityOverride.Length > 0 ? CPUAffinityOverride.Length : (int)MaxParallelThreadsCount.Value;
             if (CPUAffinityOverride.Length > 0 && (DeviceInfo.Idiom == DeviceIdiom.Desktop || OperatingSystem.IsIOS())) parallelThreadCount = (int)(parallelThreadCount * 1.5);
@@ -735,7 +747,7 @@ public partial class RenderPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-            Context context = Context.CreateDefault();
+            Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
             var devices = context.Devices.ToList();
             if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
             {
@@ -827,43 +839,9 @@ public partial class RenderPage : ContentPage
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
                 OneByOneRender = blockwrite,
                 PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
+                AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
+                EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
-                //MinRemainingFramesForPreparedWait = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => parallelThreadCount,
-                //    var t when t == DeviceIdiom.Tablet => parallelThreadCount * 2,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => parallelThreadCount * 3,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => parallelThreadCount * 4,
-                //    _ => parallelThreadCount * 2
-                //},
-                //RenderWorkerLaunchUtilizationThreshold = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 0.8,
-                //    _ => 1
-                //},
-                //RenderSchedulerPreparePollDelayMs = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 8000,
-                //    var t when t == DeviceIdiom.Tablet => 10000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 12500,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 15000,
-                //    _ => 15000
-                //},
-                //RenderSchedulerIdleDelayMs = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 500,
-                //    var t when t == DeviceIdiom.Tablet => 1000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 1000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 2000,
-                //    _ => 2000
-                //},
-                //MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 0,
-                //    var t when t == DeviceIdiom.Tablet => 25000,
-                //    var t when t == DeviceIdiom.Phone => 30000,
-                //    _ => 40000
-                //},
                 MinSchedulePreparedFrames = parallelThreadCount,
                 UseHDR = ProjectUsesHDR,
                 MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
@@ -914,12 +892,12 @@ public partial class RenderPage : ContentPage
                 }
                 finally
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(50);
                     _previewUpdateSemaphore.Release();
                 }
             };
 
-            builder?.Build()?.Start();
+            builder?.Build(preparerAffinityCpuIndexes)?.Start();
             await Task.Run(() => renderer.PrepareRender(_cts.Token), _cts.Token);
             if (_cts.IsCancellationRequested) return;
 
@@ -948,21 +926,35 @@ public partial class RenderPage : ContentPage
 
                 SetSubProg("WriteVideo");
                 Log("Finish writing video...");
-                int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
-                int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
-                builder?.Finish((i) => Timeline.MixtureLayers(
-                    Timeline.GetFramesInOneFrame(
-                        clips,
+                await Task.Run(() =>
+                {
+                    int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
+                    int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
+                    builder?.Finish((i) => Timeline.MixtureLayers(
+                        Timeline.GetFramesInOneFrame(
+                            clips,
+                            i,
+                            width,
+                            height,
+                            projectRelativeWidth: projectRelativeWidth,
+                            projectRelativeHeight: projectRelativeHeight),
                         i,
                         width,
                         height,
                         projectRelativeWidth: projectRelativeWidth,
                         projectRelativeHeight: projectRelativeHeight),
-                    i,
-                    width,
-                    height,
-                    projectRelativeWidth: projectRelativeWidth,
-                    projectRelativeHeight: projectRelativeHeight), duration);
+                        duration,
+                        (_, p) =>
+                        {
+                            Dispatcher.Dispatch(async () =>
+                            {
+                                await SubProgress.ProgressTo(p, 250, Easing.Linear);
+                                SubProgLabel.Text = $"{_currentSubProgText} ({p:p2})";
+
+                            });
+                        });
+                });
+
 
             }
 

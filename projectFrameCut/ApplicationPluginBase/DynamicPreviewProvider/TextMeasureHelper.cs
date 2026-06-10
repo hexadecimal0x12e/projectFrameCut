@@ -30,6 +30,8 @@ internal static class TextMeasureHelper
             if (string.IsNullOrEmpty(entry.text))
                 continue;
 
+            entry.text = entry.text.Replace("\r\n", "\n").Replace('\r', '\n');
+
             if (!TextClipFontRegistry.TryGetFont(entry.fontFamily, out var primaryFont) || primaryFont is null)
             {
                 var fallbackName = TextClipFontRegistry.FallbackFamilyName;

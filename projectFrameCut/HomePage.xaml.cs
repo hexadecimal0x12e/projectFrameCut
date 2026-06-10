@@ -29,7 +29,6 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using static System.Net.Mime.MediaTypeNames;
 using Application = Microsoft.Maui.Controls.Application;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -39,6 +38,8 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Effect;
+
 
 
 
@@ -943,7 +944,7 @@ public partial class HomePage : ContentPage
                                 }
                             }
 #if WINDOWS
-                            ILGPU.Context context = ILGPU.Context.CreateDefault();
+                            ILGPU.Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                             var devices = context.Devices.ToList();
                             List<AcceleratorInfo> listAccels = new();
                             for (uint i = 0; i < devices.Count; i++)
@@ -1332,49 +1333,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-
-        if (!SettingsManager.IsSettingExists("UserName") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserName", "")))
-        {
-            try
-            {
-                var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("��", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("��", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
-                SettingsManager.WriteSetting("UserName", rnd.Generate());
-            }
-            catch
-            {
-                SettingsManager.WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
-
-            }
-        }
-
-
-        if (SettingsManager.IsBoolSettingTrue("render_SaveCheckpoint"))
-        {
-            Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-            MyLoggerExtensions.SaveDiagResult = true;
-            MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
-
-        }
-        else
-        {
-            MyLoggerExtensions.SaveDiagResult = false;
-        }
-        IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-        PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-        PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-        var vfdCahceDir = SettingsManager.GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
-        Directory.CreateDirectory(vfdCahceDir);
-        VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
-        VideoFrameDiskCache.EnableCompression = SettingsManager.IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
-        VideoFrameDiskCache.MaximumCacheSizeBytes = SettingsManager.GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
-        IVideoSource.EnableMemoryCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
-        IVideoSource.EnableDiskCache = SettingsManager.IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-        ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
-        IVectorContentClip.GlobalDefaultAntiAliasMode = SettingsManager.GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
-        NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && SettingsManager.IsBoolSettingTrue("diag_TypesettingEngineDiagMode"); 
-        TextClip.DiagMode = SettingsManager.IsBoolSettingTrue("diag_TypesettingEngineDiagMode"); 
-        DynamicPreview.DisableVectorPreviewPaths = SettingsManager.IsBoolSettingTrue("render_DisallowVectorClipToMAUIPathInPreview");
-        DynamicPreview.DisableEffectDynamicPreview = SettingsManager.IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
+        MainSettingsPage.SyncSettingToModules();
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 

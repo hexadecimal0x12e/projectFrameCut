@@ -139,16 +139,21 @@ namespace projectFrameCut.DraftStuff
                 {
                     var color = Color.FromArgb(ClipColor);
                     Clip.Background = new SolidColorBrush(color);
+                    return;
                 }
                 catch
                 {
-                    // Invalid color string, use default
-                    Clip.Background = DetermineAssetColor(ClipType);
+                    // Invalid color string, fall through to generate a new one
                 }
             }
-            else
+
+            // Generate a random color and persist it so the clip keeps the same color
+            // across reloads instead of getting a different random color each time.
+            var brush = DetermineAssetColor(ClipType);
+            Clip.Background = brush;
+            if (brush is SolidColorBrush scb)
             {
-                Clip.Background = DetermineAssetColor(ClipType);
+                ClipColor = scb.Color.ToArgbHex();
             }
         }
 

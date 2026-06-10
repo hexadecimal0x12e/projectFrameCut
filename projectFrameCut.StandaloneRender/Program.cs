@@ -23,6 +23,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
+using projectFrameCut.Render.Effect;
+
 
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
 using Microsoft.DiagnosticsHub;
@@ -40,6 +42,7 @@ namespace projectFrameCut.StandaloneRender
         {
             if (!args.Contains("--nolog"))
             {
+                Console.ForegroundColor = ConsoleColor.White;
                 MyLoggerExtensions.OnLog += (m, l) =>
                 {
                     if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
@@ -198,6 +201,58 @@ namespace projectFrameCut.StandaloneRender
                 return TryResolveAssembly(requestedAssembly.Name!, probingPaths.ToArray(), keepInMemory: true);
             };
 
+            #region plugin loading
+
+            var plugins = new List<projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>
+                {
+                    new InternalPluginBase(),
+                    new ILGPUPlugin(),
+                };
+
+            if (switches.TryGetValue("pluginRoot", out var pluginRoot) && !string.IsNullOrWhiteSpace(pluginRoot))
+            {
+                if (Directory.Exists(pluginRoot))
+                {
+                    Log($"Loading external plugins from: {pluginRoot}");
+                    foreach (var dllPath in Directory.GetFiles(pluginRoot, "*.dll"))
+                    {
+                        try
+                        {
+                            var assembly = Assembly.LoadFrom(dllPath);
+                            var types = assembly.GetTypes();
+                            var ldr = types?.First(a => a.Name == "PluginLoader");
+                            if (ldr is null)
+                            {
+                                Log("No PluginLoader class found in assembly.", "warning");
+                                continue;
+                            }
+                            var ldrMethod = ldr.GetMethod("CreateInstance");
+                            var pluginObj = ldrMethod?.Invoke(null, ["stand-Alone", Path.GetDirectoryName(dllPath)]);
+                            if (pluginObj is IPluginBase plugin)
+                            {
+                                if (plugin.PluginAPIVersion != PluginAPIVersion)
+                                {
+                                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
+                                    continue;
+                                }
+                                plugins.Add(plugin);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Failed to load assembly {Path.GetFileName(dllPath)}: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    Log($"WARNING: Plugin root directory '{pluginRoot}' does not exist.");
+                }
+            }
+
+            PluginManager.Init(plugins);
+            Log($"{PluginManager.LoadedPlugins.Count} plugins loaded.");
+            #endregion
 
             switch (runningMode)
             {
@@ -218,7 +273,7 @@ namespace projectFrameCut.StandaloneRender
                     }
                     catch { throw; }
                 case "list_accels":
-                    Context context = Context.CreateDefault();
+                    Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                     var devices = context.Devices.ToList();
                     List<AcceleratorInfo> listAccels = new();
                     for (uint i = 0; i < devices.Count; i++)
@@ -299,7 +354,7 @@ namespace projectFrameCut.StandaloneRender
             try
             {
 
-                Context context = Context.CreateDefault();
+                Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                 var devices = context.Devices.ToList();
                 List<Device> picked = new();
                 for (int i = 0; i < devices.Count; i++)
@@ -366,6 +421,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     Log($"Picked accelerator {item.Name} : {item.AcceleratorType}");
                 }
+
 
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
@@ -442,58 +498,6 @@ namespace projectFrameCut.StandaloneRender
 
             #endregion
 
-            #region plugin loading
-
-            var plugins = new List<projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>
-                {
-                    new InternalPluginBase(),
-                    new ILGPUPlugin(),
-                };
-
-            if (switches.TryGetValue("pluginRoot", out var pluginRoot) && !string.IsNullOrWhiteSpace(pluginRoot))
-            {
-                if (Directory.Exists(pluginRoot))
-                {
-                    Log($"Loading external plugins from: {pluginRoot}");
-                    foreach (var dllPath in Directory.GetFiles(pluginRoot, "*.dll"))
-                    {
-                        try
-                        {
-                            var assembly = Assembly.LoadFrom(dllPath);
-                            var types = assembly.GetTypes();
-                            var ldr = types?.First(a => a.Name == "PluginLoader");
-                            if (ldr is null)
-                            {
-                                Log("No PluginLoader class found in assembly.", "warning");
-                                continue;
-                            }
-                            var ldrMethod = ldr.GetMethod("CreateInstance");
-                            var pluginObj = ldrMethod?.Invoke(null, ["stand-Alone", Path.GetDirectoryName(dllPath)]);
-                            if (pluginObj is IPluginBase plugin)
-                            {
-                                if (plugin.PluginAPIVersion != PluginAPIVersion)
-                                {
-                                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
-                                    continue;
-                                }
-                                plugins.Add(plugin);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"Failed to load assembly {Path.GetFileName(dllPath)}: {ex.Message}");
-                        }
-                    }
-                }
-                else
-                {
-                    Log($"WARNING: Plugin root directory '{pluginRoot}' does not exist.");
-                }
-            }
-
-            PluginManager.Init(plugins);
-            #endregion
-
             #region read args
             if (!switches.ContainsKey("project"))
             {
@@ -546,7 +550,7 @@ namespace projectFrameCut.StandaloneRender
 
             int maxParallelThreads = Environment.ProcessorCount;
             bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
-            int[]? renderWorkerAffinityCpuIndexes = null;
+            int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
             if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
             if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
             if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
@@ -594,6 +598,8 @@ namespace projectFrameCut.StandaloneRender
                         if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
                             maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
                     }
+                    maxParallelThreads *= 2;
+                    preparerAffinityCpuIndexes = renderWorkerAffinityCpuIndexes.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(renderWorkerAffinityCpuIndexes).ToArray() : [];
                 }
                 else
                 {
@@ -635,6 +641,12 @@ namespace projectFrameCut.StandaloneRender
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
 
             Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
+
+            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
+            {
+                EffectHelper.ForcePreferToType = forcePreferToType;
+                Log($"Using forced effect implement type: {forcePreferToType}");
+            }
 
             #endregion
 
@@ -711,7 +723,7 @@ namespace projectFrameCut.StandaloneRender
                     Duration = timeline.Duration,
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
-                    LogStaticsData = true,
+                    LogStaticsData = false,
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
                     EnableRenderWatchdogForceStart = false,
@@ -738,16 +750,16 @@ namespace projectFrameCut.StandaloneRender
 #endif
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2}          \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame          \r");
                         }
                     };
                 }
 
-                builder?.Build()?.Start();
+                builder?.Build(preparerAffinityCpuIndexes)?.Start();
                 renderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
                 Log("Start render...");
@@ -784,7 +796,7 @@ namespace projectFrameCut.StandaloneRender
                 if (cts.IsCancellationRequested) return;
 
                 Log("Finish writing video...");
-                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration);
+                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration, (c, p) => Console.Write($"Frame #{c} added, completed {p:p2}.    \r"));
 
                 Log($"Releasing resources...");
 
@@ -954,6 +966,7 @@ namespace projectFrameCut.StandaloneRender
                     string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await composeVideo(vidOutputPath);
                     composeAudio(audOutputPath);
+                    Console.WriteLine("Composing audio and video... this may take a few seconds.");
                     VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);
                     try
                     {

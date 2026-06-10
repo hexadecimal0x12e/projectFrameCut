@@ -1618,4 +1618,630 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         }
     }
 
+    internal static class OpenGLSinglePassHelper
+    {
+        internal static object[] ComputeSinglePass(
+            object[] args,
+            Func<int, int, int, string> buildShader,
+            string computerName)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+
+            int srcLength = rIn.Length;
+            int glLength = srcLength;
+
+            float[] rPad = PreparePaddedChannel(rIn, srcLength, glLength);
+            float[] gPad = PreparePaddedChannel(gIn, srcLength, glLength);
+            float[] bPad = PreparePaddedChannel(bIn, srcLength, glLength);
+            float[] aPad = PreparePaddedChannel(aIn, srcLength, glLength);
+
+            string shader = buildShader(srcLength, glLength, srcLength);
+
+            return ComputerHelper.EnqueueCompute(() =>
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader,
+                        Inputs = new float[][] { rPad },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = computerName,
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accelerator);
+
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromMilliseconds(ComputerHelper.Timeout))) != readyTask)
+                        throw new TimeoutException($"GLComputeView.WaitUntilReadyAsync timed out.");
+                    await readyTask;
+
+                    async Task<float[]> RunChannel(float[] channel, string jobId)
+                    {
+                        accelerator.JobID = jobId;
+                        accelerator.Inputs = new float[][] { channel };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+                        var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == srcLength) return raw;
+                        var trimmed = new float[srcLength];
+                        Array.Copy(raw, 0, trimmed, 0, Math.Min(raw.Length, srcLength));
+                        return trimmed;
+                    }
+
+                    var rOut = await RunChannel(rPad, computerName + "-R");
+                    var gOut = await RunChannel(gPad, computerName + "-G");
+                    var bOut = await RunChannel(bPad, computerName + "-B");
+                    var aOut = await RunChannel(aPad, computerName + "-A");
+                    return new object[] { rOut, gOut, bOut, aOut };
+                });
+
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                    throw new TimeoutException($"{computerName}.Compute timed out after 60 seconds.");
+
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null)
+                    throw new InvalidOperationException($"{computerName} Compute failed: accelerator returned null result.");
+                return result;
+            });
+        }
+
+        private static float[] PreparePaddedChannel(float[] source, int sourceLength, int paddedLength)
+        {
+            var arr = new float[paddedLength];
+            Array.Copy(source, 0, arr, 0, Math.Min(Math.Min(source.Length, sourceLength), paddedLength));
+            return arr;
+        }
+    }
+
+    public class OpacityComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "FadeOpacity";
+
+        public object[] Compute(object[] args)
+        {
+            float opacity = Convert.ToSingle(args[4]);
+            return OpenGLSinglePassHelper.ComputeSinglePass(args, (srcLen, glLen, len) => $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    outputData[i] = inputData[i];
+                }
+                """, "OpacityComputer");
+        }
+    }
+
+    public class VignetteComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Vignette";
+
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]);
+            int h = Convert.ToInt32(args[5]);
+            float strength = Convert.ToSingle(args[6]);
+            float radius = Convert.ToSingle(args[7]);
+            return OpenGLSinglePassHelper.ComputeSinglePass(args, (srcLen, glLen, len) => $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    int x = int(i % uint({{w}}));
+                    int y = int(i / uint({{w}}));
+                    float cx = float({{w}}) * 0.5;
+                    float cy = float({{h}}) * 0.5;
+                    float dx = (float(x) - cx) / cx;
+                    float dy = (float(y) - cy) / cy;
+                    float dist = sqrt(dx * dx + dy * dy);
+                    float factor = 1.0;
+                    if (dist > {{radius}})
+                    {
+                        float t = min((dist - {{radius}}) / (1.0 - {{radius}}), 1.0);
+                        factor = 1.0 - t * t * {{strength}};
+                    }
+                    outputData[i] = inputData[i] * factor;
+                }
+                """, "VignetteComputer");
+        }
+    }
+
+    public class FlipComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Flip";
+
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]);
+            int h = Convert.ToInt32(args[5]);
+            int horizontal = Convert.ToBoolean(args[6]) ? 1 : 0;
+            int vertical = Convert.ToBoolean(args[7]) ? 1 : 0;
+            return OpenGLSinglePassHelper.ComputeSinglePass(args, (srcLen, glLen, len) => $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    int x = int(i % uint({{w}}));
+                    int y = int(i / uint({{w}}));
+                    int srcX = ({{horizontal}} != 0) ? ({{w}} - 1 - x) : x;
+                    int srcY = ({{vertical}} != 0) ? ({{h}} - 1 - y) : y;
+                    int srcIdx = srcY * {{w}} + srcX;
+                    outputData[i] = inputData[srcIdx];
+                }
+                """, "FlipComputer");
+        }
+    }
+
+    public class SharpenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Sharpen";
+
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]);
+            float amount = Convert.ToSingle(args[5]);
+            return OpenGLSinglePassHelper.ComputeSinglePass(args, (srcLen, glLen, len) => $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    int x = int(i % uint({{w}}));
+                    float orig = inputData[i];
+                    int left = (x > 0) ? int(i) - 1 : int(i);
+                    int right = (x < {{w}} - 1) ? int(i) + 1 : int(i);
+                    int top = int(i) - {{w}};
+                    if (top < 0) top = int(i);
+                    int bottom = int(i) + {{w}};
+                    if (bottom >= {{len}}) bottom = int(i);
+                    float avg = (inputData[left] + inputData[right] + inputData[top] + inputData[bottom]) * 0.25;
+                    outputData[i] = orig + {{amount}} * (orig - avg);
+                }
+                """, "SharpenComputer");
+        }
+    }
+
+    public class RotationComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Rotation";
+        public object[] Compute(object[] args)
+        {
+            int srcW = Convert.ToInt32(args[4]);
+            int srcH = Convert.ToInt32(args[5]);
+            int outW = Convert.ToInt32(args[6]);
+            int outH = Convert.ToInt32(args[7]);
+            float angleDeg = Convert.ToSingle(args[8]);
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(outW * outH);
+
+            // This one needs different src/dst sizes, so we handle it manually
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int glPad = Math.Max(srcLength, dstLength);
+
+            float[] PadChannel(float[] ch)
+            {
+                var arr = new float[glPad];
+                Array.Copy(ch, 0, arr, 0, Math.Min(ch.Length, srcLength));
+                return arr;
+            }
+            var rPad = PadChannel(rIn); var gPad = PadChannel(gIn);
+            var bPad = PadChannel(bIn); var aPad = PadChannel(aIn);
+
+            string shader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{dstLength}})) { outputData[i] = 0.0; return; }
+                    int x = int(i % uint({{outW}}));
+                    int y = int(i / uint({{outW}}));
+                    float angleRad = {{(angleDeg * MathF.PI / 180f)}};
+                    float cosA = cos(-angleRad);
+                    float sinA = sin(-angleRad);
+                    float srcCx = float({{srcW}}) * 0.5;
+                    float srcCy = float({{srcH}}) * 0.5;
+                    float outCx = float({{outW}}) * 0.5;
+                    float outCy = float({{outH}}) * 0.5;
+                    float ox = float(x) - outCx;
+                    float oy = float(y) - outCy;
+                    float sx = cosA * ox - sinA * oy + srcCx;
+                    float sy = sinA * ox + cosA * oy + srcCy;
+                    if (sx >= 0.0 && sx < float({{srcW}} - 1) && sy >= 0.0 && sy < float({{srcH}} - 1))
+                    {
+                        int sx0 = int(sx); int sy0 = int(sy);
+                        int sx1 = sx0 + 1; int sy1 = sy0 + 1;
+                        float fx = sx - float(sx0); float fy = sy - float(sy0);
+                        int i00 = sy0 * {{srcW}} + sx0; int i10 = sy0 * {{srcW}} + sx1;
+                        int i01 = sy1 * {{srcW}} + sx0; int i11 = sy1 * {{srcW}} + sx1;
+                        outputData[i] =
+                            ((inputData[i00] * (1.0 - fx) + inputData[i10] * fx) * (1.0 - fy) +
+                             (inputData[i01] * (1.0 - fx) + inputData[i11] * fx) * fy);
+                    }
+                    else { outputData[i] = 0.0; }
+                }
+                """;
+
+            return ComputerHelper.EnqueueCompute(() =>
+            {
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader, Inputs = new float[][] { rPad },
+                        WidthRequest = 50, HeightRequest = 50,
+                        JobID = "RotationComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
+                    };
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        { accelerator.HandlerChanged -= OnHandlerChanged; handlerReadyTcs.TrySetResult(handler); }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accelerator);
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    { accelerator.HandlerChanged -= OnHandlerChanged; handlerReadyTcs.TrySetResult(existingHandler); }
+                    var hTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(hTask, Task.Delay(TimeSpan.FromSeconds(10))) != hTask)
+                    { accelerator.HandlerChanged -= OnHandlerChanged; throw new TimeoutException("Handler creation timed out."); }
+                    var handler = await hTask;
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready.");
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromMilliseconds(ComputerHelper.Timeout))) != readyTask)
+                        throw new TimeoutException("GLComputeView timed out.");
+                    await readyTask;
+
+                    async Task<float[]> RunCh(float[] ch, string id)
+                    {
+                        accelerator.JobID = id; accelerator.Inputs = new float[][] { ch };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+                        var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == dstLength) return raw;
+                        var t = new float[dstLength]; Array.Copy(raw, 0, t, 0, Math.Min(raw.Length, dstLength)); return t;
+                    }
+                    var rO = await RunCh(rPad, "RotationComputer-R"); var gO = await RunCh(gPad, "RotationComputer-G");
+                    var bO = await RunCh(bPad, "RotationComputer-B"); var aO = await RunCh(aPad, "RotationComputer-A");
+                    return new object[] { rO, gO, bO, aO };
+                });
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                    throw new TimeoutException("RotationComputer timed out.");
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                if (result is null) throw new InvalidOperationException("RotationComputer returned null.");
+                return result;
+            });
+        }
+    }
+
+    public class BlurComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Blur";
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int w = Convert.ToInt32(args[4]);
+            float sigma = Convert.ToSingle(args[5]);
+            int radius = (int)MathF.Ceiling(sigma);
+            if (radius <= 0) radius = 1;
+            int len = rIn.Length;
+            int h = len / w;
+            int glPad = len;
+
+            float[] Pad(float[] src)
+            {
+                var a = new float[glPad]; Array.Copy(src, 0, a, 0, Math.Min(src.Length, glPad)); return a;
+            }
+            var rP = Pad(rIn); var gP = Pad(gIn); var bP = Pad(bIn); var aP = Pad(aIn);
+
+            string horizShader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    int x = int(i % uint({{w}}));
+                    int rowStart = int(i) - x;
+                    float sum = 0.0; int count = 0;
+                    for (int k = x - {{radius}}; k <= x + {{radius}}; k++)
+                    {
+                        int col = k < 0 ? 0 : (k >= {{w}} ? {{w}} - 1 : k);
+                        sum += inputData[rowStart + col]; count++;
+                    }
+                    outputData[i] = sum / float(count);
+                }
+                """;
+
+            string vertShader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{len}})) { outputData[i] = 0.0; return; }
+                    int y = int(i / uint({{w}}));
+                    float sum = 0.0; int count = 0;
+                    for (int k = y - {{radius}}; k <= y + {{radius}}; k++)
+                    {
+                        int row = k < 0 ? 0 : (k >= {{h}} ? {{h}} - 1 : k);
+                        sum += inputData[row * {{w}} + int(i % uint({{w}}))]; count++;
+                    }
+                    outputData[i] = sum / float(count);
+                }
+                """;
+
+            return ComputerHelper.EnqueueCompute(() =>
+            {
+                var mtTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView accH = new NativeGLSurfaceView { ShaderSource = horizShader, Inputs = new float[][] { rP }, WidthRequest = 50, HeightRequest = 50, JobID = "Blur-H", OutputElementType = GLComputeView.OutputElementType.Float32 };
+                    var tcsH = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnH(object? s, EventArgs e) { if (accH.Handler is NativeGLSurfaceViewHandler hh) { accH.HandlerChanged -= OnH; tcsH.TrySetResult(hh); } }
+                    accH.HandlerChanged += OnH;
+                    ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accH);
+                    if (accH.Handler is NativeGLSurfaceViewHandler eh) { accH.HandlerChanged -= OnH; tcsH.TrySetResult(eh); }
+                    if (await Task.WhenAny(tcsH.Task, Task.Delay(10000)) != tcsH.Task) throw new TimeoutException();
+                    var hH = await tcsH.Task;
+                    if (hH?.PlatformView is not GLComputeView gvH) throw new InvalidOperationException();
+                    var rtH = gvH.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(rtH, Task.Delay(ComputerHelper.Timeout)) != rtH) throw new TimeoutException();
+                    await rtH;
+
+                    async Task<float[]> RunH(float[] ch, NativeGLSurfaceViewHandler handler)
+                    {
+                        accH.JobID = "Blur-H"; accH.Inputs = new float[][] { ch };
+                        NativeGLSurfaceViewHandler.MapInputs(handler, accH);
+                        var raw = (float[])await gvH.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == len) return raw;
+                        var t = new float[len]; Array.Copy(raw, 0, t, 0, Math.Min(raw.Length, len)); return t;
+                    }
+
+                    var rT = await RunH(rP, hH); var gT = await RunH(gP, hH); var bT = await RunH(bP, hH); var aT = await RunH(aP, hH);
+
+                    NativeGLSurfaceView accV = new NativeGLSurfaceView { ShaderSource = vertShader, Inputs = new float[][] { rT }, WidthRequest = 50, HeightRequest = 50, JobID = "Blur-V", OutputElementType = GLComputeView.OutputElementType.Float32 };
+                    var tcsV = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnV(object? s, EventArgs e) { if (accV.Handler is NativeGLSurfaceViewHandler hv) { accV.HandlerChanged -= OnV; tcsV.TrySetResult(hv); } }
+                    accV.HandlerChanged += OnV;
+                    ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accV);
+                    if (accV.Handler is NativeGLSurfaceViewHandler ev) { accV.HandlerChanged -= OnV; tcsV.TrySetResult(ev); }
+                    if (await Task.WhenAny(tcsV.Task, Task.Delay(10000)) != tcsV.Task) throw new TimeoutException();
+                    var hV = await tcsV.Task;
+                    if (hV?.PlatformView is not GLComputeView gvV) throw new InvalidOperationException();
+                    var rtV = gvV.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(rtV, Task.Delay(ComputerHelper.Timeout)) != rtV) throw new TimeoutException();
+                    await rtV;
+
+                    async Task<float[]> RunV(float[] ch)
+                    {
+                        accV.JobID = "Blur-V"; accV.Inputs = new float[][] { ch };
+                        NativeGLSurfaceViewHandler.MapInputs(hV, accV);
+                        var raw = (float[])await gvV.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                        if (raw.Length == len) return raw;
+                        var t = new float[len]; Array.Copy(raw, 0, t, 0, Math.Min(raw.Length, len)); return t;
+                    }
+                    return new object[] { await RunV(rT), await RunV(gT), await RunV(bT), await RunV(aT) };
+                });
+                if (!mtTask.Wait(TimeSpan.FromSeconds(60))) throw new TimeoutException("BlurComputer timed out.");
+                var r = (object[])TaskHelper.SyncWait(() => mtTask, CancellationToken.None);
+                if (r is null) throw new InvalidOperationException("BlurComputer returned null.");
+                return r;
+            });
+        }
+    }
+
+    public class ColorAdjustmentComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "ColorAdjustment";
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            float brightness = Convert.ToSingle(args[4]), contrast = Convert.ToSingle(args[5]);
+            float saturation = Convert.ToSingle(args[6]), hue = Convert.ToSingle(args[7]);
+            float gamma = Convert.ToSingle(args[8]), vibrance = Convert.ToSingle(args[9]);
+            float temperature = Convert.ToSingle(args[10]), invertF = Convert.ToSingle(args[11]);
+            float grayscale = Convert.ToSingle(args[12]), opacity = Convert.ToSingle(args[13]);
+            float maxV = Convert.ToSingle(args[14]);
+
+            int srcLen = rIn.Length;
+            // Pack RGBA into one buffer: R[0..N-1] G[0..N-1] B[0..N-1] A[0..N-1]
+            int packedLen = srcLen * 4;
+            var packed = new float[packedLen];
+            Array.Copy(rIn, 0, packed, 0, srcLen);
+            Array.Copy(gIn, 0, packed, srcLen, srcLen);
+            Array.Copy(bIn, 0, packed, srcLen * 2, srcLen);
+            Array.Copy(aIn, 0, packed, srcLen * 3, srcLen);
+
+            float angleRad = hue * MathF.PI / 180f;
+            string shader = $$"""
+                #version 310 es
+                layout(local_size_x = 256) in;
+                layout(std430, binding = 0) buffer InBuffer { float inputData[]; };
+                layout(std430, binding = 6) buffer OutBuffer { float outputData[]; };
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{srcLen}})) { outputData[i] = 0.0; outputData[i+{{srcLen}}] = 0.0; outputData[i+{{srcLen*2}}] = 0.0; outputData[i+{{srcLen*3}}] = 0.0; return; }
+                    float r = inputData[i], g = inputData[i+{{srcLen}}], b = inputData[i+{{srcLen*2}}], a = inputData[i+{{srcLen*3}}];
+
+                    // 1. Brightness
+                    float bf = {{brightness}} - 1.0;
+                    r = bf >= 0.0 ? r + ({{maxV}} - r) * bf : r * (1.0 + bf);
+                    g = bf >= 0.0 ? g + ({{maxV}} - g) * bf : g * (1.0 + bf);
+                    b = bf >= 0.0 ? b + ({{maxV}} - b) * bf : b * (1.0 + bf);
+
+                    // 2. Contrast
+                    r = ((r / {{maxV}} - 0.5) * {{contrast}} + 0.5) * {{maxV}};
+                    g = ((g / {{maxV}} - 0.5) * {{contrast}} + 0.5) * {{maxV}};
+                    b = ((b / {{maxV}} - 0.5) * {{contrast}} + 0.5) * {{maxV}};
+
+                    // 3. Saturation
+                    float gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    r = gray + {{saturation}} * (r - gray);
+                    g = gray + {{saturation}} * (g - gray);
+                    b = gray + {{saturation}} * (b - gray);
+
+                    // 4. Hue (inline RGB<->HSL)
+                    float hh = 0.0, ss, ll;
+                    {   float nr = r / {{maxV}}, ng = g / {{maxV}}, nb = b / {{maxV}};
+                        float cMax = max(max(nr, ng), nb), cMin = min(min(nr, ng), nb);
+                        float delta = cMax - cMin;
+                        if (delta > 0.0) {
+                            if (cMax == nr) hh = 60.0 * mod((ng - nb) / delta, 6.0);
+                            else if (cMax == ng) hh = 60.0 * ((nb - nr) / delta + 2.0);
+                            else hh = 60.0 * ((nr - ng) / delta + 4.0);
+                            if (hh < 0.0) hh += 360.0;
+                        }
+                        ll = (cMax + cMin) * 0.5;
+                        ss = (ll > 0.0 && ll < 1.0) ? delta / (1.0 - abs(2.0 * ll - 1.0)) : 0.0;
+                    }
+                    hh += {{hue}};
+                    if (hh < 0.0) hh += 360.0; if (hh >= 360.0) hh -= 360.0;
+                    if (ss < 0.000001) { r = ll * {{maxV}}; g = ll * {{maxV}}; b = ll * {{maxV}}; }
+                    else {
+                        float qq = ll < 0.5 ? ll * (1.0 + ss) : ll + ss - ll * ss;
+                        float p = 2.0 * ll - qq;
+                        float hN = hh / 360.0;
+                        float Tr = hN + 0.333333; if (Tr < 0.0) Tr += 1.0; if (Tr > 1.0) Tr -= 1.0;
+                        float Tg = hN; if (Tg < 0.0) Tg += 1.0; if (Tg > 1.0) Tg -= 1.0;
+                        float Tb = hN - 0.333333; if (Tb < 0.0) Tb += 1.0; if (Tb > 1.0) Tb -= 1.0;
+                        float h2r(float t) { return t < 0.166667 ? p + (qq - p) * 6.0 * t : t < 0.5 ? qq : t < 0.666667 ? p + (qq - p) * (0.666667 - t) * 6.0 : p; }
+                        r = h2r(Tr) * {{maxV}}; g = h2r(Tg) * {{maxV}}; b = h2r(Tb) * {{maxV}};
+                    }
+
+                    // 5. Gamma
+                    float invG = 1.0 / max({{gamma}}, 0.001);
+                    r = {{maxV}} * pow(r / {{maxV}}, invG);
+                    g = {{maxV}} * pow(g / {{maxV}}, invG);
+                    b = {{maxV}} * pow(b / {{maxV}}, invG);
+
+                    // 6. Vibrance
+                    float vSat = 1.0 + {{vibrance}} * 0.5;
+                    float vGray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    r = vGray + vSat * (r - vGray);
+                    g = vGray + vSat * (g - vGray);
+                    b = vGray + vSat * (b - vGray);
+
+                    // 7. Temperature
+                    r *= 1.0 + {{temperature}} * 0.01;
+                    b *= 1.0 - {{temperature}} * 0.01;
+
+                    // 8. Invert
+                    if ({{invertF}} > 0.5) { r = {{maxV}} - r; g = {{maxV}} - g; b = {{maxV}} - b; }
+
+                    // 9. Grayscale
+                    float lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    float gs = {{grayscale}} >= 1.0 ? 1.0 : 1.0 - {{grayscale}};
+                    r = lum + gs * (r - lum); g = lum + gs * (g - lum); b = lum + gs * (b - lum);
+
+                    // 10. Opacity
+                    outputData[i] = r; outputData[i+{{srcLen}}] = g;
+                    outputData[i+{{srcLen*2}}] = b; outputData[i+{{srcLen*3}}] = a * {{opacity}};
+                }
+                """;
+
+            return ComputerHelper.EnqueueCompute(() =>
+            {
+                var mtTask = MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    NativeGLSurfaceView acc = new NativeGLSurfaceView { ShaderSource = shader, Inputs = new float[][] { packed }, WidthRequest = 50, HeightRequest = 50, JobID = "ColorAdjustmentComputer", OutputElementType = GLComputeView.OutputElementType.Float32 };
+                    var tcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnH(object? s, EventArgs e) { if (acc.Handler is NativeGLSurfaceViewHandler hh) { acc.HandlerChanged -= OnH; tcs.TrySetResult(hh); } }
+                    acc.HandlerChanged += OnH; ComputerHelper.AddPlatformComputeViewHandler?.Invoke(acc);
+                    if (acc.Handler is NativeGLSurfaceViewHandler eh) { acc.HandlerChanged -= OnH; tcs.TrySetResult(eh); }
+                    if (await Task.WhenAny(tcs.Task, Task.Delay(10000)) != tcs.Task) throw new TimeoutException("Handler timeout.");
+                    var handler = await tcs.Task;
+                    if (handler?.PlatformView is not GLComputeView glView) throw new InvalidOperationException();
+                    var rt = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(rt, Task.Delay(ComputerHelper.Timeout)) != rt) throw new TimeoutException("Timeout.");
+                    await rt;
+                    var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
+                    if (raw.Length < packedLen) { var tp = new float[packedLen]; Array.Copy(raw, 0, tp, 0, raw.Length); raw = tp; }
+                    var rO = new float[srcLen]; var gO = new float[srcLen]; var bO = new float[srcLen]; var aO = new float[srcLen];
+                    Array.Copy(raw, 0, rO, 0, srcLen);
+                    Array.Copy(raw, srcLen, gO, 0, srcLen);
+                    Array.Copy(raw, srcLen * 2, bO, 0, srcLen);
+                    Array.Copy(raw, srcLen * 3, aO, 0, srcLen);
+                    return new object[] { rO, gO, bO, aO };
+                });
+                if (!mtTask.Wait(TimeSpan.FromSeconds(60))) throw new TimeoutException("ColorAdjustmentComputer timed out.");
+                var result = (object[])TaskHelper.SyncWait(() => mtTask, CancellationToken.None);
+                if (result is null) throw new InvalidOperationException("ColorAdjustmentComputer returned null.");
+                return result;
+            });
+        }
+    }
+
+
 }

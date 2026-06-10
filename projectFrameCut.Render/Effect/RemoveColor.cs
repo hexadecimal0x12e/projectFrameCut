@@ -38,6 +38,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string NeedComputer => "RemoveColorComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
         public string? BindedEffectGroupID { get; set; }
 
 

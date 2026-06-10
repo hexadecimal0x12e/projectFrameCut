@@ -7476,6 +7476,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
@@ -7610,11 +7611,31 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             // Dispatch UI update and track it for backpressure
             var previewsForThisFrame = preparedPreviews;
-            pendingUiUpdate = Dispatcher.DispatchAsync(async () =>
+            pendingUiUpdate = Dispatcher.DispatchAsync([MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)] async () =>
             {
                 try
                 {
                     UpdatePlayheadPosition(TimelineScrollView.ScrollX);
+
+                    // Auto-scroll timeline to keep playhead visible during playback
+                    var timeX = FrameToPixel((uint)_currentFrame);
+                    var scrollX = TimelineScrollView.ScrollX;
+                    var viewportWidth = TimelineScrollView.Width;
+                    if (viewportWidth > 0)
+                    {
+                        double margin = 50;
+                        if (timeX < scrollX + margin)
+                        {
+                            await TimelineScrollView.ScrollToAsync(Math.Max(0, timeX - margin), 0, false);
+                            UpdatePlayheadPosition(TimelineScrollView.ScrollX);
+                        }
+                        else if (timeX > scrollX + viewportWidth - margin)
+                        {
+                            await TimelineScrollView.ScrollToAsync(timeX - viewportWidth + margin, 0, false);
+                            UpdatePlayheadPosition(TimelineScrollView.ScrollX);
+                        }
+                    }
+
                     CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(targetFrame * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
                     applyWatch.Restart();
                     ClipEditor.ApplyPreparedPreviews(previewsForThisFrame);

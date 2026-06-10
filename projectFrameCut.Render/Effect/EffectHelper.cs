@@ -20,6 +20,8 @@ namespace projectFrameCut.Render.Effect
             return (double)(index - startPoint) / (endPoint - startPoint);
         }
 
+        public static EffectImplementType? ForcePreferToType = null;
+
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
@@ -41,7 +43,7 @@ namespace projectFrameCut.Render.Effect
             IMixture? mixture = null;
             foreach (var item in Effects)
             {
-                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                var e = PluginManager.CreateEffect(item, ForcePreferToType ?? (item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
                 if (e is ISpeedVarianceProvider p)
                 {
                     if (haveSpeedVarProvider) throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
@@ -71,7 +73,7 @@ namespace projectFrameCut.Render.Effect
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
-                var e = PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType);
+                var e = PluginManager.CreateEffect(item, ForcePreferToType ?? (item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
                 effects.Add(e);
 
 

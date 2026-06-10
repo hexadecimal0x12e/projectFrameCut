@@ -13,6 +13,7 @@ namespace projectFrameCut.Render.Compose
     {
         public abstract string TypeName { get; }
         public abstract string? NeedComputer { get; }
+        public bool IsReorderable => true;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string Name { get; set; }
         public string Id { get; set; }

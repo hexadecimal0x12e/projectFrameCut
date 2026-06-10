@@ -1286,4 +1286,355 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             return BlendModeVulkanHelper.ComputeBlend(top, bottom, topAlpha, bottomAlpha, outputBpp, actualPixels, VulkanShaderLibrary.BlendColorSrcDifference);
         }
     }
+
+    internal static class VulkanSinglePassHelper
+    {
+        internal static object[] ComputeSinglePass(object[] args, string shader, string name)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int len = rIn.Length;
+
+            return VulkanComputerRunner.EnqueueCompute(async () =>
+            {
+                var (accelerator, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(shader, new float[][] { rIn }, OutputElementType.Float32);
+
+                async Task<float[]> RunChannel(float[] channel)
+                {
+                    accelerator.Inputs = new float[][] { channel };
+                    NativeVulkanSurfaceViewHandler.MapInputs(handler, accelerator);
+                    var raw = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
+                    if (raw.Length == len) return raw;
+                    var trimmed = new float[len];
+                    Array.Copy(raw, 0, trimmed, 0, Math.Min(raw.Length, len));
+                    return trimmed;
+                }
+
+                var rOut = await RunChannel(rIn);
+                var gOut = await RunChannel(gIn);
+                var bOut = await RunChannel(bIn);
+                var aOut = await RunChannel(aIn);
+                return new object[] { rOut, gOut, bOut, aOut };
+            }, $"{name}.Compute timed out.");
+        }
+    }
+
+    public class VulkanOpacityComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "FadeOpacity";
+        public object[] Compute(object[] args)
+        {
+            float opacity = Convert.ToSingle(args[4]);
+            int len = ((float[])args[0]).Length;
+            return VulkanSinglePassHelper.ComputeSinglePass(args, $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    o[idx] = i[idx];
+                }
+                """, "VulkanOpacityComputer");
+        }
+    }
+
+    public class VulkanVignetteComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "Vignette";
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]), h = Convert.ToInt32(args[5]);
+            float strength = Convert.ToSingle(args[6]), radius = Convert.ToSingle(args[7]);
+            int len = ((float[])args[0]).Length;
+            return VulkanSinglePassHelper.ComputeSinglePass(args, $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    int x = int(idx % {{w}}), y = int(idx / {{w}});
+                    float cx = float({{w}}) * 0.5, cy = float({{h}}) * 0.5;
+                    float dx = (float(x) - cx) / cx, dy = (float(y) - cy) / cy;
+                    float dist = sqrt(dx*dx + dy*dy);
+                    float factor = 1.0;
+                    if (dist > {{radius}}) {
+                        float t = min((dist - {{radius}}) / (1.0 - {{radius}}), 1.0);
+                        factor = 1.0 - t*t*{{strength}};
+                    }
+                    o[idx] = i[idx] * factor;
+                }
+                """, "VulkanVignetteComputer");
+        }
+    }
+
+    public class VulkanFlipComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "Flip";
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]), h = Convert.ToInt32(args[5]);
+            int horiz = Convert.ToBoolean(args[6]) ? 1 : 0, vert = Convert.ToBoolean(args[7]) ? 1 : 0;
+            int len = ((float[])args[0]).Length;
+            return VulkanSinglePassHelper.ComputeSinglePass(args, $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    int x = int(idx % {{w}}), y = int(idx / {{w}});
+                    int sx = ({{horiz}} != 0) ? {{w}} - 1 - x : x;
+                    int sy = ({{vert}} != 0) ? {{h}} - 1 - y : y;
+                    o[idx] = i[sy * {{w}} + sx];
+                }
+                """, "VulkanFlipComputer");
+        }
+    }
+
+    public class VulkanSharpenComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "Sharpen";
+        public object[] Compute(object[] args)
+        {
+            int w = Convert.ToInt32(args[4]);
+            float amount = Convert.ToSingle(args[5]);
+            int len = ((float[])args[0]).Length;
+            return VulkanSinglePassHelper.ComputeSinglePass(args, $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    int x = int(idx % {{w}});
+                    float orig = i[idx];
+                    int left = x > 0 ? int(idx) - 1 : int(idx);
+                    int right = x < {{w}} - 1 ? int(idx) + 1 : int(idx);
+                    int top = int(idx) - {{w}}; if (top < 0) top = int(idx);
+                    int bottom = int(idx) + {{w}}; if (bottom >= {{len}}) bottom = int(idx);
+                    float avg = (i[left] + i[right] + i[top] + i[bottom]) * 0.25;
+                    o[idx] = orig + {{amount}} * (orig - avg);
+                }
+                """, "VulkanSharpenComputer");
+        }
+    }
+
+    public class VulkanRotationComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "Rotation";
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException();
+            var gIn = args[1] as float[] ?? throw new ArgumentException();
+            var bIn = args[2] as float[] ?? throw new ArgumentException();
+            var aIn = args[3] as float[] ?? throw new ArgumentException();
+            int srcW = Convert.ToInt32(args[4]), srcH = Convert.ToInt32(args[5]);
+            int outW = Convert.ToInt32(args[6]), outH = Convert.ToInt32(args[7]);
+            float angleDeg = Convert.ToSingle(args[8]);
+            int srcLen = checked(srcW * srcH), dstLen = checked(outW * outH);
+            int vkLen = Math.Max(srcLen, dstLen);
+
+            float[] Pad(float[] s) { var a = new float[vkLen]; Array.Copy(s, 0, a, 0, Math.Min(s.Length, srcLen)); return a; }
+            var rP = Pad(rIn); var gP = Pad(gIn); var bP = Pad(bIn); var aP = Pad(aIn);
+
+            string shader = $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{dstLen}}) { o[idx] = 0.0; return; }
+                    int x = int(idx % {{outW}}), y = int(idx / {{outW}});
+                    float ar = {{(angleDeg * MathF.PI / 180f)}};
+                    float cosA = cos(-ar), sinA = sin(-ar);
+                    float scx = float({{srcW}}) * 0.5, scy = float({{srcH}}) * 0.5;
+                    float ocx = float({{outW}}) * 0.5, ocy = float({{outH}}) * 0.5;
+                    float ox = float(x) - ocx, oy = float(y) - ocy;
+                    float sx = cosA * ox - sinA * oy + scx;
+                    float sy = sinA * ox + cosA * oy + scy;
+                    if (sx >= 0.0 && sx < float({{srcW}}-1) && sy >= 0.0 && sy < float({{srcH}}-1)) {
+                        int sx0 = int(sx), sy0 = int(sy), sx1 = sx0+1, sy1 = sy0+1;
+                        float fx = sx - float(sx0), fy = sy - float(sy0);
+                        int i00 = sy0*{{srcW}}+sx0, i10 = sy0*{{srcW}}+sx1;
+                        int i01 = sy1*{{srcW}}+sx0, i11 = sy1*{{srcW}}+sx1;
+                        o[idx] = ((i[i00]*(1.0-fx)+i[i10]*fx)*(1.0-fy)+(i[i01]*(1.0-fx)+i[i11]*fx)*fy);
+                    } else { o[idx] = 0.0; }
+                }
+                """;
+
+            return VulkanComputerRunner.EnqueueCompute(async () =>
+            {
+                var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(shader, new float[][] { rP }, OutputElementType.Float32);
+                async Task<float[]> RunCh(float[] ch) {
+                    acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
+                    var raw = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
+                    if (raw.Length == dstLen) return raw;
+                    var t = new float[dstLen]; Array.Copy(raw, 0, t, 0, Math.Min(raw.Length, dstLen)); return t;
+                }
+                return new object[] { await RunCh(rP), await RunCh(gP), await RunCh(bP), await RunCh(aP) };
+            }, "VulkanRotationComputer timed out.");
+        }
+    }
+
+    public class VulkanBlurComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "Blur";
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException();
+            var gIn = args[1] as float[] ?? throw new ArgumentException();
+            var bIn = args[2] as float[] ?? throw new ArgumentException();
+            var aIn = args[3] as float[] ?? throw new ArgumentException();
+            int w = Convert.ToInt32(args[4]), len = rIn.Length, h = len / w;
+            int radius = Math.Max(1, (int)MathF.Ceiling(Convert.ToSingle(args[5])));
+
+            string hShader = $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    int x = int(idx % {{w}}), rs = int(idx) - x;
+                    float sum = 0.0; int cnt = 0;
+                    for (int k = x - {{radius}}; k <= x + {{radius}}; k++) {
+                        int col = clamp(k, 0, {{w}}-1);
+                        sum += i[rs + col]; cnt++;
+                    }
+                    o[idx] = sum / float(cnt);
+                }
+                """;
+
+            string vShader = $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{len}}) { o[idx] = 0.0; return; }
+                    int y = int(idx / {{w}});
+                    float sum = 0.0; int cnt = 0;
+                    for (int k = y - {{radius}}; k <= y + {{radius}}; k++) {
+                        int row = clamp(k, 0, {{h}}-1);
+                        sum += i[row * {{w}} + int(idx % {{w}})]; cnt++;
+                    }
+                    o[idx] = sum / float(cnt);
+                }
+                """;
+
+            return VulkanComputerRunner.EnqueueCompute(async () =>
+            {
+                var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(hShader, new float[][] { rIn }, OutputElementType.Float32);
+                async Task<float[]> RunH(float[] ch) {
+                    acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
+                    return (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
+                }
+                var rT = await RunH(rIn); var gT = await RunH(gIn); var bT = await RunH(bIn); var aT = await RunH(aIn);
+
+                var (acc2, handler2, vkView2) = await VulkanComputerRunner.CreateAcceleratorAsync(vShader, new float[][] { rT }, OutputElementType.Float32);
+                async Task<float[]> RunV(float[] ch) {
+                    acc2.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler2, acc2);
+                    return (float[])await vkView2.RunComputeAsync(OutputElementType.Float32);
+                }
+                return new object[] { await RunV(rT), await RunV(gT), await RunV(bT), await RunV(aT) };
+            }, "VulkanBlurComputer timed out.");
+        }
+    }
+
+    public class VulkanColorAdjustmentComputer : IComputer
+    {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
+        public string SupportedEffectOrMixture => "ColorAdjustment";
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException(); var gIn = args[1] as float[] ?? throw new ArgumentException();
+            var bIn = args[2] as float[] ?? throw new ArgumentException(); var aIn = args[3] as float[] ?? throw new ArgumentException();
+            float brightness = Convert.ToSingle(args[4]), contrast = Convert.ToSingle(args[5]);
+            float saturation = Convert.ToSingle(args[6]), hue = Convert.ToSingle(args[7]);
+            float gamma = Convert.ToSingle(args[8]), vibrance = Convert.ToSingle(args[9]);
+            float temperature = Convert.ToSingle(args[10]), invertF = Convert.ToSingle(args[11]);
+            float grayscale = Convert.ToSingle(args[12]), opacity = Convert.ToSingle(args[13]);
+            float maxV = Convert.ToSingle(args[14]);
+            int srcLen = rIn.Length, packedLen = srcLen * 4;
+
+            var packed = new float[packedLen];
+            Array.Copy(rIn, 0, packed, 0, srcLen); Array.Copy(gIn, 0, packed, srcLen, srcLen);
+            Array.Copy(bIn, 0, packed, srcLen * 2, srcLen); Array.Copy(aIn, 0, packed, srcLen * 3, srcLen);
+
+            string shader = $$"""
+                #version 450
+                layout(local_size_x = 256) in;
+                layout(set = 0, binding = 0, std430) buffer InBuf { float i[]; };
+                layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
+                void main() {
+                    uint idx = gl_GlobalInvocationID.x;
+                    if (idx >= {{srcLen}}) { o[idx]=0.0; o[idx+{{srcLen}}]=0.0; o[idx+{{srcLen*2}}]=0.0; o[idx+{{srcLen*3}}]=0.0; return; }
+                    float r=i[idx], g=i[idx+{{srcLen}}], b=i[idx+{{srcLen*2}}], a=i[idx+{{srcLen*3}}];
+                    float bf = {{brightness}} - 1.0;
+                    r = bf>=0.0 ? r+({{maxV}}-r)*bf : r*(1.0+bf);
+                    g = bf>=0.0 ? g+({{maxV}}-g)*bf : g*(1.0+bf);
+                    b = bf>=0.0 ? b+({{maxV}}-b)*bf : b*(1.0+bf);
+                    r = ((r/{{maxV}}-0.5)*{{contrast}}+0.5)*{{maxV}};
+                    g = ((g/{{maxV}}-0.5)*{{contrast}}+0.5)*{{maxV}};
+                    b = ((b/{{maxV}}-0.5)*{{contrast}}+0.5)*{{maxV}};
+                    float gray = 0.2126*r + 0.7152*g + 0.0722*b;
+                    r = gray + {{saturation}}*(r-gray);
+                    g = gray + {{saturation}}*(g-gray);
+                    b = gray + {{saturation}}*(b-gray);
+                    // Hue
+                    {   float nr=r/{{maxV}}, ng=g/{{maxV}}, nb=b/{{maxV}};
+                        float cmx=max(max(nr,ng),nb), cmn=min(min(nr,ng),nb), delta=cmx-cmn;
+                        float hh=0.0, ss, ll;
+                        if (delta>0.0) { if(cmx==nr) hh=60.0*mod((ng-nb)/delta,6.0); else if(cmx==ng) hh=60.0*((nb-nr)/delta+2.0); else hh=60.0*((nr-ng)/delta+4.0); if(hh<0.0) hh+=360.0; }
+                        ll=(cmx+cmn)*0.5; ss=(ll>0.0&&ll<1.0)?delta/(1.0-abs(2.0*ll-1.0)):0.0;
+                        hh+= {{hue}}; if(hh<0.0) hh+=360.0; if(hh>=360.0) hh-=360.0;
+                        if(ss<0.000001) { r=ll*{{maxV}}; g=ll*{{maxV}}; b=ll*{{maxV}}; }
+                        else { float qq=ll<0.5?ll*(1.0+ss):ll+ss-ll*ss; float p=2.0*ll-qq; float hN=hh/360.0;
+                            float Tr=hN+0.333333; if(Tr<0.0)Tr+=1.0; if(Tr>1.0)Tr-=1.0;
+                            float Tg=hN; if(Tg<0.0)Tg+=1.0; if(Tg>1.0)Tg-=1.0;
+                            float Tb=hN-0.333333; if(Tb<0.0)Tb+=1.0; if(Tb>1.0)Tb-=1.0;
+                            float h2r(float t) { return t<0.166667?p+(qq-p)*6.0*t:t<0.5?qq:t<0.666667?p+(qq-p)*(0.666667-t)*6.0:p; }
+                            r=h2r(Tr)*{{maxV}}; g=h2r(Tg)*{{maxV}}; b=h2r(Tb)*{{maxV}}; }
+                    }
+                    float invG=1.0/max({{gamma}},0.001);
+                    r={{maxV}}*pow(r/{{maxV}},invG); g={{maxV}}*pow(g/{{maxV}},invG); b={{maxV}}*pow(b/{{maxV}},invG);
+                    float vSat=1.0+{{vibrance}}*0.5, vGray=0.2126*r+0.7152*g+0.0722*b;
+                    r=vGray+vSat*(r-vGray); g=vGray+vSat*(g-vGray); b=vGray+vSat*(b-vGray);
+                    r*=1.0+{{temperature}}*0.01; b*=1.0-{{temperature}}*0.01;
+                    if({{invertF}}>0.5) { r={{maxV}}-r; g={{maxV}}-g; b={{maxV}}-b; }
+                    float lum=0.2126*r+0.7152*g+0.0722*b, gs={{grayscale}}>=1.0?1.0:1.0-{{grayscale}};
+                    o[idx]=lum+gs*(r-lum); o[idx+{{srcLen}}]=lum+gs*(g-lum);
+                    o[idx+{{srcLen*2}}]=lum+gs*(b-lum); o[idx+{{srcLen*3}}]=a*{{opacity}};
+                }
+                """;
+
+            return VulkanComputerRunner.EnqueueCompute(async () =>
+            {
+                var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(shader, new float[][] { packed }, OutputElementType.Float32);
+                var raw = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
+                if (raw.Length < packedLen) { var tp = new float[packedLen]; Array.Copy(raw, 0, tp, 0, raw.Length); raw = tp; }
+                var rO = new float[srcLen]; var gO = new float[srcLen]; var bO = new float[srcLen]; var aO = new float[srcLen];
+                Array.Copy(raw, 0, rO, 0, srcLen); Array.Copy(raw, srcLen, gO, 0, srcLen);
+                Array.Copy(raw, srcLen * 2, bO, 0, srcLen); Array.Copy(raw, srcLen * 3, aO, 0, srcLen);
+                return new object[] { rO, gO, bO, aO };
+            }, "VulkanColorAdjustmentComputer timed out.");
+        }
+    }
 }

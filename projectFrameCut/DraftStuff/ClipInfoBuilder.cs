@@ -498,10 +498,10 @@ namespace projectFrameCut.DraftStuff
                 };
                 resetButton.Clicked += (s, e) =>
                 {
-                    var defaultColor = GetDefaultColorHex(clip.ClipType);
-                    colorHexLabel.Text = defaultColor;
-                    colorPreview.Color = Color.FromArgb(defaultColor);
-                    invoker(null!); // Reset to default
+                    invoker(null!); // Triggers random color generation via ApplyClipColor()
+                    var newColor = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+                    colorHexLabel.Text = newColor;
+                    colorPreview.Color = Color.FromArgb(newColor);
                 };
 
                 var layout = new HorizontalStackLayout

@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MaxValue; set { } }
+        bool IEffect.IsReorderable => false;
     }
     /// <summary>
     /// A classic speed variance provider that provides a constant speed ratio. The ratio can be set through the "Ratio" parameter. This is useful for implementing effects like "Fast Forward" or "Slow Motion".

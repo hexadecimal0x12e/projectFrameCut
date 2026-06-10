@@ -9,6 +9,7 @@ using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1638,6 +1639,7 @@ namespace projectFrameCut.InteractableEditor
         /// <b>THIS FUNCTION MUST BE CALLED ON THE UI THREAD.</b>
         /// </remarks>
         /// <param name="preparedPreviews">The prepared previews</param>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public bool ApplyPreparedPreviews(IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews)
         {
             if (preparedPreviews.Count == 0)

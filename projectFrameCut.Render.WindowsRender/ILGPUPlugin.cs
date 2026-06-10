@@ -59,7 +59,14 @@ namespace projectFrameCut.Render.WindowsRender
                 {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(accelerators,null)) },
                 {"DarkenComputer", new(() => new BlendDarkenComputer(accelerators,null)) },
                 {"LightenComputer", new(() => new BlendLightenComputer(accelerators,null)) },
-                {"DifferenceComputer", new(() => new BlendDifferenceComputer(accelerators,null)) }
+                {"DifferenceComputer", new(() => new BlendDifferenceComputer(accelerators,null)) },
+                {"OpacityComputer", new(() => new OpacityComputer(accelerators,null)) },
+                {"VignetteComputer", new(() => new VignetteComputer(accelerators,null)) },
+                {"FlipComputer", new(() => new FlipComputer(accelerators,null)) },
+                {"SharpenComputer", new(() => new SharpenComputer(accelerators,null)) },
+                {"RotationComputer", new(() => new RotationComputer(accelerators,null)) },
+                {"BlurComputer", new(() => new BlurComputer(accelerators,null)) },
+                {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer(accelerators,null)) }
             };
 
 
@@ -67,7 +74,7 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>> { };
         public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
-        
+
         //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
@@ -95,7 +102,7 @@ namespace projectFrameCut.Render.WindowsRender
         {
             try
             {
-                var ctx = Context.CreateDefault();
+                var ctx = Context.Create(builder => builder.EnableAlgorithms());
                 accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
             }
             catch (Exception ex)

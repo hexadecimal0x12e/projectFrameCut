@@ -27,6 +27,8 @@ namespace projectFrameCut.Render.Effect
 
         public Dictionary<string, object> Parameters => new();
 
+        public bool IsReorderable => false;
+
         public TextClipEntry[] Process(TextClipEntry[] source, float progress)
         {
             float alpha = Math.Clamp(progress, 0f, 1f);

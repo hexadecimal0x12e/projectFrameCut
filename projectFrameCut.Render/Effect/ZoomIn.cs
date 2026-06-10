@@ -18,6 +18,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public bool IsReorderable => true;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; }
 

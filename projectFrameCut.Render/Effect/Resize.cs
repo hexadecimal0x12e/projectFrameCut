@@ -34,6 +34,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => "ResizeComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
 
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -220,6 +221,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => null;
         public EffectImplementType ImplementType => EffectImplementType.IPicture;
+        public bool IsReorderable => true;
 
 
         public static List<string> ParametersNeeded { get; } = new List<string>

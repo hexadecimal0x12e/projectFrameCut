@@ -36,6 +36,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -595,6 +596,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {

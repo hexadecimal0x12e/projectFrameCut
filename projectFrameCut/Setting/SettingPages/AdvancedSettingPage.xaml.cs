@@ -143,7 +143,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSeparator()
 
         .AddText("IPicture", fontSize: 20)
-        .AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
+        //.AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
         .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
         .AddSwitch("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()

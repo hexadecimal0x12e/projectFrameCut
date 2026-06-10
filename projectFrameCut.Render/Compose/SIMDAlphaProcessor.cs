@@ -188,6 +188,96 @@ namespace projectFrameCut.Render.Compose
         }
 
         /// <summary>
+        /// SIMD copy of three byte (8bpp) RGB channels from source to destination arrays.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void CopyBytesRgb(
+            byte[] srcR, byte[] srcG, byte[] srcB,
+            byte[] dstR, byte[] dstG, byte[] dstB,
+            int srcOffset, int dstOffset, int count)
+        {
+            int simdWidth = Vector<byte>.Count;
+            int i = 0;
+            for (; i <= count - simdWidth; i += simdWidth)
+            {
+                new Vector<byte>(srcR, srcOffset + i).CopyTo(dstR, dstOffset + i);
+                new Vector<byte>(srcG, srcOffset + i).CopyTo(dstG, dstOffset + i);
+                new Vector<byte>(srcB, srcOffset + i).CopyTo(dstB, dstOffset + i);
+            }
+            for (; i < count; i++)
+            {
+                dstR[dstOffset + i] = srcR[srcOffset + i];
+                dstG[dstOffset + i] = srcG[srcOffset + i];
+                dstB[dstOffset + i] = srcB[srcOffset + i];
+            }
+        }
+
+        /// <summary>
+        /// SIMD copy of three ushort (16bpp) RGB channels from source to destination arrays.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void CopyUshortsRgb(
+            ushort[] srcR, ushort[] srcG, ushort[] srcB,
+            ushort[] dstR, ushort[] dstG, ushort[] dstB,
+            int srcOffset, int dstOffset, int count)
+        {
+            int simdWidth = Vector<ushort>.Count;
+            int i = 0;
+            for (; i <= count - simdWidth; i += simdWidth)
+            {
+                new Vector<ushort>(srcR, srcOffset + i).CopyTo(dstR, dstOffset + i);
+                new Vector<ushort>(srcG, srcOffset + i).CopyTo(dstG, dstOffset + i);
+                new Vector<ushort>(srcB, srcOffset + i).CopyTo(dstB, dstOffset + i);
+            }
+            for (; i < count; i++)
+            {
+                dstR[dstOffset + i] = srcR[srcOffset + i];
+                dstG[dstOffset + i] = srcG[srcOffset + i];
+                dstB[dstOffset + i] = srcB[srcOffset + i];
+            }
+        }
+
+        /// <summary>
+        /// SIMD upconvert of byte RGB channels to ushort (multiply by 257).
+        /// Uses Vector.Widen to expand bytes to two ushort vectors, then scales.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static void UpconvertBytesToUshortsRgb(
+            byte[] srcR, byte[] srcG, byte[] srcB,
+            ushort[] dstR, ushort[] dstG, ushort[] dstB,
+            int srcOffset, int dstOffset, int count)
+        {
+            var scale = new Vector<ushort>(257);
+            int simdWidth = Vector<byte>.Count;
+            int ushortSimd = Vector<ushort>.Count;
+            int i = 0;
+
+            for (; i <= count - simdWidth; i += simdWidth)
+            {
+                var vbR = new Vector<byte>(srcR, srcOffset + i);
+                var vbG = new Vector<byte>(srcG, srcOffset + i);
+                var vbB = new Vector<byte>(srcB, srcOffset + i);
+
+                Vector.Widen(vbR, out var vRlo, out var vRhi);
+                Vector.Widen(vbG, out var vGlo, out var vGhi);
+                Vector.Widen(vbB, out var vBlo, out var vBhi);
+
+                (vRlo * scale).CopyTo(dstR, dstOffset + i);
+                (vRhi * scale).CopyTo(dstR, dstOffset + i + ushortSimd);
+                (vGlo * scale).CopyTo(dstG, dstOffset + i);
+                (vGhi * scale).CopyTo(dstG, dstOffset + i + ushortSimd);
+                (vBlo * scale).CopyTo(dstB, dstOffset + i);
+                (vBhi * scale).CopyTo(dstB, dstOffset + i + ushortSimd);
+            }
+            for (; i < count; i++)
+            {
+                dstR[dstOffset + i] = (ushort)(srcR[srcOffset + i] * 257);
+                dstG[dstOffset + i] = (ushort)(srcG[srcOffset + i] * 257);
+                dstB[dstOffset + i] = (ushort)(srcB[srcOffset + i] * 257);
+            }
+        }
+
+        /// <summary>
         /// Estimates brightness from RGB using offsets into arrays.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
