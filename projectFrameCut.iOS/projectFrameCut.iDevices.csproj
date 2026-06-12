@@ -114,6 +114,7 @@
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>

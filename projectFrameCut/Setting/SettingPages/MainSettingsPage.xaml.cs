@@ -19,6 +19,7 @@ using projectFrameCut.Services;
 using projectFrameCut.Shared;
 
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
+using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 
 namespace projectFrameCut
 {
@@ -191,9 +192,10 @@ namespace projectFrameCut
             IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
             ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
             IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
+            IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
             NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
             TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
-            DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrue("render_DisallowVectorClipToMAUIPathInPreview");
+            DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
             DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
         }
         int count = 0;

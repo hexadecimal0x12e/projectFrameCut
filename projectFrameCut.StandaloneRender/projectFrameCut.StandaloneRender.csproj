@@ -11,8 +11,10 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
     <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
+		<PackageReference Include="ILGPU" Version="1.5.3" />
+		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">

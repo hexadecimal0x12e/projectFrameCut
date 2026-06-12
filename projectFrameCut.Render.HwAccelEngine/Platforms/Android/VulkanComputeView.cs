@@ -9,12 +9,12 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView;
+using static projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView;
 using AndroidView = Android.Views.View;
 using VulkanBuffer = Silk.NET.Vulkan.Buffer;
 using VulkanDevice = Silk.NET.Vulkan.Device;
 
-namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     public unsafe class VulkanComputeView : AndroidView
     {

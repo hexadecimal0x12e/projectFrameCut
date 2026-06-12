@@ -148,6 +148,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
@@ -157,7 +158,6 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<PackageReference Include="System.Management" Version="10.0.0" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
@@ -172,7 +172,6 @@
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
 		<AndroidLibrary Include="Resources\Assembly\fishnet-1.1.0.aar" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">

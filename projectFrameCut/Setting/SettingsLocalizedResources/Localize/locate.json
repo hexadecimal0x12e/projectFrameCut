@@ -2278,6 +2278,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_ForceImpType_ForceHwAccel",
+        "Value": "\u5F3A\u5236\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u5B9E\u73B0\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ForceImpType_ForceIPicture",
+        "Value": "\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_GCOption",
         "Value": "\u540E\u7AEF .NET CLR \u5783\u573E\u56DE\u6536\u9009\u9879",
         "Mode": "ConstString",
@@ -2495,16 +2511,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ForceImpType_ForceHwAccel",
-        "Value": "\u5F3A\u5236\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u5B9E\u73B0\u6548\u679C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ForceImpType_ForceIPicture",
-        "Value": "\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C",
+        "Id": "Render_EnableHwAccelRasterizer",
+        "Value": "\u786C\u4EF6\u52A0\u901F\u5149\u6805\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

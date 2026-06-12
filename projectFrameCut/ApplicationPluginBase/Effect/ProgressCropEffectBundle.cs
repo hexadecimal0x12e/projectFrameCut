@@ -115,7 +115,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 var list = GetCropList();
                 return list.Select((item, idx) =>
-                    new KeyFrameStepInfo(item.Index, $"关键帧 #{idx + 1} ({(item.Index * 100):F0}%)"))
+                    new KeyFrameStepInfo(item.Index, $"Keyframe #{idx + 1} ({(item.Index * 100):F0}%)"))
                     .ToList();
             }
         }
@@ -229,7 +229,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             panel.AddSeparator();
 
             panel.AddCollapsibleSection(
-                EffectBundleUiHelper.L("Effect_Crop_Collapsible_Transform", "坐标与旋转"),
+                EffectBundleUiHelper.L("Effect_Crop_Collapsible_Transform", "Transform"),
                 contentPanel =>
                 {
                     EffectBundleUiHelper.AddNumericEntry(

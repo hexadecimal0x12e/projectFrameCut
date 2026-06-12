@@ -754,7 +754,7 @@ public partial class RenderPage : ContentPage
                 var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
                 if (accels == "all")
                 {
-                    projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
                 }
                 else
                 {
@@ -762,17 +762,17 @@ public partial class RenderPage : ContentPage
                                 .Select(s => int.TryParse(s, out var id) ? id : -1)
                                 .Where(id => id >= 0)
                                 .ToList();
-                    projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
                 }
 
             }
             else
             {
                 var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
             }
 
-            if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+            if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
             var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");

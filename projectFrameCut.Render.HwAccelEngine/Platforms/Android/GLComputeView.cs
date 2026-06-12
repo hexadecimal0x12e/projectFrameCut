@@ -15,7 +15,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MauiGraphics = Microsoft.Maui.Graphics;
 
-namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     public class GLComputeView : GLSurfaceView, GLSurfaceView.IRenderer
     {
@@ -78,7 +78,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         public void OnSurfaceChanged(IGL10 gl, int width, int height) { }
 
-        public override void SurfaceDestroyed(global::Android.Views.ISurfaceHolder holder)
+        public override void SurfaceDestroyed(ISurfaceHolder holder)
         {
             initialized = false;
             _readyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);

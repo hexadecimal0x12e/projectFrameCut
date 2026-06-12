@@ -58,7 +58,7 @@ public partial class EditSettingPage : ContentPage
                     return;
                 }
                 var accelDevice = devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices[0]);
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
                 LoadTextPreview = true;
             }
         }

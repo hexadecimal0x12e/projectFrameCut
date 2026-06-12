@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
     <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
   </ItemGroup>
 

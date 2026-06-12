@@ -2,12 +2,14 @@
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Device = ILGPU.Runtime.Device;
 
 namespace projectFrameCut.Render.WindowsRender
 {
@@ -2591,7 +2593,7 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 if (acceleratorId > devices.Count)
                 {
-                    Log($"ERROR: Accelerator {acceleratorId} is not exist.", "error");
+                    Logger.Log($"ERROR: Accelerator {acceleratorId} is not exist.", "error");
                     return null;
                 }
                 pick = devices[acceleratorId];
@@ -2612,7 +2614,7 @@ namespace projectFrameCut.Render.WindowsRender
                     ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
             else
             {
-                Log($"ERROR: acceleratorType {accelType} is not supported.");
+                Logger.Log($"ERROR: acceleratorType {accelType} is not supported.");
             }
             return pick;
         }

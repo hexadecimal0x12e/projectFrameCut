@@ -651,11 +651,12 @@ namespace projectFrameCut
                 List<IPluginBase> plugins = new()
                     {
                         internalBase,
+                        new Render.HwAccelEngine.HwAccelEnginePlugin()
+                        {
 #if ANDROID
-                        new OpenGLPlugin() {DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
-#elif WINDOWS
-                        new ILGPUPlugin(),
+                            DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan")
 #endif
+                        }
                     };
                 try
                 {

@@ -3,9 +3,9 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using Silk.NET.Shaderc;
 using System.Globalization;
-using static projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView;
+using static projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView;
 
-namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     internal static class VulkanShaderLibrary
     {

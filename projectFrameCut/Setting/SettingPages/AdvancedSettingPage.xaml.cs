@@ -151,7 +151,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText(Localized.MainSettingsPage_Tab_Render, fontSize: 20)
         .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
         .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
-        .AddSwitch("render_DisallowVectorClipToMAUIPathInPreview", SettingLocalizedResources.Advanced_DisallowVectorClipToMAUIPathInPreview, IsBoolSettingTrue("render_DisallowVectorClipToMAUIPathInPreview"), null)
+        .AddSwitch("render_DisallowVectorClipToMAUIPathInPreview", SettingLocalizedResources.Advanced_DisallowVectorClipToMAUIPathInPreview, IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true), null) //the vector dynamic preview is very problematic so disable it by default
         .AddSwitch("render_DisallowViewBasedEffectInPreview", SettingLocalizedResources.Advanced_DisallowViewBasedEffectInPreview, IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview"), null)
         .AddSeparator()
 

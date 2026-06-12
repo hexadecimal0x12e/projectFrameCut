@@ -4,20 +4,21 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 
-namespace projectFrameCut.Render.WindowsRender
+namespace projectFrameCut.StandaloneRender
 {
     public class ILGPUPlugin : IPluginBase
     {
         public static Accelerator[] accelerators = Array.Empty<Accelerator>();
 
 
-        string IPluginBase.PluginID => "projectFrameCut.Render.WindowsRender.ILGPUPlugin";
+        string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin";
 
         int IPluginBase.PluginAPIVersion => 1;
 
@@ -86,7 +87,7 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public IMessagingService MessagingQueue { get; set; }
 
-        public Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> { };
+        public Dictionary<string, Func<Guid, Guid, Render.RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, Render.RenderAPIBase.ClipAndTrack.ITransform>> { };
 
         public IClip ClipCreator(JsonElement element)
         {

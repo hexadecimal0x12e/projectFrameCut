@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xamarin.Google.Crypto.Tink.Annotations;
 
-namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     internal static class ShaderLibrary
     {

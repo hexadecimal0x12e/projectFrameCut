@@ -200,7 +200,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             panel.AddSeparator();
 
             panel.AddCollapsibleSection(
-                EffectBundleUiHelper.L("Effect_Placer_Collapsible_Position", "坐标"),
+                EffectBundleUiHelper.L("Effect_Placer_Collapsible_Position", "Position"),
                 contentPanel =>
                 {
                     EffectBundleUiHelper.AddNumericEntry(

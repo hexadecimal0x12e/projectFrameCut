@@ -206,6 +206,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ClipInfoBuilder infoBuilder;
     public InteractableEditor.InteractableEditor ClipEditor;
     public InteractableEditor.DynamicPreview DynamicPreviewProvider;
+    private CancellationTokenSource? _dynamicPreviewCts;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
     public ProjectAddClipView AddClipView = null!;
 
@@ -635,7 +636,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
         if (AcceleratorToUse is null) throw new InvalidDataException($"Please specific a accelerator.");
-        projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [AcceleratorToUse];
+        projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [AcceleratorToUse];
 #endif
 
         await Dispatcher.DispatchAsync(() =>
@@ -6960,12 +6961,23 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task<bool> RefreshDynamicPreviewOverlay()
     {
+        // 取消任何正在进行的预览准备操作
+        _dynamicPreviewCts?.Cancel();
+        _dynamicPreviewCts?.Dispose();
+        _dynamicPreviewCts = new CancellationTokenSource();
+        var token = _dynamicPreviewCts.Token;
+
         try
         {
             var targetWidth = Math.Max(1, previewWidth);
             var targetHeight = Math.Max(1, previewHeight);
-            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, CancellationToken.None);
+            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, token);
+            token.ThrowIfCancellationRequested();
             return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
         catch (Exception ex)
         {
@@ -8784,7 +8796,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 "Debug_ReRenderLivePreview", new Command(async () =>
                 {
-                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, ClipEditor.Width, ClipEditor.Height, CancellationToken.None);
+                    _dynamicPreviewCts?.Cancel();
+                    _dynamicPreviewCts?.Dispose();
+                    _dynamicPreviewCts = new CancellationTokenSource();
+                    var token = _dynamicPreviewCts.Token;
+                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, ClipEditor.Width, ClipEditor.Height, token);
+                    token.ThrowIfCancellationRequested();
                     ClipEditor.ApplyPreparedPreviews(preparedPreviews);
                 })
             },

@@ -958,9 +958,8 @@ public partial class HomePage : ContentPage
                                 SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
                                 Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
                             }
-                            var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
-                                                    .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                                    new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+                            var picked = listAccels.FirstOrDefault(c => c.index == SettingsManager.GetSettingAs<int>("accel_DeviceId", -1, -1), listAccels.First());
+                            var accelDevice = devices.FirstOrDefault(c => c.Name == picked.name, devices.First());
                             page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
                             await page.PostInit();

@@ -38,6 +38,8 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Text.FontHelper;
 using System.Text.Json.Serialization;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.HwAccelEngine;
+
 
 
 
@@ -88,7 +90,7 @@ public partial class TestPage : ContentPage
         var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
                                 .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
                                 new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-        Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice.CreateAccelerator(context)];
+        HwAccelEnginePlugin.accelerators = [accelDevice.CreateAccelerator(context)];
 
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
@@ -969,7 +971,7 @@ public partial class TestPage : ContentPage
             var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
             if (accels == "all")
             {
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
             }
             else
             {
@@ -977,17 +979,17 @@ public partial class TestPage : ContentPage
                             .Select(s => int.TryParse(s, out var id) ? id : -1)
                             .Where(id => id >= 0)
                             .ToList();
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
             }
 
         }
         else
         {
             var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
         }
 
-        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+        if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
         await Benchmarker.Start((d, etr) =>

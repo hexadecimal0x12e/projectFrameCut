@@ -1,11 +1,10 @@
-﻿using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.Render.AndroidOpenGL
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     public enum ComputeBackend
     {
