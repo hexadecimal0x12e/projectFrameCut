@@ -132,6 +132,7 @@ namespace projectFrameCut.Shared
         Arabic
     }
 
+    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]
     public record TextClipEntry
     {
         // Core text
@@ -172,6 +173,11 @@ namespace projectFrameCut.Shared
 
         // Additional: DPI for font rasterization (nullable, uses default when null)
         public float? dpi { get; init; } = null;
+
+        // When false, BuildEntriesForTargetSize skips font-size and wrapping-width
+        // scaling (used by FixedWidth / FixedHeight / FixedSize layout modes where
+        // the provider already produces entries in the correct coordinate space).
+        public bool ScaleWithTarget { get; init; } = true;
 
         // Use in UI only, not for rendering
         public bool ShouldInSubtrack { get; set; } = false;

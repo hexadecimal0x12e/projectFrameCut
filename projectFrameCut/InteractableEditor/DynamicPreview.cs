@@ -9,6 +9,7 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -85,6 +86,28 @@ public sealed class DynamicPreview : IDisposable
                 return _materializedView;
             }
         }
+    }
+
+    /// <summary>
+    /// Intermediate result from Phase 1 (background source preparation), consumed by Phase 2 (UI-thread View building).
+    /// </summary>
+    private sealed class PreviewSourceData
+    {
+        public IClip Clip { get; init; } = null!;
+        public string? ErrorMessage { get; init; }
+
+        // Provider 直接返回的 View（SolidColorClip 创建的 BoxView、错误 Label 等无法提取 ImageSource 的情况）
+        public View? PreservedView { get; init; }
+        // dispatchable provider 制准备的图片源，Phase 2 传给 Generate 使用
+        public Drawing.Base.IPicture? PreparedPicture { get; init; }
+        // 从帧解码或 ImageSource.FromFile 获得的 ImageSource（最常用）
+        public ImageSource? FrameSource { get; init; }
+        // VectorClip 标记（实际数据在 Phase 2 从 clip 读取）
+        public bool HasVectorData { get; init; }
+        // 是否已执行全渲染回退（跳过 effect 叠加逻辑）
+        public bool UsedFullRenderFallback { get; init; }
+        // 已启用效果列表（Phase 2 叠加效果时需要）
+        public IReadOnlyList<IEffect>? EnabledEffects { get; init; }
     }
 
     private IClip[]? _clips;
@@ -329,15 +352,6 @@ public sealed class DynamicPreview : IDisposable
         }
 
         var prepared = new PreparedPreview[orderedRequests.Length];
-        if (orderedRequests.Length < ParallelPreparationThreshold)
-        {
-            for (var i = 0; i < orderedRequests.Length; i++)
-            {
-                prepared[i] = GenerateClipPreviewPrepared(orderedRequests[i], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token);
-            }
-
-            return prepared;
-        }
 
         using var semaphore = new SemaphoreSlim(s_maxPreparationParallelism);
         var tasks = new Task[orderedRequests.Length];
@@ -368,6 +382,10 @@ public sealed class DynamicPreview : IDisposable
                 prepared[index] = await Task.Run(() =>
                     GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
                     token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is silent — the slot stays null, semaphore released in finally.
             }
             finally
             {
@@ -525,9 +543,15 @@ public sealed class DynamicPreview : IDisposable
 
     private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, CancellationToken token)
     {
-        var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message, applyClipTargetLayout, token);
-        Func<View>? viewFactory = generatedView is not null ? () => generatedView : null;
-        return new PreparedPreview(request.Clip.Id, viewFactory, message, request.Clip);
+        var sourceData = GenerateClipPreviewSource(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, token);
+        if (sourceData is null)
+        {
+            return new PreparedPreview(request.Clip.Id, null, "Failed to generate preview source.", request.Clip);
+        }
+
+        return new PreparedPreview(request.Clip.Id, () =>
+            BuildClipPreviewView(sourceData, request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
+            sourceData.ErrorMessage, request.Clip);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -599,7 +623,7 @@ public sealed class DynamicPreview : IDisposable
                         var entries = styleProvider.BuildEntries();
                         if (entries.Length > 0)
                         {
-                            var rebuiltEntries = new List<TextClipEntry>(entries);
+                            var rebuiltEntries = new List<TextEntry>(entries);
                             clip.ExtraData["TextEntries"] = rebuiltEntries;
                             resolvedEntries = rebuiltEntries;
                         }
@@ -610,11 +634,14 @@ public sealed class DynamicPreview : IDisposable
                     {
                         if (resolvedEntries.Count > 0)
                         {
-                            var bounds = TextMeasureHelper.MeasureBounds(resolvedEntries);
+                            var bounds = TextMeasureHelper.MeasureBounds(textClip);
                             textClip.TargetX = (int)Math.Round(bounds.X);
                             textClip.TargetY = (int)Math.Round(bounds.Y);
                             textClip.TargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
                             textClip.TargetHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+                            // Shift entries to clip-local space so the layout canvas
+                            // (TargetWidth × TargetHeight) matches the coordinate system.
+                            ShiftEntriesToClipLocal(resolvedEntries, textClip.TargetX, textClip.TargetY);
                         }
                         else
                         {
@@ -638,6 +665,11 @@ public sealed class DynamicPreview : IDisposable
                         textClip.TargetY = (int)bounds.Y;
                         textClip.TargetWidth = (int)Math.Ceiling(bounds.Width);
                         textClip.TargetHeight = (int)Math.Ceiling(bounds.Height);
+                        // Shift entries to clip-local space so the layout canvas
+                        // (TargetWidth × TargetHeight) matches the coordinate system.
+                        var rawEntries = TextMeasureHelper.ResolveEntries(textClip);
+                        if (rawEntries.Count > 0)
+                            ShiftEntriesToClipLocal(rawEntries, textClip.TargetX, textClip.TargetY);
                     }
                 }
             }
@@ -674,15 +706,10 @@ public sealed class DynamicPreview : IDisposable
         }
     }
 
-    private View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message, bool applyClipTargetLayout, CancellationToken token)
+    private PreviewSourceData? GenerateClipPreviewSource(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
     {
-        Stopwatch diagSW = Stopwatch.StartNew();
-        message = null;
         var clip = request.Clip;
-        if (clip is null)
-        {
-            return null;
-        }
+        if (clip is null) return null;
 
         var enabledEffects = GetEnabledEffectsSorted(clip.EffectsInstances);
         List<IColorAdjustEffect>? sourceColorAdjustEffects = null;
@@ -699,8 +726,13 @@ public sealed class DynamicPreview : IDisposable
 
         var willUseEffectFallback = DisableEffectDynamicPreview && enabledEffects.Length > 0;
 
-        View? generatedView = null;
-        var usedFullRenderFallback = false;
+        View? preservedView = null;
+        ImageSource? frameSource = null;
+        IPicture? preparedPicture = null;
+        bool hasVectorData = false;
+        bool usedFullRenderFallback = false;
+        string? errorMessage = null;
+
         if (willUseEffectFallback)
         {
             LogOnce(_effectFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
@@ -709,13 +741,18 @@ public sealed class DynamicPreview : IDisposable
         {
             if (clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
             {
+                // Vector 路径：Phase 1 只读数据，Phase 2 创建 MAUI Path
+                hasVectorData = true;
+            }
+            else if (request.Provider.IsPrepareGenerateDispatchable)
+            {
                 try
                 {
-                    generatedView = BuildVectorPreviewView(vectorClip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                    preparedPicture = request.Provider.PrepareSource(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, token).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
-                    message = $"Failed to generate vector preview: {ex.Message}";
+                    errorMessage = $"Failed to prepare preview source: {ex.Message}";
                 }
             }
             else
@@ -729,11 +766,21 @@ public sealed class DynamicPreview : IDisposable
                         Math.Max(1, projectRelativeHeight),
                         Math.Max(1, targetWidth),
                         Math.Max(1, targetHeight)));
-                    generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                    var providerView = request.Provider.Generate(clip, null, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                    if (providerView is Image providerImage && providerImage.Source is not null)
+                    {
+                        // 提取 ImageSource，在 Phase 2 于 UI 线程重新创建 Image
+                        frameSource = providerImage.Source;
+                    }
+                    else
+                    {
+                        // 非 Image 控件（BoxView、Label 等）保留原 View
+                        preservedView = providerView;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    message = $"Failed to generate dynamic preview: {ex.Message}";
+                    errorMessage = $"Failed to generate dynamic preview: {ex.Message}";
                 }
                 finally
                 {
@@ -752,38 +799,117 @@ public sealed class DynamicPreview : IDisposable
                 LogOnce(_missingProviderFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
             }
 
-            generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, fullRender: false, sourceColorAdjustEffects, token);
-            usedFullRenderFallback = false;
+            // GenerateFrameFallbackView 返回的是 Image View，这里只取 ImageSource
+            var fallbackView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, fullRender: false, sourceColorAdjustEffects, token);
+            if (fallbackView is Image fallbackImage && fallbackImage.Source is not null)
+            {
+                frameSource = fallbackImage.Source;
+            }
+            else
+            {
+                preservedView = fallbackView;
+            }
         }
-        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 1 - preview generation took {diagSW.ElapsedMilliseconds} ms.");
         if (token.IsCancellationRequested) return null;
 
+        // willUseEffectFallback 路径：在后台线程做全部渲染（包含帧读取），只保留 ImageSource
         if (willUseEffectFallback)
         {
-            generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+            var fallbackView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+            if (fallbackView is Image fbImage && fbImage.Source is not null)
+            {
+                frameSource = fbImage.Source;
+            }
+            else
+            {
+                preservedView = fallbackView;
+            }
             usedFullRenderFallback = true;
         }
-        else if (generatedView is null)
+        else if (preservedView is null && frameSource is null && !hasVectorData)
         {
+            // 没有任何结果时尝试 fallback
             try
             {
-                generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, token: token);
+                var fallbackView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, token: token);
+                if (fallbackView is Image fbImage && fbImage.Source is not null)
+                {
+                    frameSource = fbImage.Source;
+                }
+                else
+                {
+                    preservedView = fallbackView;
+                }
             }
             catch (Exception ex)
             {
-                message = $"Failed to render fallback frame: {ex.Message}";
-                return null;
+                errorMessage = $"Failed to render fallback frame: {ex.Message}";
+                return new PreviewSourceData
+                {
+                    Clip = clip,
+                    ErrorMessage = errorMessage,
+                    EnabledEffects = enabledEffects,
+                };
             }
         }
 
-        if (generatedView is null)
+        return new PreviewSourceData
         {
-            return null;
+            Clip = clip,
+            ErrorMessage = errorMessage,
+            PreservedView = preservedView,
+            PreparedPicture = preparedPicture,
+            FrameSource = frameSource,
+            HasVectorData = hasVectorData,
+            EnabledEffects = enabledEffects,
+            UsedFullRenderFallback = usedFullRenderFallback,
+        };
+    }
+
+    /// <summary>
+    /// Phase 2: 在 UI 线程上从 PreviewSourceData 创建 MAUI View，叠加效果并应用布局。
+    /// </summary>
+    private View BuildClipPreviewView(PreviewSourceData source, PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, CancellationToken token)
+    {
+        var clip = source.Clip;
+        var enabledEffects = source.EnabledEffects ?? [];
+
+        View generatedView;
+        if (source.PreparedPicture is not null && request.Provider is not null)
+        {
+            generatedView = request.Provider.Generate(clip, source.PreparedPicture, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+        }
+        else if (source.FrameSource is not null)
+        {
+            generatedView = new Image
+            {
+                Source = source.FrameSource,
+                Aspect = Aspect.Fill,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+            };
+        }
+        else if (source.PreservedView is not null)
+        {
+            generatedView = source.PreservedView;
+        }
+        else if (source.HasVectorData && clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
+        {
+            generatedView = BuildVectorPreviewView(vectorClip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+        }
+        else
+        {
+            // No data to build a view from
+            return null!;
         }
 
-        if (enabledEffects.Length > 0 && !usedFullRenderFallback && !DisableEffectDynamicPreview)
+        if (token.IsCancellationRequested) return null!;
+
+        // 叠加效果（effect stacking）
+        bool usedFullRenderFallback = source.UsedFullRenderFallback;
+        if (enabledEffects.Count > 0 && !usedFullRenderFallback && !DisableEffectDynamicPreview)
         {
-            for (var i = 0; i < enabledEffects.Length; i++)
+            for (var i = 0; i < enabledEffects.Count; i++)
             {
                 var effect = enabledEffects[i];
                 if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
@@ -794,15 +920,8 @@ public sealed class DynamicPreview : IDisposable
                 var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
                 if (isLegacyLayoutEffect)
                 {
-                    if (!applyClipTargetLayout)
-                    {
-                        continue;
-                    }
-
-                    if (HasExplicitTargetRect(clip))
-                    {
-                        continue;
-                    }
+                    if (!applyClipTargetLayout) continue;
+                    if (HasExplicitTargetRect(clip)) continue;
                 }
                 var provider = ResolveEffectProvider(effect, generatedView.GetType());
                 if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
@@ -832,30 +951,18 @@ public sealed class DynamicPreview : IDisposable
                 }
             }
         }
-        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 2 - process effect took {diagSW.ElapsedMilliseconds} ms.");
 
-        if (generatedView is null)
-        {
-            return null;
-        }
+        if (token.IsCancellationRequested) return null!;
 
         generatedView.AutomationId ??= $"clip={clip.ClipType},id={clip.Id}";
 
-        if (!applyClipTargetLayout)
+        // 应用布局
+        if (!applyClipTargetLayout || usedFullRenderFallback)
         {
             return generatedView;
         }
 
-        if (usedFullRenderFallback)
-        {
-            return generatedView;
-        }
-
-        var layout = ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
-
-        //LogDiagnostic($"[GenerateClipPreview] The request {request.Clip.Name}'s Stage 3 - apply layout {diagSW.ElapsedMilliseconds} ms.");
-        return layout;
-
+        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
     }
 
     private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int canvasWidth, int canvasHeight, uint frameIndex)
@@ -961,6 +1068,20 @@ public sealed class DynamicPreview : IDisposable
 
     private static bool HasExplicitTargetRect(IClip clip)
         => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+    private static void ShiftEntriesToClipLocal(IReadOnlyList<TextEntry> entries, int offsetX, int offsetY)
+    {
+        if (offsetX == 0 && offsetY == 0) return;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            if (e is not null)
+            {
+                e.X -= offsetX;
+                e.Y -= offsetY;
+            }
+        }
+    }
 
     private static bool HasLegacyInternalPlaceResizeEffects(IClip clip)
     {
@@ -1906,17 +2027,23 @@ public sealed class DynamicPreview : IDisposable
                 catch (ArgumentOutOfRangeException)
                 {
                     skippedSegmentCount++;
+                    break;
                 }
                 catch (Exception ex) when (ex.Message.Contains("CanvasImageSource") || ex.Message.Contains("MaximumBitmapSize"))
                 {
-                    skippedSegmentCount++;
+                    break;
                 }
             }
         }
 
         if (skippedSegmentCount > 0)
         {
-            Log($"Vector preview: skipped {skippedSegmentCount} oversize segment(s) exceeding device limit of {deviceLimit}.");
+            Log($"Vector preview: skipped {skippedSegmentCount} oversize segment(s) exceeding device limit of {deviceLimit}.","error");
+        }
+
+        if(skippedSegmentCount >= sortedElements.Count())
+        {
+            throw new ArgumentOutOfRangeException($"all vector segment exceeds device limit of {deviceLimit}. Please check your source, or disable Vector dynamic previewing function.");
         }
 
         return container;

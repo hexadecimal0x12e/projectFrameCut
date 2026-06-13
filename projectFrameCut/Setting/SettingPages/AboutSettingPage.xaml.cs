@@ -79,14 +79,26 @@ public partial class AboutSettingPage : ContentPage
         {
             var renderType = typeof(Renderer).Assembly;
             var drawingType = typeof(Drawing.Base.IPicture).Assembly;
-            string renderHash = "", drawingHash = "", drawingCommit = "unknown";
+            string renderHash = "", drawingHash = "", drawingCommit = "unknown", programDate = "?", channel = "N/A";
             try
             {
 #pragma warning disable IL3000 // we have already detected that the assembly is not dynamic, so it's safe to get the location
                 renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
                 drawingHash = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? HashServices.ComputeFileHash(drawingType.Location) : "unknown";
+                try
+                {
+                    var appType = Assembly.GetExecutingAssembly();
+                    programDate = !appType.IsDynamic && Path.Exists(appType.Location) ? $"on {File.GetLastWriteTime(appType.Location):yyyy-MM-dd HH:mm:ss}" : "unknown";
+                }
+                catch
+                {
+                    programDate = "?";
+                }
 #pragma warning restore IL3000
                 drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
+#if WINDOWS
+                channel = WinUI.Program.ChannelId ?? "NotDef";
+#endif
 
             }
             catch { renderHash = "unknown"; }
@@ -94,10 +106,11 @@ public partial class AboutSettingPage : ContentPage
             AppDetailVersionLabel.Text =
                 $"""
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
-                {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
+                {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} {programDate}
                 {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
                 {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
-                Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
+                Package: {AppInfo.PackageName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")} 
+                Copyright (c) hexadecimal0x12e 2025-{DateTime.Now.Year}. All rights reserved.
                 """;
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;
         }

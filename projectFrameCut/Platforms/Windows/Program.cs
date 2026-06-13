@@ -5,6 +5,7 @@
 
 using Microsoft.Win32;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;

@@ -1,7 +1,7 @@
 {
   "DefaultLocate": "zh-CN",
   "AdditionalUsing": "",
-  "NameSpaceOfLocalizerInstance": "projectFrameCut.ApplicationAPIBase.LocalizedResources",
+  "NameSpaceOfLocalizerInstance": "projectFrameCut.ApplicationAPIBase.Localize",
   "ClassNameSpaceOfLocalizerInstance": "APIBaseLocalizedResources",
   "NameOfLocalizerInstance": "Localized",
   "NameOfBaseInterface": "ApplicationAPIBaseLocalizerBase",

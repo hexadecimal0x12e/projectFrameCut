@@ -53,6 +53,24 @@ public partial class ClipPlaceConfiguratorView : ContentView
         BindingMode.TwoWay,
         propertyChanged: OnAnyBindablePropertyChanged);
 
+    public static readonly BindableProperty DisableMoveProperty = BindableProperty.Create(
+        nameof(DisableMove),
+        typeof(bool),
+        typeof(ClipPlaceConfiguratorView),
+        false);
+
+    public static readonly BindableProperty DisableHorizontalResizeProperty = BindableProperty.Create(
+        nameof(DisableHorizontalResize),
+        typeof(bool),
+        typeof(ClipPlaceConfiguratorView),
+        false);
+
+    public static readonly BindableProperty DisableVerticalResizeProperty = BindableProperty.Create(
+        nameof(DisableVerticalResize),
+        typeof(bool),
+        typeof(ClipPlaceConfiguratorView),
+        false);
+
     public static readonly BindableProperty TargetXProperty = BindableProperty.Create(
         nameof(TargetX),
         typeof(int),
@@ -107,6 +125,24 @@ public partial class ClipPlaceConfiguratorView : ContentView
     {
         get => (bool)GetValue(EnabledProperty);
         set => SetValue(EnabledProperty, value);
+    }
+
+    public bool DisableMove
+    {
+        get => (bool)GetValue(DisableMoveProperty);
+        set => SetValue(DisableMoveProperty, value);
+    }
+
+    public bool DisableHorizontalResize
+    {
+        get => (bool)GetValue(DisableHorizontalResizeProperty);
+        set => SetValue(DisableHorizontalResizeProperty, value);
+    }
+
+    public bool DisableVerticalResize
+    {
+        get => (bool)GetValue(DisableVerticalResizeProperty);
+        set => SetValue(DisableVerticalResizeProperty, value);
     }
 
     public bool AllowClipOutOfBounds
@@ -391,7 +427,7 @@ public partial class ClipPlaceConfiguratorView : ContentView
 
     private void OnSelectionPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        if (!Enabled)
+        if (!Enabled || DisableMove)
         {
             return;
         }
@@ -428,7 +464,11 @@ public partial class ClipPlaceConfiguratorView : ContentView
                 break;
             case GestureStatus.Running:
                 var (sx, sy) = GetScaleFactors();
-                ApplyResize(handle, e.TotalX / sx, e.TotalY / sy);
+                var dx = e.TotalX / sx;
+                var dy = e.TotalY / sy;
+                if (DisableHorizontalResize) dx = 0;
+                if (DisableVerticalResize) dy = 0;
+                ApplyResize(handle, dx, dy);
                 break;
         }
     }

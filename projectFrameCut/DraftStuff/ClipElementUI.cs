@@ -46,11 +46,18 @@ namespace projectFrameCut.DraftStuff
         public double origLength { get; set; } = 0;
         public double origX { get; set; } = 0;
 
+        public bool IsMoveable { get; set; } = true;
+        public bool IsHorizontalResizable { get; set; } = true;
+        public bool IsVerticalResizable { get; set; } = true;
+        public bool CanSnapWhilePlacing { get; set; } = true;
+        public bool CanSnapWhileResizing { get; set; } = true;
+
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>
         /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
         /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
         /// </summary>
+        // this is a legacy thing and pretty confusing
         public bool isInfiniteLength { get; set; } = false;
         public uint maxFrameCount { get; set; } = 0;
         public uint relativeStartFrame { get; set; } = 0u;

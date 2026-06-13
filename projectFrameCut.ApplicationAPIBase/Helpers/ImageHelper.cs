@@ -139,37 +139,10 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         public static ImageSource ToImageSource(this IPicture picture)
         {
             if (picture == null) return null;
-            //return new IPictureImageSource { Source = picture };
-
-            //var imgId = picture.GetUniqueID();
-            //var cachePath = Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache", $"{imgId}.png");
-
-            //if (File.Exists(cachePath))
-            //{
-            //    try
-            //    {
-            //        return ImageSource.FromFile(cachePath);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Log(ex, $"Failed to load image from cache file path: {cachePath}. Will try to load from memory stream.");
-            //    }
-            //}
-
-            //try
-            //{
-            //    Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "ToImageSourceCache"));
-            //    picture.SaveAsPng8bpp(cachePath);
-            //    return ImageSource.FromFile(cachePath);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Log(ex, $"Failed to save image to cache file path: {cachePath}. Will try to load from memory stream.");
-                var ms = new MemoryStream();
-                picture.ToBitPerPixel(8).SaveToPng(ms);
-                var bytes = ms.ToArray();
-                return ImageSource.FromStream(() => new MemoryStream(bytes));
-            //}
+            var ms = new MemoryStream();
+            picture.ToBitPerPixel(8).SaveToPng(ms);
+            var bytes = ms.ToArray();
+            return ImageSource.FromStream(() => new MemoryStream(bytes));
 
         }
 

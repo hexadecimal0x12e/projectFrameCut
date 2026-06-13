@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
@@ -242,12 +243,25 @@ namespace projectFrameCut.DraftStuff
             {
                 try
                 {
-                    IReadOnlyList<TextClipEntry>? entries = rawEntries as IReadOnlyList<TextClipEntry>;
+                    IReadOnlyList<TextEntry>? entries = rawEntries as IReadOnlyList<TextEntry>;
                     if (entries is null && rawEntries is JsonElement je)
-                        entries = je.Deserialize<IReadOnlyList<TextClipEntry>>();
+                    {
+                        try { entries = je.Deserialize<IReadOnlyList<TextEntry>>(); }
+                        catch
+                        {
+                            // Fall back to old TextClipEntry format
+                            try
+                            {
+                                var oldEntries = je.Deserialize<IReadOnlyList<TextClipEntry>>();
+                                if (oldEntries is { Count: > 0 })
+                                    entries = TextEntryMigration.MigrateFromTextClipEntries(oldEntries);
+                            }
+                            catch { }
+                        }
+                    }
                     if (entries is { Count: > 0 })
                     {
-                        var bounds = TextMeasureHelper.MeasureBounds(entries);
+                        var bounds = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
                         if (bounds.Width > 0 && bounds.Height > 0)
                         {
                             exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));

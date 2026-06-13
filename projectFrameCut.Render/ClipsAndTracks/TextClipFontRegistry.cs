@@ -13,6 +13,8 @@ public static class TextClipFontRegistry
 
     private static readonly HashSet<string> FontPaths = new(StringComparer.OrdinalIgnoreCase);
 
+    public static List<FontFace> FallbackFonts { get; private set; } = new List<FontFace>();
+
     public static void Initialize(IEnumerable<FontFace>? sysFonts = null)
     {
         if (sysFonts?.Any() ?? false)
@@ -23,7 +25,11 @@ public static class TextClipFontRegistry
                 Fonts.TryAdd(fontKey, font);
             }
         }
-
+        if (FallbackFonts?.Any() ?? false)
+        {
+            if (Fonts.TryGetValue("HarmonyOS Sans SC Medium", out var f1)) FallbackFonts.Add(f1);
+            if (Fonts.TryGetValue("Arial Regular", out var f2)) FallbackFonts.Add(f2);
+        }
         if (_initialized) return;
 
         lock (InitLock)
@@ -55,16 +61,38 @@ public static class TextClipFontRegistry
         RegisterFont(path);
     }
 
+    public static void RegisterFontFace(FontFace fontFace)
+    {
+        if (fontFace is null) return;
+        var fontKey = fontFace.UniqueName ?? $"{fontFace.FamilyName} {fontFace.SubfamilyName}";
+        if (string.IsNullOrWhiteSpace(fontKey))
+            return;
+
+        Fonts.AddOrUpdate(fontKey,
+            _ => fontFace,
+            (_, existing) =>
+            {
+                if (!ReferenceEquals(existing, fontFace))
+                    existing.Dispose();
+                return fontFace;
+            });
+    }
+
     public static FontFace? GetFont(string familyName)
     {
         Initialize();
         return Fonts.TryGetValue(familyName, out var font) ? font : null;
     }
-
     public static bool TryGetFont(string familyName, out FontFace? font)
     {
         Initialize();
-        return Fonts.TryGetValue(familyName, out font);
+        if (Fonts.TryGetValue(familyName, out font))
+            return true;
+
+        //final fallback: try to find by family name only
+        font = Fonts.Values.FirstOrDefault(f =>
+            string.Equals(f.FamilyName, familyName, StringComparison.OrdinalIgnoreCase));
+        return font is not null;
     }
 
     public static string? FallbackFamilyName

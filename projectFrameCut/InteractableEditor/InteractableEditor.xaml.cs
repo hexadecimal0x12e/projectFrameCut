@@ -1,6 +1,7 @@
 using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -60,6 +61,10 @@ namespace projectFrameCut.InteractableEditor
         private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
         private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
         private const string TextStyleProviderParametersKey = "TextStyleProvider_Parameters";
+
+        private const string DisableMoveKey = "InteractableEditor_DisableMove";
+        private const string DisableHorizontalResizeKey = "InteractableEditor_DisableHorizontalResize";
+        private const string DisableVerticalResizeKey = "InteractableEditor_DisableVerticalResize";
 
         private double _canvasWidth = 800;
         private double _canvasHeight = 240;
@@ -444,10 +449,11 @@ namespace projectFrameCut.InteractableEditor
                 AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(-handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
                 AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayW - handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
 
-                HandleTL.IsVisible = showHandles;
-                HandleTR.IsVisible = showHandles;
-                HandleBL.IsVisible = showHandles;
-                HandleBR.IsVisible = showHandles;
+                bool resizeHandleVisible = showHandles && (_owner.Clips[ClipId].IsHorizontalResizable || _owner.Clips[ClipId].IsVerticalResizable);
+                HandleTL.IsVisible = resizeHandleVisible;
+                HandleTR.IsVisible = resizeHandleVisible;
+                HandleBL.IsVisible = resizeHandleVisible;
+                HandleBR.IsVisible = resizeHandleVisible;
 
                 if (showSizeLabel)
                 {
@@ -2161,7 +2167,20 @@ namespace projectFrameCut.InteractableEditor
         {
             if (LockLayout) return;
             LogDiagnostic($"[Pan] OnClipPanUpdated fired, id:{e.GestureId}, StatusType:{e.StatusType}, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
-            if (_currentClip == null || !ReferenceEquals(state, _activeState)) return;
+
+            // Auto-select the clip being interacted with when no clip is currently
+            // selected or when a different clip's gesture recogniser fires first.
+            if (_currentClip == null || !ReferenceEquals(state, _activeState))
+            {
+                if (!Clips.TryGetValue(state.ClipId, out var target) || !target.IsMoveable)
+                    return;
+                _currentClip = target;
+                _activeState = state;
+            }
+            else if (!_currentClip.IsMoveable)
+            {
+                return;
+            }
             _panEventTriggerCounter++;
             switch (e.StatusType)
             {
@@ -2198,7 +2217,9 @@ namespace projectFrameCut.InteractableEditor
 
                         double newVisualX = _startX + deltaX;
                         double newVisualY = _startY + deltaY;
-                        double snapThresholdVideo = ComputeSnapThresholdVideo(scale);
+                        double snapThresholdVideo = _currentClip?.CanSnapWhilePlacing != false
+                            ? ComputeSnapThresholdVideo(scale)
+                            : 0;
                         var unsnapped = new Rect(newVisualX, newVisualY, _startW, _startH);
                         _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
 
@@ -2245,7 +2266,19 @@ namespace projectFrameCut.InteractableEditor
         {
             if (LockLayout) return;
             LogDiagnostic($"[Pan] OnResizePanUpdated fired, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
-            if (_currentClip == null || !ReferenceEquals(state, _activeState)) return;
+
+            // Auto-select the clip being interacted with (mirrors OnClipPanUpdated).
+            if (_currentClip == null || !ReferenceEquals(state, _activeState))
+            {
+                if (!Clips.TryGetValue(state.ClipId, out var target) || !target.IsMoveable)
+                    return;
+                _currentClip = target;
+                _activeState = state;
+            }
+            else if (!_currentClip.IsMoveable)
+            {
+                return;
+            }
             bool allowFreeScale = IsAllowFreeScaleResizeEnabled(_currentClip);
 
             switch (e.StatusType)
@@ -2284,6 +2317,20 @@ namespace projectFrameCut.InteractableEditor
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
 
+                    if (_currentClip is not null)
+                    {
+                        // For TextClip with partial axis constraints (FixedWidth /
+                        // FixedHeight layout modes), allow free two-axis drag so that
+                        // corner handles feel responsive.  HandleClipResize applies the
+                        // correct per-mode constraint on completion and the text view
+                        // rect read-back provides the auto-computed dimension.
+                        bool isTextClip = _currentClip.ClipType == ClipMode.TextClip;
+                        if (!isTextClip && !_currentClip.IsHorizontalResizable)
+                            dx = 0;
+                        if (!isTextClip && !_currentClip.IsVerticalResizable)
+                            dy = 0;
+                    }
+
                     double newX = _startX, newY = _startY, newW = _startW, newH = _startH;
 
                     if (handle == ResizeHandle.TopLeft)
@@ -2316,7 +2363,9 @@ namespace projectFrameCut.InteractableEditor
                         ApplyAspectLockedResize(handle, ref newX, ref newY, ref newW, ref newH);
                     }
 
-                    double snapThresholdVideo = ComputeSnapThresholdVideo(scale);
+                    double snapThresholdVideo = _currentClip?.CanSnapWhileResizing != false
+                        ? ComputeSnapThresholdVideo(scale)
+                        : 0;
                     var snapped = ApplyClipSnapping(new Rect(newX, newY, newW, newH), snapThresholdVideo, handle);
                     newX = snapped.X;
                     newY = snapped.Y;
@@ -2949,8 +2998,10 @@ namespace projectFrameCut.InteractableEditor
 
             if (_currentClip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(_currentClip.ExtraData, out var textRect))
             {
-                x += textRect.X;
-                y += textRect.Y;
+                // Use the measured text bounds for clip dimensions.
+                // Don't accumulate textRect.X/Y into the position — those are text-content
+                // offsets (near zero for origin-placed entries) and would drift on every
+                // GetCurrentRect → UpdateClipRenderRect round-trip.
                 w = textRect.Width;
                 h = textRect.Height;
             }
@@ -3007,6 +3058,15 @@ namespace projectFrameCut.InteractableEditor
                     targetWidth: Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero)),
                     targetHeight: Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
                     isInRatio: isInRatio);
+
+                // Read back the text view rect so that auto-computed dimensions
+                // (e.g. auto-wrapped height in FixedWidth mode, computed wrapping
+                // width in FixedHeight mode) replace the raw drag deltas.
+                if (TryResolveTextClipViewRect(_currentClip.ExtraData, out var textRect))
+                {
+                    w = Math.Clamp(textRect.Width, MinSize, _videoWidth);
+                    h = Math.Clamp(textRect.Height, MinSize, _videoHeight);
+                }
             }
 
             _currentClip.TargetX = (int)Math.Round(x, MidpointRounding.AwayFromZero);
@@ -3066,7 +3126,7 @@ namespace projectFrameCut.InteractableEditor
             var entries = provider.BuildEntries();
             if (entries.Length > 0)
             {
-                clip.ExtraData["TextEntries"] = new List<TextClipEntry>(entries);
+                clip.ExtraData["TextEntries"] = new List<TextEntry>(entries);
             }
 
             return true;
@@ -3086,10 +3146,16 @@ namespace projectFrameCut.InteractableEditor
         {
             if (clip.ClipType == ClipMode.SolidColorClip) return true;
 
-            if (clip.ClipType == ClipMode.TextClip
-                && ReadBoolExtraData(clip.ExtraData, TextClipStyleAllowFreeResizeKey, out var textAllowFree))
+            if (clip.ClipType == ClipMode.TextClip)
             {
-                return textAllowFree;
+                if (ReadBoolExtraData(clip.ExtraData, TextClipStyleAllowFreeResizeKey, out var textAllowFree))
+                    return textAllowFree;
+
+                // Not cached in ExtraData — read directly from the text style provider.
+                if (TryGetTextStyleAllowFreeResize(clip.ExtraData, out var providerAllowFree))
+                    return providerAllowFree;
+
+                return false;
             }
 
             if (ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, out var allowFreeScale))
@@ -3098,6 +3164,28 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return false;
+        }
+
+        private static bool TryGetTextStyleAllowFreeResize(
+            Dictionary<string, object>? extraData, out bool allowFree)
+        {
+            allowFree = false;
+            if (extraData is null) return false;
+
+            if (!TryReadExtraDataString(extraData, TextStyleProviderFromKey, out var providerFrom)
+                || !TryReadExtraDataString(extraData, TextStyleProviderTypeKey, out var providerType))
+                return false;
+
+            var parameters = ReadTextStyleParameters(extraData);
+            var provider = Services.TextStyleServices.RestoreTextStyleProvider(
+                providerFrom, providerType, parameters);
+            if (provider is null) return false;
+
+            if (parameters is not null)
+                provider.Parameters = new Dictionary<string, string>(parameters);
+
+            allowFree = provider.AllowFreeRatioResize;
+            return true;
         }
 
         private IClip? GetClipInstance(ClipElementUI clip)
@@ -3234,9 +3322,21 @@ namespace projectFrameCut.InteractableEditor
                 provider.Parameters = new Dictionary<string, string>(parameters);
             }
 
-            var rectTuple = provider.GetViewRect(
-                Math.Max(1, (int)Math.Round(_videoWidth)),
-                Math.Max(1, (int)Math.Round(_videoHeight)));
+            // The provider builds entries in *project-pixel space*, where lengths
+            // are interpreted against the clip's own bounding box. Ask
+            // GetViewRect using the clip's current target dimensions (the ones
+            // we just wrote via HandleClipResize) so the returned rect is in the
+            // same pixel space the editor uses for TargetWidth/TargetHeight.
+            // Fall back to the video canvas only when the clip has no explicit
+            // target dimensions yet.
+            int canvasW = _currentClip?.TargetWidth > 0
+                ? _currentClip.TargetWidth
+                : Math.Max(1, (int)Math.Round(_videoWidth));
+            int canvasH = _currentClip?.TargetHeight > 0
+                ? _currentClip.TargetHeight
+                : Math.Max(1, (int)Math.Round(_videoHeight));
+
+            var rectTuple = provider.GetViewRect(canvasW, canvasH);
             if (rectTuple.TargetWidth <= 0 || rectTuple.TargetHeight <= 0)
             {
                 return false;

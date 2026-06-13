@@ -752,7 +752,7 @@ public class __ApplicationAPIBaseLocalizerBase_zh_CN__ : ApplicationAPIBaseLocal
 }
 
 #endregion
-namespace projectFrameCut.ApplicationAPIBase.LocalizedResources
+namespace projectFrameCut.ApplicationAPIBase.Localize
 {
     public static class APIBaseLocalizedResources
     {

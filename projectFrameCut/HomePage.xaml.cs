@@ -167,7 +167,7 @@ public partial class HomePage : ContentPage
                     var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
                     if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                     {
-                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover);
+                        await GoDraft(p, draft.ProjectName ?? "Project", isReadonly: false, throwOnException: false, skipAskForRecover: skipAskForRecover);
                         return;
 
                     }
@@ -1875,10 +1875,10 @@ public partial class HomePage : ContentPage
             element.isInfiniteLength = true;
             element.maxFrameCount = 0;
             element.ExtraData = new();
-            element.ExtraData["TextEntries"] = new List<TextClipEntry>
+            element.ExtraData["TextEntries"] = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
             {
                 template.First().Value with { text = $"Happy April fools day!" }
-            };
+            });
 
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "timeline.json"),

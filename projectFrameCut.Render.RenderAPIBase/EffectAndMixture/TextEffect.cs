@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using projectFrameCut.Drawing.Text.Entry;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -10,28 +8,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Process the input text clip's entries.
         /// </summary>
         /// <returns>the updated entries.</returns>
-        public TextClipEntry[] Process(TextClipEntry[] source);
+        public TextEntry[] Process(TextEntry[] source);
 
         string? IEffect.NeedComputer => null;
         EffectType IEffect.TypeOfEffect => EffectType.TextEffect;
     }
     public interface IContinuousTextEffect : IEffect
     {
-        /// <summary>
-        /// Represents the start point of the effect inside this Clip.
-        /// Only used when <see cref="IsScoped"/> is true.
-        /// </summary>
         public int StartPoint { get; set; }
-        /// <summary>
-        /// Represents the end point of the effect inside this Clip.
-        /// Only used when <see cref="IsScoped"/> is true.
-        /// </summary>
         public int EndPoint { get; set; }
-        /// <summary>
-        /// If true, the effect is scoped to <see cref="StartPoint"/> and <see cref="EndPoint"/>.
-        /// The caller will skip the effect if the current frame is outside this range,
-        /// and compute progress relative to this range instead of the full clip duration.
-        /// </summary>
         public bool IsScoped { get; set; }
 
         /// <summary>
@@ -40,7 +25,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="source">The input text entries.</param>
         /// <param name="progress">A value between 0 and 1 indicating the current progress of the effect.</param>
         /// <returns>the updated entries.</returns>
-        public TextClipEntry[] Process(TextClipEntry[] source, float progress);
+        public TextEntry[] Process(TextEntry[] source, float progress);
 
         string? IEffect.NeedComputer => null;
         EffectType IEffect.TypeOfEffect => EffectType.ContinuousTextEffect;

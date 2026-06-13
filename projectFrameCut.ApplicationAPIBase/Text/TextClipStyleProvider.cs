@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -42,10 +43,41 @@ namespace projectFrameCut.ApplicationAPIBase.Text
         public bool AllowFreeRatioResize { get; }
 
         /// <summary>
+        /// Get a bool value indicating whether the clip can be resized horizontally (e.g. by the editor's resize handles).
+        /// Derived from the current LayoutMode.
+        /// </summary>
+        public bool IsHorizontalResizable { get; }
+
+        /// <summary>
+        /// Get a bool value indicating whether the clip can be resized vertically (e.g. by the editor's resize handles).
+        /// Derived from the current LayoutMode.
+        /// </summary>
+        public bool IsVerticalResizable { get; }
+
+        /// <summary>
+        /// Get a bool value indicating whether the clip can snap to other clips or guides while resizing.
+        /// </summary>
+        public bool CanSnapWhileResizing { get; }
+
+        /// <summary>
+        /// The layout mode that determines how the text is sized and positioned relative to its clip boundary.
+        /// </summary>
+        public TextClipLayoutMode LayoutMode { get; set; }
+
+        /// <summary>
+        /// Indicate whether shows a default Editor in Property panel.
+        /// </summary>
+        public virtual bool ShowDefaultTextEditor => true;
+        /// <summary>
+        /// Indicate whether shows a default Editor in Property panel.
+        /// </summary>
+        public virtual bool ShowLayoutModePicker => true;
+
+        /// <summary>
         /// Build the actual entry/entries to rendering in a TextClip form <see cref="Parameters"/>
         /// </summary>
         /// <returns></returns>
-        public TextClipEntry[] BuildEntries();
+        public TextEntry[] BuildEntries();
 
         /// <summary>
         /// Build A UI for the user to configure this TextClip.

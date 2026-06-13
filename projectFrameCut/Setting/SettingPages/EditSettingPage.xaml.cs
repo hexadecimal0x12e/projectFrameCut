@@ -294,15 +294,17 @@ public partial class EditSettingPage : ContentPage
                         b.AddSeparator();
                         var s = e.Value;
                         var sample = s.SampleText ?? "AaBbYyZz";
+#pragma warning disable CS0618 // 类型或成员已过时
                         TextClip t = new TextClip
                         {
                             Id = s.StyleId,
                             Name = s.StyleId,
-                            TextEntries = new List<TextClipEntry>
+                            TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                             {
                                 e.Value with { text = sample }
-                            }
+                            })
                         };
+#pragma warning restore CS0618 // 类型或成员已过时
 
 
                         var fs = s.fontSize > 0 ? s.fontSize : 36;

@@ -30,7 +30,7 @@ public class InternalPluginBase : IPluginBase
 
     public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
-    public int PluginAPIMinorVersion => 1;
+    public int PluginAPIMinorVersion => 0;
 
     public string Name => "Internal fundamental plugin";
 
@@ -205,7 +205,7 @@ public class InternalPluginBase : IPluginBase
         return type switch
         {
             ClipMode.VideoClip => element.Deserialize<VideoClip>() ?? throw new NullReferenceException(),
-            ClipMode.PhotoClip => element.Deserialize<PhotoClip>() ?? throw new NullReferenceException(),
+            ClipMode.PhotoClip => HandlePhotoClip(element),
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
@@ -213,6 +213,26 @@ public class InternalPluginBase : IPluginBase
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
+    }
+
+    private static IClip HandlePhotoClip(JsonElement element)
+    {
+        bool isVect = false;
+        try
+        {
+            isVect = element.GetProperty("IsVector").GetBoolean();
+
+        }
+        catch { }
+
+        if (isVect || (element.TryGetProperty("FilePath", out var filePathProperty) && !string.IsNullOrEmpty(filePathProperty.GetString()) && (Path.GetExtension(filePathProperty.GetString()) ?? "").ToLowerInvariant() == ".svg"))
+        {
+            return element.Deserialize<VectorPhotoClip>() ?? throw new NullReferenceException();
+        }
+        else
+        {
+            return element.Deserialize<PhotoClip>() ?? throw new NullReferenceException();
+        }
     }
 
     ISoundTrack IPluginBase.SoundTrackCreator(JsonElement element)

@@ -212,17 +212,16 @@ namespace projectFrameCut.Render.Rendering
             var clip = new TextClip
             {
                 Id = "", Name = "", LayerIndex = 0,
-                TextEntries = new List<TextClipEntry>
+                TextEntries = new List<TextEntry>
                 {
-                    new TextClipEntry
+                    new TextEntry
                     {
-                        text = text,
-                        x = (int)(width - measuredW - padding),
-                        y = (int)(height - measuredH - padding),
-                        fontFamily = fontFamily,
-                        fontSize = fontSize,
-                        fontStyle = ClipFontStyle.Regular,
-                        r = 65535, g = 65535, b = 65535, a = 0.5f
+                        Text = text,
+                        X = (int)(width - measuredW - padding),
+                        Y = (int)(height - measuredH - padding),
+                        FontName = fontFamily,
+                        FontSize = fontSize,
+                        FillR = 65535, FillG = 65535, FillB = 65535, FillA = 0.5f
                     }
                 },
             };

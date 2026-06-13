@@ -28,6 +28,7 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -1710,6 +1711,12 @@ namespace projectFrameCut.DraftStuff
             void FontChanged(object? sender, FontItem font)
             {
                 if (font == null) return;
+
+                if (font.InnerFont is not null)
+                    TextClipFontRegistry.RegisterFontFace(font.InnerFont);
+                else if (!string.IsNullOrWhiteSpace(font.Path))
+                    TextClipFontRegistry.AddFont(font.Path);
+
                 fontSelectBtn.Text = font.DisplayName;
                 currentEntry = currentEntry with { fontFamily = font.FontName };
                 UpdateGlyphWarning();
@@ -2102,7 +2109,8 @@ namespace projectFrameCut.DraftStuff
                             ["StrokeColor"] = ToArgbHexNoAlpha(entry.strokeR, entry.strokeG, entry.strokeB),
                             ["Dpi"] = entry.dpi?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
                             ["UseVerticalLayout"] = entry.UseVerticalLayout.ToString(),
-                            ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString()
+                            ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString(),
+                            ["LayoutMode"] = "FillClip"
                         }
                     };
                     styleProvider = basic;
@@ -2135,10 +2143,168 @@ namespace projectFrameCut.DraftStuff
             providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
             providerHost.AddSeparator();
             TryUseDialogFontPicker(providerPpb, styleProvider, (s) => HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", s, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : "")));
-            providerHost.AddFromAnother(providerPpb, styleProvider);
+
+            // Add LayoutMode picker managed centrally via ITextClipStyleProvider.LayoutMode
+            Dictionary<string, TextClipLayoutMode> LocalizedLayoutOptionKVP = new Dictionary<string, TextClipLayoutMode>
+            {
+                { PPLocalizedResources.TextOption_LayoutMode_FixedWidth, TextClipLayoutMode.FixedWidth },
+                { PPLocalizedResources.TextOption_LayoutMode_FillClip, TextClipLayoutMode.FillClip },
+                { PPLocalizedResources.TextOption_LayoutMode_FixedSize, TextClipLayoutMode.FixedSize },
+            }; //FixedHeight mode is buggy so hide now
+            providerHost
+            .AppendWhen(styleProvider.ShowLayoutModePicker, 
+                c => c.AddPicker("LayoutMode", PPLocalizedResources.TextOption_LayoutMode, LocalizedLayoutOptionKVP.Keys.ToArray(), LocalizedLayoutOptionKVP.ReverseLookup(styleProvider.LayoutMode, PPLocalizedResources.TextOption_LayoutMode_FixedWidth), picker =>
+                {
+    #if iDevices
+                    picker.Closed += (s, e) =>
+                    {
+                        if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
+                        {
+                            if (LocalizedLayoutOptionKVP.TryGetValue(modeStr, out var parsedMode))
+                                styleProvider.LayoutMode = parsedMode;
+                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
+                        }
+                    };
+    #else
+                    picker.SelectedIndexChanged += (s, e) =>
+                    {
+                        if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
+                        {
+                            if (LocalizedLayoutOptionKVP.TryGetValue(modeStr, out var parsedMode))
+                                styleProvider.LayoutMode = parsedMode;
+                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
+                        }
+                    };
+    #endif
+                })
+            )
+            .AppendWhen(styleProvider.ShowDefaultTextEditor,
+                c => c.AddCustomChild(
+                (c) =>
+                {
+                    var editor = new Editor
+                    {
+                        MinimumHeightRequest = 150,
+                        Text = styleProvider.BasicText,
+                        IsSpellCheckEnabled = true,
+                        IsTextPredictionEnabled = true,
+                        Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
+                    };
+                    editor.Unfocused += (_, _) => c(editor.Text);
+                    return editor;
+                },
+                "Text", styleProvider.BasicText)
+                .AddButton(Localized._Apply, (_, _) => { })
+            )
+            .AddFromAnother(providerPpb, styleProvider)
+            .AddSeparator()
+            .AddButton(PPLocalizedResources.TextOption_ChangeStyle, async (_, _) =>
+            {
+                var available = TextStyleServices.GetAvailableTextStyleProviders();
+                if (available.Count == 0) return;
+
+                var styleNames = available.Keys.ToArray();
+                var currentStyle = styleProvider.TypeName;
+                var picked = await page.DisplayActionSheetAsync(
+                    PPLocalizedResources.TextOption_ChangeStyle, null, null, styleNames);
+
+                if (string.IsNullOrWhiteSpace(picked) || picked == currentStyle) return;
+                if (!available.TryGetValue(picked, out var factory)) return;
+
+                var newProvider = factory();
+                // 保留基础文本
+                newProvider.BasicText = styleProvider.BasicText;
+                // 保留布局模式和换行宽度
+                newProvider.Parameters["LayoutMode"] = styleProvider.LayoutMode.ToString();
+                if (styleProvider.Parameters.TryGetValue("WrappingWidth", out var ww) && !string.IsNullOrWhiteSpace(ww))
+                    newProvider.Parameters["WrappingWidth"] = ww;
+                if (styleProvider.Parameters.TryGetValue("TextStyleManualSize", out var ms) && !string.IsNullOrWhiteSpace(ms))
+                    newProvider.Parameters["TextStyleManualSize"] = ms;
+
+                // 测量新样式的自然尺寸
+                var newEntries = newProvider.BuildEntries();
+                var newRect = TextMeasureHelper.MeasureBounds(newEntries, 1920, 1080);
+                var newW = Math.Max(1, (int)Math.Ceiling(newRect.Width));
+                var newH = Math.Max(1, (int)Math.Ceiling(newRect.Height));
+
+                // 持久化新样式到 clip
+                clip.ExtraData ??= new();
+                clip.ExtraData[TextStyleProviderFromKey] = newProvider.FromPlugin;
+                clip.ExtraData[TextStyleProviderTypeKey] = newProvider.TypeName;
+                clip.ExtraData[TextStyleProviderParamsKey] = new Dictionary<string, string>(newProvider.Parameters);
+                if (newEntries.Length > 0)
+                    clip.ExtraData["TextEntries"] = newEntries.ToList();
+
+                clip.TargetWidth = newW;
+                clip.TargetHeight = newH;
+                clip.IsMoveable = true;
+                clip.IsHorizontalResizable = newProvider.IsHorizontalResizable;
+                clip.IsVerticalResizable = newProvider.IsVerticalResizable;
+                clip.CanSnapWhileResizing = newProvider.CanSnapWhileResizing;
+
+                handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextStyleChanged", newProvider, newProvider));
+            })
+            .AddButton(PPLocalizedResources.TextOption_ReLayout, (_, _) =>
+            {
+                // 清除所有布局约束，强制重新测量文本的自然尺寸
+                styleProvider.Parameters.Remove("WrappingWidth");
+                styleProvider.Parameters.Remove("TextStyleManualSize");
+                styleProvider.Parameters.Remove("FixedHeightValue");
+                styleProvider.LayoutMode = TextClipLayoutMode.FillClip;
+
+                // 重新测量文本的自然宽高
+                var resetEntries = styleProvider.BuildEntries();
+                var resetRect = TextMeasureHelper.MeasureBounds(resetEntries, 1920, 1080);
+                var resetW = Math.Max(1, (int)Math.Ceiling(resetRect.Width));
+                var resetH = Math.Max(1, (int)Math.Ceiling(resetRect.Height));
+
+                clip.TargetWidth = resetW;
+                clip.TargetHeight = resetH;
+                clip.IsMoveable = true;
+                clip.IsHorizontalResizable = styleProvider.IsHorizontalResizable;
+                clip.IsVerticalResizable = styleProvider.IsVerticalResizable;
+                clip.CanSnapWhileResizing = styleProvider.CanSnapWhileResizing;
+
+                clip.ExtraData ??= new();
+                // 持久化更新后的参数
+                clip.ExtraData[TextStyleProviderParamsKey] = new Dictionary<string, string>(styleProvider.Parameters);
+
+                if (resetEntries.Length > 0)
+                {
+                    clip.ExtraData["TextEntries"] = resetEntries.ToList();
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", resetEntries, resetEntries));
+                }
+            }, (c) => c.TextColor = Color.FromArgb("#FF8080"));
+
             void HandlePanelChange(object? s, PropertyPanelPropertyChangedEventArgs e)
             {
                 if (s is not ITextClipStyleProvider provider) return;
+
+                // 字体变更时，确保 FontFace 已在 TextClipFontRegistry 中注册，
+                // 避免 TextLayoutPipeline.ResolveFont 回退到 fallback 字体导致测量异常。
+                if (e.Id == "FontFamily")
+                {
+                    var fontName = e.Value?.ToString();
+                    if (!string.IsNullOrWhiteSpace(fontName) && !TextClipFontRegistry.TryGetFont(fontName, out _))
+                    {
+                        if (TextServices.LoadedFonts.TryGetValue(fontName, out var fontItem))
+                        {
+                            if (fontItem.InnerFont is not null)
+                                TextClipFontRegistry.RegisterFontFace(fontItem.InnerFont);
+                            else if (!string.IsNullOrWhiteSpace(fontItem.Path))
+                                TextClipFontRegistry.AddFont(fontItem.Path);
+                        }
+                    }
+                }
+
+                // Text changes are managed centrally by ClipInfoBuilder rather than
+                // each individual style provider.
+                if (e.Id == "Text")
+                {
+                    provider.BasicText = e.Value?.ToString() ?? string.Empty;
+                    provider.Parameters["Text"] = provider.BasicText;
+                }
+
                 (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
                 if (updated != null)
                 {
@@ -2147,6 +2313,10 @@ namespace projectFrameCut.DraftStuff
                 }
                 clip.TargetWidth = newW > 0 ? newW : clip.TargetWidth;
                 clip.TargetHeight = newH > 0 ? newH : clip.TargetHeight;
+                clip.IsMoveable = true;
+                clip.IsHorizontalResizable = provider.IsHorizontalResizable;
+                clip.IsVerticalResizable = provider.IsVerticalResizable;
+                clip.CanSnapWhileResizing = provider.CanSnapWhileResizing;
                 var updatedEntries = provider.BuildEntries();
                 if (updatedEntries.Length > 0)
                 {
@@ -2211,6 +2381,11 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (font == null) return;
 
+                    if (font.InnerFont is not null)
+                        TextClipFontRegistry.RegisterFontFace(font.InnerFont);
+                    else if (!string.IsNullOrWhiteSpace(font.Path))
+                        TextClipFontRegistry.AddFont(font.Path);
+
                     selectFontButton.Text = font.DisplayName;
                     fontChangedCallback(font.FontName);
                     page.Dispatcher.Dispatch(async () => await page.HidePopup());
@@ -2249,8 +2424,8 @@ namespace projectFrameCut.DraftStuff
                 try
                 {
                     var deserialized = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
-                    if (deserialized != null)
-                        clip.ExtraData["TextEntries"] = deserialized;
+                    if (deserialized is { Count: > 0 })
+                        clip.ExtraData["TextEntries"] = TextEntryMigration.MigrateFromTextClipEntries(deserialized);
                 }
                 catch { }
             }
@@ -2298,6 +2473,14 @@ namespace projectFrameCut.DraftStuff
                 {
                     clip.ExtraData["TextEntries"] = rebuiltEntries.ToList();
                     //handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", rebuiltEntries, rebuiltEntries));
+                }
+
+                if (styleProvider != null)
+                {
+                    clip.IsMoveable = true;
+                    clip.IsHorizontalResizable = styleProvider.IsHorizontalResizable;
+                    clip.IsVerticalResizable = styleProvider.IsVerticalResizable;
+                    clip.CanSnapWhileResizing = styleProvider.CanSnapWhileResizing;
                 }
             }
         }

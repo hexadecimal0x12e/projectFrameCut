@@ -1115,6 +1115,38 @@
         "DontTranslate": false
       },
       {
+        "Id": "General_VectorClip",
+        "Value": "\u77E2\u91CF\u56FE\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u6297\u952F\u9F7F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u65E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "General_VideoCodec",
         "Value": "\u89C6\u9891\u89E3\u7801",
         "Mode": "ConstString",
@@ -1490,6 +1522,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u53D8\u66F4\u6837\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "TextOption_Color",
         "Value": "\u6587\u672C\u989C\u8272",
         "Mode": "ConstString",
@@ -1604,6 +1644,46 @@
         "DontTranslate": false
       },
       {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u5E03\u5C40\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u586B\u5145\uFF08\u6587\u672C\u6491\u6EE1\u9009\u533A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u5B9A\u9AD8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u56FA\u5B9A\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u5B9A\u5BBD\uFF08\u81EA\u52A8\u6362\u884C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "TextOption_LineSpacing",
         "Value": "\u884C\u8DDD",
         "Mode": "ConstString",
@@ -1622,6 +1702,14 @@
       {
         "Id": "TextOption_Position",
         "Value": "\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u91CD\u7F6E\u5E03\u5C40",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1912,38 +2000,6 @@
           }
         ],
         "DontTranslate": false
-      },
-      {
-        "Id": "General_VectorClip",
-        "Value": "\u77E2\u91CF\u56FE\u5F62",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VectorClip_AAMode",
-        "Value": "\u6297\u952F\u9F7F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VectorClip_AAMode_Default",
-        "Value": "\u9ED8\u8BA4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "General_VectorClip_AAMode_None",
-        "Value": "\u65E0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -2022,7 +2078,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "As part of projectFrameCut, provides the basic functionality of projectFrameCut",
+        "Value": "As part of projectFrameCut, it provides the basic rendering and processing capabilities of projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2263,7 +2319,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Reset",
+        "Value": "Reset default color adjustment",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2960,7 +3016,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Warning: Manually configuring these effects may lead to unexpected results. Please modify them with caution.",
+        "Value": "Warning: Manually configuring these effects may lead to unexpected results and may be overwritten. Please modify with caution.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3254,7 +3310,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "The current clip has keyframes; editing here will only affect the initial value.",
+        "Value": "Warning: The current clip has keyframes. Editing here will only affect the initial value.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3263,7 +3319,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "No keyframes.",
+        "Value": "No keyframes under this effect.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3290,7 +3346,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Each segment can have only one Mixture.",
+        "Value": "Each segment can have only one mixer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3317,7 +3373,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Ratio",
+        "Value": "Gear Ratio",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3962,6 +4018,195 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "No effects available. Please check your configuration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Search Effect Name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "All Types",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Text Continuity Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Configure in the editor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Text Effects",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Vector Graphic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Anti-aliasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Default",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "None",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Keyframe #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Change Style",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Layout Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Fill (text fills selection)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Fixed Height",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Fixed Size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Fixed Width (Auto Wrap)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Reset Layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Warning: Manually configured text settings may be overwritten.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -4013,7 +4258,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u4F5C\u70BA projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Value": "\u4F5C\u70BA projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u6E32\u67D3\u548C\u8655\u7406\u80FD\u529B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4247,7 +4492,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u8B66\u544A\uFF1A\u624B\u52D5\u914D\u7F6E\u9019\u4E9B\u6548\u679C\u53EF\u80FD\u6703\u5C0E\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7D50\u679C\u3002\u8ACB\u8B39\u614E\u4FEE\u6539\u5B83\u5011\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52D5\u914D\u7F6E\u9019\u4E9B\u6548\u679C\u53EF\u80FD\u6703\u5C0E\u81F4\u610F\u6599\u4E4B\u5916\u7684\u7D50\u679C\uFF0C\u4E26\u4E14\u5B83\u5011\u53EF\u80FD\u6703\u88AB\u8986\u84CB\u3002\u8ACB\u8B39\u614E\u4FEE\u6539\u5B83\u5011\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5805,7 +6050,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u6BD4\u4F8B",
+        "Value": "\u8B8A\u901F\u6BD4\u4F8B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5859,7 +6104,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u7576\u524D\u7247\u6BB5\u5B58\u5728\u95DC\u9375\u5E40\uFF0C\u5728\u6B64\u8655\u7684\u7DE8\u8F2F\u53EA\u6703\u5F71\u97FF\u521D\u59CB\u503C\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u76EE\u524D\u7247\u6BB5\u5B58\u5728\u95DC\u9375\u5E40\uFF0C\u5728\u6B64\u8655\u7684\u7DE8\u8F2F\u53EA\u6703\u5F71\u97FF\u521D\u59CB\u503C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5886,7 +6131,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u66AB\u7121\u95DC\u9375\u5E40\u3002",
+        "Value": "\u6B64\u6548\u679C\u4E0B\u66AB\u7121\u95DC\u9375\u5E40\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5931,7 +6176,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u91CD\u7F6E",
+        "Value": "\u91CD\u7F6E\u9810\u8A2D\u8ABF\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5948,7 +6193,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u6BCF\u500B\u7247\u6BB5\u53EA\u80FD\u6709\u4E00\u500B Mixture\u3002",
+        "Value": "\u6BCF\u500B\u7247\u6BB5\u53EA\u80FD\u6709\u4E00\u500B\u6DF7\u5408\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5980,6 +6225,195 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\u6C92\u6709\u4EFB\u4F55\u53EF\u7528\u7684\u6548\u679C\u3002\u8ACB\u6AA2\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u641C\u5C0B\u6548\u679C\u540D\u7A31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u6587\u5B57\u9023\u7E8C\u6027\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u6240\u6709\u985E\u578B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u5728\u7DE8\u8F2F\u5668\u88E1\u914D\u7F6E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u6587\u5B57\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u6297\u92F8\u9F52",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u7121",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u8B8A\u66F4\u6A23\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u586B\u5145\uFF08\u6587\u672C\u6490\u6EFF\u9078\u5340\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u4F48\u5C40\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u5B9A\u9AD8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u56FA\u5B9A\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u5B9A\u5BEC\uFF08\u81EA\u52D5\u63DB\u884C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u91CD\u8A2D\u4F48\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52D5\u914D\u7F6E\u7684\u9019\u4E9B\u6587\u5B57\u914D\u7F6E\u53EF\u80FD\u6703\u88AB\u8986\u84CB\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\u5411\u91CF\u5716\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u95DC\u9375\u5E40 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -6033,11 +6467,11 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "projectFrameCut\u306E\u4E00\u90E8\u3068\u3057\u3066\u3001projectFrameCut\u306E\u57FA\u672C\u6A5F\u80FD\u3092\u63D0\u4F9B\u3057\u307E\u3059",
+        "Value": "projectFrameCut\u306E\u4E00\u90E8\u3068\u3057\u3066\u3001\u57FA\u672C\u7684\u306A\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u304A\u3088\u3073\u51E6\u7406\u6A5F\u80FD\u3092\u63D0\u4F9B\u3057\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\uFF0C\u8FD9\u662F\u5E94\u7528\u7A0B\u5E8F\u7684\u540D\u79F0",
         "DontTranslate": false
       },
       {
@@ -6267,7 +6701,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u8B66\u544A\uFF1A\u3053\u308C\u3089\u306E\u52B9\u679C\u3092\u624B\u52D5\u3067\u8A2D\u5B9A\u3059\u308B\u3068\u3001\u4E88\u671F\u3057\u306A\u3044\u7D50\u679C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u5909\u66F4\u306F\u614E\u91CD\u306B\u884C\u3063\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u308C\u3089\u306E\u52B9\u679C\u3092\u624B\u52D5\u3067\u8A2D\u5B9A\u3059\u308B\u3068\u3001\u4E88\u671F\u3057\u306A\u3044\u7D50\u679C\u304C\u751F\u3058\u3001\u4E0A\u66F8\u304D\u3055\u308C\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u614E\u91CD\u306B\u5909\u66F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7833,7 +8267,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u6BD4\u7387",
+        "Value": "\u5909\u901F\u6BD4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7878,7 +8312,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u73FE\u5728\u306E\u30AF\u30EA\u30C3\u30D7\u306B\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0\u304C\u3042\u308A\u307E\u3059\u3002\u3053\u3053\u3067\u306E\u7DE8\u96C6\u306F\u521D\u671F\u5024\u306E\u307F\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u73FE\u5728\u306E\u30AF\u30EA\u30C3\u30D7\u306B\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0\u304C\u3042\u308A\u307E\u3059\u3002\u3053\u3053\u3067\u306E\u7DE8\u96C6\u306F\u521D\u671F\u5024\u306E\u307F\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7905,7 +8339,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+        "Value": "\u3053\u306E\u30A8\u30D5\u30A7\u30AF\u30C8\u306B\u306F\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7950,11 +8384,11 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u30EA\u30BB\u30C3\u30C8",
+        "Value": "\u521D\u671F\u8272\u8ABF\u306B\u623B\u3059",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6309\u94AE\u6587\u5B57\uFF0C\u8868\u793A\u91CD\u7F6E\u64CD\u4F5C\u3002\u4F7F\u7528\u5E38\u89C1\u7684\u65E5\u8BED\u8868\u8FBE\uFF0C\u907F\u514D\u8FC7\u957F\u3002",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -7968,7 +8402,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u5404\u30BB\u30B0\u30E1\u30F3\u30C8\u306B\u8A2D\u5B9A\u3067\u304D\u308BMixture\u306F1\u3064\u3060\u3051\u3067\u3059\u3002",
+        "Value": "\u5404\u30BB\u30B0\u30E1\u30F3\u30C8\u306B\u30DF\u30AD\u30B5\u30FC\u306F1\u3064\u3060\u3051\u8A2D\u5B9A\u3067\u304D\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7997,6 +8431,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "\u30C6\u30AD\u30B9\u30C8\uFF08\u5B9A\u756A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\u5229\u7528\u53EF\u80FD\u306A\u52B9\u679C\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u5168\u7A2E\u985E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u9023\u7D9A\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u30A8\u30C7\u30A3\u30BF\u30FC\u3067\u8A2D\u5B9A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u691C\u7D22\u52B9\u679C\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u6587\u5B57\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u30A2\u30F3\u30C1\u30A8\u30A4\u30EA\u30A2\u30B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u306A\u3057",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\u30D9\u30AF\u30C8\u30EB\u56F3\u5F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u30AD\u30FC\u30D5\u30EC\u30FC\u30E0 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u5857\u308A\u3064\u3076\u3057\uFF08\u30C6\u30AD\u30B9\u30C8\u3067\u9078\u629E\u7BC4\u56F2\u3092\u57CB\u3081\u308B\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u56FA\u5B9A\u9AD8\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u56FA\u5B9A\u30B5\u30A4\u30BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u30EC\u30A4\u30A2\u30A6\u30C8\u65B9\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52D5\u3067\u8A2D\u5B9A\u3057\u305F\u30C6\u30AD\u30B9\u30C8\u8A2D\u5B9A\u306F\u4E0A\u66F8\u304D\u3055\u308C\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u30EC\u30A4\u30A2\u30A6\u30C8\u3092\u521D\u671F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u30B9\u30BF\u30A4\u30EB\u5909\u66F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u56FA\u5B9A\u5E45\uFF08\u81EA\u52D5\u6539\u884C\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8053,7 +8676,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "projectFrameCut\uC758 \uC77C\uBD80\uB85C, projectFrameCut\uC758 \uAE30\uBCF8 \uAE30\uB2A5\uC744 \uC81C\uACF5\uD569\uB2C8\uB2E4.",
+        "Value": "projectFrameCut\uC758 \uC77C\uBD80\uB85C\uC11C, projectFrameCut\uC758 \uAE30\uBCF8 \uB80C\uB354\uB9C1 \uBC0F \uCC98\uB9AC \uB2A5\uB825\uC744 \uC81C\uACF5\uD569\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8286,7 +8909,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\uACBD\uACE0: \uC774 \uD6A8\uACFC\uB4E4\uC744 \uC218\uB3D9\uC73C\uB85C \uAD6C\uC131\uD558\uBA74 \uC608\uC0C1\uCE58 \uBABB\uD55C \uACB0\uACFC\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC8FC\uC758\uD574\uC11C \uC218\uC815\uD558\uC2ED\uC2DC\uC624.",
+        "Value": "\uACBD\uACE0: \uC774\uB7EC\uD55C \uD6A8\uACFC\uB97C \uC218\uB3D9\uC73C\uB85C \uAD6C\uC131\uD558\uBA74 \uC608\uC0C1\uCE58 \uBABB\uD55C \uACB0\uACFC\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC73C\uBA70 \uB36E\uC5B4\uC4F0\uC5EC\uC9C8 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC2E0\uC911\uD558\uAC8C \uC218\uC815\uD558\uC2ED\uC2DC\uC624.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9869,7 +10492,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\uBE44\uC728",
+        "Value": "\uBCC0\uC18D\uBE44",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9896,7 +10519,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\uD604\uC7AC \uD074\uB9BD\uC5D0 \uD0A4\uD504\uB808\uC784\uC774 \uC788\uC2B5\uB2C8\uB2E4. \uC5EC\uAE30\uC5D0\uC11C\uC758 \uD3B8\uC9D1\uC740 \uCD08\uAE30\uAC12\uC5D0\uB9CC \uC601\uD5A5\uC744 \uBBF8\uCE69\uB2C8\uB2E4.",
+        "Value": "\uACBD\uACE0: \uD604\uC7AC \uC870\uAC01\uC5D0 \uD0A4\uD504\uB808\uC784\uC774 \uC788\uC2B5\uB2C8\uB2E4. \uC5EC\uAE30\uC11C\uC758 \uD3B8\uC9D1\uC740 \uCD08\uAE30\uAC12\uC5D0\uB9CC \uC601\uD5A5\uC744 \uBBF8\uCE69\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9923,7 +10546,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\uD0A4 \uD504\uB808\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uC774 \uD6A8\uACFC\uC5D0 \uD0A4\uD504\uB808\uC784\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9968,7 +10591,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\uCD08\uAE30\uD654",
+        "Value": "\uAE30\uBCF8 \uC0C9\uC0C1 \uC870\uC815 \uC7AC\uC124\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9986,7 +10609,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\uAC01 \uC138\uADF8\uBA3C\uD2B8\uC5D0\uB294 Mixture\uAC00 \uD558\uB098\uB9CC \uD5C8\uC6A9\uB429\uB2C8\uB2E4.",
+        "Value": "\uAC01 \uC138\uADF8\uBA3C\uD2B8\uC5D0\uB294 \uBBF9\uC11C\uAC00 \uD558\uB098\uB9CC \uC788\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10018,6 +10641,195 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uD6A8\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\uBAA8\uB4E0 \uC720\uD615",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\uD14D\uC2A4\uD2B8 \uC5F0\uC18D\uC131 \uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\uAC80\uC0C9 \uD6A8\uACFC \uC774\uB984",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\uD3B8\uC9D1\uAE30\uC5D0\uC11C \uAD6C\uC131...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\uC548\uD2F0\uC568\uB9AC\uC5B4\uC2F1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\uBCA1\uD130 \uADF8\uB798\uD53D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\uD14D\uC2A4\uD2B8 \uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\uD0A4\uD504\uB808\uC784 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\uC2A4\uD0C0\uC77C \uBCC0\uACBD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\uB808\uC774\uC544\uC6C3 \uBAA8\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\uACE0\uC815 \uB192\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\uACE0\uC815 \uB108\uBE44(\uC790\uB3D9 \uC904 \uBC14\uAFC8)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\uACE0\uC815 \uD06C\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\uCC44\uC6B0\uAE30 (\uD14D\uC2A4\uD2B8\uAC00 \uC120\uD0DD \uC601\uC5ED\uC744 \uCC44\uC6C0)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\uACBD\uACE0: \uC218\uB3D9\uC73C\uB85C \uC124\uC815\uD55C \uD14D\uC2A4\uD2B8 \uAD6C\uC131\uC774 \uB36E\uC5B4\uC4F0\uC5EC\uC9C8 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\uB808\uC774\uC544\uC6C3 \uC7AC\uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\uAE30\uBCF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -10071,7 +10883,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Fait partie de projectFrameCut, fournit les fonctionnalit\u00E9s de base de projectFrameCut.",
+        "Value": "En tant que partie de projectFrameCut, il fournit les capacit\u00E9s de rendu et de traitement de base de projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10305,7 +11117,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Avertissement : La configuration manuelle de ces effets peut entra\u00EEner des r\u00E9sultats inattendus. Veuillez les modifier avec prudence.",
+        "Value": "Avertissement : la configuration manuelle de ces effets peut entra\u00EEner des r\u00E9sultats inattendus et ils peuvent \u00EAtre \u00E9cras\u00E9s. Veuillez les modifier avec pr\u00E9caution.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11873,7 +12685,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Proportion",
+        "Value": "Rapport de transmission",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11909,7 +12721,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "Le segment actuel contient des images cl\u00E9s, l\u0027\u00E9dition ici n\u0027affectera que la valeur initiale.",
+        "Value": "Avertissement : le segment actuel contient des images cl\u00E9s, toute modification ici n\u0027affectera que la valeur initiale.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11936,7 +12748,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Aucune image cl\u00E9.",
+        "Value": "Aucune image cl\u00E9 pour cet effet.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11981,7 +12793,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "R\u00E9initialiser",
+        "Value": "R\u00E9initialiser la palette par d\u00E9faut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11999,7 +12811,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Chaque segment ne peut avoir qu\u0027un seul Mixture.",
+        "Value": "Chaque segment ne peut avoir qu\u0027un seul m\u00E9langeur.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12028,6 +12840,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "Texte (classique)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Nom de l\u0027effet de recherche",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Aucun effet disponible. Veuillez v\u00E9rifier votre configuration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Effet de continuit\u00E9 de texte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Configurer dans l\u0027\u00E9diteur...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Tous les types",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Effet de texte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Graphiques vectoriels",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Aucun",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Anticr\u00E9nelage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Image cl\u00E9 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Remplissage (texte remplissant la s\u00E9lection)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Hauteur fixe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Taille fixe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Changer le style",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Mode de disposition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Largeur fixe (retour \u00E0 la ligne automatique)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Attention : ces configurations de texte configur\u00E9es manuellement peuvent \u00EAtre \u00E9cras\u00E9es.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "R\u00E9initialiser la disposition",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12084,7 +13085,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u5C5E projectFrameCut \u4E4B\u4E00\u7AEF\uFF0C\u5907\u5176\u57FA\u672C\u529F\u80FD\u3002",
+        "Value": "\u4E3AprojectFrameCut\u4E4B\u4E00\u90E8\uFF0C\u4F9B\u5176\u57FA\u672C\u6E32\u67D3\u4E0E\u5904\u7406\u4E4B\u80FD\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12439,11 +13440,11 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u8B66\uFF1A\u624B\u8BBE\u6B64\u7B49\u6548\uFF0C\u6216\u81F4\u610F\u5916\u4E4B\u679C\u3002\u614E\u6539\u4E4B\u3002",
+        "Value": "\u8B66\uFF1A\u624B\u8BBE\u8BF8\u6548\uFF0C\u6216\u81F4\u610F\u5916\u4E4B\u679C\uFF0C\u4E14\u6216\u4E3A\u6240\u8986\u3002\u614E\u6539\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u8B66\u793A\u8BED\u6C14\uFF0C\u53E5\u5F0F\u7B80\u6D01\u6B63\u5F0F\u3002",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u539F\u610F\u4E14\u7B80\u6D01",
         "DontTranslate": false
       },
       {
@@ -13891,11 +14892,11 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u6BD4\u4F8B",
+        "Value": "\u53D8\u901F\u4E4B\u6BD4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u4E2D\u5E38\u7528\u201C\u6BD4\u4F8B\u201D\u8868\u793A\u6BD4\u7387\uFF0C\u4FDD\u7559\u539F\u8BCD\u5373\u53EF\u3002",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -13927,11 +14928,11 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u6B64\u7247\u6BB5\u6709\u5173\u952E\u5E27\uFF0C\u6B64\u5904\u4E4B\u7F16\u8F91\u4EC5\u5F71\u54CD\u521D\u59CB\u503C\u3002",
+        "Value": "\u8B66\u793A\uFF1A\u6B64\u6BB5\u6709\u5173\u952E\u5E27\uFF0C\u6B64\u5904\u4E4B\u4FEE\u6539\u60DF\u5F71\u54CD\u521D\u59CB\u503C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u539F\u6587\u4E3A\u8B66\u544A\u4FE1\u606F\uFF0C\u6587\u8A00\u7FFB\u8BD1\u4FDD\u6301\u8B66\u793A\u8BED\u6C14",
         "DontTranslate": false
       },
       {
@@ -13954,7 +14955,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u672A\u6709\u95DC\u9375\u5E40\u3002",
+        "Value": "\u6B64\u6548\u4E4B\u4E0B\uFF0C\u5C1A\u65E0\u5173\u952E\u5E27\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13999,7 +15000,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u590D\u4F4D",
+        "Value": "\u590D\u4F4D\u9ED8\u8BA4\u8C03\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14017,7 +15018,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u6BCF\u4E00\u7247\u6BB5\uFF0C\u60DF\u6709\u4E00Mixture\u3002",
+        "Value": "\u6BCF\u6BB5\u60DF\u6709\u4E00\u6DF7\u97F3\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14046,6 +15047,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "\u6587\uFF08\u5178\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\u65E0\u53EF\u7528\u4E4B\u6548\uFF0C\u8BF7\u68C0\u89C6\u914D\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u641C\u7D22\u6548\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u6587\u7EED\u6548",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u65BC\u7F16\u8F91\u5668\u4E2D\u914D\u7F6E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u6587\u6548",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u8BF8\u7C7B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\u77E2\u5F62\u5716",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u77E2\u91CF\u56FE\u5F62\u7684\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u77E2\u8868\u65B9\u5411\uFF0C\u5F62\u5716\u8868\u56FE\u5F62",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u9664\u9F7F\u8FF9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u9884\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u201C\u9ED8\u8BA4\u201D\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u8868\u793A\u9884\u5148\u8BBE\u5B9A\u4E4B\u610F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u5173\u952E\u5E27\u7B2C{i}\uFF08{p:p2}\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4F7F\u7528\u201C\u7B2C\u201D\u5B57\u8868\u793A\u5E8F\u53F7\uFF0C\u4FDD\u7559\u62EC\u53F7\u683C\u5F0F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u66F4\u6613\u6837\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u586B\u6EFF\uFF08\u6587\u6EFF\u9078\u5340\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u5E03\u5C40\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u5B9A\u5C3A\u5BF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u5B9A\u5BBD\uFF08\u81EA\u6362\u884C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u5B9A\u9AD8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u544A\u66F0\uFF1A\u624B\u5B9A\u4E4B\u6587\u8F9E\u914D\u7F6E\uFF0C\u6050\u906D\u8986\u76D6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u7FFB\u8BD1\uFF0C\u8868\u8FBE\u4E86\u8B66\u544A\u548C\u53EF\u80FD\u88AB\u8986\u76D6\u7684\u542B\u4E49",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u91CD\u5B9A\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u65E0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14102,7 +15292,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u0643\u062C\u0632\u0621 \u0645\u0646 projectFrameCut\u060C \u064A\u0648\u0641\u0631 \u0627\u0644\u0648\u0638\u0627\u0626\u0641 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0644\u0640 projectFrameCut",
+        "Value": "\u0643\u062C\u0632\u0621 \u0645\u0646 projectFrameCut\u060C \u064A\u0648\u0641\u0631 \u0642\u062F\u0631\u0627\u062A \u0627\u0644\u062A\u0642\u062F\u064A\u0645 \u0648\u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0644\u0640 projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14457,7 +15647,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0642\u062F \u064A\u0624\u062F\u064A \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u064A\u062F\u0648\u064A \u0644\u0647\u0630\u0647 \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A \u0625\u0644\u0649 \u0646\u062A\u0627\u0626\u062C \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639\u0629. \u064A\u0631\u062C\u0649 \u062A\u0648\u062E\u064A \u0627\u0644\u062D\u0630\u0631 \u0639\u0646\u062F \u062A\u0639\u062F\u064A\u0644\u0647\u0627.",
+        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0642\u062F \u064A\u0624\u062F\u064A \u062A\u0643\u0648\u064A\u0646 \u0647\u0630\u0647 \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A \u064A\u062F\u0648\u064A\u064B\u0627 \u0625\u0644\u0649 \u0646\u062A\u0627\u0626\u062C \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639\u0629\u060C \u0648\u0642\u062F \u064A\u062A\u0645 \u0627\u0633\u062A\u0628\u062F\u0627\u0644\u0647\u0627. \u064A\u064F\u0631\u062C\u0649 \u062A\u0639\u062F\u064A\u0644\u0647\u0627 \u0628\u062D\u0630\u0631.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15914,7 +17104,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u0646\u0633\u0628\u0629",
+        "Value": "\u0646\u0633\u0628\u0629 \u0627\u0644\u062A\u063A\u064A\u064A\u0631",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15950,7 +17140,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u064A\u062D\u062A\u0648\u064A \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u062D\u0627\u0644\u064A \u0639\u0644\u0649 \u0625\u0637\u0627\u0631\u0627\u062A \u0645\u0641\u062A\u0627\u062D\u064A\u0629\u060C \u0648\u0627\u0644\u062A\u062D\u0631\u064A\u0631 \u0647\u0646\u0627 \u0633\u064A\u0624\u062B\u0631 \u0641\u0642\u0637 \u0639\u0644\u0649 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0623\u0648\u0644\u064A\u0629.",
+        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u062D\u0627\u0644\u064A \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0625\u0637\u0627\u0631\u0627\u062A \u0645\u0641\u0627\u062A\u064A\u062D\u060C \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0647\u0646\u0627 \u0633\u064A\u0624\u062B\u0631 \u0641\u0642\u0637 \u0639\u0644\u0649 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0623\u0648\u0644\u064A\u0629.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15977,7 +17167,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0637\u0627\u0631\u0627\u062A \u0631\u0626\u064A\u0633\u064A\u0629 \u062D\u0627\u0644\u064A\u064B\u0627.",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0637\u0627\u0631\u0627\u062A \u0631\u0626\u064A\u0633\u064A\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062A\u0623\u062B\u064A\u0631.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16022,7 +17212,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16040,7 +17230,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u0643\u0644 \u0645\u0642\u0637\u0639 \u064A\u0645\u0643\u0646 \u0623\u0646 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 Mixture \u0648\u0627\u062D\u062F \u0641\u0642\u0637.",
+        "Value": "\u064A\u064F\u0633\u0645\u062D \u0628\u062E\u0644\u0627\u0637 \u0648\u0627\u062D\u062F \u0641\u0642\u0637 \u0644\u0643\u0644 \u0645\u0642\u0637\u0639.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16069,6 +17259,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "\u0627\u0644\u0646\u0635 (\u0627\u0644\u0643\u0644\u0627\u0633\u064A\u0643\u064A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u062A\u0623\u062B\u064A\u0631\u0627\u062A \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0643.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u0627\u0633\u0645 \u062A\u0623\u062B\u064A\u0631 \u0627\u0644\u0628\u062D\u062B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u062A\u0623\u062B\u064A\u0631 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u064A\u0629 \u0627\u0644\u0646\u0635",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0641\u064A \u0627\u0644\u0645\u062D\u0631\u0631...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u062A\u0623\u062B\u064A\u0631 \u0627\u0644\u0646\u0635",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u0645\u0636\u0627\u062F \u0627\u0644\u062A\u0639\u0631\u062C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\u0631\u0633\u0648\u0645\u0627\u062A \u0645\u062A\u062C\u0647\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u0628\u062F\u0648\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u0625\u0637\u0627\u0631 \u0631\u0626\u064A\u0633\u064A #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0646\u0645\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u0648\u0636\u0639 \u0627\u0644\u062A\u062E\u0637\u064A\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u0645\u0644\u0621 (\u064A\u0645\u0644\u0623 \u0627\u0644\u0646\u0635 \u0627\u0644\u062A\u062D\u062F\u064A\u062F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u0627\u0631\u062A\u0641\u0627\u0639 \u062B\u0627\u0628\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u062D\u062C\u0645 \u062B\u0627\u0628\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u0639\u0631\u0636 \u062B\u0627\u0628\u062A (\u0644\u0641 \u062A\u0644\u0642\u0627\u0626\u064A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062A\u062E\u0637\u064A\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u062A\u062D\u0630\u064A\u0631: \u0642\u062F \u064A\u062A\u0645 \u0627\u0633\u062A\u0628\u062F\u0627\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0635 \u0627\u0644\u062A\u064A \u062A\u0645 \u062A\u0643\u0648\u064A\u0646\u0647\u0627 \u064A\u062F\u0648\u064A\u064B\u0627.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16125,7 +17504,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Als Teil von projectFrameCut stellt es die grundlegenden Funktionen von projectFrameCut bereit.",
+        "Value": "Als Teil von projectFrameCut bietet es grundlegende Rendering- und Verarbeitungsf\u00E4higkeiten f\u00FCr projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16480,7 +17859,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Warnung: Das manuelle Konfigurieren dieser Effekte kann zu unerwarteten Ergebnissen f\u00FChren. Bitte \u00E4ndern Sie sie mit Vorsicht.",
+        "Value": "Warnung: Die manuelle Konfiguration dieser Effekte kann zu unerwarteten Ergebnissen f\u00FChren, und sie k\u00F6nnen \u00FCberschrieben werden. Bitte \u00E4ndern Sie sie vorsichtig.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17924,7 +19303,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Verh\u00E4ltnis",
+        "Value": "\u00DCbersetzungsverh\u00E4ltnis",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17960,7 +19339,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "In diesem Clip sind Keyframes vorhanden. Bearbeitungen hier wirken sich nur auf den Anfangswert aus.",
+        "Value": "Warnung: Das aktuelle Segment enth\u00E4lt Keyframes. Die Bearbeitung hier wirkt sich nur auf den Anfangswert aus.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17987,7 +19366,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Keine Keyframes vorhanden.",
+        "Value": "Unter diesem Effekt gibt es keine Keyframes.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18032,7 +19411,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Zur\u00FCcksetzen",
+        "Value": "Farbanpassung auf Standard zur\u00FCcksetzen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18050,7 +19429,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Jedes Fragment kann nur eine Mixture haben.",
+        "Value": "Jedes Segment darf nur einen Mischer enthalten.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18079,6 +19458,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "Text (Klassisch)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Keine verf\u00FCgbaren Effekte. Bitte \u00FCberpr\u00FCfen Sie Ihre Konfiguration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Alle Typen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Name des Sucheffekts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Kontinuierlicher Texteffekt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Im Editor konfigurieren...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Texteffekt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Vektorgrafik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Anti-Aliasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Standard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Keine",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Keyframe #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "Translation of \u0027\u5173\u952E\u5E27\u0027 to \u0027Keyframe\u0027 (common term in German software UI).",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Stil \u00E4ndern",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Layout-Modus",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "F\u00FCllen (Text f\u00FCllt Auswahl)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Feste H\u00F6he",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Feste Breite (automatischer Zeilenumbruch)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Feste Gr\u00F6\u00DFe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Layout zur\u00FCcksetzen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Warnung: Manuell konfigurierte Texteinstellungen k\u00F6nnen \u00FCberschrieben werden.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18135,7 +19703,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Como parte de projectFrameCut, proporciona las funciones b\u00E1sicas de projectFrameCut.",
+        "Value": "Como parte de projectFrameCut, proporciona las capacidades b\u00E1sicas de renderizado y procesamiento de projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18490,7 +20058,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Advertencia: Configurar manualmente estos efectos podr\u00EDa dar lugar a resultados inesperados. Modif\u00EDquelos con precauci\u00F3n.",
+        "Value": "Advertencia: La configuraci\u00F3n manual de estos efectos puede provocar resultados inesperados y podr\u00EDan ser sobrescritos. Modif\u00EDquelos con precauci\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19919,7 +21487,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Proporci\u00F3n",
+        "Value": "Relaci\u00F3n de transmisi\u00F3n",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19973,7 +21541,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "El segmento actual tiene fotogramas clave; la edici\u00F3n aqu\u00ED solo afectar\u00E1 el valor inicial.",
+        "Value": "Advertencia: el clip actual tiene fotogramas clave, la edici\u00F3n aqu\u00ED solo afectar\u00E1 al valor inicial.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20000,7 +21568,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "No hay fotogramas clave.",
+        "Value": "No hay fotogramas clave en este efecto.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20045,7 +21613,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Restablecer",
+        "Value": "Restablecer la paleta predeterminada",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20063,11 +21631,11 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Cada segmento solo puede tener un Mixture.",
+        "Value": "Cada fragmento solo puede tener un mezclador.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u9519\u8BEF\u6D88\u606F\uFF1A\u6BCF\u4E2A\u7247\u6BB5\u53EA\u80FD\u6709\u4E00\u4E2AMixture\u3002",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -20092,6 +21660,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "Texto (Cl\u00E1sico)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "No hay efectos disponibles. Revisa tu configuraci\u00F3n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Todos los tipos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Nombre del efecto de b\u00FAsqueda",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Efecto de continuidad del texto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Configurar en el editor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Efecto de texto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Antialiasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Gr\u00E1ficos vectoriales",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Predeterminado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Ninguno",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Fotograma clave #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Cambiar estilo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Altura fija",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Modo de dise\u00F1o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Tama\u00F1o fijo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Rellenar (texto que llena el \u00E1rea seleccionada)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Restablecer dise\u00F1o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Advertencia: estos ajustes de texto configurados manualmente podr\u00EDan ser sobrescritos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Ancho fijo (salto de l\u00EDnea autom\u00E1tico)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20148,7 +21905,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Come parte di projectFrameCut, fornisce le funzionalit\u00E0 di base di projectFrameCut.",
+        "Value": "Parte di projectFrameCut, fornisce le funzionalit\u00E0 di base di rendering e elaborazione di projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20503,7 +22260,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Attenzione: La configurazione manuale di questi effetti potrebbe portare a risultati imprevisti. Modificarli con cautela.",
+        "Value": "Avviso: la configurazione manuale di questi effetti potrebbe causare risultati imprevisti e potrebbero essere sovrascritti. Si prega di modificarli con cautela.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21983,7 +23740,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "rapporto",
+        "Value": "rapporto di variazione",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21992,7 +23749,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "Il segmento corrente contiene fotogrammi chiave; la modifica in questo punto influenzer\u00E0 solo il valore iniziale.",
+        "Value": "Avviso: il segmento corrente ha fotogrammi chiave. Le modifiche qui influenzeranno solo il valore iniziale.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22019,7 +23776,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Nessun fotogramma chiave.",
+        "Value": "Nessun fotogramma chiave per questo effetto.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22064,7 +23821,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Ripristina",
+        "Value": "Ripristina regolazione colore predefinita",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22082,7 +23839,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Ogni frammento pu\u00F2 avere solo un Mixture.",
+        "Value": "Ogni segmento pu\u00F2 avere un solo mixer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22111,6 +23868,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "Testo (classico)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Nessun effetto disponibile. Controlla la tua configurazione.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Tutti i tipi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Nome effetto ricerca",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Configura nell\u0027editor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u5728\u7F16\u8F91\u5668\u4E2D\u6253\u5F00\u914D\u7F6E\u754C\u9762",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Effetto testo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Effetto di continuit\u00E0 del testo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Antialiasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Predefinito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Grafica vettoriale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Fotogramma chiave #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Nessuno",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Modalit\u00E0 di layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Cambia stile",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Dimensione fissa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Larghezza fissa (a capo automatico)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Altezza fissa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Riempi (testo che riempie la selezione)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Reimposta layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Attenzione: le configurazioni di testo impostate manualmente potrebbero essere sovrascritte.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22167,7 +24113,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Jako cz\u0119\u015B\u0107 projectFrameCut, zapewnia podstawowe funkcje projectFrameCut.",
+        "Value": "Jako cz\u0119\u015B\u0107 projectFrameCut, zapewnia podstawowe mo\u017Cliwo\u015Bci renderowania i przetwarzania.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22522,7 +24468,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Ostrze\u017Cenie: R\u0119czne konfigurowanie tych efekt\u00F3w mo\u017Ce prowadzi\u0107 do nieoczekiwanych rezultat\u00F3w. Zmieniaj je ostro\u017Cnie.",
+        "Value": "Ostrze\u017Cenie: r\u0119czne skonfigurowanie tych efekt\u00F3w mo\u017Ce prowadzi\u0107 do nieoczekiwanych rezultat\u00F3w i mog\u0105 one zosta\u0107 nadpisane. Modyfikuj je ostro\u017Cnie.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23988,7 +25934,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Proporcja",
+        "Value": "Prze\u0142o\u017Cenie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24006,7 +25952,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "W bie\u017C\u0105cym segmencie znajduj\u0105 si\u0119 klatki kluczowe. Edycja w tym miejscu wp\u0142ynie tylko na warto\u015B\u0107 pocz\u0105tkow\u0105.",
+        "Value": "Ostrze\u017Cenie: bie\u017C\u0105cy segment zawiera klatki kluczowe, edycja w tym miejscu wp\u0142ynie tylko na warto\u015B\u0107 pocz\u0105tkow\u0105.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24033,7 +25979,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Brak kluczowych klatek.",
+        "Value": "W tym efekcie brak klatek kluczowych.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24078,7 +26024,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Resetuj",
+        "Value": "Resetuj domy\u015Blne kolory",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24096,7 +26042,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Ka\u017Cdy fragment mo\u017Ce mie\u0107 tylko jeden Mixture.",
+        "Value": "Ka\u017Cdy fragment mo\u017Ce mie\u0107 tylko jeden mikser.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24125,6 +26071,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "Tekst (klasyczny)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Brak dost\u0119pnych efekt\u00F3w. Sprawd\u017A swoj\u0105 konfiguracj\u0119.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Wszystkie typy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Efekt ci\u0105g\u0142o\u015Bci tekstu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Konfiguruj w edytorze...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Nazwa efektu wyszukiwania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Efekt tekstowy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Antyaliasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Grafika wektorowa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Domy\u015Blne",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Klatka kluczowa #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Zmie\u0144 styl",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Brak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Wype\u0142nienie (tekst wype\u0142nia zaznaczenie)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Tryb uk\u0142adu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Sta\u0142y rozmiar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Sta\u0142a wysoko\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Sta\u0142a szeroko\u015B\u0107 (automatyczne zawijanie)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Ostrze\u017Cenie: R\u0119cznie skonfigurowane ustawienia tekstu mog\u0105 zosta\u0107 nadpisane.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Resetuj uk\u0142ad",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24181,7 +26316,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "Como parte do projectFrameCut, fornece as funcionalidades b\u00E1sicas do projectFrameCut.",
+        "Value": "Como parte do projectFrameCut, fornece capacidade b\u00E1sica de renderiza\u00E7\u00E3o e processamento do projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24536,7 +26671,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Aviso: Configurar manualmente esses efeitos pode levar a resultados inesperados. Modifique-os com cuidado.",
+        "Value": "Aviso: Configurar manualmente esses efeitos pode levar a resultados inesperados, e eles podem ser substitu\u00EDdos. Por favor, modifique-os com cuidado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26008,7 +28143,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "Propor\u00E7\u00E3o",
+        "Value": "Rela\u00E7\u00E3o de transmiss\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26017,7 +28152,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "O segmento atual possui quadros-chave, e a edi\u00E7\u00E3o aqui afetar\u00E1 apenas o valor inicial.",
+        "Value": "Aviso: O segmento atual possui quadros-chave; a edi\u00E7\u00E3o aqui afetar\u00E1 apenas o valor inicial.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26044,7 +28179,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Nenhum quadro-chave.",
+        "Value": "Nenhum quadro-chave neste efeito no momento.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26089,7 +28224,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "Redefinir",
+        "Value": "Redefinir ajuste de cor padr\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26107,7 +28242,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Cada segmento pode ter apenas um Mixture.",
+        "Value": "Cada segmento s\u00F3 pode ter um mixer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26139,6 +28274,195 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Nenhum efeito dispon\u00EDvel. Verifique sua configura\u00E7\u00E3o.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Efeito de continuidade do texto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Configurar no editor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "Todos os tipos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Efeito de texto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Gr\u00E1fico vetorial",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Antialiasing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Nenhum",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Quadro-chave #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Alterar Estilo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "Modo de layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Altura Fixa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Preencher (texto preenche a sele\u00E7\u00E3o)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Tamanho fixo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Largura fixa (quebra autom\u00E1tica)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Redefinir layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Aviso: Essas configura\u00E7\u00F5es de texto configuradas manualmente podem ser sobrescritas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Nome do efeito de pesquisa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -26192,7 +28516,7 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u041A\u0430\u043A \u0447\u0430\u0441\u0442\u044C projectFrameCut, \u043F\u0440\u0435\u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 projectFrameCut.",
+        "Value": "\u041A\u0430\u043A \u0447\u0430\u0441\u0442\u044C projectFrameCut, \u043F\u0440\u0435\u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u0431\u0430\u0437\u043E\u0432\u044B\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430 \u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 projectFrameCut.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26547,7 +28871,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u0440\u0443\u0447\u043D\u0430\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u044D\u0442\u0438\u0445 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432 \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u043C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0438\u0437\u043C\u0435\u043D\u044F\u0439\u0442\u0435 \u0438\u0445 \u0441 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u043E\u0441\u0442\u044C\u044E.",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u0440\u0443\u0447\u043D\u0430\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u044D\u0442\u0438\u0445 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432 \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u044B\u043C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C, \u0438 \u043E\u043D\u0438 \u043C\u043E\u0433\u0443\u0442 \u0431\u044B\u0442\u044C \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u043D\u044B. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0438\u0437\u043C\u0435\u043D\u044F\u0439\u0442\u0435 \u0438\u0445 \u0441 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u043E\u0441\u0442\u044C\u044E.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27993,7 +30317,7 @@
       },
       {
         "Id": "Property_Ratio",
-        "Value": "\u0421\u043E\u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435",
+        "Value": "\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u043E\u0447\u043D\u043E\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28038,7 +30362,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "\u0412 \u0442\u0435\u043A\u0443\u0449\u0435\u043C \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0435 \u0435\u0441\u0442\u044C \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u043A\u0430\u0434\u0440\u044B, \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0434\u0435\u0441\u044C \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u043D\u0430\u0447\u0430\u043B\u044C\u043D\u044B\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u043A\u0430\u0434\u0440\u044B, \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0437\u0434\u0435\u0441\u044C \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u043D\u0430\u0447\u0430\u043B\u044C\u043D\u044B\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28065,7 +30389,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "\u041D\u0435\u0442 \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0445 \u043A\u0430\u0434\u0440\u043E\u0432.",
+        "Value": "\u0414\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u044D\u0444\u0444\u0435\u043A\u0442\u0430 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0445 \u043A\u0430\u0434\u0440\u043E\u0432.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28110,7 +30434,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "\u0421\u0431\u0440\u043E\u0441",
+        "Value": "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0446\u0432\u0435\u0442\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28128,7 +30452,7 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "\u041A\u0430\u0436\u0434\u044B\u0439 \u0441\u0435\u0433\u043C\u0435\u043D\u0442 \u043C\u043E\u0436\u0435\u0442 \u0441\u043E\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0434\u043D\u0443 \u0441\u043C\u0435\u0441\u044C.",
+        "Value": "\u041A\u0430\u0436\u0434\u044B\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u043C\u043E\u0436\u0435\u0442 \u0438\u043C\u0435\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0434\u0438\u043D \u043C\u0438\u043A\u0448\u0435\u0440.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28157,6 +30481,195 @@
       {
         "Id": "TextOption_TabTitle_Classic",
         "Value": "\u0422\u0435\u043A\u0441\u0442 (\u043A\u043B\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043A\u0438\u0439)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "\u041D\u0435\u0442 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0445 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044E.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u044D\u0444\u0444\u0435\u043A\u0442\u0430 \u043F\u043E\u0438\u0441\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "\u0412\u0441\u0435 \u0442\u0438\u043F\u044B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "\u042D\u0444\u0444\u0435\u043A\u0442 \u043D\u0435\u043F\u0440\u0435\u0440\u044B\u0432\u043D\u043E\u0441\u0442\u0438 \u0442\u0435\u043A\u0441\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0432 \u0440\u0435\u0434\u0430\u043A\u0442\u043E\u0440\u0435...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "\u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0439 \u044D\u0444\u0444\u0435\u043A\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "\u0412\u0435\u043A\u0442\u043E\u0440\u043D\u0430\u044F \u0433\u0440\u0430\u0444\u0438\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "\u0421\u0433\u043B\u0430\u0436\u0438\u0432\u0430\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "\u041F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "\u041D\u0435\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "\u041A\u043B\u044E\u0447\u0435\u0432\u043E\u0439 \u043A\u0430\u0434\u0440 #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0441\u0442\u0438\u043B\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "\u0417\u0430\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 (\u0442\u0435\u043A\u0441\u0442 \u0437\u0430\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u043D\u0443\u044E \u043E\u0431\u043B\u0430\u0441\u0442\u044C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "\u0420\u0435\u0436\u0438\u043C \u043C\u0430\u043A\u0435\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u0432\u044B\u0441\u043E\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u0448\u0438\u0440\u0438\u043D\u0430 (\u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u0435\u0440\u0435\u043D\u043E\u0441)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u044D\u0442\u0438 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438, \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u0435 \u0432\u0440\u0443\u0447\u043D\u0443\u044E, \u043C\u043E\u0433\u0443\u0442 \u0431\u044B\u0442\u044C \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u043D\u044B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043C\u0430\u043A\u0435\u0442",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28213,11 +30726,11 @@
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "projectFrameCut\u0027\u00FCn bir par\u00E7as\u0131 olarak, projectFrameCut\u0027\u0131n temel i\u015Flevlerini sa\u011Flar",
+        "Value": "projectFrameCut\u0027\u0131n bir par\u00E7as\u0131 olarak, projectFrameCut\u0027\u0131n temel render ve i\u015Fleme yeteneklerini sa\u011Flar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Do not translate \u0027projectFrameCut\u0027, it\u0027s the app name",
         "DontTranslate": false
       },
       {
@@ -28568,7 +31081,7 @@
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Uyar\u0131: Bu efektleri manuel olarak yap\u0131land\u0131rmak beklenmeyen sonu\u00E7lara yol a\u00E7abilir. L\u00FCtfen bunlar\u0131 dikkatlice de\u011Fi\u015Ftirin.",
+        "Value": "Uyar\u0131: Bu efektleri manuel olarak yap\u0131land\u0131rmak beklenmeyen sonu\u00E7lara yol a\u00E7abilir ve bunlar \u00FCzerine yaz\u0131labilir. L\u00FCtfen bunlar\u0131 dikkatlice de\u011Fi\u015Ftirin.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30051,7 +32564,7 @@
       },
       {
         "Id": "KeyFrame_EditWarning",
-        "Value": "Ge\u00E7erli klipte anahtar kareler var, buradaki d\u00FCzenleme yaln\u0131zca ba\u015Flang\u0131\u00E7 de\u011Ferini etkiler.",
+        "Value": "Uyar\u0131: Ge\u00E7erli par\u00E7ada anahtar kareler var, buradaki d\u00FCzenleme yaln\u0131zca ba\u015Flang\u0131\u00E7 de\u011Ferini etkileyecektir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30078,7 +32591,7 @@
       },
       {
         "Id": "KeyFrame_Empty",
-        "Value": "Anahtar kare yok.",
+        "Value": "Bu efekt alt\u0131nda hen\u00FCz anahtar kare yok.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30123,7 +32636,7 @@
       },
       {
         "Id": "ColorAdjustment_Reset",
-        "Value": "S\u0131f\u0131rla",
+        "Value": "Varsay\u0131lan renk ayar\u0131n\u0131 s\u0131f\u0131rla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30141,11 +32654,10 @@
       },
       {
         "Id": "Mixture_ErrSingle",
-        "Value": "Her segmentte yaln\u0131zca bir Mixture olabilir.",
+        "Value": "Her segmentte yaln\u0131zca bir mikser olabilir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -30174,6 +32686,195 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Add_Effect_None",
+        "Value": "Hi\u00E7bir mevcut efekt yok. L\u00FCtfen yap\u0131land\u0131rman\u0131z\u0131 kontrol edin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search",
+        "Value": "Arama Etkisi Ad\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Add_Search_Any",
+        "Value": "T\u00FCm T\u00FCrler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ProgressPlacer_OpenEditor",
+        "Value": "Edit\u00F6rde yap\u0131land\u0131r...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ContinuousTextEffect",
+        "Value": "Metin S\u00FCreklilik Efekti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_TextEffect",
+        "Value": "Metin Efekti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip",
+        "Value": "Vekt\u00F6r grafikleri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode",
+        "Value": "Kenar Yumu\u015Fatma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_Default",
+        "Value": "Varsay\u0131lan",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorClip_AAMode_None",
+        "Value": "Yok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "KeyFrame_Progress",
+        "Value": "Anahtar kare #{i} ({p:p2})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "double",
+            "Value": "p"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "p",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ChangeStyle",
+        "Value": "Stili De\u011Fi\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode",
+        "Value": "D\u00FCzen modu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FillClip",
+        "Value": "Doldur (Metin alan\u0131n\u0131 doldurma)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedHeight",
+        "Value": "Sabit Y\u00FCkseklik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedSize",
+        "Value": "Sabit Boyut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_ReLayout",
+        "Value": "Yerle\u015Fimi s\u0131f\u0131rla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_LayoutMode_FixedWidth",
+        "Value": "Sabit Geni\u015Flik (Otomatik Sat\u0131r Kayd\u0131rma)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TextOption_TabTitle_Classic_Warn",
+        "Value": "Uyar\u0131: Bu manuel olarak yap\u0131land\u0131r\u0131lan metin ayarlar\u0131 \u00FCzerine yaz\u0131labilir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u7684\u8FD9\u4E9B\u6587\u672C\u914D\u7F6E\u53EF\u80FD\u4F1A\u88AB\u8986\u76D6\u3002",
         "DontTranslate": false
       }
     ]

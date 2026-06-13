@@ -330,7 +330,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                             {
                                 new Label
                                 {
-                                    Text = LocalizedResources.APIBaseLocalizedResources.Localized.TabView_Error(SelectedItem?.Header?.ToString() ?? "Unknown tab"),
+                                    Text = Localize.APIBaseLocalizedResources.Localized.TabView_Error(SelectedItem?.Header?.ToString() ?? "Unknown tab"),
                                     FontSize = 20,
                                     TextColor = Colors.Yellow,
                                     HorizontalOptions = LayoutOptions.Center,

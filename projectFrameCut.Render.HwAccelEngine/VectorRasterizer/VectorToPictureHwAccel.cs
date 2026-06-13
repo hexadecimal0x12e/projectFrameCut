@@ -15,7 +15,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
     {
         /// <summary>Convert a vector picture to a raster IPicture using hardware acceleration when available.</summary>
         public IPicture Convert(VectorPicture canvas, int width, int height,
-            bool transparentBackground = false, AntiAliasMode aaMode = AntiAliasMode.None)
+            bool transparentBackground = false, AntiAliasMode aaMode = AntiAliasMode.None, CancellationToken ct = default)
         {
             if (width <= 0 || height <= 0)
                 throw new ArgumentOutOfRangeException($"Canvas size must be positive. Got {width}x{height}.");
@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             return result;
 #else
             // Platform without GPU compute backend — fall back to CPU
-            return new CPUVectorPictureRasterizer().Convert(canvas, width, height, transparentBackground, aaMode);
+            return new CPUVectorPictureRasterizer().Convert(canvas, width, height, transparentBackground, aaMode, ct);
 #endif
         }
 

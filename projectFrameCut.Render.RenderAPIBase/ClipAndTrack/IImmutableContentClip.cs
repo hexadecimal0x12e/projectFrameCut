@@ -24,10 +24,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         VectorPicture IVectorContentClip.GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight)
             => GetVectorPicture(requiredWidth, requiredHeight);
 
-
         IPicture IImmutableContentClip.GetContent(int width, int height, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
-            return VectorToIPicture.Convert(GetVectorPicture(height, height), width, height, forceResize, GlobalDefaultAntiAliasMode).ToBitPerPixel(targetPPB);
+            return GlobalDefaultRasterizer.Convert(GetVectorPicture(width, height), width, height, forceResize, GlobalDefaultAntiAliasMode).ToBitPerPixel(targetPPB);
         }
     }
 }

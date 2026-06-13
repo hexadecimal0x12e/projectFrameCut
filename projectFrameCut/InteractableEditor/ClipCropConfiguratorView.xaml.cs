@@ -55,6 +55,24 @@ public partial class ClipCropConfiguratorView : ContentView
         BindingMode.TwoWay,
         propertyChanged: OnAnyBindablePropertyChanged);
 
+    public static readonly BindableProperty DisableMoveProperty = BindableProperty.Create(
+        nameof(DisableMove),
+        typeof(bool),
+        typeof(ClipCropConfiguratorView),
+        false);
+
+    public static readonly BindableProperty DisableHorizontalResizeProperty = BindableProperty.Create(
+        nameof(DisableHorizontalResize),
+        typeof(bool),
+        typeof(ClipCropConfiguratorView),
+        false);
+
+    public static readonly BindableProperty DisableVerticalResizeProperty = BindableProperty.Create(
+        nameof(DisableVerticalResize),
+        typeof(bool),
+        typeof(ClipCropConfiguratorView),
+        false);
+
     public static readonly BindableProperty StartXProperty = BindableProperty.Create(
         nameof(StartX),
         typeof(int),
@@ -117,6 +135,24 @@ public partial class ClipCropConfiguratorView : ContentView
     {
         get => (bool)GetValue(EnabledProperty);
         set => SetValue(EnabledProperty, value);
+    }
+
+    public bool DisableMove
+    {
+        get => (bool)GetValue(DisableMoveProperty);
+        set => SetValue(DisableMoveProperty, value);
+    }
+
+    public bool DisableHorizontalResize
+    {
+        get => (bool)GetValue(DisableHorizontalResizeProperty);
+        set => SetValue(DisableHorizontalResizeProperty, value);
+    }
+
+    public bool DisableVerticalResize
+    {
+        get => (bool)GetValue(DisableVerticalResizeProperty);
+        set => SetValue(DisableVerticalResizeProperty, value);
     }
 
     public int StartX
@@ -637,7 +673,7 @@ public partial class ClipCropConfiguratorView : ContentView
 
     private void OnSelectionPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        if (!Enabled)
+        if (!Enabled || DisableMove)
         {
             return;
         }
@@ -738,6 +774,9 @@ public partial class ClipCropConfiguratorView : ContentView
 
         double dx = totalX * workspaceW / viewport.Width;
         double dy = totalY * workspaceH / viewport.Height;
+
+        if (DisableHorizontalResize) dx = 0;
+        if (DisableVerticalResize) dy = 0;
 
         double x = _dragStartX;
         double y = _dragStartY;

@@ -30,7 +30,7 @@ using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
 using System.Reflection;
 using projectFrameCut.Drawing.Base;
-
+using projectFrameCut.Render.HwAccelEngine;
 
 
 
@@ -38,8 +38,7 @@ using projectFrameCut.Drawing.Base;
 
 
 #if ANDROID
-using projectFrameCut.Render.AndroidOpenGL;
-using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
 #endif

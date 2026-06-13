@@ -150,7 +150,7 @@ public class DraftSettingPage
                     })
                 };
 
-                ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
+                ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
 
                 var clearOldHistoryButton = new Button
                 {

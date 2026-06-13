@@ -21,6 +21,17 @@ namespace projectFrameCut.Render.Effect
         private bool _computerResolved;
 
         private static readonly BilinearPictureResizer _cpuFallback = new();
+        private readonly CancellationToken _cancellationToken;
+
+        public HwAccelPictureResizer()
+            : this(CancellationToken.None)
+        {
+        }
+
+        public HwAccelPictureResizer(CancellationToken cancellationToken)
+        {
+            _cancellationToken = cancellationToken;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private IComputer? GetComputer()
@@ -71,7 +82,10 @@ namespace projectFrameCut.Render.Effect
         {
             var computer = GetComputer();
             if (computer == null)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
                 return (Picture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+            }
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -85,6 +99,8 @@ namespace projectFrameCut.Render.Effect
             var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
+
+            _cancellationToken.ThrowIfCancellationRequested();
 
             float[] r = ConvertToFloat(source.r);
             float[] g = ConvertToFloat(source.g);
@@ -106,6 +122,8 @@ namespace projectFrameCut.Render.Effect
             IPicture? result = null;
             try
             {
+                _cancellationToken.ThrowIfCancellationRequested();
+
                 // Pass 16 as pixel-type hint so the computer can return ushort[] for RGB directly
                 var resultArr = computer.Compute(new object[]
                 {
@@ -117,6 +135,8 @@ namespace projectFrameCut.Render.Effect
 
                 if (resultArr.Length != 4)
                     throw new InvalidOperationException("Accelerator didn't return the expected 4 arrays.");
+
+                _cancellationToken.ThrowIfCancellationRequested();
 
                 result = new Picture16bpp(destW, destH)
                 {
@@ -183,7 +203,10 @@ namespace projectFrameCut.Render.Effect
         {
             var computer = GetComputer();
             if (computer == null)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
                 return (Picture8bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+            }
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -197,6 +220,8 @@ namespace projectFrameCut.Render.Effect
             var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
+
+            _cancellationToken.ThrowIfCancellationRequested();
 
             float[] r = ConvertToFloat(source.r);
             float[] g = ConvertToFloat(source.g);
@@ -295,7 +320,10 @@ namespace projectFrameCut.Render.Effect
         {
             var computer = GetComputer();
             if (computer == null)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
                 return (HDRPicture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
+            }
 
             var sw = Stopwatch.StartNew();
             if (targetWidth == source.Width && targetHeight == source.Height)
@@ -309,6 +337,8 @@ namespace projectFrameCut.Render.Effect
             var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
+
+            _cancellationToken.ThrowIfCancellationRequested();
 
             float[] r = ConvertToFloat(source.r);
             float[] g = ConvertToFloat(source.g);
@@ -330,6 +360,8 @@ namespace projectFrameCut.Render.Effect
             HDRPicture16bpp? result = null;
             try
             {
+                _cancellationToken.ThrowIfCancellationRequested();
+
                 var resultArr = computer.Compute(new object[]
                 {
                     r, g, b, a,
@@ -340,6 +372,8 @@ namespace projectFrameCut.Render.Effect
 
                 if (resultArr.Length != 4)
                     throw new InvalidOperationException("Accelerator didn't return the expected 4 arrays.");
+
+                _cancellationToken.ThrowIfCancellationRequested();
 
                 int dstPixels = checked(destW * destH);
                 result = new HDRPicture16bpp(destW, destH)
@@ -375,11 +409,13 @@ namespace projectFrameCut.Render.Effect
 
                 // Interpolate brightness channel on CPU (bilinear) since the GPU computer
                 // only handles the RGBA channels.
+                _cancellationToken.ThrowIfCancellationRequested();
+
                 float[]? sourceBrightness = source.Brightness;
                 if (sourceBrightness != null && sourceBrightness.Length == source.Pixels)
                 {
                     result.Brightness = InterpolateBrightness(
-                        sourceBrightness, source.Width, source.Height, destW, destH);
+                        sourceBrightness, source.Width, source.Height, destW, destH, _cancellationToken);
                 }
                 else
                 {
@@ -415,7 +451,8 @@ namespace projectFrameCut.Render.Effect
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static float[] InterpolateBrightness(
-            float[] srcBrightness, int srcW, int srcH, int dstW, int dstH)
+            float[] srcBrightness, int srcW, int srcH, int dstW, int dstH,
+            CancellationToken cancellationToken = default)
         {
             var result = new float[dstW * dstH];
             double xRatio = (double)srcW / dstW;
@@ -423,6 +460,9 @@ namespace projectFrameCut.Render.Effect
 
             for (int y = 0; y < dstH; y++)
             {
+                if ((y & 0xF) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+
                 double srcY = (y + 0.5) * yRatio - 0.5;
                 int y0 = (int)Math.Floor(srcY);
                 int y1 = y0 + 1;

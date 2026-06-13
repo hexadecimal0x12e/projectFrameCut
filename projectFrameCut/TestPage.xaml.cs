@@ -39,6 +39,9 @@ using projectFrameCut.Drawing.Text.FontHelper;
 using System.Text.Json.Serialization;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
+using projectFrameCut.Drawing.Text.Entry;
+
+
 
 
 
@@ -51,6 +54,7 @@ using projectFrameCut.Render.HwAccelEngine;
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 
 #endif
 
@@ -238,7 +242,7 @@ public partial class TestPage : ContentPage
 
                 var tcsA = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var alphaGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var alphaGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderAlphaSrc,
                     Inputs = new float[][]
@@ -256,7 +260,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (alphaGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (alphaGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -287,7 +291,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsA.TrySetResult(res);
                             }
                         }
@@ -312,7 +316,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsR = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var RGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var RGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -332,7 +336,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (RGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (RGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -363,7 +367,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsR.TrySetResult(res);
                             }
                         }
@@ -394,7 +398,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsG = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var GGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var GGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -414,7 +418,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (GGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (GGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -445,7 +449,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsG.TrySetResult(res);
                             }
                         }
@@ -475,7 +479,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsB = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var BGLView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var BGLView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -496,7 +500,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (BGLView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (BGLView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -527,7 +531,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsB.TrySetResult(res);
                             }
                         }
@@ -695,16 +699,17 @@ public partial class TestPage : ContentPage
             };
             w.Initialize();
             TextClip c = new TextClip { Id = "1", Name = "1" };
-            TextClipEntry te = new TextClipEntry
+            TextEntry te = new TextEntry
             {
-                r = 65535,
-                g = 65535,
-                b = 65535,
-                a = 65535,
-                fontFamily = "Arial",
-                x = 50,
-                y = 50,
-                fontSize = 120,
+                FillR = 65535,
+                FillG = 65535,
+                FillB = 65535,
+                FillA = 1f,
+                FontName = "Arial",
+                X = 50,
+                Y = 50,
+                FontSize = 120,
+                Text = "",
             };
             f.Brightness = new float[f.Pixels];
             for (int idx = 0; idx < f.Pixels; idx++)
@@ -727,7 +732,7 @@ public partial class TestPage : ContentPage
 
             for (int i = 0; i < 1; i++)
             {
-                c.TextEntries = [te with { text = $"Frame {i}" }];
+                c.TextEntries = [te with { Text = $"Frame {i}" }];
                 var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
                 textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
@@ -959,8 +964,8 @@ public partial class TestPage : ContentPage
     {
 
 #if ANDROID
-        Render.AndroidOpenGL.ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
-        Render.AndroidOpenGL.ComputerHelper.Init();
+        ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
+        ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS

@@ -1,6 +1,6 @@
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 
@@ -29,16 +29,16 @@ namespace projectFrameCut.Render.Effect
 
         public bool IsReorderable => false;
 
-        public TextClipEntry[] Process(TextClipEntry[] source, float progress)
+        public TextEntry[] Process(TextEntry[] source, float progress)
         {
             float alpha = Math.Clamp(progress, 0f, 1f);
 
-            var result = new TextClipEntry[source.Length];
+            var result = new TextEntry[source.Length];
             for (int i = 0; i < source.Length; i++)
             {
                 result[i] = source[i] with
                 {
-                    a = (source[i].a ?? 1f) * alpha
+                    FillA = source[i].FillA * alpha
                 };
             }
             return result;

@@ -1607,14 +1607,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var fontOverride = textLang switch
             {
-                TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
-                TextLanguage.Japanese => "Noto Sans JP",
-                TextLanguage.Korean => "Noto Sans KR",
-                TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
+                TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
+                TextLanguage.Japanese => "Noto Sans JP Regular",
+                TextLanguage.Korean => "Noto Sans KR Regular",
+                TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
                 _ => "Noto Sans"
             };
             entries = entries
-                .Select(e => e.fontFamily == "Arial" ? e with { fontFamily = fontOverride } : e)
+                .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
                 .ToArray();
         }
 
@@ -3385,10 +3385,10 @@ public class TextStyleItemViewModel
                 {
                     Id = Id,
                     Name = Id,
-                    TextEntries = new List<TextClipEntry>
+                    TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                     {
                         ActualTemplate with { text = sample }
-                    }
+                    })
                 };
 
                 var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
@@ -3431,21 +3431,7 @@ public class TextStyleProviderItemViewModel
                 var entries = Provider.BuildEntries();
                 if (entries.Length == 0)
                 {
-                    entries = new[]
-                    {
-                        new TextClipEntry
-                        {
-                            text = BasicText ?? "AaBbYyZz",
-                            x = 0,
-                            y = 0,
-                            fontFamily = "Arial",
-                            fontSize = 36,
-                            r = 65535,
-                            g = 65535,
-                            b = 65535,
-                            a = 1f
-                        }
-                    };
+                    return null!;
                 }
 
                 TextClip t = new TextClip
@@ -3455,8 +3441,8 @@ public class TextStyleProviderItemViewModel
                     TextEntries = entries.ToList()
                 };
 
-                var maxFontSize = entries.Max(e => e.fontSize > 0 ? e.fontSize : 36f);
-                var sample = entries.OrderByDescending(e => e.text?.Length ?? 0).FirstOrDefault()?.text ?? BasicText ?? "AaBbYyZz";
+                var maxFontSize = entries.Max(e => e.FontSize > 0 ? e.FontSize : 36f);
+                var sample = entries.OrderByDescending(e => e.Text?.Length ?? 0).FirstOrDefault()?.Text ?? BasicText ?? "AaBbYyZz";
                 var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
                 var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
 

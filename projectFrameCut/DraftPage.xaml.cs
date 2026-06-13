@@ -71,8 +71,8 @@ using projectFrameCut.MetalAccelerater;
 #endif
 
 #if ANDROID
-using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
-using projectFrameCut.Render.AndroidOpenGL;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine;
 using Microsoft.Maui.Platform;
 #endif
 
@@ -207,6 +207,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public InteractableEditor.InteractableEditor ClipEditor;
     public InteractableEditor.DynamicPreview DynamicPreviewProvider;
     private CancellationTokenSource? _dynamicPreviewCts;
+    private readonly object _dynamicPreviewCtsLock = new();
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
     public ProjectAddClipView AddClipView = null!;
 
@@ -6948,6 +6949,31 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #region live preview
     SemaphoreSlim renderingLock = new(1, 1);
+    private CancellationTokenSource? _renderOneFrameCts;
+    private readonly object _renderCtsLock = new();
+
+    private CancellationToken ResetDynamicPreviewToken()
+    {
+        lock (_dynamicPreviewCtsLock)
+        {
+            _dynamicPreviewCts?.Cancel();
+            // Intentionally not disposed here: an in-flight preparation task may still observe the
+            // token. Disposing eagerly raced with that observer and surfaced as random
+            // ObjectDisposedExceptions that left the preview stuck on a black frame. This CTS uses no
+            // timer, so letting the GC reclaim it is safe.
+            _dynamicPreviewCts = new CancellationTokenSource();
+            return _dynamicPreviewCts.Token;
+        }
+    }
+
+    private void CancelDynamicPreview()
+    {
+        lock (_dynamicPreviewCtsLock)
+        {
+            _dynamicPreviewCts?.Cancel();
+        }
+    }
+
     private async Task RefreshPreviewFromCurrentProviderAsync()
     {
         if (UseDynamicPreview)
@@ -6961,11 +6987,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task<bool> RefreshDynamicPreviewOverlay()
     {
-        // 取消任何正在进行的预览准备操作
-        _dynamicPreviewCts?.Cancel();
-        _dynamicPreviewCts?.Dispose();
-        _dynamicPreviewCts = new CancellationTokenSource();
-        var token = _dynamicPreviewCts.Token;
+        // 取消任何正在进行的预览准备操作。重建令牌的过程串行化，避免并发 Dispose 触发
+        // ObjectDisposedException（这是预览高概率卡在黑屏的根因之一）。
+        var token = ResetDynamicPreviewToken();
 
         try
         {
@@ -6994,15 +7018,36 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
-        await renderingLock.WaitAsync();
-        _currentFrame = duration;
-        SyncClipEditorCurrentFrame();
+        // Supersede any in-flight render BEFORE waiting on the lock so the current holder aborts and
+        // releases it promptly, and surface feedback immediately so the status bar always shows that a
+        // render was requested — even while we are still queued behind another render.
+        var cts = new CancellationTokenSource();
+        CancellationTokenSource? previousCts;
+        lock (_renderCtsLock)
+        {
+            previousCts = _renderOneFrameCts;
+            _renderOneFrameCts = cts;
+        }
+        previousCts?.Cancel();
+        CancelDynamicPreview();
+
         SetStateBusy();
         SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
+
+        await renderingLock.WaitAsync();
         try
         {
-            using var cts = new CancellationTokenSource();
-#if !DEBUG
+            // A newer render request arrived while we waited for the lock; drop this one quietly.
+            if (cts.IsCancellationRequested) return;
+
+            _currentFrame = duration;
+            SyncClipEditorCurrentFrame();
+
+            // Always keep a hard timeout (even in DEBUG) so a wedged render can never hold the lock
+            // forever — otherwise every later playhead click would silently block on WaitAsync.
+#if DEBUG
+            cts.CancelAfter(60000);
+#else
             cts.CancelAfter(10000);
 #endif
             var targetWidth = width ?? previewWidth;
@@ -7065,7 +7110,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch (OperationCanceledException)
         {
-            SetStateFail(Localized.DraftPage_RenderTimeout);
+            // Superseded by a newer request → stay silent and let that request own the UI.
+            // Only report a timeout when this render is still the active one.
+            bool superseded;
+            lock (_renderCtsLock)
+            {
+                superseded = !ReferenceEquals(_renderOneFrameCts, cts);
+            }
+            if (!superseded)
+            {
+                SetStateFail(Localized.DraftPage_RenderTimeout);
+            }
         }
         catch (Exception ex)
         {
@@ -7079,6 +7134,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         finally
         {
+            lock (_renderCtsLock)
+            {
+                if (ReferenceEquals(_renderOneFrameCts, cts))
+                {
+                    _renderOneFrameCts = null;
+                }
+            }
+            cts.Dispose();
             renderingLock.Release();
         }
     }
@@ -7945,15 +8008,22 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SyncClipEditorCurrentFrame();
                 UpdatePlayheadPosition();
                 CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(duration * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
+
+                // Debounce overlapping clicks so only the latest playhead position is rendered. The
+                // playhead/label above already moved synchronously; RenderOneFrame additionally
+                // supersedes any in-flight render so a burst of clicks can never wedge the preview.
+                _movePlayheadDebounceCts?.Cancel();
+                _movePlayheadDebounceCts = new CancellationTokenSource();
+                var renderToken = _movePlayheadDebounceCts.Token;
                 try
                 {
-                    await RenderOneFrame(duration);
+                    await Task.Delay(120, renderToken);
+                    if (!renderToken.IsCancellationRequested)
+                    {
+                        await RenderOneFrame(duration);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Render frame {ex}", this);
-                    await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), Localized._OK);
-                }
+                catch (TaskCanceledException) { }
             }
         }
         catch (Exception ex)
@@ -8796,10 +8866,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 "Debug_ReRenderLivePreview", new Command(async () =>
                 {
-                    _dynamicPreviewCts?.Cancel();
-                    _dynamicPreviewCts?.Dispose();
-                    _dynamicPreviewCts = new CancellationTokenSource();
-                    var token = _dynamicPreviewCts.Token;
+                    var token = ResetDynamicPreviewToken();
                     var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, ClipEditor.Width, ClipEditor.Height, token);
                     token.ThrowIfCancellationRequested();
                     ClipEditor.ApplyPreparedPreviews(preparedPreviews);

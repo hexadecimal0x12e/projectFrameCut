@@ -1,11 +1,12 @@
 ﻿using Microsoft.Win32;
+using projectFrameCut.WinUI;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using static projectFrameCut.Drawing.Base.IPicture;
 
-namespace projectFrameCut.WinUI
+namespace projectFrameCut.Platforms.Windows
 {
     internal static class ConfigHandler
     {

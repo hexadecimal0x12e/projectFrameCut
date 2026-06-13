@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -89,8 +90,8 @@ namespace projectFrameCut.Render.Benchmark
                     SecondPerFrameRatio = 1f,
                     TextEntries =
                     [
-                        new TextClipEntry("projectFrameCut Benchmark", 80, 80, "Arial", 72, 65535, 65535, 65535, 1.0f),
-                        new TextClipEntry("SolidColorClip + Effects", 90, 180, "Arial", 44, 65535, 50000, 20000, 1.0f),
+                        new TextEntry { Text = "projectFrameCut Benchmark", X = 80, Y = 80, FontName = "Arial", FontSize = 72, FillR = 65535, FillG = 65535, FillB = 65535, FillA = 1.0f },
+                        new TextEntry { Text = "SolidColorClip + Effects", X = 90, Y = 180, FontName = "Arial", FontSize = 44, FillR = 65535, FillG = 50000, FillB = 20000, FillA = 1.0f },
                     ],
                     Effects =
                     [
@@ -138,8 +139,8 @@ namespace projectFrameCut.Render.Benchmark
                     SecondPerFrameRatio = 1f,
                     TextEntries =
                     [
-                        new TextClipEntry("基准测试", 520, 420, "HarmonyOS_Sans_SC_Regular", 120, 65535, 40000, 8000, 1.0f),
-                        new TextClipEntry("ZoomIn / Crop / Resize", 500, 560, "HarmonyOS_Sans_SC_Regular", 52, 50000, 65535, 50000, 1.0f),
+                        new TextEntry { Text = "基准测试", X = 520, Y = 420, FontName = "HarmonyOS_Sans_SC_Regular", FontSize = 120, FillR = 65535, FillG = 40000, FillB = 8000, FillA = 1.0f },
+                        new TextEntry { Text = "ZoomIn / Crop / Resize", X = 500, Y = 560, FontName = "HarmonyOS_Sans_SC_Regular", FontSize = 52, FillR = 50000, FillG = 65535, FillB = 50000, FillA = 1.0f },
                     ],
                     Effects =
                     [

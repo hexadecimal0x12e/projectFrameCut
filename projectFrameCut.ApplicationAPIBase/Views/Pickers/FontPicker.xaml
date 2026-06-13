@@ -2,7 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
-             xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.LocalizedResources"
+             xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.Localize"
              xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers"
              x:Class="projectFrameCut.ApplicationAPIBase.Views.Pickers.FontPicker"
              x:Name="Root">

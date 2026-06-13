@@ -24,6 +24,7 @@ using System.Text.Unicode;
 using TinyPinyin;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 
 namespace projectFrameCut.Services
 {
@@ -55,7 +56,7 @@ namespace projectFrameCut.Services
                 };
                 var engine = new NormalTypesettingEngine();
                 var vectorCanvas = engine.Layout(textEntry, fontFace);
-                var picture = VectorToIPicture.Convert(vectorCanvas, 640, 480, transparentBackground: false, aaMode: AntiAliasMode.SSAA8x);
+                var picture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, 640, 480, transparentBackground: false, aaMode: AntiAliasMode.SSAA8x);
                 return picture.ToBitPerPixel(8);
             }
             catch
@@ -118,7 +119,7 @@ namespace projectFrameCut.Services
                         textEntry.FillR = textEntry.FillG = textEntry.FillB = 65535;
                     }
                     var vectorCanvas = engine.Layout(textEntry, fontFace);
-                    var picture = VectorToIPicture.Convert(vectorCanvas, width, height, transparentBackground: true, aaMode: AntiAliasMode.SSAA8x);
+                    var picture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, width, height, transparentBackground: true, aaMode: AntiAliasMode.SSAA8x);
 
                     picture.SaveToPng(cachePath);
 

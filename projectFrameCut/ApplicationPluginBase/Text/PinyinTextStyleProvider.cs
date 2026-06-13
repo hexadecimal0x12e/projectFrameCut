@@ -15,6 +15,8 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks.Text;
+using TextAlignment = projectFrameCut.Drawing.Text.Entry.TextAlignment;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -28,11 +30,14 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         protected const string PinyinColorKey = "PinyinColor";
         protected const string SpacingKey = "CharSpacing";
         public const string ManualSizeKey = "PinyinManualSize";
+        public const string LayoutModeKey = "LayoutMode";
+        protected const string WrappingWidthKey = "WrappingWidth";
 
         private Dictionary<string, string> _parameters = new();
 
         public PinyinTextStyleProvider()
         {
+            BasicText = DefaultText;
             EnsureDefaults();
         }
 
@@ -48,11 +53,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         protected virtual int DefaultSpacing => 8;
 
-        public string BasicText
-        {
-            get => GetOrDefault(TextKey, DefaultText);
-            set => _parameters[TextKey] = value ?? string.Empty;
-        }
+        public string BasicText { get; set; }
 
         public Dictionary<string, string> Parameters
         {
@@ -61,16 +62,59 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             {
                 _parameters = value ?? new Dictionary<string, string>();
                 EnsureDefaults();
+                if (_parameters.TryGetValue(TextKey, out var t) && !string.IsNullOrWhiteSpace(t))
+                    BasicText = t;
             }
         }
 
-        public bool AllowFreeRatioResize => true;
+        public bool AllowFreeRatioResize => LayoutMode switch
+        {
+            TextClipLayoutMode.FixedSize => false,
+            _ => true,
+        };
 
-        public TextClipEntry[] BuildEntries()
+        public bool IsHorizontalResizable => LayoutMode switch
+        {
+            TextClipLayoutMode.FixedSize or TextClipLayoutMode.FixedHeight => false,
+            _ => true,
+        };
+
+        public bool IsVerticalResizable => LayoutMode switch
+        {
+            TextClipLayoutMode.FixedSize or TextClipLayoutMode.FixedWidth => false,
+            _ => true,
+        };
+
+        public bool CanSnapWhileResizing => LayoutMode switch
+        {
+            TextClipLayoutMode.FixedSize or TextClipLayoutMode.FixedWidth or TextClipLayoutMode.FixedHeight => false,
+            _ => true,
+        };
+
+        public TextClipLayoutMode LayoutMode
+        {
+            get => ParseLayoutMode(GetOrDefault(LayoutModeKey, "FillClip"), TextClipLayoutMode.FillClip);
+            set
+            {
+                var oldMode = LayoutMode;
+                _parameters[LayoutModeKey] = value.ToString();
+
+                if (oldMode != value && value == TextClipLayoutMode.FixedWidth)
+                {
+                    if (!_parameters.ContainsKey(WrappingWidthKey) || string.IsNullOrWhiteSpace(_parameters[WrappingWidthKey]))
+                    {
+                        var measured = MeasureEntries(BuildEntries());
+                        _parameters[WrappingWidthKey] = Math.Max(100, (int)Math.Ceiling(measured.Width)).ToString(CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+        }
+
+        public TextEntry[] BuildEntries()
         {
             var text = BasicText;
             if (string.IsNullOrWhiteSpace(text))
-                return Array.Empty<TextClipEntry>();
+                return Array.Empty<TextEntry>();
 
             var fontFamily = GetOrDefault(FontKey, "HarmonyOS Sans SC");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
@@ -89,94 +133,136 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var baseLineY = hasHanCharacters
                 ? (int)Math.Ceiling(pinyinBlockHeight + Math.Max(8f, pinyinFontSize * 0.18f))
                 : 0;
-            var entries = new List<TextClipEntry>();
-            var currentX = 0;
-            var sentenceLanguage = TextHelper.DetectTextLanguage(text);
-            foreach (var c in text)
+
+            if (LayoutMode == TextClipLayoutMode.FixedWidth)
             {
-                var isCJK = IsCJKCharacter(c);
-                if (isCJK)
+                var ww = ParseNullableFloat(GetOrDefault(WrappingWidthKey, string.Empty));
+                if (ww.HasValue && ww.Value > 0 && font is not null)
                 {
-                    var pronunciationLanguage = IsHanCharacter(c) && sentenceLanguage != TextLanguage.Chinese && sentenceLanguage != TextLanguage.Japanese
-                        ? TextLanguage.Chinese
-                        : sentenceLanguage;
-                    var rawPinyin = TaskHelper.SyncWait(() => TextServices.GetHowToPronuce(c.ToString(), pronunciationLanguage), cancellationToken: CancellationToken.None);
-                    var isKnown = rawPinyin.Length > 0 && rawPinyin != c.ToString();
-                    if (isKnown)
+                    var breakEntry = new TextEntry
                     {
-                        var estCharWidth = MeasureTextWidth(font!, c.ToString(), fontSize);
-                        var estPinyinWidth = MeasureTextWidth(pinyinFont!, rawPinyin, pinyinFontSize);
-                        var columnWidth = (int)Math.Ceiling(Math.Max(estCharWidth, estPinyinWidth)) + charSpacing;
-                        var centerX = currentX + columnWidth / 2;
+                        Text = text,
+                        FontName = fontFamily,
+                        FontSize = fontSize,
+                    };
+                    // Use any square canvas — for square canvases UnitLength
+                    // equals the canvas dim, so divider cancels naturally and
+                    // BreakLine receives the wrap width in the engine's
+                    // height-normalised units.
+                    var ctx = TextLayoutContext.FromCanvas(1000f, 1000f);
+                    var normalized = TextLayoutPipeline.ToEngineSpace(breakEntry, ctx);
+                    text = LineBreakHandler.BreakLine(normalized, font, ww.Value / 1000f);
+                }
+            }
 
-                        entries.Add(new TextClipEntry
+            var lineHeight = baseLineY > 0
+                ? baseLineY + (int)Math.Ceiling(fontSize * 1.2f)
+                : (int)Math.Ceiling(fontSize * 1.2f);
+
+            var entries = new List<TextEntry>();
+            var sentenceLanguage = TextHelper.DetectTextLanguage(text);
+            var lines = text.Split('\n');
+            var currentY = 0;
+
+            ushort fillR = (ushort)Math.Round(color.Red * 65535);
+            ushort fillG = (ushort)Math.Round(color.Green * 65535);
+            ushort fillB = (ushort)Math.Round(color.Blue * 65535);
+            float fillA = (float)color.Alpha;
+            ushort pinyinR = (ushort)Math.Round(pinyinColor.Red * 65535);
+            ushort pinyinG = (ushort)Math.Round(pinyinColor.Green * 65535);
+            ushort pinyinB = (ushort)Math.Round(pinyinColor.Blue * 65535);
+            float pinyinA = (float)pinyinColor.Alpha;
+
+            foreach (var line in lines)
+            {
+                var currentX = 0;
+                foreach (var c in line)
+                {
+                    var isCJK = IsCJKCharacter(c);
+                    if (isCJK)
+                    {
+                        var pronunciationLanguage = IsHanCharacter(c) && sentenceLanguage != TextLanguage.Chinese && sentenceLanguage != TextLanguage.Japanese
+                            ? TextLanguage.Chinese
+                            : sentenceLanguage;
+                        var rawPinyin = TaskHelper.SyncWait(() => TextServices.GetHowToPronuce(c.ToString(), pronunciationLanguage), cancellationToken: CancellationToken.None);
+                        var isKnown = rawPinyin.Length > 0 && rawPinyin != c.ToString();
+                        if (isKnown)
                         {
-                            text = rawPinyin,
-                            x = centerX,
-                            y = 0,
-                            fontFamily = fontFamily,
-                            fontSize = pinyinFontSize,
-                            horizontalAlignment = ClipHorizontalAlignment.Center,
-                            r = (ushort)Math.Round(pinyinColor.Red * 65535),
-                            g = (ushort)Math.Round(pinyinColor.Green * 65535),
-                            b = (ushort)Math.Round(pinyinColor.Blue * 65535),
-                            a = (float)pinyinColor.Alpha
-                        });
+                            var estCharWidth = MeasureTextWidth(font!, c.ToString(), fontSize);
+                            var estPinyinWidth = MeasureTextWidth(pinyinFont!, rawPinyin, pinyinFontSize);
+                            var columnWidth = (int)Math.Ceiling(Math.Max(estCharWidth, estPinyinWidth)) + charSpacing;
+                            var centerX = currentX + columnWidth / 2;
 
-                        entries.Add(new TextClipEntry
+                            entries.Add(new TextEntry
+                            {
+                                Text = rawPinyin,
+                                X = centerX,
+                                Y = currentY,
+                                FontName = fontFamily,
+                                FontSize = pinyinFontSize,
+                                Alignment = TextAlignment.Center,
+                                FillR = pinyinR,
+                                FillG = pinyinG,
+                                FillB = pinyinB,
+                                FillA = pinyinA,
+                            });
+
+                            entries.Add(new TextEntry
+                            {
+                                Text = c.ToString(),
+                                X = centerX,
+                                Y = currentY + baseLineY,
+                                FontName = fontFamily,
+                                FontSize = fontSize,
+                                Alignment = TextAlignment.Center,
+                                FillR = fillR,
+                                FillG = fillG,
+                                FillB = fillB,
+                                FillA = fillA,
+                            });
+
+                            currentX += columnWidth;
+                        }
+                        else
                         {
-                            text = c.ToString(),
-                            x = centerX,
-                            y = baseLineY,
-                            fontFamily = fontFamily,
-                            fontSize = fontSize,
-                            horizontalAlignment = ClipHorizontalAlignment.Center,
-                            r = (ushort)Math.Round(color.Red * 65535),
-                            g = (ushort)Math.Round(color.Green * 65535),
-                            b = (ushort)Math.Round(color.Blue * 65535),
-                            a = (float)color.Alpha
-                        });
-
-                        currentX += columnWidth;
+                            var estWidth = (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
+                            entries.Add(new TextEntry
+                            {
+                                Text = c.ToString(),
+                                X = currentX,
+                                Y = currentY + baseLineY,
+                                FontName = fontFamily,
+                                FontSize = fontSize,
+                                FillR = fillR,
+                                FillG = fillG,
+                                FillB = fillB,
+                                FillA = fillA,
+                            });
+                            currentX += estWidth;
+                        }
                     }
                     else
                     {
-                        var estWidth = (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
-                        entries.Add(new TextClipEntry
+                        var estWidth = c == ' '
+                            ? (int)Math.Ceiling(fontSize * 0.35f) + charSpacing
+                            : (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
+
+                        entries.Add(new TextEntry
                         {
-                            text = c.ToString(),
-                            x = currentX,
-                            y = baseLineY,
-                            fontFamily = fontFamily,
-                            fontSize = fontSize,
-                            r = (ushort)Math.Round(color.Red * 65535),
-                            g = (ushort)Math.Round(color.Green * 65535),
-                            b = (ushort)Math.Round(color.Blue * 65535),
-                            a = (float)color.Alpha
+                            Text = c.ToString(),
+                            X = currentX,
+                            Y = currentY + baseLineY,
+                            FontName = fontFamily,
+                            FontSize = fontSize,
+                            FillR = fillR,
+                            FillG = fillG,
+                            FillB = fillB,
+                            FillA = fillA,
                         });
                         currentX += estWidth;
                     }
                 }
-                else
-                {
-                    var estWidth = c == ' '
-                        ? (int)Math.Ceiling(fontSize * 0.35f) + charSpacing
-                        : (int)Math.Ceiling(MeasureTextWidth(font!, c.ToString(), fontSize)) + charSpacing;
-
-                    entries.Add(new TextClipEntry
-                    {
-                        text = c.ToString(),
-                        x = currentX,
-                        y = baseLineY,
-                        fontFamily = fontFamily,
-                        fontSize = fontSize,
-                        r = (ushort)Math.Round(color.Red * 65535),
-                        g = (ushort)Math.Round(color.Green * 65535),
-                        b = (ushort)Math.Round(color.Blue * 65535),
-                        a = (float)color.Alpha
-                    });
-                    currentX += estWidth;
-                }
+                currentY += lineHeight;
             }
 
             return entries.ToArray();
@@ -186,7 +272,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         {
             var panel = new PropertyPanelBuilder();
             var currentText = BasicText;
-            var currentFont = GetOrDefault(FontKey, "HarmonyOS Sans SC");
+            var currentFont = GetOrDefault(FontKey, "HarmonyOS Sans SC Medium");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
             var glyphWarning = new Label
             {
@@ -203,14 +289,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
             }
 
-            panel.AddEntry(TextKey, "Text", BasicText, "Text", entry =>
-            {
-                entry.TextChanged += (s, e) =>
-                {
-                    currentText = e.NewTextValue ?? string.Empty;
-                    UpdateGlyphWarning();
-                };
-            }, EntryUpdateEventCallMode.OnAnyTextChange);
+            // BasicText editor is managed centrally by ClipInfoBuilder.
 
             var fontOptions = TextServices.LoadedFonts.Keys.OrderBy(c => c).ToArray();
             if (fontOptions.Length > 0)
@@ -241,7 +320,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
             else
             {
-                panel.AddEntry(FontKey, "Font", currentFont, "Arial", entry =>
+                panel.AddEntry(FontKey, "Font", currentFont, "HarmonyOS Sans SC Medium", entry =>
                 {
                     entry.TextChanged += (s, e) =>
                     {
@@ -252,9 +331,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
 
             UpdateGlyphWarning();
-
             panel.AddCustomChild(glyphWarning);
-
             panel.AddSlider(SizeKey, "Font Size", 20, 400, fontSize, eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
             var pinyinRatio = ParseFloat(GetOrDefault(PinyinFontSizeRatioKey, DefaultPinyinFontSizeRatio.ToString(CultureInfo.InvariantCulture)), DefaultPinyinFontSizeRatio);
@@ -274,9 +351,10 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             {
                 case TextKey:
                     BasicText = args.Value?.ToString() ?? string.Empty;
+                    _parameters[TextKey] = BasicText;
                     break;
                 case FontKey:
-                    _parameters[FontKey] = args.Value?.ToString() ?? "Arial";
+                    _parameters[FontKey] = args.Value?.ToString() ?? "HarmonyOS Sans SC Medium";
                     break;
                 case SizeKey:
                     if (TryParseFloat(args.Value, out var size))
@@ -287,15 +365,11 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     break;
                 case PinyinFontSizeRatioKey:
                     if (TryParseFloat(args.Value, out var ratio))
-                    {
                         _parameters[PinyinFontSizeRatioKey] = ratio.ToString(CultureInfo.InvariantCulture);
-                    }
                     break;
                 case SpacingKey:
                     if (int.TryParse(args.Value?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var spacing))
-                    {
                         _parameters[SpacingKey] = spacing.ToString(CultureInfo.InvariantCulture);
-                    }
                     break;
                 case ColorKey:
                     _parameters[ColorKey] = args.Value?.ToString() ?? "#FFFFFF";
@@ -304,9 +378,19 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     _parameters[PinyinColorKey] = args.Value?.ToString() ?? string.Empty;
                     break;
             }
-
             var rect = MeasureEntries(BuildEntries());
-            return (_parameters, Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
+            var measuredW = Math.Max(1, (int)Math.Ceiling(rect.Width));
+            var measuredH = Math.Max(1, (int)Math.Ceiling(rect.Height));
+
+            if (LayoutMode == TextClipLayoutMode.FixedWidth)
+            {
+                var ww = ParseNullableFloat(GetOrDefault(WrappingWidthKey, string.Empty));
+                if (ww.HasValue && ww.Value > 0)
+                    return (_parameters, (int)Math.Ceiling(ww.Value), measuredH);
+                return (_parameters, measuredW, measuredH);
+            }
+
+            return (_parameters, measuredW, measuredH);
         }
 
         public Dictionary<string, string> HandleClipResize(bool isInRatio, int TargetX, int TargetY, int TargetWidth, int TargetHeight)
@@ -316,6 +400,15 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (TargetWidth <= 0 || TargetHeight <= 0)
                 return new Dictionary<string, string>(_parameters);
 
+            if (LayoutMode == TextClipLayoutMode.FixedSize)
+                return new Dictionary<string, string>(_parameters);
+
+            if (LayoutMode == TextClipLayoutMode.FixedWidth)
+            {
+                _parameters[WrappingWidthKey] = TargetWidth.ToString(CultureInfo.InvariantCulture);
+                return new Dictionary<string, string>(_parameters);
+            }
+
             var currentRect = GetViewRect(TargetWidth, TargetHeight);
             if (currentRect.TargetWidth <= 0 || currentRect.TargetHeight <= 0)
                 return new Dictionary<string, string>(_parameters);
@@ -324,15 +417,13 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)),
                 DefaultFontSize);
 
-            var scaleY = (double)TargetHeight / currentRect.TargetHeight;
-            if (double.IsNaN(scaleY) || double.IsInfinity(scaleY) || scaleY <= 0)
+            var scale = (double)TargetHeight / currentRect.TargetHeight;
+            if (double.IsNaN(scale) || double.IsInfinity(scale) || scale <= 0)
                 return new Dictionary<string, string>(_parameters);
 
-            var updatedSize = (float)(currentFontSize * scaleY);
+            var updatedSize = (float)(currentFontSize * scale);
             if (updatedSize > 0)
-            {
                 _parameters[SizeKey] = updatedSize.ToString(CultureInfo.InvariantCulture);
-            }
 
             return new Dictionary<string, string>(_parameters);
         }
@@ -345,7 +436,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries);
+                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
                 return new ClipPositionTuple(
                     (int)Math.Round(rect.X),
                     (int)Math.Round(rect.Y),
@@ -362,69 +453,24 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         private void EnsureDefaults()
         {
             if (!_parameters.ContainsKey(TextKey)) _parameters[TextKey] = DefaultText;
-            if (!_parameters.ContainsKey(FontKey)) _parameters[FontKey] = "Arial";
+            if (!_parameters.ContainsKey(FontKey)) _parameters[FontKey] = "HarmonyOS Sans SC Medium";
             if (!_parameters.ContainsKey(SizeKey)) _parameters[SizeKey] = DefaultFontSize.ToString(CultureInfo.InvariantCulture);
             if (!_parameters.ContainsKey(ColorKey)) _parameters[ColorKey] = "#FFFFFF";
             if (!_parameters.ContainsKey(PinyinFontSizeRatioKey)) _parameters[PinyinFontSizeRatioKey] = DefaultPinyinFontSizeRatio.ToString(CultureInfo.InvariantCulture);
             if (!_parameters.ContainsKey(PinyinColorKey)) _parameters[PinyinColorKey] = "";
             if (!_parameters.ContainsKey(SpacingKey)) _parameters[SpacingKey] = DefaultSpacing.ToString(CultureInfo.InvariantCulture);
+            if (!_parameters.ContainsKey(LayoutModeKey)) _parameters[LayoutModeKey] = "FillClip";
+            if (!_parameters.ContainsKey(WrappingWidthKey)) _parameters[WrappingWidthKey] = string.Empty;
         }
 
-        private static (float left, float top, float right, float bottom) GetEntryBounds(TextClipEntry entry)
-        {
-            var (width, height) = EstimateEntrySize(entry);
-            var left = entry.horizontalAlignment switch
-            {
-                ClipHorizontalAlignment.Center => entry.x - width / 2f,
-                ClipHorizontalAlignment.Right => entry.x - width,
-                _ => entry.x
-            };
-
-            var top = entry.verticalAlignment switch
-            {
-                ClipVerticalAlignment.Center => entry.y - height / 2f,
-                ClipVerticalAlignment.Bottom => entry.y - height,
-                _ => entry.y
-            };
-
-            return (left, top, left + width, top + height);
-        }
-
-        private static (int width, int height) EstimateEntrySize(TextClipEntry entry)
-        {
-            var text = entry.text ?? string.Empty;
-            var fontSize = entry.fontSize > 0 ? entry.fontSize : 24f;
-            var font = ResolveFontFace(entry.fontFamily ?? "Arial");
-            if (font is not null)
-            {
-                var textEntry = new TextEntry
-                {
-                    Text = text,
-                    FontName = font.FamilyName,
-                    FontSize = fontSize / 1000f,
-                    LineSpacing = 0f,
-                };
-                var engine = new NormalTypesettingEngine();
-                var (widthNorm, heightNorm) = engine.Measure(textEntry, font);
-                var width = Math.Max(1, (int)Math.Ceiling(widthNorm * 1000f));
-                var height = Math.Max(1, (int)Math.Ceiling(heightNorm * 1000f));
-                return (width, height);
-            }
-            var fallbackWidth = Math.Max(1, (int)Math.Round(text.Length * fontSize * 0.6f));
-            var fallbackHeight = Math.Max(1, (int)Math.Round(fontSize * 1.2f));
-            return (fallbackWidth, fallbackHeight);
-        }
-
-        private static (float Width, float Height) MeasureEntries(TextClipEntry[] entries)
+        private static (float Width, float Height) MeasureEntries(TextEntry[] entries)
         {
             if (entries.Length == 0)
-            {
                 return (1f, 1f);
-            }
 
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries);
+                var rect = TextMeasureHelper.MeasureBounds(entries, 1920f, 1080f);
                 return (Math.Max(1f, (float)Math.Ceiling(rect.Width)) + 15f, Math.Max(1f, (float)Math.Ceiling(rect.Height)) + 15f);
             }
             catch
@@ -454,6 +500,11 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 : fallback;
         }
 
+        private static TextClipLayoutMode ParseLayoutMode(string? value, TextClipLayoutMode fallback)
+        {
+            return Enum.TryParse<TextClipLayoutMode>(value, true, out var parsed) ? parsed : fallback;
+        }
+
         private static float ParseFloat(string? value, float fallback)
         {
             return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
@@ -464,24 +515,18 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
         }
 
+        private static float? ParseNullableFloat(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+        }
+
         private static bool TryParseFloat(object? value, out float result)
         {
-            if (value is float f)
-            {
-                result = f;
-                return true;
-            }
-            if (value is double d)
-            {
-                result = (float)d;
-                return true;
-            }
+            if (value is float f) { result = f; return true; }
+            if (value is double d) { result = (float)d; return true; }
             if (float.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            {
-                result = parsed;
-                return true;
-            }
-
+            { result = parsed; return true; }
             result = 0f;
             return false;
         }
@@ -492,24 +537,17 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             {
                 if (TextServices.LoadedFonts.TryGetValue(fontFamily, out var fontItem) && TextServices.TryResolveFontFamily(fontItem, out var face))
                     return face;
-
                 TextClipFontRegistry.TryGetFont(fontFamily, out var registryFont);
-                if (registryFont is not null)
-                    return registryFont;
+                if (registryFont is not null) return registryFont;
             }
-
-            // Fallback to the global fallback font
             var fallbackKey = TextClipFontRegistry.FallbackFamilyName;
             if (fallbackKey is not null)
             {
                 if (TextServices.LoadedFonts.TryGetValue(fallbackKey, out var fallbackItem) && TextServices.TryResolveFontFamily(fallbackItem, out var fallbackFace))
                     return fallbackFace;
-
                 TextClipFontRegistry.TryGetFont(fallbackKey, out var fallbackRegistryFont);
-                if (fallbackRegistryFont is not null)
-                    return fallbackRegistryFont;
+                if (fallbackRegistryFont is not null) return fallbackRegistryFont;
             }
-
             return null;
         }
 
@@ -517,16 +555,17 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         {
             if (string.IsNullOrEmpty(text))
                 return Math.Max(1f, fontSize);
-
             var entry = new TextEntry
             {
                 Text = text,
                 FontName = font.FamilyName,
-                FontSize = fontSize / 100f,
+                FontSize = fontSize,
                 LineSpacing = 0f,
             };
+            var ctx = TextLayoutContext.FromCanvas(100f, 100f);
+            var normalized = TextLayoutPipeline.ToEngineSpace(entry, ctx);
             var engine = new NormalTypesettingEngine();
-            var (width, _) = engine.Measure(entry, font);
+            var (width, _) = engine.Measure(normalized, font);
             return Math.Max(1f, width * 100f);
         }
 
@@ -534,33 +573,25 @@ namespace projectFrameCut.ApplicationPluginBase.Text
         {
             if (string.IsNullOrEmpty(text))
                 return Math.Max(1f, fontSize);
-
             var entry = new TextEntry
             {
                 Text = text,
                 FontName = font.FamilyName,
-                FontSize = fontSize / 100f,
+                FontSize = fontSize,
                 LineSpacing = 0f,
             };
+            var ctx = TextLayoutContext.FromCanvas(100f, 100f);
+            var normalized = TextLayoutPipeline.ToEngineSpace(entry, ctx);
             var engine = new NormalTypesettingEngine();
-            var (_, height) = engine.Measure(entry, font);
+            var (_, height) = engine.Measure(normalized, font);
             return Math.Max(1f, height * 100f);
         }
 
         private static Color ParseColorOrFallback(string? value, Color fallback)
         {
-            if (string.IsNullOrWhiteSpace(value))
-                return fallback;
-
-            try
-            {
-                return Color.FromArgb(value);
-            }
-            catch
-            {
-                return fallback;
-            }
+            if (string.IsNullOrWhiteSpace(value)) return fallback;
+            try { return Color.FromArgb(value); }
+            catch { return fallback; }
         }
-
     }
 }

@@ -1,5 +1,5 @@
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using static projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources;
+using static projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources;
 using projectFrameCut.Shared;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Entry;
