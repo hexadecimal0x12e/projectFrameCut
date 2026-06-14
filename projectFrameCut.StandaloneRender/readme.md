@@ -130,9 +130,19 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 - **`-enableThreadAffinity=<true|false>`**  
   是否启用线程亲和性，以减少线程切换带来的性能损失。默认：`true`
 
+- **`-renderWorkerAffinity=<cpu indexes>`**  
+  渲染工作线程的手动 CPU 亲和性设置。支持逗号分隔的 CPU 索引或范围，例如 `0-3,5,7`。  
+  启用此参数后会自动设置 `enableThreadAffinity=true`。
+
 - **`-oneByOneRender=<true|false>`**  
   是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
   设置此参数为`true`会覆盖参数 **`-maxParallelThreads`** 为1。
+
+- **`-renderByLayer=<true|false>`**  
+  是否为每个图层分别渲染（而不是合并所有图层）。默认：`false`
+
+- **`-prepareInWorker=<true|false>`**  
+  是否在工作线程中准备帧（而不是在渲染线程中准备）。默认：`false`
 
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器设备。默认：`false`
@@ -161,6 +171,9 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 - **`-diagReportPath=<path to .csv file or output directory>`**  
   诊断报告输出路径（CSV 格式）。
 
+- **`-LogState=<true|false>`**
+  是否在渲染过程中输出详细的状态日志。默认：`false`
+
 - **`-stopAfter=<second>`**
   在一段时间后停止渲染，单位为秒。不定义此参数代表不限制。
 
@@ -179,6 +192,9 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-ApproximateMixture=<true|false>`**
   是否允许近似混合模式。这会提高性能，但可能会降低某些效果的质量。默认：`false`
+
+- **`-ForcePreferToType=<NotSpecified|cpu|cuda|opencl>`**
+  强制所有效果使用指定的实现类型，覆盖正常的自动选择。默认：`NotSpecified`（不强制）
 
 ### 模式 'bench' 的参数
 

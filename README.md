@@ -45,8 +45,6 @@
 
 - [x] 字幕和文本
 
-- [ ] 远程服务器支持 （仍然需要完善）
-
 - [x] AI功能（AI生成字幕，配音，甚至素材）
 
 - [ ] AI全自动剪辑
@@ -69,6 +67,27 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 如果你使用iPad，建议使用 iPad 11th Generation或者更新、Pad mini 5th Generation或者更新、以及使用Apple M系列芯片的各款iPad Air/Pro。
 
 对于MacCatalyst目标，我们支持MacOS 14.0\(macOS Sonoma\) 或者更新的系统上运行，同时支持Intel或者Apple芯片的Mac。**我们建议使用至少有16GB的统一内存Apple芯片的Mac。**
+
+### AI支持
+软件支持基础的AI聊天、Agent、图片与视频生成。所有的服务你都需要自备一个API Key。
+软件内有一个基础的AI Agent，叫做'Assistant P'，它可以帮助你完成一些基础的操作（比如剪辑管理，效果管理，甚至是一些简单的编辑任务）。你可以直接和它对话来让它帮你完成一些任务。
+我们适配了大部分主流的API服务提供商，包括OpenAI、Azure OpenAI、Anthropic、DeepSeek官方API、以及一些云平台的私有接口（比如阿里云和腾讯云）。
+请注意，目前AI模型有以下限制：
+* 不支持Anthropic的API模式、DeepSeek官方API在思考模式下的ToolCall，以及一些云平台的私有接口。
+* 第三方API要求使用兼容OpenAI API的接口（比如Azure OpenAI），但是我们不保证所有的API都能正常工作。
+
+#### 软件内AI ToolCall
+我们知道，现在说明软件都在搞AI集成。
+因此，现在软件内的AI支持ToolCall，允许让AI代替你完成项目编辑和一些操作。你可以直接询问'Assistant P' “你能用ToolCall干什么”，来了解他们能做什么。
+
+#### MCP Server
+想要在第三方Agent里使用软件的功能？没问题，我们提供了一个MCP Server，通过WebSocket连接到软件来实现对软件的控制。你可以在Release里找到它。MCP服务器和软件内AI ToolCall使用了同一套接口，它也可以实现大部分的功能。
+
+关于MCP Server、Skill和AI ToolCall的更多信息，你可以[去这里看看](./projectFrameCut.McpServer/README.md)
+
+
+### 插件
+你可以使用插件来自定义projectFrameCut。要开发插件，如果你感兴趣[这里有教程](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
 
 ### 如何编译
 
@@ -153,12 +172,8 @@ c:\path\to\your\folder\Android
 
 因为一些原因，如果你需要生成iOS/MacCatalyst目标，请使用`projectFrameCut.iDevices.csproj`，而不是`projectFrameCut.csproj`
 
-
 ### 关于本地化
 目前，除了中文的本地化资源以外，所有的本地化字符串都是由AI生成的。如果你发现了问题，请提交Issue。
-
-### 插件
-你可以使用插件来自定义projectFrameCut。要开发插件，如果你感兴趣[这里有教程](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
 
 ### 许可和第三方库致谢
 projectFrameCut的主程序和核心渲染库（CRL）使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
