@@ -2,16 +2,40 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build *)",
-      "Bash(splc-edit list-locales *)",
-      "Bash(splc-edit list-items *)",
-      "Bash(splc-edit get-item *)",
+      "Bash(splc-edit *)",
       "Bash(dotnet tool *)",
       "Bash(xargs -I{} sh -c 'jq -r \"select\\(.message.role == \\\\\"assistant\\\\\"\\) | .message.content[]? | select\\(.type == \\\\\"tool_use\\\\\"\\) | \\\\\"\\\\\\(.name\\)\\\\t\\\\\\(if .name == \\\\\"Bash\\\\\" then .input.command else \\\\\"\\\\\" end\\)\\\\\"\" \"{}\" 2>/dev/null')",
-      "Bash(splc-edit generate-code *)",
-      "Bash(splc-edit add-item *)",
-      "Bash(splc-edit update-item *)",
       "Bash(xxd)",
-      "Bash(findstr Value)"
+      "Bash(findstr Value)",
+      "Bash(dotnet restore *)",
+      "Bash(cd *)",
+      "PowerShell(cd *)",
+      "PowerShell(dotnet build *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Select-String -Pattern \"error|Error|错误\")",
+      "Bash(dir *)",
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(xargs grep -l \"projectFrameCut.Drawing\" --include=\"*.cs\")",
+      "Read(//mnt/d/**)",
+      "Read(//d//**)",
+      "Bash(dotnet test *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(splc-edit *)",
+      "Bash(findstr *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(dotnet restore *)"
+    ],
+    "deny": [
+      "Bash(Select-*)",
+      "Bash(Get-*)",
+      "Bash(Set-*)",
+      "Bash(git commit *)",
+      "Powershell(git commit *)"
     ]
+  },
+  "skillOverrides": {
+    "lsp-setup": "off"
   }
 }

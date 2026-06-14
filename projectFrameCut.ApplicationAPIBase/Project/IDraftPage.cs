@@ -35,7 +35,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <summary>
         /// Gets a read-only dictionary of all clip UI elements keyed by their unique identifiers.
         /// </summary>
-        IReadOnlyDictionary<string, IClipElementUI> AllClips { get; }
+        IReadOnlyDictionary<Guid, IClipElementUI> AllClips { get; }
 
         /// <summary>
         /// Gets or sets the number of seconds represented by each timeline frame.
@@ -137,7 +137,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <param name="maxFrames">The maximum number of frames for the clip.</param>
         /// <param name="sourceElement">Optional source clip element to copy from.</param>
         /// <returns>The newly created clip element UI.</returns>
-        IClipElementUI CreateAndAddClip(double startX, double width, int trackIndex, string? id = null, string? labelText = null, Brush? background = null, Border? prototype = null, bool resolveOverlap = true, uint relativeStart = 0, uint maxFrames = 0, IClipElementUI? sourceElement = null);
+        IClipElementUI CreateAndAddClip(double startX, double width, int trackIndex, Guid? id = null, string? labelText = null, Brush? background = null, Border? prototype = null, bool resolveOverlap = true, uint relativeStart = 0, uint maxFrames = 0, IClipElementUI? sourceElement = null);
 
         /// <summary>
         /// Creates a clip from the specified asset and adds it to the track at a calculated position.
@@ -253,10 +253,10 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Shows a popup for clip properties or custom views over the editor surface.
         /// </summary>
         /// <param name="content">Optional view content to display in the popup.</param>
-        /// <param name="border">Optional border styling for the popup.</param>
+        /// <param name="border">Optional anchor view for clip-mode popup positioning.</param>
         /// <param name="clip">Optional clip associated with the popup.</param>
         /// <param name="mode">The popup display mode identifier.</param>
         /// <returns>A task representing the asynchronous popup operation.</returns>
-        Task ShowAPopup(View? content = null, Border? border = null, IClipElementUI? clip = null, string mode = "");
+        Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "");
     }
 }

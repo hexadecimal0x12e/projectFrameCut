@@ -1,15 +1,17 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using SixLabors.Fonts;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render.Rendering
@@ -32,62 +34,7 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
         }
 
-        public static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, INormalEffect item, IComputer? computer, int width, int height)
-        {
-            if (item.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = item.GetStep(frame, width, height);
-                    steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = item.Render(frame, computer, width, height);
-                }
-            }
-            else
-            {
-                frame = item.Render(frame, computer, width, height);
-            }
-        }
-
-        public static void ProcessContinuousEffect(uint targetFrame, IClip clip, IComputer? computer, ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IContinuousEffect c, int width, int height)
-        {
-            if (c.EndPoint == 0 && c.EndPoint == 0)
-            {
-                c.StartPoint = (int)(clip.StartFrame);
-                c.EndPoint = (int)(c.StartPoint + clip.GetEffectiveDuration());
-            }
-            if (c.YieldProcessStep)
-            {
-                lastIsProcessStep = true;
-                try
-                {
-                    var step = c.GetStep(frame, targetFrame, width, height);
-                    steps.Add(step);
-                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {c.Name}({c.TypeName}) : {step.GetProcessStack()}");
-
-                }
-                catch (Exception ex)
-                {
-                    Log($"[Render] WARN: Failed to get process steps for continuous effect {c.Name}: {ex}");
-                    lastIsProcessStep = false;
-                    frame = c.Render(frame, targetFrame, computer, width, height);
-                }
-
-            }
-            else
-            {
-                frame = c.Render(frame, targetFrame, computer, width, height);
-            }
-        }
-
-        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IBindableArgumentEffect item, IComputer? computer, int width, int height)
+        public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, IBindableArgumentEffect item, IComputer? computer, int width, int height)
         {
             switch (item.EffectRole)
             {
@@ -161,64 +108,18 @@ namespace projectFrameCut.Render.Rendering
                         }
                         return mvproc.GenerateOnce;
                     }
-                    break;
-                //case BindableArgumentEffectType.ResultGenerator:
-                //    if (item is IBindableArgumentEffectOneInputResultGenerator rg)
-                //    {
-                //        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                //        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                //        if (item.YieldProcessStep)
-                //        {
-                //            lastIsProcessStep = true;
-                //            try
-                //            {
-                //                var step = rg.GenerateResultStep(cachedValue, width, height);
-                //                steps.Add(step);
-                //                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                //            }
-                //            catch (Exception ex)
-                //            {
-                //                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                //                lastIsProcessStep = false;
-                //                frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //            }
-                //        }
-                //        else
-                //        {
-                //            frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                //        }
-                //    }
-                //    break;
+                    
                 case BindableArgumentEffectType.OneInputResultGenerator:
                     if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(crg.BindedArgumentProviderID, "BindedArgumentProviderID");
                         var cachedValue = GetCachedValue(crg.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                        if (item.YieldProcessStep)
+                        if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
                         {
-                            lastIsProcessStep = true;
-                            try
-                            {
-                                if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
-                                {
-                                    crg.StartPoint = (int)(clip.StartFrame);
-                                    crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
-                                }
-                                var step = crg.GenerateResultStep(cachedValue, targetFrame, width, height);
-                                steps.Add(step);
-                                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                                lastIsProcessStep = false;
-                                frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                            }
+                            crg.StartPoint = (int)(clip.StartFrame);
+                            crg.EndPoint = (int)(crg.StartPoint + clip.GetEffectiveDuration());
                         }
-                        else
-                        {
-                            frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
-                        }
+                        frame = crg.GenerateResult(cachedValue, targetFrame, frame, computer, width, height);
                     }
                     break;
                 default:
@@ -228,47 +129,103 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
+        // ---- 水印缓存（按源尺寸缓存不同分辨率的渲染结果） ----
+        private static readonly Dictionary<(int Width, int Height), IPicture> _watermarkCache = new();
+        private static readonly List<(int, int)> _watermarkKeys = new(); // FIFO 淘汰顺序
+        private const int WatermarkCacheMaxSize = 8;
+        private static float _measuredTextPixelW, _measuredTextPixelH;
+        private static bool _haveTextMeasure;
+        private static readonly object _watermarkSync = new();
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static IPicture ProcessAIWatermark(IPicture src, uint? frameIndex = null)
         {
-            Stopwatch sw = Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew();
+            var key = (src.Width, src.Height);
 
-            // 定义文本内容和样式
-            string watermarkText = "Generated by AI";
-            float fontSize = 24;
-            string fontFamily = "Arial";
-            float padding = 10; // 距离边缘的边距
-
-            // 测量文本尺寸
-            var font = SystemFonts.CreateFont(fontFamily, fontSize, FontStyle.Regular);
-            var textOptions = new TextOptions(font);
-            var textSize = TextMeasurer.MeasureSize(watermarkText, textOptions);
-
-            var wtmkClip = new TextClip
+            IPicture? overlay;
+            lock (_watermarkSync)
             {
-                Id = "",
-                Name = "",
-                LayerIndex = 0,
-                TextEntries = new List<TextClipEntry>
+                if (!_watermarkCache.TryGetValue(key, out overlay))
                 {
-                    new TextClipEntry
+                    if (_watermarkCache.Count >= WatermarkCacheMaxSize)
                     {
-                        text = watermarkText,
-                        x = (int)(src.Width - textSize.Width - padding),
-                        y = (int)(src.Height - textSize.Height - padding),
-                        fontFamily = fontFamily,
-                        fontSize = fontSize,
-                        fontStyle = FontStyle.Regular,
-                        r = 65535,
-                        g = 65535,
-                        b = 65535,
-                        a = 0.5f
+                        var staleKey = _watermarkKeys[0];
+                        _watermarkKeys.RemoveAt(0);
+                        if (_watermarkCache.Remove(staleKey, out var staleFrame))
+                            staleFrame.Dispose(true);
+                    }
+                    overlay = BuildWatermarkOverlay(src.Width, src.Height);
+                    overlay.CanBeDisposed = false;
+                    _watermarkCache[key] = overlay;
+                    _watermarkKeys.Add(key);
+                }
+            }
+
+            var computer = PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false);
+            var result = ClassicOverlayMixture.Default.Mix(src, overlay, computer, overlay.BitPerPixel);
+            sw.Stop();
+            result.ProcessStack = new List<PictureProcessStack>(src.ProcessStack)
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Add AI Watermark",
+                    Operator = typeof(EffectProcessing),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = sw.Elapsed
+                }
+            };
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static IPicture BuildWatermarkOverlay(int width, int height)
+        {
+            const string text = "Generated by AI";
+            const float fontSize = 24;
+            var fontFamily = TextClipFontRegistry.FallbackFamilyName ?? "Arial";
+            const float padding = 10;
+
+            // 只测量一次文本像素尺寸（文字和字体不会在运行时改变）
+            float measuredW, measuredH;
+            if (!_haveTextMeasure)
+            {
+                if (TextClipFontRegistry.TryGetFont(fontFamily, out var fontFace) && fontFace is not null)
+                {
+                    var entry = new TextEntry
+                    {
+                        Text = text,
+                        FontName = fontFamily,
+                        FontSize = fontSize / MathF.Min(width, height),
+                        LineSpacing = 0f,
+                    };
+                    var engine = new NormalTypesettingEngine();
+                    (var w, var h) = engine.Measure(entry, fontFace);
+                    _measuredTextPixelW = w * MathF.Min(width, height);
+                    _measuredTextPixelH = h * MathF.Min(width, height);
+                    _haveTextMeasure = true;
+                }
+            }
+            measuredW = _haveTextMeasure ? _measuredTextPixelW : text.Length * fontSize * 0.6f;
+            measuredH = _haveTextMeasure ? _measuredTextPixelH : fontSize;
+
+            var clip = new TextClip
+            {
+                Id = Guid.Empty, Name = "", LayerIndex = 0,
+                TextEntries = new List<TextEntry>
+                {
+                    new TextEntry
+                    {
+                        Text = text,
+                        X = (int)(width - measuredW - padding),
+                        Y = (int)(height - measuredH - padding),
+                        FontName = fontFamily,
+                        FontSize = fontSize,
+                        FillR = 65535, FillG = 65535, FillB = 65535, FillA = 0.5f
                     }
                 },
             };
-            var frame = wtmkClip.GetFrameRelativeToStartPointOfSource(0, src.Width, src.Height, true, 8);
-            var result = ClassicOverlayMixture.Default.Mix(src, frame, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), frame.bitPerPixel);
-            result.ProcessStack = src.ProcessStack.Append(new PictureProcessStack { OperationDisplayName = "Add AI Watermark", Operator = typeof(EffectProcessing), ProcessingFuncStackTrace = new StackTrace(true), Elapsed = sw.Elapsed }).ToList();
-            return result;
+            return clip.GetFrameRelativeToStartPointOfSource(0, width, height, true, 8);
         }
     }
 }

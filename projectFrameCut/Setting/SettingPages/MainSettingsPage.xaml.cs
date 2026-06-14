@@ -4,7 +4,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.Compose;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Drawing.Vector.ImportExport;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
+using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 
 namespace projectFrameCut
 {
@@ -97,6 +112,12 @@ namespace projectFrameCut
             }
         }
 
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+            SyncSettingToModules();
+        }
+
         public static async Task RebootApp(Page currentPage)
         {
             var conf = await currentPage.DisplayAlertAsync(Localized._Info,
@@ -118,6 +139,65 @@ namespace projectFrameCut
 
             }
         }
+        public static void SyncSettingToModules()
+        {
+
+            if (!IsSettingExists("UserName") || string.IsNullOrWhiteSpace(GetSetting("UserName", "")))
+            {
+                try
+                {
+                    var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
+                    WriteSetting("UserName", rnd.Generate());
+                }
+                catch
+                {
+                    WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
+
+                }
+            }
+
+
+            if (IsBoolSettingTrue("render_SaveCheckpoint"))
+            {
+                Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
+                MyLoggerExtensions.SaveDiagResult = true;
+                MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+
+            }
+            else
+            {
+                MyLoggerExtensions.SaveDiagResult = false;
+            }
+            if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel"))
+            {
+                EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
+            }
+            else if (IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
+            {
+                EffectHelper.ForcePreferToType = EffectImplementType.IPicture;
+            }
+            else
+            {
+                EffectHelper.ForcePreferToType = null;
+            }
+            IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
+            PictureLifecycleTracker.Enabled = IsBoolSettingTrue("diag_TraceIPictureObject");
+            PictureLifecycleTracker.TrackCollection = IsBoolSettingTrue("diag_TraceIPictureObject");
+            var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
+            Directory.CreateDirectory(vfdCahceDir);
+            VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
+            VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
+            VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
+            IVideoSource.EnableMemoryCache = IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
+            IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
+            ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
+            IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
+            IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
+            NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
+            TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
+            DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
+            DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
+        }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {
@@ -127,7 +207,7 @@ namespace projectFrameCut
                 if (count >= 20)
                 {
                     var response = await DisplayPromptAsync(Localized._Info, "");
-                    if (!string.IsNullOrWhiteSpace(response)) SettingsManager.WriteSetting("StoreModeOverride", response);
+                    if (!string.IsNullOrWhiteSpace(response)) WriteSetting("StoreModeOverride", response);
                 }
             }
             else

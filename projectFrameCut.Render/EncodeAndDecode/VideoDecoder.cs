@@ -1,7 +1,7 @@
 ﻿using FFmpeg.AutoGen;
+using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp.ColorSpaces;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -31,6 +31,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private double _fps = -1.0;
         private int _currentFrameNumber = 0;
 
+        private readonly Dictionary<uint, Picture16bpp> _frameCache = new();
+        private readonly VideoFrameDiskCache _diskCache;
+        private const int MaxFrameCacheSize = 15;
+
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
 
@@ -58,6 +62,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
+            if (!string.IsNullOrWhiteSpace(path)) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public IVideoSource CreateNew(string newSource) => new DecoderContext16Bit(newSource);
@@ -202,7 +207,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
-        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             bool lockTaken = false;
@@ -219,22 +223,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
+                if (IVideoSource.EnableMemoryCache && _frameCache.TryGetValue(targetFrame, out var cachedFrame))
+                {
+                    Index++;
+                    return cachedFrame;
+                }
+
+                // Try disk cache before decoding
+                if (IVideoSource.EnableDiskCache && _diskCache.TryLoad16bpp(targetFrame, out var diskFrame))
+                {
+                    if (IVideoSource.EnableMemoryCache) _frameCache[targetFrame] = diskFrame;
+                    Index++;
+                    return diskFrame;
+                }
+
                 if (targetFrame < _currentFrameNumber)
                 {
-                    int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    if (seekRet < 0)
-                    {
-                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
-                        if (StrictMode)
-                            throw new InvalidOperationException(msg);
-                        Log(msg, "warning");
-                        throw new InvalidOperationException(msg);
-                    }
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
+                    SmartSeekTo(targetFrame);
                 }
 
                 bool frameFound = false;
+                int decodedFrameNumber = _currentFrameNumber;
                 while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
                 {
                     try
@@ -252,12 +261,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             int receiveRet = ffmpeg.avcodec_receive_frame(_codec, _frm);
                             if (receiveRet == 0)
                             {
-                                if (_currentFrameNumber++ == targetFrame)
+                                if (decodedFrameNumber == targetFrame)
                                 {
                                     frameFound = true;
                                     break;
                                 }
 
+                                CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                                decodedFrameNumber++;
                                 continue;
                             }
 
@@ -275,9 +286,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (frameFound)
                         break;
 
-                    if (_totalFrames >= 0 && _currentFrameNumber > _totalFrames)
+                    if (_totalFrames >= 0 && decodedFrameNumber > _totalFrames)
                         break;
                 }
+
+                _currentFrameNumber = decodedFrameNumber + 1;
 
                 if (!frameFound)
                 {
@@ -310,13 +323,115 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                CacheFinalFrame(targetFrame, picture);
+                return picture;
             }
             finally
             {
                 if (lockTaken)
                     locker.Exit();
             }
+        }
+
+        private void SmartSeekTo(uint targetFrame)
+        {
+            if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                return;
+            }
+
+            var timeBase = _fmt->streams[_videoStreamIndex]->time_base;
+            double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
+            if (timeBaseSeconds <= 0)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                return;
+            }
+
+            double targetTimeSeconds = targetFrame / _fps;
+            double seekTimeSeconds = Math.Max(0, targetTimeSeconds - 0.5);
+            long seekTimestamp = (long)(seekTimeSeconds / timeBaseSeconds);
+
+            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            if (seekRet < 0)
+            {
+                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                if (seekRet < 0)
+                {
+                    var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                    if (StrictMode)
+                        throw new InvalidOperationException(msg);
+                    Log(msg, "warning");
+                    throw new InvalidOperationException(msg);
+                }
+                _currentFrameNumber = 0;
+            }
+            else
+            {
+                _currentFrameNumber = Math.Max(0, (int)(seekTimeSeconds * _fps) - 15);
+            }
+
+            ffmpeg.avcodec_flush_buffers(_codec);
+        }
+
+        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (_frameCache.ContainsKey(frameNumber))
+                return;
+
+            ffmpeg.sws_scale(
+                _sws,
+                _frm->data,
+                _frm->linesize,
+                0,
+                _height,
+                _rgb->data,
+                _rgb->linesize);
+
+            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, _height);
+            CacheFinalFrame(frameNumber, picture);
+        }
+
+        private void CacheFinalFrame(uint frameNumber, Picture16bpp picture)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (IVideoSource.EnableMemoryCache)
+            {
+                if (_frameCache.ContainsKey(frameNumber))
+                    return;
+
+                if (_frameCache.Count >= MaxFrameCacheSize)
+                {
+                    uint bestEvict = 0;
+                    long bestDist = -1;
+                    foreach (var key in _frameCache.Keys)
+                    {
+                        long dist = Math.Abs((long)key - (long)frameNumber);
+                        if (dist > bestDist)
+                        {
+                            bestDist = dist;
+                            bestEvict = key;
+                        }
+                    }
+                    _frameCache.Remove(bestEvict);
+                }
+
+                _frameCache[frameNumber] = picture;
+            }
+
+            if (IVideoSource.EnableDiskCache)
+                _diskCache.Save16bppFrameAsync(frameNumber, picture);
         }
 
 
@@ -333,6 +448,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var size = width * height;
             var result = new Picture16bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new ushort[size],
                 g = new ushort[size],
                 b = new ushort[size],
@@ -383,6 +501,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 locker.Exit();
             }
 
+            _frameCache.Clear();
+            _diskCache?.Dispose();
+
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
@@ -421,6 +542,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private double _fps = -1.0;
         private int _currentFrameNumber = 0;
 
+        private readonly Dictionary<uint, HDRPicture16bpp> _frameCache = new();
+        private readonly VideoFrameDiskCache _diskCache;
+        private const int MaxFrameCacheSize = 10;
+
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
 
@@ -441,12 +566,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
+        
+        
         private Lock locker = new();
 
         public HDRDecoderContext(string path)
         {
             _path = path;
             Initialize();
+            if (!string.IsNullOrWhiteSpace(path)) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public IVideoSource CreateNew(string newSource) => new HDRDecoderContext(newSource);
@@ -608,22 +736,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
+                if (IVideoSource.EnableMemoryCache && _frameCache.TryGetValue(targetFrame, out var cachedFrame))
+                {
+                    Index++;
+                    return cachedFrame;
+                }
+
+                // Try disk cache before decoding
+                if (IVideoSource.EnableDiskCache && _diskCache.TryLoadHDR(targetFrame, out var diskHDRFrame))
+                {
+                    if (IVideoSource.EnableMemoryCache) _frameCache[targetFrame] = diskHDRFrame;
+                    Index++;
+                    return diskHDRFrame;
+                }
+
                 if (targetFrame < _currentFrameNumber)
                 {
-                    int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    if (seekRet < 0)
-                    {
-                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
-                        if (StrictMode)
-                            throw new InvalidOperationException(msg);
-                        Log(msg, "warning");
-                        throw new InvalidOperationException(msg);
-                    }
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
+                    SmartSeekTo(targetFrame);
                 }
 
                 bool frameFound = false;
+                int decodedFrameNumber = _currentFrameNumber;
                 while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
                 {
                     try
@@ -641,12 +774,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             int receiveRet = ffmpeg.avcodec_receive_frame(_codec, _frm);
                             if (receiveRet == 0)
                             {
-                                if (_currentFrameNumber++ == targetFrame)
+                                if (decodedFrameNumber == targetFrame)
                                 {
                                     frameFound = true;
                                     break;
                                 }
 
+                                CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                                decodedFrameNumber++;
                                 continue;
                             }
 
@@ -664,9 +799,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (frameFound)
                         break;
 
-                    if (_totalFrames >= 0 && _currentFrameNumber > _totalFrames)
+                    if (_totalFrames >= 0 && decodedFrameNumber > _totalFrames)
                         break;
                 }
+
+                _currentFrameNumber = decodedFrameNumber + 1;
 
                 if (!frameFound)
                 {
@@ -699,13 +836,118 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for HDR '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows);
+                var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows);
+                CacheFinalFrame(targetFrame, picture);
+                return picture;
             }
             finally
             {
                 if (lockTaken)
                     locker.Exit();
             }
+        }
+
+        private void SmartSeekTo(uint targetFrame)
+        {
+            if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                return;
+            }
+
+            var timeBase = _fmt->streams[_videoStreamIndex]->time_base;
+            double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
+            if (timeBaseSeconds <= 0)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                return;
+            }
+
+            double targetTimeSeconds = targetFrame / _fps;
+            double seekTimeSeconds = Math.Max(0, targetTimeSeconds - 0.5);
+            long seekTimestamp = (long)(seekTimeSeconds / timeBaseSeconds);
+
+            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            if (seekRet < 0)
+            {
+                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                if (seekRet < 0)
+                {
+                    var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                    if (StrictMode)
+                        throw new InvalidOperationException(msg);
+                    Log(msg, "warning");
+                    throw new InvalidOperationException(msg);
+                }
+                _currentFrameNumber = 0;
+            }
+            else
+            {
+                _currentFrameNumber = Math.Max(0, (int)(seekTimeSeconds * _fps) - 15);
+            }
+
+            ffmpeg.avcodec_flush_buffers(_codec);
+        }
+
+        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (_frameCache.ContainsKey(frameNumber))
+                return;
+
+            float maximumBrightness = ResolveFrameMaximumBrightness(_frm);
+            AVColorTransferCharacteristic transferCharacteristic = _frm->color_trc;
+
+            ffmpeg.sws_scale(
+                _sws,
+                _frm->data,
+                _frm->linesize,
+                0,
+                _height,
+                _rgb->data,
+                _rgb->linesize);
+
+            var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, transferCharacteristic, maximumBrightness, _height);
+            CacheFinalFrame(frameNumber, picture);
+        }
+
+        private void CacheFinalFrame(uint frameNumber, HDRPicture16bpp picture)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (IVideoSource.EnableMemoryCache)
+            {
+                if (_frameCache.ContainsKey(frameNumber))
+                    return;
+
+                if (_frameCache.Count >= MaxFrameCacheSize)
+                {
+                    uint bestEvict = 0;
+                    long bestDist = -1;
+                    foreach (var key in _frameCache.Keys)
+                    {
+                        long dist = Math.Abs((long)key - (long)frameNumber);
+                        if (dist > bestDist)
+                        {
+                            bestDist = dist;
+                            bestEvict = key;
+                        }
+                    }
+                    _frameCache.Remove(bestEvict);
+                }
+
+                _frameCache[frameNumber] = picture;
+            }
+
+            if (IVideoSource.EnableDiskCache)
+                _diskCache.SaveHDRFrameAsync(frameNumber, picture);
         }
 
 
@@ -840,12 +1082,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             var result = new HDRPicture16bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new ushort[size],
                 g = new ushort[size],
                 b = new ushort[size],
                 Brightness = new float[size],
                 MaximumBrightness = maxBrightness,
-                hasAlphaChannel = hasAlpha,
+                HasAlphaChannel = hasAlpha,
                 a = hasAlpha ? Enumerable.Repeat(1f, size).ToArray() : null,
             };
 
@@ -908,6 +1153,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 locker.Exit();
             }
+
+            _frameCache.Clear();
+            _diskCache?.Dispose();
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
@@ -994,6 +1242,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private int _currentFrameNumber = 0;
         private bool flushSent = false;
 
+        // Frame cache: avoids re-decoding recently accessed frames.
+        private readonly Dictionary<uint, Picture8bpp> _frameCache = new();
+        private readonly VideoFrameDiskCache _diskCache;
+        private const int MaxFrameCacheSize = 30;
 
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
@@ -1015,12 +1267,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
+        
+        
         private Lock locker = new();
 
         public DecoderContext8Bit(string path)
         {
             _path = path;
             Initialize();
+            if (!string.IsNullOrWhiteSpace(path)) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public IVideoSource CreateNew(string newSource) => new DecoderContext8Bit(newSource);
@@ -1192,7 +1447,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
 
-        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         [DebuggerNonUserCode()]
         public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
         {
@@ -1210,24 +1464,28 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
+                // Check frame cache first
+                if (IVideoSource.EnableMemoryCache && _frameCache.TryGetValue(targetFrame, out var cachedFrame))
+                {
+                    Index++;
+                    return cachedFrame;
+                }
+
+                // Try disk cache before decoding
+                if (IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
+                {
+                    if (IVideoSource.EnableMemoryCache) _frameCache[targetFrame] = diskFrame;
+                    Index++;
+                    return diskFrame;
+                }
+
                 if (targetFrame < _currentFrameNumber)
                 {
-                    int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    if (seekRet < 0)
-                    {
-                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
-                        if (StrictMode)
-                            throw new InvalidOperationException(msg);
-                        Log(msg, "warning");
-                        throw new InvalidOperationException(msg);
-                    }
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
-                    _eof = false;
-                    flushSent = false;
+                    SmartSeekTo(targetFrame);
                 }
 
                 bool frameFound = false;
+                int decodedFrameNumber = _currentFrameNumber;
                 while (true)
                 {
                     if (!_eof)
@@ -1269,12 +1527,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         int receiveRet = ffmpeg.avcodec_receive_frame(_codec, _frm);
                         if (receiveRet == 0)
                         {
-                            if (_currentFrameNumber++ == targetFrame)
+                            if (decodedFrameNumber == targetFrame)
                             {
                                 frameFound = true;
                                 break;
                             }
 
+                            // Cache intermediate frames during forward decode
+                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                            decodedFrameNumber++;
                             continue;
                         }
 
@@ -1290,9 +1551,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_eof && flushSent)
                         break;
 
-                    if (_totalFrames >= 0 && _currentFrameNumber > _totalFrames)
+                    if (_totalFrames >= 0 && decodedFrameNumber > _totalFrames)
                         break;
                 }
+
+                _currentFrameNumber = decodedFrameNumber + 1;
 
                 if (!frameFound)
                 {
@@ -1324,15 +1587,127 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                CacheFinalFrame(targetFrame, picture);
+                return picture;
             }
             finally
             {
                 if (lockTaken)
                     locker.Exit();
             }
+        }
 
+        private void SmartSeekTo(uint targetFrame)
+        {
+            if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
+            {
+                // Degrade to legacy seek-to-zero
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                _eof = false;
+                flushSent = false;
+                return;
+            }
 
+            var timeBase = _fmt->streams[_videoStreamIndex]->time_base;
+            double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
+            if (timeBaseSeconds <= 0)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                _eof = false;
+                flushSent = false;
+                return;
+            }
+
+            // Seek to ~0.5s before target; FFmpeg lands on the nearest keyframe
+            double targetTimeSeconds = targetFrame / _fps;
+            double seekTimeSeconds = Math.Max(0, targetTimeSeconds - 0.5);
+            long seekTimestamp = (long)(seekTimeSeconds / timeBaseSeconds);
+
+            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            if (seekRet < 0)
+            {
+                // Fallback: seek to beginning
+                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                if (seekRet < 0)
+                {
+                    var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                    if (StrictMode)
+                        throw new InvalidOperationException(msg);
+                    Log(msg, "warning");
+                    throw new InvalidOperationException(msg);
+                }
+                _currentFrameNumber = 0;
+            }
+            else
+            {
+                // Conservative estimate: subtract a few frames to avoid overshooting
+                _currentFrameNumber = Math.Max(0, (int)(seekTimeSeconds * _fps) - 15);
+            }
+
+            ffmpeg.avcodec_flush_buffers(_codec);
+            _eof = false;
+            flushSent = false;
+        }
+
+        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (_frameCache.ContainsKey(frameNumber))
+                return;
+
+            // Convert and cache this intermediate frame
+            ffmpeg.sws_scale(
+                _sws,
+                _frm->data,
+                _frm->linesize,
+                0,
+                _height,
+                _rgb->data,
+                _rgb->linesize);
+
+            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, _height);
+            CacheFinalFrame(frameNumber, picture);
+        }
+
+        private void CacheFinalFrame(uint frameNumber, Picture8bpp picture)
+        {
+            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+                return;
+
+            if (IVideoSource.EnableMemoryCache)
+            {
+                if (_frameCache.ContainsKey(frameNumber))
+                    return;
+
+                if (_frameCache.Count >= MaxFrameCacheSize)
+                {
+                    // Evict the frame furthest from this one
+                    uint bestEvict = 0;
+                    long bestDist = -1;
+                    foreach (var key in _frameCache.Keys)
+                    {
+                        long dist = Math.Abs((long)key - (long)frameNumber);
+                        if (dist > bestDist)
+                        {
+                            bestDist = dist;
+                            bestEvict = key;
+                        }
+                    }
+                    _frameCache.Remove(bestEvict);
+                }
+
+                _frameCache[frameNumber] = picture;
+            }
+
+            if (IVideoSource.EnableDiskCache)
+                _diskCache.Save8bppFrameAsync(frameNumber, picture);
         }
 
         //[DebuggerNonUserCode()]
@@ -1348,6 +1723,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {
+                Tag = string.IsNullOrWhiteSpace(filePath)
+                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
+                    : $"{filePath} frame #{frameIdx}",
                 r = new byte[size],
                 g = new byte[size],
                 b = new byte[size],
@@ -1397,6 +1775,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 locker.Exit();
             }
 
+            _frameCache.Clear();
+            _diskCache?.Dispose();
+
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
@@ -1412,7 +1793,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
     }
 }
-
 
 
 

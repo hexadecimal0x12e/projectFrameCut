@@ -194,7 +194,7 @@ public partial class DiagnosticSettingPage : ContentPage
     }
 
 
-    private string GetAppInfo()
+    public static string GetAppInfo(bool includeCodec = true, bool includeAssembly = true)
     {
         bool IsPackaged = false;
         string PackageName = "Unknown";
@@ -253,8 +253,10 @@ public partial class DiagnosticSettingPage : ContentPage
 
         }
         catch { }
-        string renderHash = "unknown";
+        string renderHash = "unknown", drawingHash = "unknown", programDate = "?", drawingDate = "?", drawingCommit = "?";
         var renderType = typeof(Renderer).Assembly;
+        var drawingType = typeof(Drawing.Base.IPicture).Assembly;
+        var appType = typeof(MauiProgram).Assembly;
 
         try
         {
@@ -263,7 +265,41 @@ public partial class DiagnosticSettingPage : ContentPage
                 renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
             }
             catch { renderHash = "unknown"; }
+            try
+            {
+                drawingHash = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? HashServices.ComputeFileHash(drawingType.Location) : "unknown";
 
+            }
+            catch
+            {
+                drawingHash = "unknown";
+
+            }
+
+            try
+            {
+                programDate = !appType.IsDynamic && Path.Exists(appType.Location) ? File.GetLastWriteTime(appType.Location).ToString("yyyy-MM-dd HH:mm:ss") : "unknown";
+
+            }
+            catch
+            {
+                programDate = "?";
+            }
+            try
+            {
+                drawingDate = !drawingType.IsDynamic && Path.Exists(drawingType.Location) ? File.GetLastWriteTime(drawingType.Location).ToString("yyyy-MM-dd HH:mm:ss") : "unknown";
+
+            }
+            catch
+            {
+                drawingDate = "?";
+            }
+            try
+            {
+                drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
+
+            }
+            catch { drawingCommit = "unknown"; }
         }
         catch { }
 
@@ -272,29 +308,34 @@ public partial class DiagnosticSettingPage : ContentPage
             $"""
             {Localized.AppBrand} - {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} ({AppInfo.BuildString})
             IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
-            CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
-            {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0+unknown commit").Skip(6).Aggregate("", (a, b) => $"{a}{b}")}  
+            {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} on {programDate} 
+            {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
+            {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit.Substring(0, 8)} {drawingDate}) hash:{drawingHash}
 
-            - CPU arch: {RuntimeInformation.ProcessArchitecture}
-            - AppDataPath: {MauiProgram.BasicDataPath}
-            - UserDataPath: {MauiProgram.DataPath}
-            {(OperatingSystem.IsWindows() ? $"- IsPackaged: {IsPackaged}" : "")}
-            - Bundle Identifier / Package Name: {PackageName}
+            AppDataPath: {MauiProgram.BasicDataPath}
+            UserDataPath: {MauiProgram.DataPath}
+            {(OperatingSystem.IsWindows() ? $"IsPackaged: {IsPackaged}" : "")}
+            Bundle Identifier / Package Name: {PackageName}
 
             CmdLine:
             {string.Join(' ', MauiProgram.CmdlineArgs)}
 
+            """
+            + (includeAssembly ?
+            $"""
             Assembly: 
             {GetAssemblyInfo()}
 
+            """ : "")
+            + (includeCodec ?
+            $"""
             Internal FFmpeg:
             - lib location: {MauiProgram.FFmpegRoot}
             - version: {internalFFmpegVersion}
             - config: {internalFFmpegCfg}
             - Codecs: 
             {string.Join("\r\n", codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
-
-            """;
+            """ : "");
     }
 
 
@@ -304,6 +345,7 @@ public partial class DiagnosticSettingPage : ContentPage
         builder.AppendLine(
             $"""
             brief OS version from CLR: {Environment.OSVersion.Platform} {Environment.OSVersion.Version} ({RuntimeInformation.OSDescription})
+            CPU Arch: {RuntimeInformation.ProcessArchitecture}
             
             """);
 #if ANDROID
@@ -572,6 +614,20 @@ public partial class DiagnosticSettingPage : ContentPage
 #else
         builder.AppendLine("Device info: platform not recognized or unsupported for detailed info.");
 #endif
+        try
+        {
+            builder.AppendLine();
+            builder.AppendLine("CPU Core group from ThreadAffinityHelper:");
+            foreach (var group in ThreadAffinityHelper.GetCpuCoreGroups())
+            {
+                builder.AppendLine($"- Group ({string.Join(", ", group.CpuIndexes)}): {group}");
+            }
+        }
+        catch (Exception ex)
+        {
+            builder.AppendLine($"Exception reading CPU core groups: {ex.Message}");
+        }
+
         return builder.ToString();
     }
 }

@@ -6,12 +6,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 		<AssemblyDescription>projectFrameCut's Windows/Linux standalone renderer</AssemblyDescription>
+		<AssemblyTitle>projectFrameCut standalone renderer</AssemblyTitle>
 		<Version>1.4.0.1</Version>
 	</PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
     <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
+		<PackageReference Include="ILGPU" Version="1.5.3" />
+		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
   </ItemGroup>
 
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="18.7.37220.1" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<DefineConstants>$(DefineConstants);TRACE;DIAGHUB_ENABLE_TRACE_SYSTEM</DefineConstants>
+	</PropertyGroup>
+	
 </Project>

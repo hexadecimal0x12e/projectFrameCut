@@ -16,7 +16,6 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Plugin;
-using SixLabors.ImageSharp;
 using projectFrameCut.Services;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -25,11 +24,13 @@ using System.Runtime.InteropServices;
 
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
 using System.Reflection;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.HwAccelEngine;
 
 
 
@@ -37,8 +38,7 @@ using System.Reflection;
 
 
 #if ANDROID
-using projectFrameCut.Render.AndroidOpenGL;
-using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
 #endif
@@ -67,7 +67,7 @@ public partial class RenderPage : ContentPage
     public bool running;
 
 
-    // ÈÕÖ¾»º³åÇø
+    // ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     private readonly StringBuilder _logBuffer = new StringBuilder();
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
     private System.Timers.Timer? _logUpdateTimer;
@@ -151,11 +151,20 @@ public partial class RenderPage : ContentPage
                 };
                 vm.BitDepth = "10bit";
             }
+            if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
+            {
+                MaxParallelThreadsCountLabel.IsVisible = false;
+                MaxParallelThreadsCount.IsVisible = false;
+                MaxParallelThreadsCount.Value = Environment.ProcessorCount;//fallback
+            }
+            else
+            {
+                MaxParallelThreadsCount.Value = (int)SettingsManager.GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8);
+            }
         }
         catch { }
         BindingContext = vm;
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
-        MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
@@ -168,13 +177,6 @@ public partial class RenderPage : ContentPage
         InitializeLogPanel();
         InitializeScreenSaverTimer();
 
-#if ANDROID
-        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount;
-        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount / 2, 6);
-#else
-        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount * 8;
-        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount * 2, 16);
-#endif
     }
     private void InitializeLogTimer()
     {
@@ -390,7 +392,7 @@ public partial class RenderPage : ContentPage
         {
             var batch = new StringBuilder();
             int count = 0;
-            const int maxBatchSize = 50; // Ã¿´Î×î¶à´¦Àí 50 ÌõÈÕÖ¾
+            const int maxBatchSize = 50; // Ã¿ï¿½ï¿½ï¿½ï¿½à´¦ï¿½ï¿½ 50 ï¿½ï¿½ï¿½ï¿½Ö¾
 
             while (count < maxBatchSize && _logQueue.TryDequeue(out var logEntry))
             {
@@ -486,21 +488,6 @@ public partial class RenderPage : ContentPage
 #endif
                 if (_cts.IsCancellationRequested) return;
 
-                try
-                {
-                    await ComposeAudio(vm, audOutputPath);
-
-                }
-                catch (Exception ex)
-                {
-
-                    Log(ex, "compose audio", this);
-                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
-                    return;
-                }
-                if (_cts.IsCancellationRequested) return;
-
                 var mtdDict = new Dictionary<string, string>
                 {
                     { "title", _project.ProjectName ?? "Project" },
@@ -524,6 +511,21 @@ public partial class RenderPage : ContentPage
                     return;
                 }
 
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await ComposeAudio(vm, audOutputPath);
+
+                }
+                catch (Exception ex)
+                {
+
+                    Log(ex, "compose audio", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
                 if (_cts.IsCancellationRequested) return;
 
                 double targetFps = double.Parse(vm.Framerate);
@@ -550,12 +552,22 @@ public partial class RenderPage : ContentPage
 
 
                 if (_cts.IsCancellationRequested) return;
+                SetSubProg("FinalEncoding");
 
                 await Task.Run(async () =>
                 {
                     try
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true, mtdDict);
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict);
+                        if (!SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                        {
+                            try
+                            {
+                                File.Delete(vidOutputPath);
+                                File.Delete(audOutputPath);
+                            }
+                            catch { }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -584,7 +596,7 @@ public partial class RenderPage : ContentPage
                         catch { }
                     }
 #else
-                    await Task.Run(() => File.Move(compOutputPath, resultPath));
+                    //await Task.Run(() => File.Move(compOutputPath, resultPath));
 
 #endif
 #if WINDOWS
@@ -691,7 +703,36 @@ public partial class RenderPage : ContentPage
             var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
 
-            int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
+            int[] CPUAffinityOverride = Array.Empty<int>(), preparerAffinityCpuIndexes = [];
+            bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
+            if (EnableThreadAffinity)
+            {
+                try
+                {
+                    if (SettingsManager.IsSettingExists("render_coreAffinityOverride") && !string.IsNullOrWhiteSpace(SettingsManager.GetSetting("render_coreAffinityOverride", "")))
+                    {
+                        CPUAffinityOverride = SettingsManager.GetSetting("render_coreAffinityOverride", "0").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(c => uint.TryParse(c, out _)).Select(int.Parse).ToArray();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                            var bigGroup = group.OrderBy(c => c.MaxFrequencyKHz ?? 0 + c.Capacity ?? 0 + c.EfficiencyClass ?? 0).Last();
+                            CPUAffinityOverride = bigGroup.CpuIndexes.ToArray();
+
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+                preparerAffinityCpuIndexes = CPUAffinityOverride.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(CPUAffinityOverride).ToArray() : [];
+
+            }
+            int parallelThreadCount = CPUAffinityOverride.Length > 0 ? CPUAffinityOverride.Length : (int)MaxParallelThreadsCount.Value;
+            if (CPUAffinityOverride.Length > 0 && (DeviceInfo.Idiom == DeviceIdiom.Desktop || OperatingSystem.IsIOS())) parallelThreadCount = (int)(parallelThreadCount * 1.5);
+
+            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Prepare in worker: {SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true)}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
 
 #if ANDROID
             ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
@@ -705,14 +746,14 @@ public partial class RenderPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-            Context context = Context.CreateDefault();
+            Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
             var devices = context.Devices.ToList();
             if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
             {
                 var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
                 if (accels == "all")
                 {
-                    projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
                 }
                 else
                 {
@@ -720,17 +761,17 @@ public partial class RenderPage : ContentPage
                                 .Select(s => int.TryParse(s, out var id) ? id : -1)
                                 .Where(id => id >= 0)
                                 .ToList();
-                    projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
                 }
 
             }
             else
             {
                 var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
             }
 
-            if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+            if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
             var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
@@ -793,43 +834,13 @@ public partial class RenderPage : ContentPage
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
+                EnableThreadAffinity = EnableThreadAffinity,
+                WorkerCPUCoreIndexs = CPUAffinityOverride,
+                OneByOneRender = blockwrite,
+                PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
+                AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
+                EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
-                //MinRemainingFramesForPreparedWait = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => parallelThreadCount,
-                //    var t when t == DeviceIdiom.Tablet => parallelThreadCount * 2,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => parallelThreadCount * 3,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => parallelThreadCount * 4,
-                //    _ => parallelThreadCount * 2
-                //},
-                //RenderWorkerLaunchUtilizationThreshold = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 0.8,
-                //    _ => 1
-                //},
-                //RenderSchedulerPreparePollDelayMs = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 8000,
-                //    var t when t == DeviceIdiom.Tablet => 10000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 12500,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 15000,
-                //    _ => 15000
-                //},
-                //RenderSchedulerIdleDelayMs = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 500,
-                //    var t when t == DeviceIdiom.Tablet => 1000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount > 8 => 1000,
-                //    var t when t == DeviceIdiom.Phone && Environment.ProcessorCount <= 8 => 2000,
-                //    _ => 2000
-                //},
-                //MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
-                //{
-                //    var t when t == DeviceIdiom.Desktop => 0,
-                //    var t when t == DeviceIdiom.Tablet => 25000,
-                //    var t when t == DeviceIdiom.Phone => 30000,
-                //    _ => 40000
-                //},
                 MinSchedulePreparedFrames = parallelThreadCount,
                 UseHDR = ProjectUsesHDR,
                 MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
@@ -880,12 +891,12 @@ public partial class RenderPage : ContentPage
                 }
                 finally
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(50);
                     _previewUpdateSemaphore.Release();
                 }
             };
 
-            builder?.Build()?.Start();
+            builder?.Build(preparerAffinityCpuIndexes)?.Start();
             await Task.Run(() => renderer.PrepareRender(_cts.Token), _cts.Token);
             if (_cts.IsCancellationRequested) return;
 
@@ -914,21 +925,35 @@ public partial class RenderPage : ContentPage
 
                 SetSubProg("WriteVideo");
                 Log("Finish writing video...");
-                int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
-                int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
-                builder?.Finish((i) => Timeline.MixtureLayers(
-                    Timeline.GetFramesInOneFrame(
-                        clips,
+                await Task.Run(() =>
+                {
+                    int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
+                    int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
+                    builder?.Finish((i) => Timeline.MixtureLayers(
+                        Timeline.GetFramesInOneFrame(
+                            clips,
+                            i,
+                            width,
+                            height,
+                            projectRelativeWidth: projectRelativeWidth,
+                            projectRelativeHeight: projectRelativeHeight),
                         i,
                         width,
                         height,
                         projectRelativeWidth: projectRelativeWidth,
                         projectRelativeHeight: projectRelativeHeight),
-                    i,
-                    width,
-                    height,
-                    projectRelativeWidth: projectRelativeWidth,
-                    projectRelativeHeight: projectRelativeHeight), duration);
+                        duration,
+                        (_, p) =>
+                        {
+                            Dispatcher.Dispatch(async () =>
+                            {
+                                await SubProgress.ProgressTo(p, 250, Easing.Linear);
+                                SubProgLabel.Text = $"{_currentSubProgText} ({p:p2})";
+
+                            });
+                        });
+                });
+
 
             }
 
@@ -1646,8 +1671,8 @@ public class RenderPageViewModel : INotifyPropertyChanged
                     {
                         _width = parts[0];
                         _height = parts[1];
-                        OnPropertyChanged(nameof(Width));   // ÐÞÕý
-                        OnPropertyChanged(nameof(Height));  // ÐÞÕý
+                        OnPropertyChanged(nameof(Width));   // ï¿½ï¿½ï¿½ï¿½
+                        OnPropertyChanged(nameof(Height));  // ï¿½ï¿½ï¿½ï¿½
                     }
                 }
             }

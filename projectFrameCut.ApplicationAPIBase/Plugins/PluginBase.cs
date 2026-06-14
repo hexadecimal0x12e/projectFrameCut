@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Project;
+using projectFrameCut.ApplicationAPIBase.Text;
 
 
 namespace projectFrameCut.ApplicationAPIBase.Plugins
@@ -29,7 +30,16 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 4;
+        public static int CurrentAppLevelPluginAPIVersion => 5;
+
+        /// <summary>
+        /// The root of app's data.
+        /// </summary>
+        public static string AppDataRoot 
+        { 
+            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; } 
+            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; } 
+        } = "";
 
         /// <summary>
         /// Get the version of the Application-level plugin.
@@ -40,6 +50,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// Gets a dictionary that maps effect names to their corresponding effect bundle creation functions.
         /// </summary>
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }
+
+        /// <summary>
+        /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
+        /// </summary>
+        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
 
         /// <summary>
         /// Get a helper for dynamic preview generation. The key of the dictionary is the type name of the clip or effect that the provider can generate preview for. The value is the provider itself.

@@ -10,7 +10,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
+using projectFrameCut.Drawing.Processing.Converting;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -34,6 +34,19 @@ using System.Text.Encodings.Web;
 using System.Text.Json.Serialization.Metadata;
 using System.Text;
 using FFmpeg.AutoGen;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Text.FontHelper;
+using System.Text.Json.Serialization;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.HwAccelEngine;
+using projectFrameCut.Drawing.Text.Entry;
+
+
+
+
+
+
+
 
 
 
@@ -41,6 +54,7 @@ using FFmpeg.AutoGen;
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 
 #endif
 
@@ -80,17 +94,17 @@ public partial class TestPage : ContentPage
         var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
                                 .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
                                 new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-        Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice.CreateAccelerator(context)];
+        HwAccelEnginePlugin.accelerators = [accelDevice.CreateAccelerator(context)];
 
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
-        TextClip.GetFont(true);
+        TextClipFontRegistry.Initialize();
         _ = LoadFontPickerAsync();
 
         TextPicker.SelectedFontChanged += async (s, e) =>
         {
-            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerItem, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
 
         };
     }
@@ -198,7 +212,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region openGL test
-    private projectFrameCut.Shared.Picture16bpp srcA, srcB;
+    private Picture16bpp srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
@@ -212,11 +226,11 @@ public partial class TestPage : ContentPage
             Task.WaitAll([
                 Task.Run(() =>
                 {
-                    srcA = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
+                    srcA = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
                 Task.Run(() =>
                 {
-                    srcB = new projectFrameCut.Shared.Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
+                    srcB = new Picture16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
             ]);
 
@@ -228,7 +242,7 @@ public partial class TestPage : ContentPage
 
                 var tcsA = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var alphaGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var alphaGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderAlphaSrc,
                     Inputs = new float[][]
@@ -246,7 +260,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (alphaGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (alphaGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -277,7 +291,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsA.TrySetResult(res);
                             }
                         }
@@ -302,7 +316,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsR = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var RGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var RGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -322,7 +336,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (RGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (RGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -353,7 +367,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsR.TrySetResult(res);
                             }
                         }
@@ -384,7 +398,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsG = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var GGlView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var GGlView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -404,7 +418,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (GGlView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (GGlView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -435,7 +449,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsG.TrySetResult(res);
                             }
                         }
@@ -465,7 +479,7 @@ public partial class TestPage : ContentPage
             {
                 var tcsB = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var BGLView = new projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceView()
+                var BGLView = new projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceView()
                 {
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
@@ -486,7 +500,7 @@ public partial class TestPage : ContentPage
                 {
                     try
                     {
-                        if (BGLView.Handler is projectFrameCut.Render.AndroidOpenGL.Platforms.Android.NativeGLSurfaceViewHandler handler)
+                        if (BGLView.Handler is projectFrameCut.Render.HwAccelEngine.Platforms.Android.NativeGLSurfaceViewHandler handler)
                         {
                             var platformView = handler.PlatformView;
                             if (platformView != null)
@@ -517,7 +531,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsB.TrySetResult(res);
                             }
                         }
@@ -544,17 +558,17 @@ public partial class TestPage : ContentPage
             Debug.WriteLine("Waiting for convertor done...");
             Task.WaitAll(RConvertor, GConvertor, BConvertor);
             Debug.WriteLine("Writing result...");
-            var outPic = new projectFrameCut.Shared.Picture16bpp(srcA.Width, srcA.Height)
+            var outPic = new Picture16bpp(srcA.Width, srcA.Height)
             {
                 r = uOutR,
                 g = uOutG,
                 b = uOutB,
                 a = outA,
-                hasAlphaChannel = true
+                HasAlphaChannel = true
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";
-            outPic.SaveAsPng16bpp(path);
+            outPic.SaveToPng(path);
 
             ResultImage.Source = ImageSource.FromFile(path);
 
@@ -684,17 +698,18 @@ public partial class TestPage : ContentPage
                 PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
             };
             w.Initialize();
-            TextClip c = new TextClip { Id = "1", Name = "1" };
-            TextClipEntry te = new TextClipEntry
+            TextClip c = new TextClip { Id = Guid.Parse("00000000-0000-0000-0000-000000000001"), Name = "1" };
+            TextEntry te = new TextEntry
             {
-                r = 65535,
-                g = 65535,
-                b = 65535,
-                a = 65535,
-                fontFamily = "Arial",
-                x = 50,
-                y = 50,
-                fontSize = 120,
+                FillR = 65535,
+                FillG = 65535,
+                FillB = 65535,
+                FillA = 1f,
+                FontName = "Arial",
+                X = 50,
+                Y = 50,
+                FontSize = 120,
+                Text = "",
             };
             f.Brightness = new float[f.Pixels];
             for (int idx = 0; idx < f.Pixels; idx++)
@@ -713,18 +728,18 @@ public partial class TestPage : ContentPage
                     f.Brightness[idx] = 1f;
                 }
             }
-            f.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+            f.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
 
             for (int i = 0; i < 1; i++)
             {
-                c.TextEntries = [te with { text = $"Frame {i}" }];
+                c.TextEntries = [te with { Text = $"Frame {i}" }];
                 var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
-                textFrame.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
-                var t = textFrame.ToHDRPicture(1, 5000);
+                textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
-                t.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                t.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-                r.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"), null);
+                r.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
@@ -751,9 +766,9 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.a
         };
-        fThrowBrightness.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fNormalizeBrigtnessToRGB = f.SaveToSixLaborsImage(16, true).ToPJFCPicture(16);
-        fNormalizeBrigtnessToRGB.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fThrowBrightness.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
+        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
             r = f.r,
@@ -761,7 +776,7 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.Brightness
         };
-        fReplaceAlpha.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlpha.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
@@ -769,7 +784,7 @@ public partial class TestPage : ContentPage
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
         }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-        fReplaceAlphaAndComposeMask.SaveAsPng16bpp(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
             OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
@@ -787,7 +802,7 @@ public partial class TestPage : ContentPage
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 50,
             StartY = 120
@@ -796,7 +811,7 @@ public partial class TestPage : ContentPage
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            result.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -808,12 +823,12 @@ public partial class TestPage : ContentPage
     private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 250,
             StartY = 180
         };
-        ResizeEffect_ImageSharp r = new()
+        ResizeEffect_IPicture r = new()
         {
             Height = 300,
             Width = 1000,
@@ -822,11 +837,11 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -854,21 +869,21 @@ public partial class TestPage : ContentPage
                 NormalizeBrightnessToRGBOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 OverlayMaskFromBrightnessOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.OverlayMaskFromBrightness).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
                 DiscardBrightnessChannelOutputImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    h.SaveToSixLaborsImage(16, false, HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveAsPng(ms);
+                    h.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel).SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -882,7 +897,7 @@ public partial class TestPage : ContentPage
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
                     MemoryStream ms = new();
-                    frame.SaveToSixLaborsImage().SaveAsPng(ms);
+                    frame.SaveToPng(ms);
                     ms.Position = 0;
                     return ms;
                 });
@@ -897,18 +912,18 @@ public partial class TestPage : ContentPage
     private void TestMixtureButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_IPicture p = new()
+        PlaceEffect_HwAccel p = new()
         {
             StartX = 50,
             StartY = 120
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            final.SaveToPng(ms);
             ms.Position = 0;
             return ms;
         });
@@ -949,8 +964,8 @@ public partial class TestPage : ContentPage
     {
 
 #if ANDROID
-        Render.AndroidOpenGL.ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
-        Render.AndroidOpenGL.ComputerHelper.Init();
+        ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
+        ComputerHelper.Init();
 #elif iDevices
 
 #elif WINDOWS
@@ -961,7 +976,7 @@ public partial class TestPage : ContentPage
             var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
             if (accels == "all")
             {
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
             }
             else
             {
@@ -969,17 +984,17 @@ public partial class TestPage : ContentPage
                             .Select(s => int.TryParse(s, out var id) ? id : -1)
                             .Where(id => id >= 0)
                             .ToList();
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
             }
 
         }
         else
         {
             var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
         }
 
-        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+        if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
         await Benchmarker.Start((d, etr) =>
@@ -1019,6 +1034,8 @@ public partial class TestPage : ContentPage
         .AddSwitch("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
         .AddButton("testButton", "Click me!")
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef", "ghijklm"))
+        .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef222", "ghijklm111"))
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
@@ -1039,17 +1056,20 @@ public partial class TestPage : ContentPage
         })
         .ListenToChanges(async (s, e) =>
         {
-            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
+            await DisplayAlertAsync("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
         });
         PpbTestGrid.Content = ppb.Build();
 
 
     }
 
-    private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
+    private void PPBPaddingSlider_DragCompleted(object sender, EventArgs e)
     {
-        ppb.DefaultPadding = e.NewValue;
-        PpbTestGrid.Content = ppb.Build();
+        Dispatcher.Dispatch(() =>
+        {
+            ppb.DefaultPadding = PPBPaddingSlider.Value;
+            PpbTestGrid.Content = ppb.Build();
+        });
     }
 
     private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
@@ -1218,12 +1238,15 @@ public partial class TestPage : ContentPage
 
     private async void TestFontPropReaderButton_Clicked(object sender, EventArgs e)
     {
-        var info = TextHelper.ReadFontFileInfo(@"C:\Windows\Fonts\msyhbd.ttc");
-        await DisplayAlertAsync(Title, JsonSerializer.Serialize(info, new JsonSerializerOptions
+        var info = TextHelper.CreateFontInfo("1", @"C:\Windows\Fonts\msyhbd.ttc");
+        foreach (var item in info)
         {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        }), "ok");
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(item.InnerFont, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            }), "ok");
+        }
     }
     #endregion
 

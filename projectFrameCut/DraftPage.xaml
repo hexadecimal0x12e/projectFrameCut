@@ -155,6 +155,31 @@
             <MenuFlyoutItem Text="{l:Localized Key=AIAssistant_ChatViewTitle}" Command="{Binding ManageWindowCommand}" CommandParameter="assistant" />
 -->
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollLeft}" Command="{Binding TimelineScrollCommand}" CommandParameter="-10" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
+                                Key="Left" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollRight}" Command="{Binding TimelineScrollCommand}" CommandParameter="10" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
+                                Key="Right" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_FollowPlayhead}" Command="{Binding FollowPlayheadCommand}" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
+                                Key="F" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{Binding IsTimelineScrollEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_LockScroll}, FalseObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_UnLockScroll}}}" Command="{Binding SetTimelineScrollLockCommand}" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
+                                Key="L" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" Command="{Binding ZoomCommand}" CommandParameter="-" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
@@ -405,7 +430,11 @@
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="1">
-                    <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" />
+                    <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" >
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer x:Name="StatusLabelTap" NumberOfTapsRequired="2" Command="{Binding ManageWindowCommand}" CommandParameter="messages" />
+                        </Label.GestureRecognizers>
+                    </Label>
                 </HorizontalStackLayout>
 
 

@@ -36,7 +36,7 @@ namespace projectFrameCut.Render.Effect
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => ImplementType == EffectImplementType.HwAcceleration ? "PlaceComputer" : null;
-        public bool YieldProcessStep => ImplementType != EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }

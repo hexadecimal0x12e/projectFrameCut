@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -29,6 +30,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get which kind of effect is. 
         /// </summary>
+        /// <remarks>
+        /// Never set this in your effect's code, this property has been set when you implement the specific effect interface, such as <see cref="INormalEffect"/>, <see cref="IContinuousEffect"/> and so on.
+        /// </remarks>
         public EffectType TypeOfEffect { get; }
 
         /// <summary>
@@ -67,25 +71,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int Index { get; set; }
 
         /// <summary>
+        /// Get whether this effect is reorderable in the effect stack. If false, the effect will be rendered in a fixed position in the final effect stack.
+        /// </summary>
+        public bool IsReorderable { get; }
+
+        /// <summary>
         /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
         /// Or be null indicates this effect does not need a specific computer.
         /// </summary>
         [JsonIgnore]
         public string? NeedComputer { get; }
-        /// <summary>
-        /// Gets a value indicating whether the effect produces a rendered <see cref="IPicture"/> or a un-processed <see cref="IPictureProcessStep"/> to be used in the next step.
-        /// </summary>
-        [JsonIgnore]
-        public bool YieldProcessStep { get; }
 
 
         /// <summary>
         /// Get the relative width of the effect.
         /// </summary>
+        /// <remarks>
+        /// -1 for some effects which do not care about the width and height of the output canvas, such as <see cref="IClipPositionProvider"/>. 
+        /// For effects that care about the output canvas size, it should be set to the width of the output canvas when creating the effect, and the effect will do scaling based on the relative width and height when rendering.
+        /// </remarks>
         public int RelativeWidth { get; set; }
         /// <summary>
         /// Get the relative height of the effect.
         /// </summary>
+        /// <remarks>
+        /// -1 for some effects which do not care about the width and height of the output canvas, such as <see cref="IClipPositionProvider"/>. 
+        /// For effects that care about the output canvas size, it should be set to the width of the output canvas when creating the effect, and the effect will do scaling based on the relative width and height when rendering.
+        /// </remarks>
         public int RelativeHeight { get; set; }
 
         /// <summary>
@@ -145,15 +157,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the processed frame</returns>
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
 
-        /// <summary>
-        /// Generate some process step instead of rendering the picture directly.
-        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
-        /// </summary>
-        /// <param name="source">The input frame.</param>
-        /// <param name="targetWidth">Output canvas' width.</param>
-        /// <param name="targetHeight">Output canvas' height.</param>
-        /// <returns>the processed frame</returns>
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
     }
 
     public interface IColorAdjustEffect : INormalEffect
@@ -165,21 +168,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="computer"></param>
         /// <returns>the processed frame</returns>
         public IPicture Process(IPicture source, IComputer? computer);
-        /// <summary>
-        /// Yield a process step for adjusting the frame.
-        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns>the processed frame</returns>
-        public IPictureProcessStep GetStep(IPicture source);
-
         IPicture INormalEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) => Process(source, computer);
-        IPictureProcessStep INormalEffect.GetStep(IPicture source, int targetWidth, int targetHeight) => GetStep(source);
 
-        bool IEffect.Enabled { get => true; set { if (!value) Logger.Log("A IColorAdjustEffect should never be disabled. This operation is ignored.", "warn"); } }
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IColorAdjustEffect. This operation is ignored.", "warn"); }
-        int IEffect.Index { get => int.MinValue; set => Logger.Log("ColorAdjustment should always be first one to render and it's index should not be changed.", "warn"); }
+        bool IEffect.Enabled { get => true; set { } }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
+        int IEffect.Index { get => int.MinValue; set { } }
 
     }
 

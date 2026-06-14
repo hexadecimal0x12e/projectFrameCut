@@ -50,34 +50,36 @@
                     ZIndex="110"
                     AbsoluteLayout.LayoutFlags="None" />
 
-            <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start" />
-
 
         </AbsoluteLayout>
         <Grid x:Name="BottomControlsHost"
               VerticalOptions="End"
               HorizontalOptions="Fill"
               HeightRequest="48"
-              BackgroundColor="Transparent"
               InputTransparent="False"
-              Shadow="{Shadow Brush=Gray, Radius=3, Opacity=1}"
               ZIndex="9999">
-            <HorizontalStackLayout x:Name="LayoutOptionsBar" Margin="4" VerticalOptions="End">
-                <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_LockLayout}">
-                    <CheckBox IsChecked="{Binding LockLayout}"/>
-                    <Label Text="&#xe897;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                </HorizontalStackLayout>
-                <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_EnableSnapping}">
-                    <CheckBox IsChecked="{Binding EnableSnapping}"  />
-                    <Label Text="&#xeeac;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                </HorizontalStackLayout>
-                <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}">
-                    <CheckBox IsChecked="{Binding DisallowClipOutOfBounds}"  />
-                    <Label Text="&#xf54f;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                </HorizontalStackLayout>
-                <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ShowReferenceLines}">
-                    <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
-                    <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+            <HorizontalStackLayout x:Name="LayoutOptionsBar" Margin="4" VerticalOptions="End" >
+                <HorizontalStackLayout BackgroundColor="#80000000">
+                    <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_LockLayout}">
+                        <CheckBox IsChecked="{Binding LockLayout}"/>
+                        <Label Text="&#xe897;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_EnableSnapping}">
+                        <CheckBox IsChecked="{Binding EnableSnapping}"  />
+                        <Label Text="&#xeeac;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}">
+                        <CheckBox IsChecked="{Binding DisallowClipOutOfBounds}"  />
+                        <Label Text="&#xf54f;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ShowReferenceLines}">
+                        <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
+                        <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Margin="4,0">
+                        <CheckBox IsChecked="{Binding EnableKeyframeRecording}" />
+                        <Label Text="{l:Localized Key=InteractableEditor_KeyFrame}" Margin="-16,0,0,0" VerticalOptions="Center" FontSize="11" />
+                    </HorizontalStackLayout>
                 </HorizontalStackLayout>
 
                 <Border x:Name="DefaultColorSwatchBorder"
@@ -111,7 +113,7 @@
                 </HorizontalStackLayout>
 
             </HorizontalStackLayout>
-            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8" Shadow="{Shadow Brush=Black, Radius=3, Opacity=1}">
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8" >
                 <Button x:Name="ManageRefLineButton" Text="&#xe770;" FontFamily="Icons" Clicked="ManageRefLineButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ManageReferenceLines}" />
                 <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
             </HorizontalStackLayout>

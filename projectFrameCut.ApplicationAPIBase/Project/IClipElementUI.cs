@@ -16,7 +16,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <summary>
         /// Gets or sets the unique clip identifier.
         /// </summary>
-        string Id { get; set; }
+        Guid Id { get; set; }
         [JsonIgnore]
         /// <summary>
         /// Gets or sets the main clip visual container.
@@ -111,13 +111,15 @@ namespace projectFrameCut.ApplicationAPIBase.Project
 
         public static Func<ClipUpdateReason?, string?, string?, string?>? LocalizedChangeReasonBuilder { get; set; }
 
-        public string? SourceId { get; set; }
+        public Guid? SourceId { get; set; }
 
         public string? SourceName { get; set; }
 
         public ClipUpdateReason? Reason { get; set; }
 
         public string? DetailInfo { get; set; }
+
+        public Guid? ChangedClipID { get; set; } = null;
 
         public bool NoSave { get; set; } = false;
 

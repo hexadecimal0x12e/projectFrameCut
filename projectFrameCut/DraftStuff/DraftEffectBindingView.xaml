@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
     <Grid>
         <Grid.RowDefinitions>
@@ -43,11 +44,11 @@
         </Grid>
 
         <!-- Splitter -->
-        <Grid Grid.Column="1" BackgroundColor="#801a1a1a" IsVisible="{OnIdiom Phone=False, Default=True}">
+        <Grid Grid.Column="1" BackgroundColor="{Binding PanelCollapsed, Converter={toolkit:BoolToObjectConverter FalseObject=#801a1a1a, TrueObject=#1e1e1e}}" IsVisible="{OnIdiom Phone=False, Default=True}">
             <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
             </Grid.GestureRecognizers>
-            <Button x:Name="TogglePanelButton" Text="&lt;" WidthRequest="4" HeightRequest="4"
+            <Button x:Name="TogglePanelButton" Text="&lt;" WidthRequest="32" HeightRequest="32"
                     HorizontalOptions="Center" VerticalOptions="Center" Clicked="OnTogglePanelClicked">
                 <Button.GestureRecognizers>
                     <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
@@ -60,11 +61,16 @@
 
             <tv:TabbedView Grid.Row="0" x:Name="RightTabView">
                 <tv:TabbedViewItem Header="{l:Localized Key=PropertyPanel}">
-                    <ScrollView Padding="10">
-                        <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10">
-                            <Label HorizontalOptions="Center" VerticalOptions="Center" Text="{l:Localized Key=DraftPage_PropertyPanel_SelectToContinue}"/>
-                        </VerticalStackLayout>
-                    </ScrollView>
+                    <Grid RowDefinitions="Auto,*">
+                        <ScrollView Padding="10" Grid.Row="0">
+                            <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10">
+                                <Label HorizontalOptions="Center" VerticalOptions="Center" Text="{l:Localized Key=DraftPage_PropertyPanel_SelectToContinue}"/>
+                            </VerticalStackLayout>
+                        </ScrollView>
+                        <Border Grid.Row="1" Stroke="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 4" VerticalOptions="End" Margin="4">
+                            <Image x:Name="AfterEffectBigPreview" Background="Black" />
+                        </Border>
+                    </Grid>
                 </tv:TabbedViewItem>
                 <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_EffectBindView_AddEffect}">
                     <ScrollView Padding="10">

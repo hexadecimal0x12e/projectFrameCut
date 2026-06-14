@@ -23,15 +23,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "PreserveAspectRatio", true },
         };
 
-        public List<string> ParametersNeeded => ResizeEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => ResizeEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => ResizeEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => ResizeEffect_IPicture.ParametersType;
 
         public string TypeName => "Resize";
         public bool IsNormalEffect => true;
         public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
-        public EffectTarget Target => EffectTarget.Video;
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -59,8 +59,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             bool preserveAspectRatio = EffectBundleUiHelper.GetBool(Parameters, "PreserveAspectRatio", true);
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "Width", EffectBundleUiHelper.ParamLabel("Width"), width.ToString(), "1920");
-            EffectBundleUiHelper.AddNumericEntry(panel, "Height", EffectBundleUiHelper.ParamLabel("Height"), height.ToString(), "1080");
+            panel.AddPositionTupleInputBox("resize", new SingleLineLabel(EffectBundleUiHelper.L("_OutputSize", "Output Size")), PositionTupleMode.WH, (0, 0, width, height));
             panel.AddCheckbox(
                 "PreserveAspectRatio",
                 EffectBundleUiHelper.L("Effect_Resize_PreserveAspectRatio", "Preserve Aspect Ratio"),
@@ -71,17 +70,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Width" && EffectBundleUiHelper.TrySetInt(Parameters, "Width", args.Value))
+            switch (args.Id)
             {
-                Parameters["Width"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Width", 1920));
-            }
-            else if (args.Id == "Height" && EffectBundleUiHelper.TrySetInt(Parameters, "Height", args.Value))
-            {
-                Parameters["Height"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Height", 1080));
-            }
-            else if (args.Id == "PreserveAspectRatio")
-            {
-                EffectBundleUiHelper.TrySetBool(Parameters, "PreserveAspectRatio", args.Value);
+                case "resize_W":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "Width", args.Value))
+                        Parameters["Width"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Width", 1920));
+                    break;
+                case "resize_H":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "Height", args.Value))
+                        Parameters["Height"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Height", 1080));
+                    break;
+                case "PreserveAspectRatio":
+                    EffectBundleUiHelper.TrySetBool(Parameters, "PreserveAspectRatio", args.Value);
+                    break;
             }
 
             return Parameters;

@@ -25,15 +25,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Angle", 0f },
         };
 
-        public List<string> ParametersNeeded => CropEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => CropEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => CropEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => CropEffect_IPicture.ParametersType;
 
         public string TypeName => "Crop";
         public bool IsNormalEffect => true;
         public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
-        public EffectTarget Target => EffectTarget.Video;
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -63,10 +63,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             float angle = EffectBundleUiHelper.GetFloat(Parameters, "Angle", 0f);
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartX", EffectBundleUiHelper.ParamLabel("StartX"), startX.ToString(), "0");
-            EffectBundleUiHelper.AddNumericEntry(panel, "StartY", EffectBundleUiHelper.ParamLabel("StartY"), startY.ToString(), "0");
-            EffectBundleUiHelper.AddNumericEntry(panel, "Width", EffectBundleUiHelper.ParamLabel("Width"), width.ToString(), "1280");
-            EffectBundleUiHelper.AddNumericEntry(panel, "Height", EffectBundleUiHelper.ParamLabel("Height"), height.ToString(), "720");
+            panel.AddPositionTupleInputBox("crop", new SingleLineLabel(EffectBundleUiHelper.L("_CropRegion", "Crop Region")), PositionTupleMode.XYWH, (startX, startY, width, height));
             panel.AddSlider(
                 "Angle",
                 EffectBundleUiHelper.L("General_Rotation", "Rotation"),
@@ -81,25 +78,25 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "StartX")
+            switch (args.Id)
             {
-                EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
-            }
-            else if (args.Id == "StartY")
-            {
-                EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
-            }
-            else if (args.Id == "Width" && EffectBundleUiHelper.TrySetInt(Parameters, "Width", args.Value))
-            {
-                Parameters["Width"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Width", 1280));
-            }
-            else if (args.Id == "Height" && EffectBundleUiHelper.TrySetInt(Parameters, "Height", args.Value))
-            {
-                Parameters["Height"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Height", 720));
-            }
-            else if (args.Id == "Angle")
-            {
-                EffectBundleUiHelper.TrySetFloat(Parameters, "Angle", args.Value);
+                case "crop_X":
+                    EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
+                    break;
+                case "crop_Y":
+                    EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
+                    break;
+                case "crop_W":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "Width", args.Value))
+                        Parameters["Width"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Width", 1280));
+                    break;
+                case "crop_H":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "Height", args.Value))
+                        Parameters["Height"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "Height", 720));
+                    break;
+                case "Angle":
+                    EffectBundleUiHelper.TrySetFloat(Parameters, "Angle", args.Value);
+                    break;
             }
 
             return Parameters;

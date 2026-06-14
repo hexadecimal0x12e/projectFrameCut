@@ -1,8 +1,8 @@
 ﻿using Microsoft.Maui.Controls.Xaml;
-using projectFrameCut.ApplicationAPIBase.LocalizedResources;
+using projectFrameCut.ApplicationAPIBase.Localize;
 using System.Diagnostics;
 
-namespace projectFrameCut.ApplicationAPIBase.LocalizedResources
+namespace projectFrameCut.ApplicationAPIBase.Localize
 {
     [ContentProperty(nameof(Key))]
     [AcceptEmptyServiceProvider]

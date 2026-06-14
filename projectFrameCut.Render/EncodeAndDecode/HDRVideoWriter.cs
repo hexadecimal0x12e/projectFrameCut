@@ -431,8 +431,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public void Append(IPicture source)
         {
             ArgumentNullException.ThrowIfNull(source);
-            if (source.bitPerPixel == IPicture.PicturePixelMode.UShortPicture) Append((IPicture<ushort>)source);
-            else if (source.bitPerPixel == IPicture.PicturePixelMode.BytePicture) Append((IPicture<byte>)source);
+            if (source.BitPerPixel == IPicture.PicturePixelMode.UShortPicture) Append((IPicture<ushort>)source);
+            else if (source.BitPerPixel == IPicture.PicturePixelMode.BytePicture) Append((IPicture<byte>)source);
             else throw new NotSupportedException("Unsupported pixel mode.");
         }
 
@@ -445,7 +445,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int gLen = picture.g?.Length ?? 0;
             int bLen = picture.b?.Length ?? 0;
             int aLen = picture.a?.Length ?? 0;
-            bool hasAlpha = picture.hasAlphaChannel;
+            bool hasAlpha = picture.HasAlphaChannel;
 
             fixed (ushort* pr = picture.r)
             fixed (ushort* pg = picture.g)
@@ -527,7 +527,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int gLen = picture.g?.Length ?? 0;
             int bLen = picture.b?.Length ?? 0;
             int aLen = picture.a?.Length ?? 0;
-            bool hasAlpha = picture.hasAlphaChannel;
+            bool hasAlpha = picture.HasAlphaChannel;
 
             fixed (byte* pr = picture.r)
             fixed (byte* pg = picture.g)
@@ -610,7 +610,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int gLen = picture.g?.Length ?? 0;
             int bLen = picture.b?.Length ?? 0;
             int aLen = picture.a?.Length ?? 0;
-            bool hasAlpha = picture.hasAlphaChannel;
+            bool hasAlpha = picture.HasAlphaChannel;
 
             float maxLumaSignal = 0f;
 
@@ -668,7 +668,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int gLen = picture.g?.Length ?? 0;
             int bLen = picture.b?.Length ?? 0;
             int aLen = picture.a?.Length ?? 0;
-            bool hasAlpha = picture.hasAlphaChannel;
+            bool hasAlpha = picture.HasAlphaChannel;
 
             float maxLumaSignal = 0f;
 
@@ -726,7 +726,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int gLen = picture.g?.Length ?? 0;
             int bLen = picture.b?.Length ?? 0;
             int aLen = picture.a?.Length ?? 0;
-            bool hasAlpha = picture.hasAlphaChannel;
+            bool hasAlpha = picture.HasAlphaChannel;
             int pixels = _width * _height;
 
             float[]? brightness = (picture.Brightness != null && picture.Brightness.Length == pixels)

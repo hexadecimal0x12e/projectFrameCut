@@ -20,6 +20,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
     {
         public static Func<ConcurrentDictionary<string, AssetItem>>? GlobalAssetGetter = null;
 
+        public static Func<string, string?>? RemotePathResolver = null;
+
         public string TypeName => "DecoderContextPJFCProject";
 
         public int? ResultBitPerPixel { get; private set; } = null;
@@ -40,6 +42,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; }
         public bool StrictMode { get; set; }
+        public bool EnableMemoryCache { get; set; }
+        public bool EnableDiskCache { get; set; }
 
         public string ProjectRoot { get; private set; } = "";
 
@@ -123,10 +127,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new TimeoutException($"Timed out while waiting for the rendered frame {targetFrame} to be available. This may indicate a problem in the rendering process.");
                 }
             }, 90 * 1000, new OperationCanceledException("One-frame render operation timed out for 90 seconds."));
-            if (frame.frameIndex is not null && frame.frameIndex != targetFrame)
-            {
-                Log($"Warning: The decoded frame index {frame.frameIndex} does not match the requested frame index {targetFrame}. This may indicate a problem in the rendering process.");
-            }
             return frame;
 
         }

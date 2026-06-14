@@ -148,7 +148,7 @@ public partial class CreatePage
             private set => SetProperty(ref _frameRateDisplay, value);
         }
 
-        public string TemplateCountText => $"共 {Templates.Count} 个项目模板";
+        public string TemplateCountText => Localized.CreatePage_TemplateCount(Templates.Count);
 
         public ProjectTemplateItem? SelectedTemplate
         {

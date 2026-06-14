@@ -1,21 +1,31 @@
 {
   "DefaultLocate": "zh-CN",
   "AdditionalUsing": "",
-  "NameSpaceOfLocalizerInstance": "projectFrameCut.ApplicationAPIBase.LocalizedResources",
+  "NameSpaceOfLocalizerInstance": "projectFrameCut.ApplicationAPIBase.Localize",
   "ClassNameSpaceOfLocalizerInstance": "APIBaseLocalizedResources",
   "NameOfLocalizerInstance": "Localized",
   "NameOfBaseInterface": "ApplicationAPIBaseLocalizerBase",
-  "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
+  "EnablePseudoLocalization": false,
+  "PseudoLocalizationCondition": "DEBUG",
+  "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
     "zh-CN": [
+      {
+        "Id": "_Error",
+        "Value": "\u9519\u8BEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
       {
         "Id": "_Info",
         "Value": "\u63D0\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "_OK",
@@ -23,119 +33,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_Close",
-        "Value": "\u5173\u95ED",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_Dock",
-        "Value": "\u56DE\u5230\u5BB9\u5668",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_DockPrompt",
-        "Value": "\u4F7F\u7528\u6700\u5C0F\u5316\u6309\u94AE\u8FB9\u4E0A\u7684 \u0027\u2199\u0027 \u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002\r\u5F53\u4F60\u76F4\u63A5\u5173\u95ED\u6B64\u72EC\u7ACB\u7A97\u53E3\u65F6\uFF0C\u6B64\u7A97\u53E3\u5C06\u4F1A\u88AB\u5F7B\u5E95\u5173\u95ED\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
-        "Value": "\u4E0D\u518D\u63D0\u793A\u6211",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_GoBack",
-        "Value": "\u5411\u540E\u5BFC\u822A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_GoForward",
-        "Value": "\u5411\u524D\u5BFC\u822A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_Maximize",
-        "Value": "\u6700\u5927\u5316",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_Minimize",
-        "Value": "\u6700\u5C0F\u5316",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_PopOut",
-        "Value": "\u4F5C\u4E3A\u72EC\u7ACB\u7A97\u53E3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
-        "Value": "\u4F60\u7684iPad\u4F3C\u4E4E\u4E0D\u652F\u6301\u53F0\u524D\u8C03\u5EA6\uFF0C\u591A\u7A97\u53E3\u4F53\u9A8C\u53EF\u80FD\u53D7\u5F71\u54CD\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_DockPrompt_iPadOS",
-        "Value": "\u70B9\u51FB\u7A97\u53E3\u9876\u4E0A\u7684\u0027\u00B7\u00B7\u00B7\u0027\uFF0C\u7136\u540E\u9009\u62E9\u2018\u5173\u95ED\u2019\u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_DockPrompt_Android",
-        "Value": "\u4F60\u53EF\u80FD\u9700\u8981\u628A\u6B64\u7A97\u53E3\u8BBE\u7F6E\u4E3A\u5C0F\u7A97\u6A21\u5F0F\u6765\u8BA9\u4ED6\u548C\u5E94\u7528\u7A0B\u5E8F\u540C\u65F6\u663E\u793A\u3002\r\u4F7F\u7528\u53F3\u4FA7\u7684 \u0027\u2199\u0027 \u6309\u94AE\u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002\r\u76F4\u63A5\u5173\u95ED\u6B64\u7A97\u53E3\u4F1A\u5BFC\u81F4\u7A97\u53E3\u88AB\u5F7B\u5E95\u5173\u95ED\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "MultiWindowView_PopOut_NotSupport",
-        "Value": "\u4F60\u7684\u8BBE\u5907\u4E0D\u652F\u6301\u591A\u7A97\u53E3\u529F\u80FD\u3002\r\u6B64\u529F\u80FD\u5728\u652F\u6301\u53F0\u524D\u8C03\u5EA6\u7684iPad\u548C\u5927\u90E8\u5206\u5B89\u5353\u5E73\u677F\u4E0A\uFF0C\u4EE5\u53CA\u7535\u8111\u4E0A\u53EF\u7528\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "_Error",
-        "Value": "\u9519\u8BEF",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Canceled",
@@ -143,7 +41,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Cancelling",
@@ -151,7 +49,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Completed",
@@ -159,7 +57,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Fail",
@@ -167,7 +65,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Running",
@@ -175,7 +73,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
       },
       {
         "Id": "DraftPage_Tasks_Status_Unknown",
@@ -183,7 +81,5196 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u6240\u6709",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u6536\u85CF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u53D6\u6D88\u6536\u85CF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u7C97\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u6807\u51C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u7279\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u7279\u7EC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u7279\u9ED1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u659C\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u7EC6\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u4E2D\u7B49",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u6807\u51C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u5E38\u89C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u534A\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u6781\u7EC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u5173\u95ED",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u56DE\u5230\u5BB9\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u4F7F\u7528\u6700\u5C0F\u5316\u6309\u94AE\u8FB9\u4E0A\u7684 \u0027\u2199\u0027 \u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002\r\u5F53\u4F60\u76F4\u63A5\u5173\u95ED\u6B64\u72EC\u7ACB\u7A97\u53E3\u65F6\uFF0C\u6B64\u7A97\u53E3\u5C06\u4F1A\u88AB\u5F7B\u5E95\u5173\u95ED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u4F60\u53EF\u80FD\u9700\u8981\u628A\u6B64\u7A97\u53E3\u8BBE\u7F6E\u4E3A\u5C0F\u7A97\u6A21\u5F0F\u6765\u8BA9\u4ED6\u548C\u5E94\u7528\u7A0B\u5E8F\u540C\u65F6\u663E\u793A\u3002\r\u4F7F\u7528\u53F3\u4FA7\u7684 \u0027\u2199\u0027 \u6309\u94AE\u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002\r\u76F4\u63A5\u5173\u95ED\u6B64\u7A97\u53E3\u4F1A\u5BFC\u81F4\u7A97\u53E3\u88AB\u5F7B\u5E95\u5173\u95ED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u70B9\u51FB\u7A97\u53E3\u9876\u4E0A\u7684\u0027\u00B7\u00B7\u00B7\u0027\uFF0C\u7136\u540E\u9009\u62E9\u2018\u5173\u95ED\u2019\u6765\u4F7F\u7A97\u53E3\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u4E0D\u518D\u63D0\u793A\u6211",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u5411\u540E\u5BFC\u822A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u5411\u524D\u5BFC\u822A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u6700\u5927\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u6700\u5C0F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u4F5C\u4E3A\u72EC\u7ACB\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u4F60\u7684\u8BBE\u5907\u4E0D\u652F\u6301\u591A\u7A97\u53E3\u529F\u80FD\u3002\r\u6B64\u529F\u80FD\u5728\u652F\u6301\u53F0\u524D\u8C03\u5EA6\u7684iPad\u548C\u5927\u90E8\u5206\u5B89\u5353\u5E73\u677F\u4E0A\uFF0C\u4EE5\u53CA\u7535\u8111\u4E0A\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u4F60\u7684iPad\u4F3C\u4E4E\u4E0D\u652F\u6301\u53F0\u524D\u8C03\u5EA6\uFF0C\u591A\u7A97\u53E3\u4F53\u9A8C\u53EF\u80FD\u53D7\u5F71\u54CD\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u7531\u4E8E\u4E00\u4E2A\u5F02\u5E38\uFF0C\u6211\u4EEC\u65E0\u6CD5\u663E\u793A\u6807\u7B7E\u9875\u300C{tab}\u300D\u7684\u5185\u5BB9\u3002\r\u4F60\u53EF\u4EE5\u518D\u8BD5\u4E00\u6B21\uFF0C\u6216\u8005\u5411\u6211\u4EEC\u53CD\u9988\u8FD9\u4E2A\u95EE\u9898\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      }
+    ],
+    "en-US": [
+      {
+        "Id": "_Error",
+        "Value": "Error",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Info",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Task canceled",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Attempting to cancel task...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Task completed successfully",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Task execution failed",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Task is running",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Task Status Location",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u4EFB\u52A1\u72B6\u6001\u4F4D\u7F6E\u0027 for unknown task status display",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "All",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Add to Favorites",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Unfavorite Font",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Bold",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Regular",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extra Bold",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "ExtraLight",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Heavy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "Italic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Light",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Medium",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Regular",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "SemiBold",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Thin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Close",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Back to container",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Use the \u0027\u2199\u0027 next to the minimize button to return the window to its original container.\rWhen you directly close this independent window, this window will be completely closed.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "You may need to set this window to small window mode to display it alongside the application.\nUse the \u0027\u2199\u0027 button on the right to return the window to its previous container.\nClosing this window directly will result in the window being completely closed.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Click the \u0027...\u0027 at the top of the window, then select \u0027Close\u0027 to return the window to its original container.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Don\u0027t prompt me again",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Go back",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u5411\u540E\u5BFC\u822A\u0027 for navigation action",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Navigate Forward",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maximize",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimize",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "As a separate window",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Your device does not support multi-window functionality.\nThis feature is available on iPads that support Stage Manager, most Android tablets, and computers.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Your iPad seems to not support Stage Manager, so the multi-window experience may be affected.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Sorry, due to an exception, we cannot display the content of the tab \u0022{tab}\u0022.\rYou can try again or report this issue to us.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "zh-TW": [
+      {
+        "Id": "_Info",
+        "Value": "\u63D0\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u597D\u7684",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u5617\u8A66\u53D6\u6D88\u4EFB\u52D9...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u4EFB\u52D9\u5DF2\u6210\u529F\u5B8C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Error",
+        "Value": "\u932F\u8AA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u4EFB\u52D9\u57F7\u884C\u5931\u6557",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u4EFB\u52D9\u72C0\u614B\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u6240\u6709",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u4EFB\u52D9\u5DF2\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u6536\u85CF\u5B57\u9AD4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u4EFB\u52D9\u6B63\u5728\u57F7\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u7C97\u9AD4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u53D6\u6D88\u6536\u85CF\u5B57\u9AD4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5F9E\u6536\u85CF\u6E05\u55AE\u4E2D\u79FB\u9664\u5B57\u578B",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u6A19\u6E96",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u7279\u7D30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u7279\u9ED1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u4E2D\u7B49",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u6A19\u6E96",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u7279\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u5E38\u898F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u95DC\u9589",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u534A\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u6975\u7D30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u4F7F\u7528\u6700\u5C0F\u5316\u6309\u9215\u908A\u4E0A\u7684 \u0027\u2199\u0027 \u4F86\u4F7F\u8996\u7A97\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u88E1\u3002\r\u7576\u4F60\u76F4\u63A5\u95DC\u9589\u6B64\u7368\u7ACB\u8996\u7A97\u6642\uFF0C\u6B64\u8996\u7A97\u5C07\u6703\u88AB\u5FB9\u5E95\u95DC\u9589\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u4F60\u53EF\u80FD\u9700\u8981\u628A\u6B64\u8996\u7A97\u8A2D\u5B9A\u70BA\u5C0F\u8996\u7A97\u6A21\u5F0F\u4F86\u8B93\u5B83\u548C\u61C9\u7528\u7A0B\u5F0F\u540C\u6642\u986F\u793A\u3002\r\u4F7F\u7528\u53F3\u5074\u7684 \u0027\u2199\u0027 \u6309\u9215\u4F86\u4F7F\u8996\u7A97\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u88E1\u3002\r\u76F4\u63A5\u95DC\u9589\u6B64\u8996\u7A97\u6703\u5C0E\u81F4\u8996\u7A97\u88AB\u5FB9\u5E95\u95DC\u9589\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u9EDE\u64CA\u8996\u7A97\u9802\u4E0A\u7684\u0027...\u0027\uFF0C\u7136\u5F8C\u9078\u64C7\u300C\u95DC\u9589\u300D\u4F86\u4F7F\u8996\u7A97\u56DE\u5230\u539F\u4F86\u7684\u5BB9\u5668\u88E1\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u4E0D\u518D\u63D0\u793A\u6211",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u5411\u5F8C\u5C0E\u822A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u56DE\u5230\u5BB9\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u6700\u5927\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u5411\u524D\u5C0E\u822A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u4F5C\u70BA\u7368\u7ACB\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u4F60\u7684\u8A2D\u5099\u4E0D\u652F\u63F4\u591A\u8996\u7A97\u529F\u80FD\u3002\r\u6B64\u529F\u80FD\u5728\u652F\u63F4\u524D\u53F0\u8ABF\u5EA6\u7684iPad\u548C\u5927\u90E8\u5206\u5B89\u5353\u5E73\u677F\u4E0A\uFF0C\u4EE5\u53CA\u96FB\u8166\u4E0A\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u4F60\u7684iPad\u4F3C\u4E4E\u4E0D\u652F\u63F4\u53F0\u524D\u8ABF\u5EA6\uFF0C\u591A\u8996\u7A97\u9AD4\u9A57\u53EF\u80FD\u53D7\u5F71\u97FF\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u7531\u65BC\u4E00\u500B\u7570\u5E38\uFF0C\u6211\u5011\u7121\u6CD5\u986F\u793A\u6A19\u7C64\u9801\u300C{tab}\u300D\u7684\u5167\u5BB9\u3002\r\u60A8\u53EF\u4EE5\u518D\u8A66\u4E00\u6B21\uFF0C\u6216\u8005\u5411\u6211\u5011\u56DE\u994B\u9019\u500B\u554F\u984C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u6700\u5C0F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u659C\u9AD4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u7D30\u9AD4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "ja-JP": [
+      {
+        "Id": "_Error",
+        "Value": "\u30A8\u30E9\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u9519\u8BEF\u63D0\u793A",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u60C5\u5831",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u306F\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u30BF\u30B9\u30AF\u53D6\u6D88\u8A66\u884C\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u30BF\u30B9\u30AF\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u30BF\u30B9\u30AF\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u30BF\u30B9\u30AF\u5B9F\u884C\u5931\u6557",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u30BF\u30B9\u30AF\u306E\u72B6\u614B\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4EFB\u52A1\u72B6\u6001\u4F4D\u7F6E\u7684\u65E5\u6587\u7FFB\u8BD1\uFF0C\u4F7F\u7528\u5C11\u91CF\u7247\u5047\u540D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u3059\u3079\u3066",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u304A\u6C17\u306B\u5165\u308A\u306B\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u304A\u6C17\u306B\u5165\u308A\u89E3\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u592A\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u6A19\u6E96",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u6975\u592A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\uFF1A\u7279\u522B\u7C97",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u6975\u7D30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u6975\u592A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u30BF\u30B9\u30AF\u5B9F\u884C\u4E2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u659C\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u7D30\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Font style: Light",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u6A19\u6E96",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u4E2D\u7A0B\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u6A19\u6E96",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u6E96\u592A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\uFF1A\u534A\u7C97\uFF08SemiBold\uFF09\u7684\u65E5\u8BED\u7FFB\u8BD1\uFF0C\u4F7F\u7528\u6C49\u5B57\u51CF\u5C11\u7247\u5047\u540D",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u9589\u3058\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u6975\u7D30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u5BB9\u5668\u306B\u623B\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u6700\u5C0F\u5316\u30DC\u30BF\u30F3\u306E\u6A2A\u306B\u3042\u308B \u0027\u2199\u0027 \u3092\u4F7F\u7528\u3057\u3066\u3001\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5143\u306E\u30B3\u30F3\u30C6\u30CA\u306B\u623B\u3057\u307E\u3059\u3002\r\u3053\u306E\u72EC\u7ACB\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u76F4\u63A5\u9589\u3058\u308B\u3068\u3001\u5B8C\u5168\u306B\u9589\u3058\u3089\u308C\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u4ECA\u5F8C\u8868\u793A\u3057\u306A\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u30A6\u30A4\u30F3\u30C9\u30A6\u4E0A\u90E8\u306E\u300C\u00B7\u00B7\u00B7\u300D\u3092\u30BF\u30C3\u30D7\u3057\u3001\u300C\u9589\u3058\u308B\u300D\u3092\u9078\u3076\u3068\u3001\u5143\u306E\u30B3\u30F3\u30C6\u30CA\u306B\u623B\u308A\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u623B\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u524D\u3078\u9032\u3080",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u3053\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5C0F\u7A93\u30E2\u30FC\u30C9\u306B\u8A2D\u5B9A\u3059\u308B\u3068\u3001\u30A2\u30D7\u30EA\u3068\u540C\u6642\u306B\u8868\u793A\u3067\u304D\u307E\u3059\u3002\r\u53F3\u5074\u306E\u300C\u2199\u300D\u30DC\u30BF\u30F3\u3067\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5143\u306E\u30B3\u30F3\u30C6\u30CA\u306B\u623B\u305B\u307E\u3059\u3002\r\u3053\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u76F4\u63A5\u9589\u3058\u308B\u3068\u3001\u5B8C\u5168\u306B\u9589\u3058\u3089\u308C\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Multiwindow docking prompt for Android",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u6700\u5927\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u6700\u5C0F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u30DC\u30BF\u30F3\u30E9\u30D9\u30EB\uFF1A\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u6700\u5C0F\u5316\u3059\u308B",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u72EC\u7ACB\u30A6\u30A3\u30F3\u30C9\u30A6\u3068\u3057\u3066",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u304A\u4F7F\u3044\u306E\u30C7\u30D0\u30A4\u30B9\u306F\u30DE\u30EB\u30C1\u30A6\u30A3\u30F3\u30C9\u30A6\u6A5F\u80FD\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002\r\u3053\u306E\u6A5F\u80FD\u306F\u3001\u30B9\u30C6\u30FC\u30B8\u30DE\u30CD\u30FC\u30B8\u30E3\u3092\u30B5\u30DD\u30FC\u30C8\u3059\u308BiPad\u3001\u307B\u3068\u3093\u3069\u306EAndroid\u30BF\u30D6\u30EC\u30C3\u30C8\u3001\u304A\u3088\u3073\u30D1\u30BD\u30B3\u30F3\u3067\u5229\u7528\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u304A\u4F7F\u3044\u306EiPad\u306F\u30B9\u30C6\u30FC\u30B8\u30DE\u30CD\u30FC\u30B8\u30E3\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u306A\u3044\u3088\u3046\u3067\u3059\u3002\u30DE\u30EB\u30C1\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u4F53\u9A13\u306B\u5F71\u97FF\u304C\u3042\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001\u4F8B\u5916\u306B\u3088\u308A\u3001\u30BF\u30D6\u300C{tab}\u300D\u306E\u5185\u5BB9\u3092\u8868\u793A\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\r\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u3044\u305F\u3060\u304F\u304B\u3001\u3053\u306E\u554F\u984C\u3092\u304A\u77E5\u3089\u305B\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "ko-KR": [
+      {
+        "Id": "_Error",
+        "Value": "\uC624\uB958",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\uC54C\uB9BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\uC88B\uC544\uC694",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\uC791\uC5C5\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\uC791\uC5C5 \uCDE8\uC18C \uC2DC\uB3C4 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\uC791\uC5C5 \uC2E4\uD589 \uC2E4\uD328",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\uC791\uC5C5 \uC2E4\uD589 \uC911",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\uC791\uC5C5 \uC0C1\uD0DC \uC704\uCE58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\uC804\uCCB4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\uC990\uACA8\uCC3E\uAE30 \uAE00\uAF34",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "FontPicker\u4E2D\u201C\u6536\u85CF\u5B57\u4F53\u201D\u7684\u6309\u94AE\u6216\u6807\u9898\u6587\u672C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\uAE00\uAF34 \uC990\uACA8\uCC3E\uAE30 \uD574\uC81C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\uAD75\uAC8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\uBCF4\uD1B5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\uD2B9\uBCC4\uD788 \uAD75\uAC8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Font style: Extra Bold",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\uB9E4\uC6B0 \uAC00\uB294",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\uD5E4\uBE44",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\uAE30\uC6B8\uC784\uAF34",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\uAC00\uB294\uCCB4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\uC911\uAC04",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\uBCF4\uD1B5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\uC138\uBBF8\uBCFC\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\uAC00\uB294",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\uB2EB\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\uCEE8\uD14C\uC774\uB108\uB85C \uB3CC\uC544\uAC00\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\uBCF4\uD1B5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\uCD5C\uC18C\uD654 \uBC84\uD2BC \uC606\uC758 \u0027\u2199\u0027\uC744 \uC0AC\uC6A9\uD558\uC5EC \uCC3D\uC744 \uC6D0\uB798 \uCEE8\uD14C\uC774\uB108\uB85C \uB418\uB3CC\uB9BD\uB2C8\uB2E4.\r\uC774 \uB3C5\uB9BD \uCC3D\uC744 \uC9C1\uC811 \uB2EB\uC73C\uBA74 \uCC3D\uC774 \uC644\uC804\uD788 \uB2EB\uD799\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\uC774 \uCC3D\uC744 \uC791\uC740 \uCC3D \uBAA8\uB4DC\uB85C \uC124\uC815\uD574\uC57C \uC571\uACFC \uD568\uAED8 \uD45C\uC2DC\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\uC624\uB978\uCABD\uC758 \u0027\u2198\u0027 \uBC84\uD2BC\uC744 \uC0AC\uC6A9\uD558\uC5EC \uCC3D\uC744 \uC6D0\uB798 \uCEE8\uD14C\uC774\uB108\uB85C \uB418\uB3CC\uB9AC\uC2ED\uC2DC\uC624.\r\uC774 \uCC3D\uC744 \uC9C1\uC811 \uB2EB\uC73C\uBA74 \uCC3D\uC774 \uC644\uC804\uD788 \uB2EB\uD799\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\uCC3D \uC0C1\uB2E8\uC758 \u0027\u00B7\u00B7\u00B7\u0027\uC744(\uB97C) \uD074\uB9AD\uD55C \uB2E4\uC74C \u0027\uB2EB\uAE30\u0027\uB97C \uC120\uD0DD\uD558\uC5EC \uCC3D\uC744 \uC774\uC804 \uCEE8\uD14C\uC774\uB108\uB85C \uB418\uB3CC\uB9BD\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\uB2E4\uC2DC \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\uB4A4\uB85C \uAC00\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\uC55E\uC73C\uB85C \uC774\uB3D9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\uCD5C\uB300\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\uCD5C\uC18C\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\uB3C5\uB9BD \uCC3D\uC73C\uB85C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\uAE30\uAE30\uAC00 \uB2E4\uC911 \uCC3D \uAE30\uB2A5\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\r\uC774 \uAE30\uB2A5\uC740 \uC804\uBA74 \uC2A4\uCF00\uC904\uB9C1\uC744 \uC9C0\uC6D0\uD558\uB294 iPad\uC640 \uB300\uBD80\uBD84\uC758 Android \uD0DC\uBE14\uB9BF, \uADF8\uB9AC\uACE0 \uCEF4\uD4E8\uD130\uC5D0\uC11C \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\uB2F9\uC2E0\uC758 iPad\uAC00 \uC2A4\uD14C\uC774\uC9C0 \uB9E4\uB2C8\uC800\uB97C \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uB294 \uAC83\uC73C\uB85C \uBCF4\uC785\uB2C8\uB2E4. \uBA40\uD2F0 \uC708\uB3C4\uC6B0 \uD658\uACBD\uC774 \uC601\uD5A5\uC744 \uBC1B\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uC624\uB958\uB85C \uC778\uD574 \u0027{tab}\u0027 \uD0ED\uC758 \uB0B4\uC6A9\uC744 \uD45C\uC2DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.\r\uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098 \uC774 \uBB38\uC81C\uB97C \uC800\uD76C\uC5D0\uAC8C \uC54C\uB824\uC8FC\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "fr-FR": [
+      {
+        "Id": "_Error",
+        "Value": "Erreur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Info",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "D\u0027accord",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "T\u00E2che annul\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Tentative d\u0027annulation de la t\u00E2che...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "T\u00E2che termin\u00E9e avec succ\u00E8s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u00C9chec de l\u0027ex\u00E9cution de la t\u00E2che",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "T\u00E2che en cours d\u0027ex\u00E9cution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Emplacement du statut de la t\u00E2che",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Tous",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Ajouter aux favoris",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Retirer des favoris",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Gras",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extra gras",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Extra-l\u00E9ger",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Lourd",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "italique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "L\u00E9ger",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Moyen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Demi-gras",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Tr\u00E8s fin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Fermer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Retour au conteneur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Utilisez le \u0027\u2199\u0027 \u00E0 c\u00F4t\u00E9 du bouton de r\u00E9duction pour ramener la fen\u00EAtre dans son conteneur d\u0027origine.\rLorsque vous fermez directement cette fen\u00EAtre ind\u00E9pendante, elle sera compl\u00E8tement ferm\u00E9e.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Vous devrez peut-\u00EAtre d\u00E9finir cette fen\u00EAtre en mode fen\u00EAtre r\u00E9duite pour qu\u0027elle s\u0027affiche en m\u00EAme temps que l\u0027application.\rUtilisez le bouton \u0027\u2199\u0027 sur la droite pour remettre la fen\u00EAtre dans son conteneur d\u0027origine.\rFermer directement cette fen\u00EAtre entra\u00EEnera sa fermeture d\u00E9finitive.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Cliquez sur les \u0027\u00B7\u00B7\u00B7\u0027 en haut de la fen\u00EAtre, puis s\u00E9lectionnez \u0027Fermer\u0027 pour faire revenir la fen\u00EAtre dans son conteneur d\u0027origine.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Ne plus me demander",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Navigation arri\u00E8re",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Naviguer vers l\u0027avant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u4E8E\u591A\u7A97\u53E3\u89C6\u56FE\u4E2D\u7684\u5411\u524D\u5BFC\u822A\u6309\u94AE",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maximiser",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimiser",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Votre appareil ne prend pas en charge la fonction multi-fen\u00EAtre.\rCette fonction est disponible sur les iPad compatibles avec Stage Manager et la plupart des tablettes Android, ainsi que sur les ordinateurs.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "En tant que fen\u00EAtre ind\u00E9pendante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Votre iPad semble ne pas prendre en charge Stage Manager, l\u0027exp\u00E9rience multi-fen\u00EAtres pourrait \u00EAtre affect\u00E9e.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "D\u00E9sol\u00E9, en raison d\u0027une exception, nous ne pouvons pas afficher le contenu de l\u0027onglet \u00AB {tab} \u00BB.\rVous pouvez r\u00E9essayer ou nous signaler ce probl\u00E8me.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "\u6587\u8A00\u6587": [
+      {
+        "Id": "_Error",
+        "Value": "\u8C2C\u8BEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u793A\u7684\u6587\u8A00\u6587\u8868\u8FBE",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u5584",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u4E8B\u5DF2\u7F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u5C1D\u8BD5\u7F62\u5176\u52A1\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u539F\u6587\u4E3A\u2018\u5C1D\u8BD5\u53D6\u6D88\u4EFB\u52A1...\u2019\uFF0C\u8BD1\u6587\u7528\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u504F\u5411\u4E66\u9762\u96C5\u81F4\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u4EFB\u514B\u6210\u77E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u4EFB\u52A1\u4E0D\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u4EFB\u65B9\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u4EFB\u52D9\u72C0\u6CC1\u4E4B\u4F4D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4EFB\u52A1\u72B6\u6001\u4F4D\u7F6E\uFF0C\u6587\u8A00\u6587\u7FFB\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u8AF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u85CF\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u64A4\u85CF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u7C97\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u6B63\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u751A\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u6781\u7EC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u81F3\u9ED1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u659C\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u7EC6\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u4E2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u5E38\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u5E38\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\u5E38\u89C4\uFF0C\u8BD1\u4E3A\u6587\u8A00\u6587",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u534A\u7C97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u6781\u7EA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\u540D\u79F0\uFF0C\u610F\u4E3A\u6781\u7EC6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u95ED",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5173\u95ED\u6309\u94AE\u7684\u6587\u8A00\u6587\u7FFB\u8BD1",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u5F52\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u6309\u6700\u5C0F\u5316\u952E\u65C1\u4E4B\u0027\u2199\u0027\uFF0C\u53EF\u4F7F\u7A97\u53E3\u590D\u5F52\u539F\u5BB9\u5668\u3002\r\u82E5\u76F4\u95ED\u6B64\u72EC\u7ACB\u7A97\u53E3\uFF0C\u5219\u6B64\u7A97\u5C3D\u95ED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u6C5D\u6216\u9700\u8BBE\u6B64\u7A97\u4E3A\u5C0F\u7A97\u6A21\u5F0F\uFF0C\u4FFE\u5176\u4E0E\u5E94\u7528\u7A0B\u5E8F\u540C\u663E\u3002\r\u7528\u53F3\u4FA7\u4E4B\u0027\u2197\u0027\u94AE\uFF0C\u4F7F\u7A97\u590D\u5F52\u539F\u5BB9\u5668\u3002\r\u5F84\u76F4\u95ED\u6B64\u7A97\uFF0C\u5219\u7A97\u5C3D\u95ED\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u6309\u7A97\u9876\u4E4B\u0027\u00B7\u00B7\u00B7\u0027\uFF0C\u800C\u540E\u62E9\u0027\u95ED\u0027\uFF0C\u4FFE\u7A97\u590D\u5F52\u65E7\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u52FF\u5FA9\u793A\u543E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u518D\u63D0\u793A\u6211",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u540E\u9000",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u524D\u5BFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u4E2D\u8868\u793A\u5411\u524D\u5BFC\u822A\uFF0C\u7B80\u6D01\u4E14\u7B26\u5408\u53E4\u6C49\u8BED\u8868\u8FBE",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u6975\u5927\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u6975\u5C0F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u4E3A\u72EC\u7ACB\u4E4B\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u5C14\u5668\u4E0D\u5177\u591A\u7A97\u4E4B\u80FD\u3002\r\u6B64\u80FD\u4E8E\u652F\u6301\u524D\u5C4F\u8C03\u5EA6\u4E4BiPad\u53CA\u5B89\u5353\u5E73\u677F\u4E4B\u591A\u6570\uFF0C\u5E76\u7535\u8111\u4E0A\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u6C5D\u4E4BiPad\u4F3C\u4E0D\u652F\u53F0\u524D\u8C03\u5EA6\uFF0C\u591A\u7A97\u4F53\u9A8C\u6216\u53D7\u5176\u7D2F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u751A\u6B49\uFF0C\u56E0\u4E00\u5F02\u5E38\uFF0C\u672A\u80FD\u793A\u6807\u7B7E\u9875\u300C{tab}\u300D\u4E4B\u5185\u5BB9\u3002\u5C14\u53EF\u590D\u8BD5\uFF0C\u6216\u62A5\u6B64\u5F0A\u4E8E\u543E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "ar-SA": [
+      {
+        "Id": "_Error",
+        "Value": "\u062E\u0637\u0623",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u062A\u0644\u0645\u064A\u062D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u062D\u0633\u0646\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0647\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u0645\u062D\u0627\u0648\u0644\u0629 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0647\u0645\u0629...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u062A\u0645\u062A \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u0627\u0644\u0645\u0647\u0645\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u0641\u0634\u0644 \u062A\u0646\u0641\u064A\u0630 \u0627\u0644\u0645\u0647\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u0645\u0648\u0642\u0639 \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0647\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u0627\u0644\u0643\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u0625\u0636\u0627\u0641\u0629 \u062E\u0637 \u0625\u0644\u0649 \u0627\u0644\u0645\u0641\u0636\u0644\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u062E\u0637 \u0645\u0646 \u0627\u0644\u0645\u0641\u0636\u0644\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u063A\u0627\u0645\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u0639\u0627\u062F\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u063A\u0627\u0645\u0642 \u062C\u062F\u0627\u064B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u0631\u0641\u064A\u0639 \u062C\u062F\u0627\u064B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u062B\u0642\u064A\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u0645\u0627\u0626\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u062E\u0641\u064A\u0641",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u0645\u062A\u0648\u0633\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u0639\u0627\u062F\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u0639\u0627\u062F\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u0634\u0628\u0647 \u0639\u0631\u064A\u0636",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u0631\u0641\u064A\u0639 \u062C\u062F\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\uFF1A\u6781\u7EC6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u0625\u063A\u0644\u0627\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u0627\u0644\u0639\u0648\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u062D\u0627\u0648\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0632\u0631 \u0027\u2199\u0027 \u0627\u0644\u0645\u0648\u062C\u0648\u062F \u0628\u062C\u0648\u0627\u0631 \u0632\u0631 \u0627\u0644\u062A\u0635\u063A\u064A\u0631 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0649 \u0627\u0644\u062D\u0627\u0648\u064A\u0629 \u0627\u0644\u0623\u0635\u0644\u064A\u0629.\r\u0639\u0646\u062F \u0625\u063A\u0644\u0627\u0642 \u0647\u0630\u0647 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0645\u0633\u062A\u0642\u0644\u0629 \u0645\u0628\u0627\u0634\u0631\u0629\u060C \u0633\u064A\u062A\u0645 \u0625\u063A\u0644\u0627\u0642\u0647\u0627 \u0628\u0627\u0644\u0643\u0627\u0645\u0644.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u0642\u062F \u062A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u062A\u0639\u064A\u064A\u0646 \u0647\u0630\u0647 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0649 \u0648\u0636\u0639 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0635\u063A\u064A\u0631\u0629 \u0644\u0639\u0631\u0636\u0647\u0627 \u0645\u0639 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0648\u0642\u062A.\r\u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0632\u0631 \u0027\u2199\u0027 \u0639\u0644\u0649 \u0627\u0644\u064A\u0645\u064A\u0646 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0649 \u0627\u0644\u062D\u0627\u0648\u064A\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629.\r\u0633\u064A\u0624\u062F\u064A \u0625\u063A\u0644\u0627\u0642 \u0647\u0630\u0647 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 \u0625\u063A\u0644\u0627\u0642\u0647\u0627 \u0628\u0627\u0644\u0643\u0627\u0645\u0644.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0027\u00B7\u00B7\u00B7\u0027 \u0641\u064A \u0623\u0639\u0644\u0649 \u0627\u0644\u0646\u0627\u0641\u0630\u0629\u060C \u062B\u0645 \u0627\u062E\u062A\u0631 \u0027\u0625\u063A\u0644\u0627\u0642\u0027 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0649 \u0627\u0644\u062D\u0627\u0648\u064A\u0629 \u0627\u0644\u0623\u0635\u0644\u064A\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u0644\u0627 \u062A\u0630\u0643\u0631\u0646\u064A \u0645\u0631\u0629 \u0623\u062E\u0631\u0649",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u0627\u0644\u0631\u062C\u0648\u0639 \u0644\u0644\u062E\u0644\u0641",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u0627\u0644\u062A\u0646\u0642\u0644 \u0644\u0644\u0623\u0645\u0627\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u062A\u0643\u0628\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u0643\u0646\u0627\u0641\u0630\u0629 \u0645\u0633\u062A\u0642\u0644\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u062C\u0647\u0627\u0632\u0643 \u0644\u0627 \u064A\u062F\u0639\u0645 \u062E\u0627\u0635\u064A\u0629 \u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u062A\u0639\u062F\u062F\u0629.\r\u0647\u0630\u0647 \u0627\u0644\u062E\u0627\u0635\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0639\u0644\u0649 \u0623\u062C\u0647\u0632\u0629 iPad \u0627\u0644\u062A\u064A \u062A\u062F\u0639\u0645 Stage Manager \u0648\u0645\u0639\u0638\u0645 \u0623\u062C\u0647\u0632\u0629 Android \u0627\u0644\u0644\u0648\u062D\u064A\u0629\u060C \u0648\u0643\u0630\u0644\u0643 \u0639\u0644\u0649 \u0627\u0644\u0643\u0645\u0628\u064A\u0648\u062A\u0631.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u062A\u0635\u063A\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u064A\u0628\u062F\u0648 \u0623\u0646 iPad \u0627\u0644\u062E\u0627\u0635 \u0628\u0643 \u0644\u0627 \u064A\u062F\u0639\u0645 \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0631\u062D\u0644\u0629\u060C \u0648\u0642\u062F \u062A\u062A\u0623\u062B\u0631 \u062A\u062C\u0631\u0628\u0629 \u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u062A\u0639\u062F\u062F\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u0639\u0630\u0631\u064B\u0627\u060C \u0644\u0627 \u064A\u0645\u0643\u0646\u0646\u0627 \u0639\u0631\u0636 \u0645\u062D\u062A\u0648\u0649 \u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u300C{tab}\u300D \u0628\u0633\u0628\u0628 \u062E\u0637\u0623.\r\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0623\u0648 \u0625\u0628\u0644\u0627\u063A\u0646\u0627 \u0628\u0647\u0630\u0647 \u0627\u0644\u0645\u0634\u0643\u0644\u0629.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "de-DE": [
+      {
+        "Id": "_Error",
+        "Value": "Fehler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Hinweis",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Aufgabe abgebrochen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Versuche, die Aufgabe abzubrechen...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Aufgabe erfolgreich abgeschlossen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Aufgabenausf\u00FChrung fehlgeschlagen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Task wird ausgef\u00FChrt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4EFB\u52A1\u6B63\u5728\u6267\u884C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Aufgabenstatus-Position",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Alle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Schriftart favorisieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Schriftart aus Favoriten entfernen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Fett",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Standard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extrafett",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Extraleicht",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Extrafett",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "Kursiv",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Leicht",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Standard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Halbfett",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "D\u00FCnn",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Schlie\u00DFen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Zur\u00FCck zum Container",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Verwenden Sie die \u0027\u2199\u0027 neben der Minimierungsschaltfl\u00E4che, um das Fenster in seinen urspr\u00FCnglichen Container zur\u00FCckzubringen.\r\nWenn Sie dieses eigenst\u00E4ndige Fenster direkt schlie\u00DFen, wird es vollst\u00E4ndig geschlossen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "M\u00F6glicherweise m\u00FCssen Sie dieses Fenster in den Mini-Fenstermodus versetzen, um es gleichzeitig mit der App anzuzeigen.\rVerwenden Sie die Schaltfl\u00E4che \u0027\u2196\u0027 auf der rechten Seite, um das Fenster in seinen vorherigen Container zur\u00FCckzubringen.\rDas direkte Schlie\u00DFen dieses Fensters f\u00FChrt dazu, dass es vollst\u00E4ndig geschlossen wird.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Tippen Sie auf \u0027\u00B7\u00B7\u00B7\u0027 oben im Fenster und w\u00E4hlen Sie \u0027Schlie\u00DFen\u0027, um das Fenster in den vorherigen Container zur\u00FCckzubringen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Anleitung zum Zur\u00FCckbringen eines Fensters in den vorherigen Container auf iPadOS",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Nicht mehr erinnern",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Zur\u00FCck",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Vorw\u00E4rts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maximieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "Als separates Fenster",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Ihr Ger\u00E4t unterst\u00FCtzt keine Mehrfensterfunktion.\rDiese Funktion ist auf iPads mit Stage Manager, den meisten Android-Tablets sowie auf Computern verf\u00FCgbar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Ihr iPad scheint Stage Manager nicht zu unterst\u00FCtzen, die Multi-Fenster-Erfahrung k\u00F6nnte beeintr\u00E4chtigt sein.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Es tut uns leid, aufgrund einer Ausnahme konnten wir den Inhalt des Tabs \u201E{tab}\u0022 nicht anzeigen.\rBitte versuchen Sie es erneut oder melden Sie uns das Problem.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "es-ES": [
+      {
+        "Id": "_Error",
+        "Value": "Error",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "De acuerdo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Tarea cancelada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Intentando cancelar la tarea...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Tarea completada con \u00E9xito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Fallo en la ejecuci\u00F3n de la tarea",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Tarea en ejecuci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Ubicaci\u00F3n del estado de la tarea",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Todos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Fuente favorita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Eliminar fuente de favoritos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Negrita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Extra ligero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Pesado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extra negrita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "Cursiva",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Ligero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Medio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Regular",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Seminegrita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Extra fino",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Cerrar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Volver al contenedor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Es posible que necesites configurar esta ventana en modo ventana peque\u00F1a para que se muestre junto con la aplicaci\u00F3n.\rUsa el bot\u00F3n \u0027\u2196\u0027 a la derecha para que la ventana vuelva a su contenedor anterior.\rCerrar esta ventana directamente provocar\u00E1 que se cierre por completo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Haga clic en \u0027\u00B7\u00B7\u00B7\u0027 en la parte superior de la ventana y luego seleccione \u0027Cerrar\u0027 para que la ventana vuelva a su contenedor original.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "No volver a preguntar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Volver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Navegar hacia adelante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maximizar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimizar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Su dispositivo no es compatible con la funcionalidad de m\u00FAltiples ventanas.\nEsta funci\u00F3n est\u00E1 disponible en iPads con Stage Manager, en la mayor\u00EDa de las tabletas Android y en computadoras.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Parece que tu iPad no es compatible con Stage Manager, por lo que la experiencia de m\u00FAltiples ventanas podr\u00EDa verse afectada.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "Como ventana independiente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Lo sentimos, debido a una excepci\u00F3n, no podemos mostrar el contenido de la pesta\u00F1a \u00AB{tab}\u00BB.\rPuedes intentarlo de nuevo o informarnos de este problema.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Usa el \u0027\u2199\u0027 junto al bot\u00F3n de minimizar para devolver la ventana a su contenedor original.\rCuando cierres directamente esta ventana independiente, se cerrar\u00E1 por completo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "it-IT": [
+      {
+        "Id": "_Error",
+        "Value": "Errore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "Va bene",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Attivit\u00E0 annullata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Tentativo di annullare l\u0027attivit\u00E0...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "L\u0027attivit\u00E0 \u00E8 stata completata con successo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Esecuzione attivit\u00E0 fallita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Task in esecuzione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Posizione dello stato dell\u0027attivit\u00E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Tutti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Aggiungi font ai preferiti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Rimuovi font dai preferiti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Grassetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Normale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Extra Leggero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Pesante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extra Grassetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "Corsivo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Medio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Leggero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Normale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Semigrassetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Extra sottile",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Font style: Thin",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Chiudi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Potrebbe essere necessario impostare questa finestra in modalit\u00E0 finestra ridotta per visualizzarla contemporaneamente all\u0027applicazione.\rUtilizza il pulsante \u0027\u2199\u0027 a destra per riportare la finestra nel contenitore originale.\rChiudere direttamente questa finestra ne provocher\u00E0 la chiusura definitiva.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Usa il simbolo \u0027\u2199\u0027 accanto al pulsante di minimizzazione per far tornare la finestra al contenitore originale.\rQuando chiudi direttamente questa finestra indipendente, verr\u00E0 chiusa definitivamente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Indietro",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Non chiedere pi\u00F9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Clicca sui \u0027...\u0027 in cima alla finestra, quindi seleziona \u0027Chiudi\u0027 per riportare la finestra al contenitore precedente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimizza",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Massimizza",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Avanti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Il tuo iPad sembra non supportare Stage Manager, l\u0027esperienza multi-finestra potrebbe essere influenzata.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Ci dispiace, a causa di un\u0027eccezione, non possiamo visualizzare il contenuto della scheda \u00AB{tab}\u00BB.\rPuoi riprovare o segnalarci il problema.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Il tuo dispositivo non supporta la funzionalit\u00E0 multi-finestra.\rQuesta funzionalit\u00E0 \u00E8 disponibile su iPad con Stage Manager, sulla maggior parte dei tablet Android e su computer.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "Come finestra indipendente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Torna al contenitore",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "pl-PL": [
+      {
+        "Id": "_Info",
+        "Value": "Informacja",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Error",
+        "Value": "B\u0142\u0105d",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Pr\u00F3ba anulowania zadania...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Zadanie anulowane",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Zadanie jest wykonywane",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "B\u0142\u0105d wykonania zadania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Pozycja statusu zadania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Ulubiona czcionka",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Wszystkie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Usu\u0144 z ulubionych czcionek",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Pogrubiony",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Ekstra pogrubiony",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Ekstra cienki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u7C97\u7EC6\u540D\u79F0\uFF1A\u7279\u7EC6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Zadanie zako\u0144czone sukcesem.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "Kursywa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Normalny",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Cienki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u015Aredni",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Ci\u0119\u017Cki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normalny",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Bardzo cienki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Zwyk\u0142y",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "P\u00F3\u0142gruby",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Powr\u00F3t do kontenera",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Mo\u017Ce by\u0107 konieczne ustawienie tego okna w tryb ma\u0142ego okna, aby by\u0142o wy\u015Bwietlane razem z aplikacj\u0105.\r\nU\u017Cyj przycisku \u0027\u2199\u0027 po prawej stronie, aby przywr\u00F3ci\u0107 okno do pierwotnego kontenera.\r\nBezpo\u015Brednie zamkni\u0119cie tego okna spowoduje jego ca\u0142kowite zamkni\u0119cie.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Zamknij",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Nie przypominaj mi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "U\u017Cyj symbolu \u0027\u2199\u0027 obok przycisku minimalizacji, aby przywr\u00F3ci\u0107 okno do pierwotnego kontenera.\rGdy bezpo\u015Brednio zamkniesz to niezale\u017Cne okno, zostanie ono ca\u0142kowicie zamkni\u0119te.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Kliknij \u0027\u00B7\u00B7\u00B7\u0027 na g\u00F3rze okna, a nast\u0119pnie wybierz \u0027Zamknij\u0027, aby przywr\u00F3ci\u0107 okno do poprzedniego kontenera.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Wstecz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Naprz\u00F3d",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "jako osobne okno",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maksymalizuj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Tw\u00F3j iPad prawdopodobnie nie obs\u0142uguje funkcji Stage Manager. Do\u015Bwiadczenie z wieloma oknami mo\u017Ce by\u0107 ograniczone.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Przepraszamy, z powodu b\u0142\u0119du nie mo\u017Cemy wy\u015Bwietli\u0107 zawarto\u015Bci karty \u201E{tab}\u201D.\rSpr\u00F3buj ponownie lub zg\u0142o\u015B nam ten problem.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimalizuj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Twoje urz\u0105dzenie nie obs\u0142uguje funkcji wielu okien.\rTa funkcja jest dost\u0119pna na iPadach obs\u0142uguj\u0105cych Stage Manager, na wi\u0119kszo\u015Bci tablet\u00F3w z Androidem oraz na komputerach.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "pt-BR": [
+      {
+        "Id": "_Error",
+        "Value": "Erro",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Aviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Tentando cancelar tarefa...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "OK",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Tarefa conclu\u00EDda com sucesso.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Tarefa em execu\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Falha na execu\u00E7\u00E3o da tarefa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Tarefa cancelada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "Todos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Fonte favorita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Remover fonte dos favoritos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Extra Negrito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Extra Fina",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "Pesado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "It\u00E1lico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "Fino",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "M\u00E9dio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Negrito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "Fina",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Semi-negrito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Voltar ao cont\u00EAiner",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Use o \u0027\u2199\u0027 ao lado do bot\u00E3o minimizar para retornar a janela ao seu cont\u00EAiner original.\rQuando voc\u00EA fecha diretamente esta janela independente, ela ser\u00E1 fechada completamente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Pode ser necess\u00E1rio definir esta janela como modo de janela pequena para exibi-la simultaneamente com o aplicativo.\rUse o bot\u00E3o \u0027\u2199\u0027 \u00E0 direita para retornar a janela ao seu cont\u00EAiner original.\rFechar diretamente esta janela resultar\u00E1 em seu fechamento completo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Fechar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "N\u00E3o me perguntar novamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Clique nos \u0027\u00B7\u00B7\u00B7\u0027 no topo da janela e, em seguida, selecione \u0027Fechar\u0027 para fazer a janela retornar ao container original.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Navegar para tr\u00E1s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5411\u540E\u5BFC\u822A",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "Maximizar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "Minimizar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "Como janela independente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "Avan\u00E7ar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "Seu iPad parece n\u00E3o suportar o Gerenciador de Est\u00E1gio, a experi\u00EAncia com v\u00E1rias janelas pode ser afetada.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Seu dispositivo n\u00E3o suporta o recurso de m\u00FAltiplas janelas.\r\nEste recurso est\u00E1 dispon\u00EDvel em iPads com suporte a Stage Manager, na maioria dos tablets Android e em computadores.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Mensagem informando que o dispositivo n\u00E3o suporta o recurso de m\u00FAltiplas janelas e onde ele est\u00E1 dispon\u00EDvel.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "Desculpe, devido a uma exce\u00E7\u00E3o, n\u00E3o foi poss\u00EDvel exibir o conte\u00FAdo da guia \u0022{tab}\u0022.\nTente novamente ou nos informe sobre este problema.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Localiza\u00E7\u00E3o do status da tarefa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "ru-RU": [
+      {
+        "Id": "_Error",
+        "Value": "\u041E\u0448\u0438\u0431\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u0418\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u0417\u0430\u0434\u0430\u0447\u0430 \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u0425\u043E\u0440\u043E\u0448\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u041F\u043E\u043F\u044B\u0442\u043A\u0430 \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0437\u0430\u0434\u0430\u0447\u0443...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u0417\u0430\u0434\u0430\u0447\u0430 \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u0434\u0430\u0447\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u0417\u0430\u0434\u0430\u0447\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u041F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0441\u0442\u0430\u0442\u0443\u0441\u0430 \u0437\u0430\u0434\u0430\u0447\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "\u0412\u0441\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u0438\u0437\u0431\u0440\u0430\u043D\u043D\u043E\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0448\u0440\u0438\u0444\u0442 \u0438\u0437 \u0438\u0437\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "\u0416\u0438\u0440\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "\u041E\u0431\u044B\u0447\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "\u0421\u0432\u0435\u0440\u0445\u0436\u0438\u0440\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "\u0421\u0432\u0435\u0440\u0445\u0436\u0438\u0440\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "\u042D\u043A\u0441\u0442\u0440\u0430-\u043B\u0435\u0433\u043A\u0438\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u0421\u0432\u0435\u0442\u043B\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "\u0421\u0440\u0435\u0434\u043D\u0438\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u041A\u0443\u0440\u0441\u0438\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "\u041E\u0431\u044B\u0447\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "\u041F\u043E\u043B\u0443\u0436\u0438\u0440\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "\u041E\u0431\u044B\u0447\u043D\u044B\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "\u0412\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0432 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u0441\u0438\u043C\u0432\u043E\u043B \u0027\u2199\u0027 \u0440\u044F\u0434\u043E\u043C \u0441 \u043A\u043D\u043E\u043F\u043A\u043E\u0439 \u0441\u0432\u0435\u0440\u0442\u044B\u0432\u0430\u043D\u0438\u044F, \u0447\u0442\u043E\u0431\u044B \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043E\u043A\u043D\u043E \u0432 \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440.\r\u0415\u0441\u043B\u0438 \u0432\u044B \u0437\u0430\u043A\u0440\u043E\u0435\u0442\u0435 \u044D\u0442\u043E \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E\u0435 \u043E\u043A\u043D\u043E \u043D\u0430\u043F\u0440\u044F\u043C\u0443\u044E, \u043E\u043D\u043E \u0431\u0443\u0434\u0435\u0442 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u0437\u0430\u043A\u0440\u044B\u0442\u043E.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "\u0412\u043E\u0437\u043C\u043E\u0436\u043D\u043E, \u0432\u0430\u043C \u043D\u0443\u0436\u043D\u043E \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u044D\u0442\u043E \u043E\u043A\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u043E\u0433\u043E \u043E\u043A\u043D\u0430, \u0447\u0442\u043E\u0431\u044B \u043E\u043D\u043E \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0430\u043B\u043E\u0441\u044C \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C.\n\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u043A\u043D\u043E\u043F\u043A\u0443 \u0027\u2199\u0027 \u0441\u043F\u0440\u0430\u0432\u0430, \u0447\u0442\u043E\u0431\u044B \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043E\u043A\u043D\u043E \u0432 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440.\n\u041D\u0435\u043F\u043E\u0441\u0440\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u0438\u0435 \u044D\u0442\u043E\u0433\u043E \u043E\u043A\u043D\u0430 \u043F\u0440\u0438\u0432\u0435\u0434\u0435\u0442 \u043A \u0435\u0433\u043E \u043F\u043E\u043B\u043D\u043E\u043C\u0443 \u0437\u0430\u043A\u0440\u044B\u0442\u0438\u044E.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u0422\u043E\u043D\u043A\u0438\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u0411\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u0417\u0430\u043A\u0440\u044B\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u0412\u043F\u0435\u0440\u0435\u0434",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "\u041D\u0430\u0437\u0430\u0434",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u0420\u0430\u0437\u0432\u0435\u0440\u043D\u0443\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u0027\u00B7\u00B7\u00B7\u0027 \u0432 \u0432\u0435\u0440\u0445\u043D\u0435\u0439 \u0447\u0430\u0441\u0442\u0438 \u043E\u043A\u043D\u0430, \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0027\u0417\u0430\u043A\u0440\u044B\u0442\u044C\u0027, \u0447\u0442\u043E\u0431\u044B \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043E\u043A\u043D\u043E \u0432 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u0421\u0432\u0435\u0440\u043D\u0443\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u041A\u0430\u043A \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E\u0435 \u043E\u043A\u043D\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "\u0412\u0430\u0448 iPad, \u043F\u043E\u0445\u043E\u0436\u0435, \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 \u0441\u0446\u0435\u043D, \u0447\u0442\u043E \u043C\u043E\u0436\u0435\u0442 \u043F\u043E\u0432\u043B\u0438\u044F\u0442\u044C \u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0443 \u0441 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u043C\u0438 \u043E\u043A\u043D\u0430\u043C\u0438.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u9192\u7528\u6237\u5176iPad\u4E0D\u652F\u6301\u53F0\u524D\u8C03\u5EA6\u529F\u80FD\uFF0C\u591A\u7A97\u53E3\u4F53\u9A8C\u53EF\u80FD\u53D7\u5F71\u54CD",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "\u0412\u0430\u0448\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u043C\u043D\u043E\u0433\u043E\u043E\u043A\u043E\u043D\u043D\u044B\u0439 \u0440\u0435\u0436\u0438\u043C.\r\u042D\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u0430 iPad \u0441 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u043E\u0439 Stage Manager, \u043D\u0430 \u0431\u043E\u043B\u044C\u0448\u0438\u043D\u0441\u0442\u0432\u0435 \u043F\u043B\u0430\u043D\u0448\u0435\u0442\u043E\u0432 Android, \u0430 \u0442\u0430\u043A\u0436\u0435 \u043D\u0430 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430\u0445.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u0418\u0437\u0432\u0438\u043D\u0438\u0442\u0435, \u0438\u0437-\u0437\u0430 \u043E\u0448\u0438\u0431\u043A\u0438 \u043C\u044B \u043D\u0435 \u043C\u043E\u0436\u0435\u043C \u043E\u0442\u043E\u0431\u0440\u0430\u0437\u0438\u0442\u044C \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u00AB{tab}\u00BB. \r\n\u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0435 \u0440\u0430\u0437 \u0438\u043B\u0438 \u0441\u043E\u043E\u0431\u0449\u0438\u0442\u0435 \u043D\u0430\u043C \u043E\u0431 \u044D\u0442\u043E\u0439 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      }
+    ],
+    "tr-TR": [
+      {
+        "Id": "_Info",
+        "Value": "Bilgi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "Tamam",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "G\u00F6rev iptal edilmeye \u00E7al\u0131\u015F\u0131l\u0131yor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Error",
+        "Value": "Hata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "G\u00F6rev iptal edildi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "G\u00F6rev y\u00FCr\u00FCt\u00FCl\u00FCyor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "G\u00F6rev ba\u015Far\u0131yla tamamland\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "G\u00F6rev y\u00FCr\u00FCtme ba\u015Far\u0131s\u0131z oldu.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Add",
+        "Value": "Yaz\u0131 tipini favorilere ekle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_Favorite_Remove",
+        "Value": "Yaz\u0131 tipini favorilerden kald\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_CategoryPicker_Any",
+        "Value": "T\u00FCm",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Book",
+        "Value": "Standart",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "G\u00F6rev durumu konumu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Bold",
+        "Value": "Kal\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Heavy",
+        "Value": "A\u011F\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraLight",
+        "Value": "Ekstra \u0130nce",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5B57\u4F53\u6837\u5F0F\uFF1A\u7279\u7EC6",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Light",
+        "Value": "\u0130nce",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Italic",
+        "Value": "\u0130talik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Normal",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Medium",
+        "Value": "Orta",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Regular",
+        "Value": "Normal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_Thin",
+        "Value": "\u0130nce",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_ExtraBold",
+        "Value": "Ekstra Kal\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Dock",
+        "Value": "Konteynere D\u00F6n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "FontPicker_FontStyle_SemiBold",
+        "Value": "Yar\u0131 Kal\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "Kapat",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_iPadOS",
+        "Value": "Pencerenin \u00FCst k\u0131sm\u0131ndaki \u0027\u00B7\u00B7\u00B7\u0027 d\u00FC\u011Fmesine dokunun, ard\u0131ndan \u0027Kapat\u0027\u0131 se\u00E7erek pencerenin \u00F6nceki kapsay\u0131c\u0131s\u0131na d\u00F6nmesini sa\u011Flay\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "Bir daha sorma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_Android",
+        "Value": "Bu pencereyi, uygulamayla ayn\u0131 anda g\u00F6r\u00FCnt\u00FClemek i\u00E7in k\u00FC\u00E7\u00FCk pencere moduna ayarlaman\u0131z gerekebilir.\r\nPencereyi orijinal kab\u0131na geri d\u00F6nd\u00FCrmek i\u00E7in sa\u011Fdaki \u0027\u2199\u0027 d\u00FC\u011Fmesini kullan\u0131n.\r\nBu pencereyi do\u011Frudan kapatmak, pencerenin tamamen kapanmas\u0131na neden olur.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoForward",
+        "Value": "\u0130leri Git",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "B\u00FCy\u00FCt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_GoBack",
+        "Value": "Geri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "K\u00FC\u00E7\u00FClt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut_NotSupport",
+        "Value": "Cihaz\u0131n\u0131z \u00E7oklu pencere \u00F6zelli\u011Fini desteklemiyor.\rBu \u00F6zellik; Stage Manager destekleyen iPad\u0027lerde, \u00E7o\u011Fu Android tablette ve bilgisayarlarda kullan\u0131labilir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "Minimizasyon d\u00FC\u011Fmesinin yan\u0131ndaki \u0027\u2199\u0027 simgesini kullanarak pencereyi orijinal kapsay\u0131c\u0131s\u0131na geri getirin.\rBu ba\u011F\u0131ms\u0131z pencereyi do\u011Frudan kapatt\u0131\u011F\u0131n\u0131zda, pencere tamamen kapat\u0131lacakt\u0131r.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_StageManagerUnsupportedWarn",
+        "Value": "iPad\u0027iniz Sahne Y\u00F6neticisi\u0027ni desteklemiyor gibi g\u00F6r\u00FCn\u00FCyor, \u00E7oklu pencere deneyimi etkilenebilir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "Ba\u011F\u0131ms\u0131z pencere olarak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TabView_Error",
+        "Value": "\u00DCzg\u00FCn\u00FCz, bir hata nedeniyle {tab} sekmesinin i\u00E7eri\u011Fini g\u00F6steremiyoruz.\rTekrar deneyebilir veya bu sorunu bize bildirebilirsiniz.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "tab"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ]
   }

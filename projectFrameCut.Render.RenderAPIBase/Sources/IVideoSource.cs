@@ -3,6 +3,8 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
@@ -54,7 +56,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// <returns>the frame</returns>
         abstract IPicture GetFrame(uint targetFrame, bool hasAlpha = false);
         /// <summary>
-        /// The <see cref="GetFrame(uint, bool)"/> return's <seealso cref="IPicture.bitPerPixel"/> of the result frames.
+        /// The <see cref="GetFrame(uint, bool)"/> return's <seealso cref="IPicture.BitPerPixel"/> of the result frames.
         /// Return null if unknown or variable.
         /// </summary>
         public int? ResultBitPerPixel { get; }
@@ -104,6 +106,16 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Note this is not available for all type of IVideoSource.
         /// </remarks>
         public bool StrictMode { get; set; }
+
+        /// <summary>
+        /// Enable or disable in-memory frame caching. When enabled, decoded frames are kept in RAM for faster re-access within the session.
+        /// </summary>
+        public static bool EnableMemoryCache { get; set; }
+
+        /// <summary>
+        /// Enable or disable disk-based frame caching. When enabled, decoded frames are written to disk for faster re-access across sessions.
+        /// </summary>
+        public static bool EnableDiskCache { get; set; }
 
     }
 
@@ -157,8 +169,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public void Append(IPicture source)
         {
             ArgumentNullException.ThrowIfNull(source);
-            if (source.bitPerPixel == 16) Append((IPicture<ushort>)source);
-            else if (source.bitPerPixel == 8) Append((IPicture<byte>)source);
+            if (source.BitPerPixel == 16) Append((IPicture<ushort>)source);
+            else if (source.BitPerPixel == 8) Append((IPicture<byte>)source);
             else throw new NotSupportedException($"Unsupported pixel mode.");
         }
 

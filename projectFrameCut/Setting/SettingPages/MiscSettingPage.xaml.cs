@@ -7,7 +7,7 @@ using System.Diagnostics;
 namespace projectFrameCut.Setting.SettingPages;
 
 using static SettingManager.SettingsManager;
-using IPicture = Shared.IPicture;
+using IPicture = Drawing.Base.IPicture;
 
 public partial class MiscSettingPage : ContentPage
 {
@@ -29,6 +29,7 @@ public partial class MiscSettingPage : ContentPage
             .AddCustomChild(SettingLocalizedResources.Misc_UserID, new Label { Text = GetSetting("UserID") })
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc()))
+            .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, SettingsManager.IsBoolSettingTrue("LogDiagnostics"), null)
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton(Localized.MainSettingsPage_Tab_Advanced, async (s, e) => await Navigation.PushAsync(new SettingPages.AdvancedSettingPage()))
             .AddSeparator()
@@ -165,12 +166,10 @@ public partial class MiscSettingPage : ContentPage
                     {
                         WriteSetting("render_SaveCheckpoint", "true");
                         Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                     }
                     else
                     {
                         WriteSetting("render_SaveCheckpoint", "false");
-                        IPicture.DiagImagePath = null;
                     }
                     break;
                 case "DeveloperMode":

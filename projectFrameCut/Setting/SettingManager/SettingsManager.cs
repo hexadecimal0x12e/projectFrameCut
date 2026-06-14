@@ -24,8 +24,11 @@ namespace projectFrameCut.Setting.SettingManager
                 else if (value is null) value = new();
                 else throw new ArgumentNullException(nameof(Settings), "Settings has been already inited.");
 
-                // start background save worker when settings are initialized
-                StartBackgroundSave();
+                if (!MauiProgram.CmdlineArgs.Contains("--noSettings") || Environment.GetEnvironmentVariables().Contains("PJFC_DISABLE_SETTING_SAVE"))
+                {
+                    StartBackgroundSave();
+                }
+
             }
         } = null!;
 
@@ -65,7 +68,7 @@ namespace projectFrameCut.Setting.SettingManager
             }
             else
             {
-                if(onNotExist is null) throw new KeyNotFoundException($"Setting '{key}' not found and no default value provided.");
+                if (onNotExist is null) throw new KeyNotFoundException($"Setting '{key}' not found and no default value provided.");
                 WriteSetting(key, Convert.ToString(onNotExist) ?? "");
                 return onNotExist;
             }
@@ -191,6 +194,8 @@ namespace projectFrameCut.Setting.SettingManager
         private static async Task SaveSettingAsync(CancellationToken token = default)
         {
             if (Settings == null) return;
+            if (MauiProgram.CmdlineArgs.Contains("--noSettings") || Environment.GetEnvironmentVariables().Contains("PJFC_DISABLE_SETTING_SAVE")) return;
+
             var path = Path.Combine(MauiProgram.BasicDataPath, $"settings_{(SettingSaveSlotIndicator ? "a" : "b")}.json");
             var json = JsonSerializer.Serialize(Settings, serializerOptions);
             await File.WriteAllTextAsync(path, json, token).ConfigureAwait(false);

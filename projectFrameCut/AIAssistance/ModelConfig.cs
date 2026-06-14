@@ -82,7 +82,14 @@ namespace projectFrameCut.AIAssistance
                         Name = "Qwen",
                         TextModels = new() { "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash" },
                         ImageModels = new() { "qwen-image-2.0-pro-2026-04-22", "qwen-image-2.0","qwen-image" },
-                        VideoModels = new() { "happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "wan2.6-t2v", "wan2.6-t2v-preview", "wan2.2-kf2v-flash" }
+                        VideoModels = new() { "wan2.6-t2v", "wan2.6-t2v-preview", "wan2.2-kf2v-flash" }
+                    },
+                    new ModelProvider
+                    {
+                        Name = "HappyHorse",
+                        TextModels = new() { },
+                        ImageModels = new() {  },
+                        VideoModels = new() { "happyhorse-1.0-t2v", "happyhorse-1.0-r2v" }
                     },
                     //new ModelProvider //qwen-image is enough
                     //{

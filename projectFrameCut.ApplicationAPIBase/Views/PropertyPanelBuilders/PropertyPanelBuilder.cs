@@ -410,6 +410,124 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         }
 
         /// <summary>
+        /// 添加一个位置元组输入框（例如 XYWH 坐标，或 XW/WH 尺寸），支持 2 个或 4 个数值输入框并排排列。
+        /// 每个子输入框触发 <see cref="PropertyChanged"/> 时，<see cref="pppcea.Id"/> 为 "{Id}_X"、"{Id}_Y"、"{Id}_W" 或 "{Id}_H"，
+        /// <see cref="pppcea.Value"/> 为 <see langword="double"/> 类型。
+        /// </summary>
+        /// <param name="Id">基础标识符，子项将以 "{Id}_{field}" 命名。</param>
+        /// <param name="title">左侧标签。</param>
+        /// <param name="mode">输入模式：XYWH(4值)、XW(2值)、WH(2值)。</param>
+        /// <param name="defaultValue">默认值元组 (X, Y, W, H)，未使用的字段将被忽略。</param>
+        /// <param name="EntrySetter">用于自定义所有 Entry 的委托。</param>
+        /// <param name="entryWidth">每个数字输入框的宽度。</param>
+        /// <param name="eventCallMode">事件触发模式，默认在失去焦点时触发。</param>
+        public PropertyPanelBuilder AddPositionTupleInputBox(
+            string Id,
+            PropertyPanelItemLabel title,
+            PositionTupleMode mode,
+            (double X, double Y, double W, double H) defaultValue,
+            Action<Entry>? EntrySetter = null,
+            double entryWidth = 60,
+            EntryUpdateEventCallMode? eventCallMode = EntryUpdateEventCallMode.OnUnfocused)
+        {
+            var label = title.LabelConfigure();
+            var entryContainer = new HorizontalStackLayout
+            {
+                Spacing = 6,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            Entry CreateField(string fieldName, string shortLabel, double defaultVal)
+            {
+                var entry = new Entry
+                {
+                    Text = defaultVal.ToString(),
+                    Placeholder = "0",
+                    Keyboard = Keyboard.Numeric,
+                    WidthRequest = entryWidth,
+                    VerticalOptions = LayoutOptions.Center,
+                    BindingContext = this
+                };
+
+                var fullId = $"{Id}_{fieldName}";
+                Properties[fullId] = defaultVal;
+
+                switch (eventCallMode ?? EntryUpdateEventCallMode.OnUnfocused)
+                {
+                    case EntryUpdateEventCallMode.OnAnyTextChange:
+                        entry.TextChanged += (s, e) =>
+                        {
+                            if (double.TryParse(e.NewTextValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+                                pppcea.CreateAndInvoke(this, fullId, val);
+                        };
+                        break;
+                    default:
+                        entry.Unfocused += (s, e) =>
+                        {
+                            if (double.TryParse(entry.Text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+                                pppcea.CreateAndInvoke(this, fullId, val);
+                        };
+                        break;
+                }
+
+                EntrySetter?.Invoke(entry);
+                Components.Add(fullId, entry);
+                return entry;
+            }
+
+            void AddFieldToContainer(string fieldName, string shortLabel, double defaultVal)
+            {
+                var fieldLabel = new Label
+                {
+                    Text = shortLabel,
+                    FontSize = 11,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                var entry = CreateField(fieldName, shortLabel, defaultVal);
+                entryContainer.Children.Add(fieldLabel);
+                entryContainer.Children.Add(entry);
+            }
+
+            switch (mode)
+            {
+                case PositionTupleMode.XY:
+                    AddFieldToContainer("X", "X", defaultValue.X);
+                    AddFieldToContainer("Y", "Y", defaultValue.Y);
+                    break;
+                case PositionTupleMode.XYWH:
+                    AddFieldToContainer("X", "X", defaultValue.X);
+                    AddFieldToContainer("Y", "Y", defaultValue.Y);
+                    AddFieldToContainer("W", "W", defaultValue.W);
+                    AddFieldToContainer("H", "H", defaultValue.H);
+                    break;
+                case PositionTupleMode.XW:
+                    AddFieldToContainer("X", "X", defaultValue.X);
+                    AddFieldToContainer("W", "W", defaultValue.W);
+                    break;
+                case PositionTupleMode.WH:
+                    AddFieldToContainer("W", "W", defaultValue.W);
+                    AddFieldToContainer("H", "H", defaultValue.H);
+                    break;
+            }
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                },
+                Padding = DefaultPadding
+            };
+            grid.Children.Add(label);
+            grid.Children.Add(entryContainer);
+            Grid.SetColumn(entryContainer, 1);
+
+            children.Add(grid);
+            return this;
+        }
+
+        /// <summary>
         /// Adds a separate line (based on <seealso cref="BoxView"/>) to the property panel.
         /// </summary>
         public PropertyPanelBuilder AddSeparator() => AddSeparator(null, "");
@@ -427,6 +545,76 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             BoxViewSetter?.Invoke(boxView);
             if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, boxView);
             children.Add(boxView);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a collapsible section with a tappable header that toggles the visibility of the content area.
+        /// </summary>
+        /// <param name="headerText">Header text for the collapsible section.</param>
+        /// <param name="contentBuilder">Action to populate the content area using a nested builder.</param>
+        /// <param name="defaultExpanded">Whether the section starts expanded. Default false (collapsed).</param>
+        public PropertyPanelBuilder AddCollapsibleSection(
+            string headerText,
+            Action<PropertyPanelBuilder> contentBuilder,
+            bool defaultExpanded = false)
+        {
+            var chevron = new Label
+            {
+                Text = defaultExpanded ? "▼" : "▶",
+                FontSize = 11,
+                VerticalTextAlignment = TextAlignment.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            var headerLabel = new Label
+            {
+                Text = headerText,
+                FontSize = 13,
+                FontAttributes = FontAttributes.Bold,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            var headerGrid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 6,
+                Padding = new Thickness(0, 4)
+            };
+            headerGrid.Children.Add(chevron);
+            headerGrid.Children.Add(headerLabel);
+            Grid.SetColumn(headerLabel, 1);
+
+            var contentPanel = new PropertyPanelBuilder();
+            contentBuilder(contentPanel);
+            var contentLayout = contentPanel.Build();
+            contentLayout.IsVisible = defaultExpanded;
+            contentLayout.Padding = new Thickness(12, 0, 0, 0);
+
+            // Forward PropertyChanged events from the content panel to the parent
+            contentPanel.PropertyChanged += (s, e) => PropertyChanged?.Invoke(this, e);
+
+            var tapGesture = new TapGestureRecognizer();
+            tapGesture.Tapped += (s, e) =>
+            {
+                contentLayout.IsVisible = !contentLayout.IsVisible;
+                chevron.Text = contentLayout.IsVisible ? "▼" : "▶";
+            };
+            headerGrid.GestureRecognizers.Add(tapGesture);
+
+            var wrapper = new VerticalStackLayout
+            {
+                Spacing = 4,
+                Padding = new Thickness(0, 4, 0, 0)
+            };
+            wrapper.Children.Add(headerGrid);
+            wrapper.Children.Add(contentLayout);
+
+            children.Add(wrapper);
             return this;
         }
 
@@ -770,6 +958,50 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
         }
 
+        /// <summary>
+        /// Replaces a registered component view while preserving its container position when possible.
+        /// </summary>
+        /// <param name="id">The component identifier previously registered in <see cref="Components"/>.</param>
+        /// <param name="replacement">The new view instance to place into the panel.</param>
+        /// <returns><see langword="true"/> if the component was found and replaced; otherwise <see langword="false"/>.</returns>
+        public bool ReplaceComponent(string id, View replacement)
+        {
+            if (string.IsNullOrWhiteSpace(id) || replacement is null)
+                return false;
+
+            if (!Components.TryGetValue(id, out var original))
+                return false;
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                if (ReferenceEquals(children[i], original))
+                {
+                    children[i] = replacement;
+                    Components[id] = replacement;
+                    return true;
+                }
+
+                if (children[i] is Grid grid && grid.Children.Contains(original))
+                {
+                    var row = Grid.GetRow(original);
+                    var column = Grid.GetColumn(original);
+                    var rowSpan = Grid.GetRowSpan(original);
+                    var columnSpan = Grid.GetColumnSpan(original);
+
+                    grid.Remove(original);
+                    grid.Add(replacement);
+                    Grid.SetRow(replacement, row);
+                    Grid.SetColumn(replacement, column);
+                    Grid.SetRowSpan(replacement, rowSpan);
+                    Grid.SetColumnSpan(replacement, columnSpan);
+                    Components[id] = replacement;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
 
         /// <summary>
@@ -994,8 +1226,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         OnMouseUp
     }
 
-
-
-
+    /// <summary>
+    /// 指定位置元组输入框的模式，决定显示哪些子字段。
+    /// </summary>
+    public enum PositionTupleMode
+    {
+        /// <summary>X 和 Y 两个输入框（坐标位置）。</summary>
+        XY,
+        /// <summary>X, Y, Width, Height 四个输入框。</summary>
+        XYWH,
+        /// <summary>X 和 Width 两个输入框。</summary>
+        XW,
+        /// <summary>Width 和 Height 两个输入框。</summary>
+        WH
+    }
 
 }

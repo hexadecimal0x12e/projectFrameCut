@@ -108,6 +108,7 @@ public class DraftSettingPage
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.DraftSettingPage_Tab_Messages,
+            Tag = "messages",
             Content = BuildHistoryLogsTab()
         });
         tabView.TabItems.Add(new TabbedViewItem
@@ -150,7 +151,7 @@ public class DraftSettingPage
                     })
                 };
 
-                ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
+                ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
 
                 var clearOldHistoryButton = new Button
                 {
@@ -2008,7 +2009,7 @@ public class DraftSettingPage
             var referencedClipIds = clips
                 .Where(c => IsClipReferencingAsset(c, asset, projectRoot))
                 .Select(c => c.Id)
-                .Distinct(StringComparer.Ordinal)
+                .Distinct()
                 .ToList();
 
             bool confirm = await ConfirmAsync(
@@ -2407,7 +2408,7 @@ public class DraftSettingPage
         }
 
         (var clips, _) = DraftImportAndExportHelper.ImportFromJSON(draft, parent.ProjectInfo);
-        parent.Clips = new System.Collections.Concurrent.ConcurrentDictionary<string, ClipElementUI>(clips);
+        parent.Clips = new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(clips);
         parent.Assets = CreateAssetDictionary(assets);
 
         foreach (var item in parent.Tracks)
@@ -2447,24 +2448,20 @@ public class DraftSettingPage
         return result;
     }
 
-    private static bool IsRealClipId(string clipId)
-        => !string.IsNullOrWhiteSpace(clipId)
-        && !clipId.StartsWith("ghost_", StringComparison.Ordinal)
-        && !clipId.StartsWith("shadow_", StringComparison.Ordinal);
+    private static bool IsRealClipId(Guid clipId)
+        => clipId != Guid.Empty;
 
-    private static int RemoveStandaloneClipWithDependents(DraftStructureJSON draft, string clipId)
+    private static int RemoveStandaloneClipWithDependents(DraftStructureJSON draft, Guid clipId)
     {
-        if (string.IsNullOrWhiteSpace(clipId))
+        if (clipId == Guid.Empty)
         {
             return 0;
         }
 
         var clips = GetEditableClipDtos(draft);
-        var idsToDelete = new HashSet<string>(StringComparer.Ordinal)
+        var idsToDelete = new HashSet<Guid>
         {
             clipId,
-            "ghost_" + clipId,
-            "shadow_" + clipId
         };
 
         foreach (var clip in clips)
@@ -2475,9 +2472,9 @@ public class DraftSettingPage
             }
 
             bool linkedByPrev = clip.MetaData?.TryGetValue("transformPrevId", out var prev) == true
-                && string.Equals(prev?.ToString(), clipId, StringComparison.Ordinal);
+                && Guid.TryParse(prev?.ToString(), out var prevGuid) && prevGuid == clipId;
             bool linkedByNext = clip.MetaData?.TryGetValue("transformNextId", out var next) == true
-                && string.Equals(next?.ToString(), clipId, StringComparison.Ordinal);
+                && Guid.TryParse(next?.ToString(), out var nextGuid) && nextGuid == clipId;
 
             if (linkedByPrev || linkedByNext)
             {
@@ -2612,7 +2609,7 @@ public class DraftSettingPage
         await parent.ClipEditor.UpdateClips(parent.Clips);
         parent.ClipEditor.SetCurrentFrame((uint)Math.Max(0, parent.CurrentFrame));
         await parent.previewer.UpdateDraft(draft);
-        await parent.DynamicPreviewProvider.UpdateDraft(draft);
+        parent.DynamicPreviewProvider.SetClips(parent.previewer.Clips);
         await parent.Save();
         parent.SetStateOK(successText);
     }
@@ -2624,7 +2621,6 @@ public class DraftSettingPage
             parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
 
             var clips = parent.Clips.Values
-                .Where(c => !c.Id.StartsWith("ghost_", StringComparison.Ordinal) && !c.Id.StartsWith("shadow_", StringComparison.Ordinal))
                 .ToList();
 
             int migratedCount = 0;
@@ -2668,7 +2664,7 @@ public class DraftSettingPage
                 await parent.ClipEditor.UpdateClips(parent.Clips);
                 parent.ClipEditor.SetCurrentFrame((uint)Math.Max(0, parent.CurrentFrame));
                 await parent.previewer.UpdateDraft(draft);
-                await parent.DynamicPreviewProvider.UpdateDraft(draft);
+                parent.DynamicPreviewProvider.SetClips(parent.previewer.Clips);
                 await parent.Save();
             }
 

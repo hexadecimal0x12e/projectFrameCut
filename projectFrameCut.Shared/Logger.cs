@@ -172,6 +172,14 @@ Exception data:
         /// </summary>
         public static bool LoggingDiagnosticInfo = false;
         /// <summary>
+        /// Indicates whether should save the diagnostic image to a file, the path is specified by <see cref="DiagResultPath"/>. 
+        /// </summary>
+        public static bool SaveDiagResult = false;
+        /// <summary>
+        /// If <see cref="SaveDiagResult"/> is true, the diagnostic image will be saved to this path. The file name will be generated automatically.
+        /// </summary>
+        public static string DiagResultPath = null!;
+        /// <summary>
         /// Called when a log action happens.
         /// </summary>
         public static event Action<string, string>? OnLog;

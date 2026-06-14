@@ -31,5 +31,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             get => (string)GetValue(TagProperty);
             set => SetValue(TagProperty, value);
         }
+
+        public static readonly BindableProperty LazyContentFactoryProperty =
+            BindableProperty.Create(nameof(LazyContentFactory), typeof(Func<View>), typeof(TabbedViewItem), null);
+
+        public Func<View> LazyContentFactory
+        {
+            get => (Func<View>)GetValue(LazyContentFactoryProperty);
+            set => SetValue(LazyContentFactoryProperty, value);
+        }
+
+        public static readonly BindableProperty LazyAsyncContentFactoryProperty =
+            BindableProperty.Create(nameof(LazyAsyncContentFactory), typeof(Func<Task<View>>), typeof(TabbedViewItem), null);
+
+        public Func<Task<View>> LazyAsyncContentFactory
+        {
+            get => (Func<Task<View>>)GetValue(LazyAsyncContentFactoryProperty);
+            set => SetValue(LazyAsyncContentFactoryProperty, value);
+        }
     }
 }

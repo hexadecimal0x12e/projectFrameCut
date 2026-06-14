@@ -1,12 +1,17 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 using Microsoft.Maui.Controls.Shapes;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 {
     [ContentProperty(nameof(TabItems))]
     public partial class TabbedView : ContentView
     {
+        private readonly Dictionary<TabbedViewItem, View?> _pendingTabContents = new();
+
         public HorizontalStackLayout HeadersPanel { get; private set; }
         public ContentView ContentPresenter { get; private set; }
         public ContentView HeaderRightContentContainer { get; private set; }
@@ -186,11 +191,21 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
         private void RebuildHeaders()
         {
             HeadersPanel.Children.Clear();
+            var previousPendingContents = new Dictionary<TabbedViewItem, View?>(_pendingTabContents);
+            _pendingTabContents.Clear();
             if (TabItems == null) return;
 
             for (int i = 0; i < TabItems.Count; i++)
             {
                 var item = TabItems[i];
+                var content = item.Content;
+                if (previousPendingContents.TryGetValue(item, out var previousPendingContent) && previousPendingContent != null)
+                {
+                    content = previousPendingContent;
+                }
+
+                _pendingTabContents[item] = content;
+                item.Content = null;
                 var headerView = CreateHeaderView(item, i);
                 HeadersPanel.Children.Add(headerView);
             }
@@ -236,7 +251,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             return border;
         }
 
-        private void UpdateSelection()
+        private async void UpdateSelection()
         {
             if (TabItems == null || TabItems.Count == 0)
             {
@@ -249,11 +264,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             if (SelectedIndex >= TabItems.Count) throw new IndexOutOfRangeException($"Tab index {SelectedIndex} is out of range, currently there is {TabItems.Count} tabs.");
 
             var selectedItem = TabItems[SelectedIndex];
-
-            if (ContentPresenter.Content != selectedItem)
-            {
-                ContentPresenter.Content = selectedItem;
-            }
 
             if (SelectedItem != selectedItem)
             {
@@ -281,6 +291,133 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             {
                 item.IsSelected = (item == selectedItem);
             }
+
+
+            if (selectedItem.LazyContentFactory != null && selectedItem.Content == null &&
+                (!_pendingTabContents.TryGetValue(selectedItem, out var cachedContent) || cachedContent == null))
+            {
+                var lazyContent = selectedItem.LazyContentFactory();
+                if (lazyContent != null)
+                {
+                    _pendingTabContents[selectedItem] = lazyContent;
+                }
+            }
+
+            if (selectedItem.LazyAsyncContentFactory != null && selectedItem.Content == null &&
+                (!_pendingTabContents.TryGetValue(selectedItem, out var cachedAsyncContent) || cachedAsyncContent == null))
+            {
+                // Show a loading indicator immediately to keep the UI responsive while content is created in background.
+                var indicator = new ActivityIndicator
+                {
+                    IsRunning = true,
+                    IsVisible = true,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                ContentPresenter.Content = indicator;
+
+                View? lazyContent = null;
+                try
+                {
+                    lazyContent = await selectedItem.LazyAsyncContentFactory();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Show Tab {SelectedItem.Tag}/{SelectedItem.Header} in the tabview of {Parent}({Parent.GetType().Name})", this);
+                    lazyContent = new VerticalStackLayout
+                    {
+                        Children =
+                            {
+                                new Label
+                                {
+                                    Text = Localize.APIBaseLocalizedResources.Localized.TabView_Error(SelectedItem?.Header?.ToString() ?? "Unknown tab"),
+                                    FontSize = 20,
+                                    TextColor = Colors.Yellow,
+                                    HorizontalOptions = LayoutOptions.Center,
+                                    VerticalOptions = LayoutOptions.Center
+                                },
+                                new Label
+                                {
+                                    Text = ex.ToString(),
+                                    FontSize = 12,
+                                    TextColor = Colors.Gray,
+                                    HorizontalOptions = LayoutOptions.Center,
+                                    VerticalOptions = LayoutOptions.Center
+                                }
+                            },
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new(8)
+                    };
+
+                    if (Debugger.IsAttached)
+                    {
+                        if (await Dispatcher.DispatchAsync(async () => await Shell.Current.CurrentPage.DisplayAlertAsync("Error", $"Failed to load content for tab '{SelectedItem?.Header ?? "Unknown"}'.{Environment.NewLine}Error: {ex.Message}{Environment.NewLine}{Environment.NewLine}Throw it?", "Yes", "No")))
+                        {
+                            throw;
+                        }
+                    }
+
+                }
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (lazyContent != null)
+                    {
+                        _pendingTabContents[selectedItem] = lazyContent;
+                        UpdateSelection();
+                    }
+                    else
+                    {
+                        // Remove the indicator if loading failed or returned null and clear pending entry.
+                        if (ContentPresenter.Content == indicator)
+                            ContentPresenter.Content = null;
+                        _pendingTabContents[selectedItem] = null;
+                    }
+                });
+
+                return;
+            }
+
+            try
+            {
+                var selectedContent = selectedItem.Content;
+                if (selectedContent == null && _pendingTabContents.TryGetValue(selectedItem, out var pendingContent))
+                {
+                    // Keep the tab content detached from TabbedViewItem itself.
+                    // Otherwise the same View instance would be mounted both under
+                    // TabbedViewItem and under ContentPresenter, which causes MAUI/WinUI
+                    // to throw when switching tabs.
+                    selectedContent = pendingContent;
+                }
+
+                if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                {
+                    if (Dispatcher.IsDispatchRequired)
+                    {
+                        await Dispatcher.DispatchAsync(() =>
+                        {
+                            // Re-check on UI thread because another UpdateSelection call may
+                            // have already assigned the same view before this queued work runs.
+                            if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                            {
+                                ContentPresenter.Content = selectedContent;
+                            }
+                        });
+                    }
+                    else
+                    {
+                        ContentPresenter.Content = selectedContent;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Place tab {selectedItem.Tag}/{selectedItem.Header} content in the tabview of {Parent}({Parent.GetType().Name})", this);
+                await (Shell.Current?.DisplayAlertAsync(Localize.APIBaseLocalizedResources.Localized._Error, Localize.APIBaseLocalizedResources.Localized.TabView_Error(selectedItem?.Header?.ToString() ?? selectedItem?.Tag ?? "?"), Localize.APIBaseLocalizedResources.Localized._OK) ?? Task.CompletedTask);
+            }
+
+
         }
     }
 }

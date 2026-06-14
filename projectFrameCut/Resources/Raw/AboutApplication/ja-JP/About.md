@@ -12,7 +12,7 @@ projectFrameCut の目標は、強力で使いやすく、完全に自由な動�
 
 サードパーティライブラリと謝辞
 
-このプロジェクトでは、フレーム抽出と処理のために FFmpeg と SixLabors.ImageSharp（および関連ライブラリ）を使用し、FFmpeg の呼び出しには FFmpeg_droidFix.AutoGen を使用しています。
+このプロジェクトでは、フレーム抽出と処理のために FFmpeg と projectFrameCut.Drawing用し、FFmpeg の呼び出しには FFmpeg_droidFix.AutoGen を使用しています。
 
 Windows 向けには ILGPU を使用してハードウェアアクセラレーションを行っています。
 

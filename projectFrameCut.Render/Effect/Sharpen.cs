@@ -1,7 +1,7 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class SharpenEffect_ImageSharp : INormalEffect
+    public class SharpenEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -26,8 +26,8 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = ["Amount"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -39,7 +39,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -47,7 +47,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            return new SharpenEffect_ImageSharp
+            return new SharpenEffect_IPicture
             {
                 Amount = Convert.ToSingle(parameters["Amount"]),
                 ImplementType = implementType
@@ -58,59 +58,85 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            return new SharpenProcessStep(Amount);
+            return SharpenEffect.Process(source, Amount);
         }
     }
 
-    public class SharpenProcessStep : IPictureProcessStep
+    public class SharpenEffect_HwAccel : INormalEffect
     {
-        private TimeSpan? _elapsed;
-        public string Name => "Sharpen";
-        public Dictionary<string, object?> Properties { get; set; } = new();
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; } = "Sharpen";
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
 
-        public float Amount { get; }
+        public float Amount { get; init; } = 1f;
 
-        public SharpenProcessStep(float amount)
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
-            Amount = amount;
-            Properties = new Dictionary<string, object?>
+            { "Amount", Amount }
+        };
+
+        public string? NeedComputer => "SharpenComputer";
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
+
+        public static List<string> ParametersNeeded { get; } = ["Amount"];
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            { "Amount", "float" }
+        };
+
+        public string TypeName => "Sharpen";
+        public string? BindedEffectGroupID { get; set; }
+        public string Id { get; set; } = string.Empty;
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
             {
-                { nameof(Amount), Amount }
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            return new SharpenEffect_HwAccel
+            {
+                Amount = Convert.ToSingle(parameters["Amount"])
             };
         }
 
-        public IPicture Process(IPicture source)
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            if (computer is null)
+                return SharpenEffect.Process(source, Amount);
+
             var sw = Stopwatch.StartNew();
-            var result = EffectHelper.SharpenPicture(source, Amount, "Sharpen", typeof(SharpenProcessStep));
+            var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
+            var resultArr = computer.Compute([r, g, b, a, source.Width, Amount]);
+
+            if (resultArr.Length != 4 ||
+                resultArr[0] is not float[] rOut ||
+                resultArr[1] is not float[] gOut ||
+                resultArr[2] is not float[] bOut ||
+                resultArr[3] is not float[] aOut)
+            {
+                throw new InvalidOperationException("SharpenComputer did not return expected channel buffers.");
+            }
+
+            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, rOut, gOut, bOut, aOut, sourceHasAlpha);
             sw.Stop();
-            _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                Elapsed = sw.Elapsed,
+                OperationDisplayName = "Sharpen (GPU)",
+                Operator = typeof(SharpenEffect_HwAccel),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = new Dictionary<string, object> { { "Amount", Amount } }
+            }).ToList();
             return result;
         }
-
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            return null;
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "Sharpen",
-            Operator = typeof(SharpenProcessStep),
-            ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
-            Properties = new Dictionary<string, object>
-            {
-                { nameof(Amount), Amount }
-            }
-        };
     }
 
     public class SharpenEffectFactory : IEffectFactory
@@ -124,7 +150,7 @@ namespace projectFrameCut.Render.Effect
             { "Amount", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp, EffectImplementType.IPicture];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -134,8 +160,8 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => SharpenEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.IPicture => SharpenEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => SharpenEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.HwAcceleration => SharpenEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
@@ -144,7 +170,7 @@ namespace projectFrameCut.Render.Effect
         {
             parameters ??= new Dictionary<string, object> { { "Amount", 1f } };
             if (!parameters.ContainsKey("Amount")) parameters["Amount"] = 1f;
-            return SharpenEffect_ImageSharp.FromParametersDictionary(parameters);
+            return SharpenEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

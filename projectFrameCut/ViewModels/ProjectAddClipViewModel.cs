@@ -3,9 +3,11 @@ using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -22,11 +24,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.ViewModels;
 
@@ -203,6 +207,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 field = value;
                 _draftPage?.IsPopupClosableByTapBackground = !field;
+                IsRegenerateAvailable = true;
                 OnPropertyChanged();
             }
         }
@@ -243,12 +248,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 field = value;
                 _draftPage?.IsPopupClosableByTapBackground = !field;
+                IsRegenerateAvailable = true;
                 OnPropertyChanged();
             }
         }
     } = false;
 
-    // ???? Clip ????????
+    // ?? Clip ????????
     public bool CanGenerateAITransition
     {
         get
@@ -258,6 +264,133 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             return left != null || right != null;
         }
     }
+
+    #region AI Generation Preview
+
+    private AssetItem? _pendingGeneratedAsset;
+    private string _pendingTransitionDirection = "";
+
+    public string PreviewResultPath
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsPreviewImageType));
+                OnPropertyChanged(nameof(IsPreviewVideoType));
+            }
+        }
+    } = "";
+
+    public string PreviewContentType
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsPreviewImageType));
+                OnPropertyChanged(nameof(IsPreviewVideoType));
+            }
+        }
+    } = "";
+
+    public bool IsPreviewImageType => PreviewContentType == "Image";
+    public bool IsPreviewVideoType => PreviewContentType == "Video";
+
+    public bool IsShowingPreview
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                if (_draftPage != null)
+                    _draftPage.IsPopupClosableByTapBackground = !value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsFeedbackPanelVisible
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsSubmittingFeedback
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool HasFeedbackSubmitted
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public string FeedbackSelectedType
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsFeedbackGoodSelected));
+                OnPropertyChanged(nameof(IsFeedbackBadSelected));
+                OnPropertyChanged(nameof(IsFeedbackReportSelected));
+            }
+        }
+    } = "";
+
+    public bool IsRegenerateAvailable
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
+    public bool IsFeedbackGoodSelected => FeedbackSelectedType == "Good";
+    public bool IsFeedbackBadSelected => FeedbackSelectedType == "Bad";
+    public bool IsFeedbackReportSelected => FeedbackSelectedType == "Report";
+
+    #endregion
 
     public bool IsDraftSelectedAnyClip
     {
@@ -427,6 +560,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
+    public ObservableCollection<TextStyleProviderItemViewModel> AvailableTextStyleProviders { get; } = new();
 
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
@@ -434,6 +568,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
+    public ObservableCollection<TextStyleProviderItemViewModel> FilteredAvailableTextStyleProviders { get; } = new();
     #endregion
 
     #region command
@@ -455,6 +590,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     // AI ????????
     public ICommand GenerateAITransitionCommand { get; set; } = null!;
+
+    // AI Preview
+    public ICommand ApplyAIPreviewCommand { get; set; } = null!;
+    public ICommand RegenerateAIContentCommand { get; set; } = null!;
+    public ICommand CancelAIPreviewCommand { get; set; } = null!;
+    public ICommand ToggleFeedbackPanelCommand { get; set; } = null!;
+    public ICommand SubmitAIFeedbackCommand { get; set; } = null!;
 
     public ICommand DrawingContentUndoCommand { get; set; } = null!;
     public ICommand DrawingContentRedoCommand { get; set; } = null!;
@@ -484,6 +626,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         // AI ??????
         GenerateAITransitionCommand = new Command(async (d) => await GenerateAITransition(d));
+
+        // AI Preview
+        ApplyAIPreviewCommand = new Command(async () => await ApplyAIPreview());
+        RegenerateAIContentCommand = new Command(async () => await RegenerateAIContent());
+        CancelAIPreviewCommand = new Command(async () => await CancelAIPreview());
+        ToggleFeedbackPanelCommand = new Command(ToggleFeedbackPanel);
+        SubmitAIFeedbackCommand = new Command<string>(async (type) => await SubmitAIFeedback(type));
     }
     #endregion
 
@@ -1442,6 +1591,66 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         TextToAdd = "";
     }
 
+    public async Task AddTextClipWithStyleProvider(TextStyleProviderItemViewModel? providerOverride = null)
+    {
+        var providerItem = providerOverride;
+        if (providerItem is null) return;
+        var text = TextToAdd;
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.Id, providerItem.Parameters)
+            ?? providerItem.Provider;
+        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        provider.BasicText = text;
+
+        var entries = provider.BuildEntries();
+        var textLang = DetectTextLanguage(text);
+        if (textLang != TextLanguage.English)
+        {
+            var fontOverride = textLang switch
+            {
+                TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
+                TextLanguage.Japanese => "Noto Sans JP Regular",
+                TextLanguage.Korean => "Noto Sans KR Regular",
+                TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
+                _ => "Noto Sans"
+            };
+            entries = entries
+                .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
+                .ToArray();
+        }
+
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(300),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
+            element.ExtraData["TextEntries"] = entries.ToList();
+            element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
+            element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
+            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+
+            return element;
+        }, TextClipInSubTrack, name: "Text");
+
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+        TextToAdd = "";
+    }
+
     public void InitializeTextStyles(string? previewText = null)
     {
 
@@ -1529,6 +1738,50 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 FilteredAvailableTextStyles.Add(s);
             }
         }
+
+        InitializeTextStyleProviders(previewText);
+    }
+
+    public void InitializeTextStyleProviders(string? previewText = null)
+    {
+        AvailableTextStyleProviders.Clear();
+        try
+        {
+            foreach (var kvp in TextStyleServices.GetAvailableTextStyleProviders())
+            {
+                var provider = kvp.Value();
+                if (!string.IsNullOrWhiteSpace(previewText))
+                {
+                    provider.BasicText = previewText;
+                }
+
+                AvailableTextStyleProviders.Add(new TextStyleProviderItemViewModel(this)
+                {
+                    Id = provider.TypeName,
+                    Name = provider.TypeName,
+                    Provider = provider,
+                    FromPlugin = provider.FromPlugin,
+                    Parameters = new Dictionary<string, string>(provider.Parameters),
+                    BasicText = provider.BasicText
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Load text style providers", this);
+        }
+
+        FilteredAvailableTextStyleProviders.Clear();
+        var searchLower = SearchText?.ToLower() ?? "";
+        foreach (var s in AvailableTextStyleProviders)
+        {
+            if (string.IsNullOrWhiteSpace(searchLower) ||
+                s.Name.ToLower().Contains(searchLower) ||
+                s.BasicText.ToLower().Contains(searchLower))
+            {
+                FilteredAvailableTextStyleProviders.Add(s);
+            }
+        }
     }
 
     #endregion
@@ -1611,7 +1864,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var nextId = Guid.NewGuid();
                 var prevClip = new SolidColorClip
                 {
-                    Id = prevId.ToString(),
+                    Id = prevId,
                     Name = "_preview_prev",
                     StartFrame = 0,
                     Duration = (uint)frameCount,
@@ -1623,7 +1876,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 };
                 var nextClip = new SolidColorClip
                 {
-                    Id = nextId.ToString(),
+                    Id = nextId,
                     Name = "_preview_next",
                     StartFrame = (uint)frameCount,
                     Duration = (uint)frameCount,
@@ -1817,6 +2070,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 s.SampleText.ToLower().Contains(styleSearch))
             {
                 FilteredAvailableTextStyles.Add(s);
+            }
+        }
+
+        FilteredAvailableTextStyleProviders.Clear();
+        var providerSearch = SearchText?.ToLower() ?? "";
+        foreach (var p in AvailableTextStyleProviders)
+        {
+            if (string.IsNullOrWhiteSpace(providerSearch) ||
+                p.Name.ToLower().Contains(providerSearch) ||
+                p.BasicText.ToLower().Contains(providerSearch))
+            {
+                FilteredAvailableTextStyleProviders.Add(p);
             }
         }
     }
@@ -2293,15 +2558,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // ????????
-            await AddAIGeneratedImageToTimeline(asset.Path, AIPrompt);
-
-            // ????
-            AIPrompt = "";
-
-            // ??????
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Image";
+            ShowPreviewDialog();
         }
         catch (Exception ex)
         {
@@ -2399,12 +2660,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            await AddAIGeneratedVideoToTimeline(asset.Path, AIPrompt);
-
-            AIPrompt = "";
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Video";
+            ShowPreviewDialog();
         }
         catch (Exception ex)
         {
@@ -2629,19 +2889,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             var sourcePath = asset.Path; // ????????
 
-            _draftPage.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
-            {
-                Name = "AITransform",
-                BindedLeftClip = a,
-                BindedRightClip = b,
-                SourcePath = sourcePath
-            }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
-
-
-            AITransitionPrompt = "";
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
+            // Show preview in dialog
+            _pendingGeneratedAsset = asset;
+            _pendingTransitionDirection = directionStr;
+            PreviewResultPath = asset.Path;
+            PreviewContentType = "Video";
+            ShowPreviewDialog();
             LoadTransforms();
         }
         catch (Exception ex)
@@ -2756,7 +3009,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                             var vid = PluginManager.CreateVideoSource(localPath);
                             item.Duration = vid.TotalFrames;
                             item.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
+                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
                             item.ThumbnailPath = thumbnailPath;
                             break;
                         }
@@ -2789,6 +3042,210 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
+
+    #endregion
+
+    #region AI Generation Preview Actions
+
+    private async void ShowPreviewDialog()
+    {
+        await _draftPage.HidePopup(true);
+        _draftPage.IsPopupClosableByTapBackground = true;
+        ResetPreviewFeedbackState();
+        var previewView = new AIPreviewDialogView { BindingContext = this };
+        await _draftPage.ShowAPopup(previewView, mode: "dialog");
+    }
+
+    private void ResetPreviewFeedbackState()
+    {
+        FeedbackSelectedType = "";
+        IsFeedbackPanelVisible = false;
+        HasFeedbackSubmitted = false;
+        IsSubmittingFeedback = false;
+    }
+
+    private async Task ApplyAIPreview()
+    {
+        if (_pendingGeneratedAsset == null) return;
+
+        await _draftPage.HidePopup(true);
+
+        try
+        {
+            if (PreviewContentType == "Image")
+            {
+                await AddAIGeneratedImageToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
+            }
+            else if (!string.IsNullOrWhiteSpace(_pendingTransitionDirection))
+            {
+                AddAITransitionToTimeline(_pendingGeneratedAsset.Path);
+            }
+            else
+            {
+                await AddAIGeneratedVideoToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
+            }
+
+            AIPrompt = "";
+            AITransitionPrompt = "";
+            _pendingTransitionDirection = "";
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+            await _draftPage.HidePopup(true);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, "Apply AI preview", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, ex.Message, Localized._OK);
+        }
+        finally
+        {
+            CleanupPreviewState();
+        }
+    }
+
+    private void AddAITransitionToTimeline(string sourcePath)
+    {
+        var directionStr = _pendingTransitionDirection;
+        bool left = directionStr == "left";
+        bool right = directionStr == "right";
+        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
+        {
+            left = _draftPage._transformMenuActivatedHandle == "left";
+            right = _draftPage._transformMenuActivatedHandle == "right";
+        }
+
+        var selectedClip = _draftPage?.SelectedClip;
+        if (selectedClip == null) return;
+
+        _draftPage!.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
+        {
+            Name = "AITransform",
+            BindedLeftClip = a,
+            BindedRightClip = b,
+            SourcePath = sourcePath
+        }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
+    }
+
+    private async Task RegenerateAIContent()
+    {
+        IsRegenerateAvailable = false;
+        var wasTransition = !string.IsNullOrWhiteSpace(_pendingTransitionDirection);
+        var savedDirection = _pendingTransitionDirection;
+
+        //await _draftPage.HidePopup(true);
+        CleanupPreviewState();
+
+        if (wasTransition)
+        {
+            await GenerateAITransition(savedDirection);
+        }
+        else
+        {
+            await GenerateAIContent();
+        }
+    }
+
+    private async Task CancelAIPreview()
+    {
+        await _draftPage.HidePopup(true);
+        CleanupPreviewState();
+    }
+
+    private void CleanupPreviewState()
+    {
+        _pendingGeneratedAsset = null;
+        _pendingTransitionDirection = "";
+        PreviewResultPath = "";
+        PreviewContentType = "";
+        ResetPreviewFeedbackState();
+    }
+
+    private void ToggleFeedbackPanel()
+    {
+        IsFeedbackPanelVisible = !IsFeedbackPanelVisible;
+        if (!IsFeedbackPanelVisible)
+        {
+            FeedbackSelectedType = "";
+        }
+    }
+
+    private async Task SubmitAIFeedback(string feedbackTypeStr)
+    {
+        if (!Enum.TryParse<AssistanceChatView.ChatReplyFeedbackType>(feedbackTypeStr, out var feedbackType))
+            return;
+
+        FeedbackSelectedType = feedbackType switch
+        {
+            AssistanceChatView.ChatReplyFeedbackType.Good => "Good",
+            AssistanceChatView.ChatReplyFeedbackType.Bad => "Bad",
+            AssistanceChatView.ChatReplyFeedbackType.Report => "Report",
+            _ => ""
+        };
+
+        string reasonCode = "";
+        string reasonText = "";
+
+        if (feedbackType == AssistanceChatView.ChatReplyFeedbackType.Report)
+        {
+            var harmful = Localized.AIAssistant_ChatView_Feedback_ReportReason_Harmful;
+            var hate = Localized.AIAssistant_ChatView_Feedback_ReportReason_Hate;
+            var incorrect = Localized.AIAssistant_ChatView_Feedback_ReportReason_Incorrect;
+            var irrelevant = Localized.AIAssistant_ChatView_Feedback_ReportReason_Irrelevant;
+            var other = Localized.AIAssistant_ChatView_Feedback_ReportReason_Other;
+
+            string? selectedReason;
+            if (Application.Current?.Windows?[0]?.Page is Page page)
+            {
+                selectedReason = await page.DisplayActionSheetAsync(
+                    Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
+                    Localized._Cancel,
+                    null,
+                    harmful, hate, incorrect, irrelevant, other);
+            }
+            else
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedReason) || selectedReason == Localized._Cancel)
+            {
+                FeedbackSelectedType = "";
+                return;
+            }
+
+            reasonCode = selectedReason switch
+            {
+                var x when x == harmful => "harmful_or_dangerous",
+                var x when x == hate => "hateful_or_harassing",
+                var x when x == incorrect => "factually_incorrect",
+                var x when x == irrelevant => "irrelevant",
+                _ => "other",
+            };
+            reasonText = selectedReason;
+        }
+
+        IsSubmittingFeedback = true;
+        try
+        {
+            var prompt = string.IsNullOrWhiteSpace(AIPrompt) ? AITransitionPrompt : AIPrompt;
+            var payload = new
+            {
+                ContentType = PreviewContentType,
+                Prompt = prompt,
+                FeedbackType = feedbackType.ToString(),
+                ReasonCode = reasonCode,
+                ReasonText = reasonText,
+                CreatedAt = DateTimeOffset.Now,
+            };
+            await Task.Delay(5000);
+            Logger.Log($"AI Preview Feedback submitted: {JsonSerializer.Serialize(payload)}", "Info");
+            HasFeedbackSubmitted = true;
+            IsFeedbackPanelVisible = false;
+        }
+        finally
+        {
+            IsSubmittingFeedback = false;
+        }
+    }
 
     #endregion
 
@@ -2919,27 +3376,116 @@ public class TextStyleItemViewModel
     public required string Name { get; set; } = string.Empty;
     public required string SampleText { get; set; } = string.Empty;
     public required TextClipEntry ActualTemplate { get; set; } = default!;
+    private ImageSource? _previewSource;
+
+    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+
+    private string ComputeCacheKey()
+    {
+        var t = ActualTemplate;
+        var sb = new StringBuilder();
+        sb.Append(Id).Append('|');
+        sb.Append(SampleText ?? "AaBbYyZz").Append('|');
+        sb.Append(t.fontFamily ?? "").Append('|');
+        sb.Append(t.fontSize).Append('|');
+        sb.Append(t.fontStyle).Append('|');
+        sb.Append(t.r).Append('|');
+        sb.Append(t.g).Append('|');
+        sb.Append(t.b).Append('|');
+        sb.Append(t.a).Append('|');
+        sb.Append(t.horizontalAlignment).Append('|');
+        sb.Append(t.verticalAlignment).Append('|');
+        sb.Append(t.wrappingWidth).Append('|');
+        sb.Append(t.applyKerning).Append('|');
+        sb.Append(t.lineSpacing).Append('|');
+        sb.Append(t.rotation).Append('|');
+        sb.Append(t.strokeWidth).Append('|');
+        sb.Append(t.strokeR).Append('|');
+        sb.Append(t.strokeG).Append('|');
+        sb.Append(t.strokeB).Append('|');
+        sb.Append(t.dpi).Append('|');
+        sb.Append(t.ScaleWithTarget).Append('|');
+        sb.Append(t.UseVerticalLayout).Append('|');
+        sb.Append(t.KeepNonCJKTextAsHorizontal).Append('|');
+        sb.Append(t.x).Append('|');
+        sb.Append(t.y);
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Convert.ToHexString(hash);
+    }
+
+    private string? TryLoadFromDiskCache()
+    {
+        var dir = PreviewCacheDir;
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, ComputeCacheKey() + ".png");
+        return File.Exists(path) ? path : null;
+    }
+
+    private void SaveToDiskCache(byte[] pngBytes)
+    {
+        try
+        {
+            var dir = PreviewCacheDir;
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, ComputeCacheKey() + ".png");
+            File.WriteAllBytes(path, pngBytes);
+        }
+        catch
+        {
+            // disk cache is best-effort
+        }
+    }
+
     public ImageSource PreviewSource
     {
         get
         {
-            var sample = SampleText ?? "AaBbYyZz";
-            TextClip t = new TextClip
+            if (_previewSource != null)
+                return _previewSource;
+
+            try
             {
-                Id = Id,
-                Name = Id,
-                TextEntries = new List<TextClipEntry>
+                // Try disk cache first
+                var cachedPath = TryLoadFromDiskCache();
+                if (cachedPath != null)
                 {
-                    ActualTemplate with { text = sample }
+                    var cachedBytes = File.ReadAllBytes(cachedPath);
+                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
+                    return _previewSource;
                 }
-            };
 
-            var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
-            var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
-            var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
+                var sample = SampleText ?? "AaBbYyZz";
+                TextClip t = new TextClip
+                {
+                    Id = Guid.Parse(Id),
+                    Name = Id,
+                    TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
+                    {
+                        ActualTemplate with { text = sample }
+                    })
+                };
 
-            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-            return img.ToImageSource();
+                var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
+                var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
+                var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
+
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+
+                // Encode to PNG once, share between disk cache and ImageSource
+                var bpp8 = img.ToBitPerPixel(8);
+                using var ms = new MemoryStream();
+                bpp8.SaveToPng(ms);
+                var pngBytes = ms.ToArray();
+
+                SaveToDiskCache(pngBytes);
+                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
+                return _previewSource;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
     public bool ShouldInSubtrack { get; set; } = false;
@@ -2951,6 +3497,105 @@ public class TextStyleItemViewModel
     }
 }
 
+public class TextStyleProviderItemViewModel
+{
+    public required string Id { get; set; } = string.Empty;
+    public required string Name { get; set; } = string.Empty;
+    public required ITextClipStyleProvider Provider { get; set; } = default!;
+    public required string FromPlugin { get; set; } = string.Empty;
+    public required Dictionary<string, string> Parameters { get; set; } = new();
+    public required string BasicText { get; set; } = string.Empty;
+
+    private ImageSource? _previewSource;
+
+    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+
+    private string ComputeCacheKey()
+    {
+        var sb = new StringBuilder();
+        sb.Append(Id).Append('|');
+        sb.Append(BasicText ?? "").Append('|');
+        foreach (var kvp in Parameters.OrderBy(k => k.Key))
+        {
+            sb.Append(kvp.Key).Append('=').Append(kvp.Value).Append('|');
+        }
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Convert.ToHexString(hash);
+    }
+
+    public ImageSource PreviewSource
+    {
+        get
+        {
+            if (_previewSource != null)
+                return _previewSource;
+
+            try
+            {
+                // Try disk cache first
+                var dir = PreviewCacheDir;
+                Directory.CreateDirectory(dir);
+                var cachePath = Path.Combine(dir, ComputeCacheKey() + ".png");
+                if (File.Exists(cachePath))
+                {
+                    var cachedBytes = File.ReadAllBytes(cachePath);
+                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
+                    return _previewSource;
+                }
+
+                var entries = Provider.BuildEntries();
+                if (entries.Length == 0)
+                {
+                    return null!;
+                }
+
+                TextClip t = new TextClip
+                {
+                    Id = Guid.Parse(Id),
+                    Name = Id,
+                    TextEntries = entries.ToList()
+                };
+
+                var maxFontSize = entries.Max(e => e.FontSize > 0 ? e.FontSize : 36f);
+                var sample = entries.OrderByDescending(e => e.Text?.Length ?? 0).FirstOrDefault()?.Text ?? BasicText ?? "AaBbYyZz";
+                var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
+                var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
+
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+
+                // Encode to PNG once, share between disk cache and ImageSource
+                var bpp8 = img.ToBitPerPixel(8);
+                using var ms = new MemoryStream();
+                bpp8.SaveToPng(ms);
+                var pngBytes = ms.ToArray();
+
+                // Save to disk cache (best-effort)
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    File.WriteAllBytes(cachePath, pngBytes);
+                }
+                catch
+                {
+                    // disk cache is best-effort
+                }
+
+                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
+                return _previewSource;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    public Command AddTextClipWithStyleProviderCommand { get; set; }
+
+    public TextStyleProviderItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddTextClipWithStyleProviderCommand = new Command(async () => await parent.AddTextClipWithStyleProvider(this));
+    }
+}
+
 #endregion
-
-

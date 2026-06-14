@@ -11,7 +11,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Get the target frame after processing in the processer.
         /// </summary>
         /// <param name="sourceFrame">the frame <b>RELATIVE INSIDE THE CLIP</b></param>
-        /// <returns></returns>
+        /// <returns>the new position of the frame</returns>
         public uint GetTargetFrame(uint sourceFrame);
 
         /// <summary>
@@ -25,12 +25,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         EffectType IEffect.TypeOfEffect => EffectType.SpeedVarianceProvider;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
-        bool IEffect.Enabled { get => false; set => Logger.Log("Cannot enable a ISpeedVarianceProvider. It should be used within the render system.", "warn"); } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
+        bool IEffect.Enabled { get => false; set { } } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
         string? IEffect.NeedComputer => null;
-        bool IEffect.YieldProcessStep => false;
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
-        int IEffect.Index { get => int.MaxValue; set => Logger.Log("Cannot set Index for a ISpeedVarianceProvider. This operation is ignored.", "warn"); }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
+        int IEffect.Index { get => int.MaxValue; set { } }
+        bool IEffect.IsReorderable => false;
     }
     /// <summary>
     /// A classic speed variance provider that provides a constant speed ratio. The ratio can be set through the "Ratio" parameter. This is useful for implementing effects like "Fast Forward" or "Slow Motion".
@@ -124,15 +124,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             { "Ratio", "float" }
         };
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            if (implementType != EffectImplementType.NotSpecified)
-            {
-                throw new NotSupportedException($"Effect '{TypeName}' only supports implement type '{EffectImplementType.NotSpecified}'.");
-            }
-
             parameters ??= new Dictionary<string, object> { { "Ratio", 1f } };
             if (!parameters.ContainsKey("Ratio"))
             {

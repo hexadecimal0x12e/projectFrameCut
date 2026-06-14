@@ -4,10 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Drawing.Processing;
 
 namespace projectFrameCut.Shared
 {
@@ -53,17 +49,26 @@ namespace projectFrameCut.Shared
         ClipPositionProvider,
         ContinuousClipPositionProvider,
         MixtureProvider,
+        TextEffect,
+        ContinuousTextEffect,
         NotSpecified = -1,
     }
 
+    [Flags]
     public enum EffectTarget
     {
-        Video,
-        Audio,
-        SpeedVariance,
-        ColorAdjustment,
-        Mixture,
         NotSpecified = -1,
+        Video = 2,
+        Audio = 4,
+        SpeedVariance = 8,
+        Mixture = 16,
+        ColorAdjustment = 32,
+        Text = 64,
+
+        IsKeyFramed = 1 << 16,
+        IsNotVisibleInEffectEditor = 1 << 17,
+        IsNotVisibleInNewEffectSelector = 1 << 18,
+        InternalUse = 1 << 19,
     }
 
     public enum BindableArgumentEffectType
@@ -79,9 +84,11 @@ namespace projectFrameCut.Shared
 
     public enum EffectImplementType
     {
+        None = -1,
         NotSpecified,
         IPicture,
-        ImageSharp,
+        [Obsolete("ImageSharp-based effects are deprecated and this enum is kept for backward compatibility only. Please use IPicture-based implementations instead.", false)]
+        ImageSharp_Deprecated,
         HwAcceleration,
         Custom1,
         Custom2,
@@ -125,6 +132,7 @@ namespace projectFrameCut.Shared
         Arabic
     }
 
+    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]
     public record TextClipEntry
     {
         // Core text
@@ -135,7 +143,7 @@ namespace projectFrameCut.Shared
         // Font
         public string fontFamily { get; set; }
         public float fontSize { get; set; }
-        public FontStyle fontStyle { get; init; } = FontStyle.Regular;
+        public ClipFontStyle fontStyle { get; init; } = ClipFontStyle.Regular;
         public bool UseVerticalLayout { get; set; } = false;
         public bool KeepNonCJKTextAsHorizontal { get; set; } = false;
 
@@ -146,8 +154,8 @@ namespace projectFrameCut.Shared
         public float? a { get; set; }
 
         // Alignment and wrapping
-        public HorizontalAlignment horizontalAlignment { get; init; } = HorizontalAlignment.Left;
-        public VerticalAlignment verticalAlignment { get; init; } = VerticalAlignment.Top;
+        public ClipHorizontalAlignment horizontalAlignment { get; init; } = ClipHorizontalAlignment.Left;
+        public ClipVerticalAlignment verticalAlignment { get; init; } = ClipVerticalAlignment.Top;
         public float? wrappingWidth { get; init; } = null; // when set, enables wrapping within this width
 
         // Layout and metrics
@@ -165,6 +173,11 @@ namespace projectFrameCut.Shared
 
         // Additional: DPI for font rasterization (nullable, uses default when null)
         public float? dpi { get; init; } = null;
+
+        // When false, BuildEntriesForTargetSize skips font-size and wrapping-width
+        // scaling (used by FixedWidth / FixedHeight / FixedSize layout modes where
+        // the provider already produces entries in the correct coordinate space).
+        public bool ScaleWithTarget { get; init; } = true;
 
         // Use in UI only, not for rendering
         public bool ShouldInSubtrack { get; set; } = false;
@@ -233,26 +246,4 @@ namespace projectFrameCut.Shared
     /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
     public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
 
-    /// <summary>
-    /// Determines the method to degrade HDR image to SDR when the renderer or display does not support HDR.
-    /// </summary>
-    public enum HDRImageDegradeToSDRMode
-    {
-        /// <summary>
-        /// Normalize the pixels from the <see cref="IHDRPicture{T}.Brightness"/> channel to the range of RGB channels.
-        /// </summary>
-        NormalizeBrightnessToRGB,
-        /// <summary>
-        /// Overlay a black mask which has <see cref="IPicture{T}.a"/> channel from <see cref="IHDRPicture{T}.Brightness"/> to the RGB(A) channels.
-        /// </summary>
-        OverlayMaskFromBrightness,
-        /// <summary>
-        /// Discard the <see cref="IHDRPicture{T}.Brightness"/> channel away, and cast the remaining channels to an <see cref="Picture16bpp"/>.
-        /// </summary>
-        DiscardBrightnessChannel,
-        /// <summary>
-        /// Throw a <see cref="InvalidOperationException"/> when degrade operation occurs. Similar behavior when <see cref="IPicture.AllowPixelModeDowngrade"/> is false and you call <see cref="IPicture.ToBitPerPixel(int)"/> smaller than source's <see cref="IPicture.bitPerPixel"/>.
-        /// </summary>
-        DisallowDowngrade
-    }
 }

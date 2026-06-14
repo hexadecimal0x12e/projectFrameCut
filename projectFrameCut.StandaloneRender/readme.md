@@ -6,7 +6,7 @@
 ## 系统要求
 独立渲染器支持Windows和Linux操作系统。最低系统要求如下：
 - .NET 10 运行时
-- **8.x**的FFmpeg 库
+- **8.1.x**的FFmpeg 库
 - CUDA 或 OpenCL 支持的 GPU，用于硬件加速
 
 独立渲染器**不支持MacOS**，因为没有很好的方法在命令行程序里调用Metal API。你可以考虑使用主程序的自动渲染功能。
@@ -83,6 +83,10 @@ projectFrameCut.StandaloneRender <mode> [<args>]
   禁止将 `SIGINT` 信号（通常由 Ctrl+C 产生）注册为中断渲染的信号。这对于某些环境（如Docker容器）可能有用。
   如果没有定义此参数，程序会默认注册 `SIGINT` 信号处理程序，这意味着你可以通过按 Ctrl+C 来优雅地停止渲染过程。
 
+- **`--keyboardInterrupt`**
+  在渲染过程中，监听键盘输入。
+  当启用此选项时，你可以通过按5次Esc/Q键来取消渲染，或者按S来显示当前进度。
+
 ### 模式 'render' 的参数
 
 #### 必需参数
@@ -92,6 +96,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-output=<output file/folder>`**  
   输出文件或文件夹路径。
+  可以在文件名中包含`{CurrentTime}`，程序会将其替换为当前时间，格式为 `yyyyMMdd_HHmmss`。
 
 - **`-output_options=<width>,<height>,<fps>,<pixel format>,<encoder>`**  
   输出选项，包含 5 个值，用逗号分隔：
@@ -121,6 +126,9 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-maxParallelThreads=<number>`**  
   最大并行渲染线程数。默认：`8`
+
+- **`-enableThreadAffinity=<true|false>`**  
+  是否启用线程亲和性，以减少线程切换带来的性能损失。默认：`true`
 
 - **`-oneByOneRender=<true|false>`**  
   是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
@@ -159,6 +167,19 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 - **`-preferHwAccelDecoder=<true|false>`**
   是否优先使用硬件加速解码器。默认：`false`
 
+- **`-PictureResizer=<cpu|hwaccel>`**
+  选择要使用的硬件加速图片缩放器。默认：`hwaccel`
+
+- **`-VideoFrameDiskCacheRoot=<path to video frame disk cache root>`**
+  指定磁盘缓存的根目录。默认位于projectFrameCut缓存目录下的`VideoFrameDiskCache`文件夹中。
+  不定义此参数代表禁用磁盘缓存。
+
+- **`-VideoFrameMemoryCache=<true|false>`**
+  是否启用内存缓存。默认：`false`
+
+- **`-ApproximateMixture=<true|false>`**
+  是否允许近似混合模式。这会提高性能，但可能会降低某些效果的质量。默认：`false`
+
 ### 模式 'bench' 的参数
 
 - **`-multiAccelerator=<true|false>`**  
@@ -179,7 +200,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 返回2表示找不到加速器。
 返回255表示渲染被取消。
 返回负数通常表示出现了没有被处理的异常，可能是你的参数问题，或者是程序的bug。如果是程序的bug，请将错误信息反馈给我们。
-
+当渲染正常完成时，环境变量`projectFrameCut_RenderFinished`将会被赋值为1，并且环境变量`projectFrameCut_LastOutput`将被设置为输出文件的路径。
 
 ## 使用示例
 

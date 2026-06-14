@@ -3,7 +3,9 @@
 // in MAUI, if the namespace for WinUI's base is not '$(RootNamespace).WinUI', it will let whole App not working.
 #nullable enable
 
+using Microsoft.Win32;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;
@@ -23,6 +25,10 @@ namespace projectFrameCut.WinUI
 
         public static string? BasicDataPathOverride { get; private set; } = null;
         public static string? UserDataPathOverride { get; private set; } = null;
+
+        public static bool IsStoreModeEnabled { get; private set; } = false;
+        public static string? ChannelId { get; private set; } = "Global";
+        public static string PackageFamilyName { get; private set; } = "Portable";
 
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         public static void Main(string[] args)
@@ -63,11 +69,20 @@ namespace projectFrameCut.WinUI
                     Environment.Exit(-1);
                     return;
                 }
+                if(args.Length >= 1 && args[0].StartsWith("pjfc:runtimeConfig", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    ConfigHandler.ConfigureMain(args.Skip(1).ToArray());
+                    return;
+                }
+
                 try
                 {
-                    if (WinUI.App.IsPackaged())
+                    string pfn = "Portable";
+                    bool packaged = WinUI.App.IsPackaged();
+                    if (packaged)
                     {
-                        var pfn = WinUI.App.GetPackageFamilyName();
+                        pfn = WinUI.App.GetPackageFamilyName();
+                        PackageFamilyName = pfn;
                         projectFrameCut.Helper.HelperProgram.AppChannel = pfn switch
                         {
                             "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
@@ -82,6 +97,54 @@ namespace projectFrameCut.WinUI
                         projectFrameCut.Helper.HelperProgram.AppChannel = "Portable";
                     }
                     projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+
+                    try
+                    {
+
+                        using (RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64))
+                        {
+                            RegistryKey? key = null!;
+                            if ((key = baseKey?.OpenSubKey(@$"SOFTWARE\hexadecimal0x12e\projectFrameCut\Instances\{pfn}")) is not null)
+                            {
+                                try
+                                {
+                                    var isStore = key.GetValue("IsStoreMode", 0) as int?;
+                                    IsStoreModeEnabled = isStore != 0;
+                                    ChannelId = (key.GetValue("ChannelId", "Global") as string) ?? "Global";
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex, "Read config");
+                                    IsStoreModeEnabled = true; //if failed to read registry, assume it's in store mode to avoid potential issue, since store mode is more restricted.
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    baseKey?.CreateSubKey(@$"SOFTWARE\hexadecimal0x12e");
+                                    baseKey?.CreateSubKey(@$"SOFTWARE\hexadecimal0x12e\projectFrameCut");
+                                    baseKey?.CreateSubKey(@$"SOFTWARE\hexadecimal0x12e\projectFrameCut\Instances");
+                                    baseKey?.CreateSubKey(@$"SOFTWARE\hexadecimal0x12e\projectFrameCut\Instances\{pfn}");
+                                    if ((key = baseKey?.OpenSubKey(@$"SOFTWARE\hexadecimal0x12e\projectFrameCut\Instances\{pfn}", true)) is not null)
+                                    {
+                                        key.SetValue("IsStoreMode", pfn.Equals("0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y", StringComparison.InvariantCultureIgnoreCase) ? 1 : 0);
+                                        key.SetValue("ChannelId", "Global");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex, "Create per-instance config");
+                                }
+
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "Read option from Registry");
+                        IsStoreModeEnabled = true; //if failed to read registry, assume it's in store mode to avoid potential issue, since store mode is more restricted.
+                    }
 
 
                 }
@@ -278,18 +341,13 @@ namespace projectFrameCut.WinUI
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+        public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
         [DoesNotReturn]
         public static void Crash(Exception ex)
         {
             MauiProgram.LogWriter?.Flush();
-#if DEBUG
-            if (Debugger.IsAttached)
-            {
-                throw ex;
-            }
-#endif
+
             try
             {
                 MauiProgram.LogWriter?.WriteLine("*** FATAL: CRASH");
@@ -299,6 +357,15 @@ namespace projectFrameCut.WinUI
 
             }
             catch (Exception) { }
+
+#if DEBUG
+            if (Debugger.IsAttached)
+            {
+                Debugger.BreakForUserUnhandledException(ex);
+                Environment.Exit(ex.HResult);
+            }
+#endif
+
             try
             {
                 if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it
@@ -336,14 +403,22 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
-                    appInfo = 
+                    appInfo = Setting.SettingPages.DiagnosticSettingPage.GetAppInfo(false, false);
+                }
+                catch
+                {
+                    appInfo =
 $"""
 {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
 Assembly: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}
 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+
+OS version: {Environment.OSVersion}
+CLR Version:{Environment.Version}
+Command line: {Environment.CommandLine}
+Current directory: {Environment.CurrentDirectory}
 """;
                 }
-                catch { }
                 var content =
 $"""
 Exception type: {ex.GetType().Name}
@@ -360,10 +435,6 @@ Exception data:
 
 Environment:
 {appInfo}
-OS version: {Environment.OSVersion}
-CLR Version:{Environment.Version}
-Command line: {Environment.CommandLine}
-Current directory: {Environment.CurrentDirectory}
 
 (report ended here)
 """;
@@ -383,7 +454,7 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-  
+
                 if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
                 {
                     try

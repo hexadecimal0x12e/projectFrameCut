@@ -7,8 +7,9 @@ using Microsoft.Maui.Controls;
 using Path = System.IO.Path;
 using Image = Microsoft.Maui.Controls.Image;
 using projectFrameCut.Asset;
-using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Linq;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.InteractableEditor
 {
@@ -29,7 +30,7 @@ namespace projectFrameCut.InteractableEditor
         private View? BuildVideoPreview()
         {
             var clipId = clip.Id;
-            var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId);
+            var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId.ToString());
             if (clip.SourcePath?.StartsWith('$') ?? false)
             {
                 var assetId = clip.SourcePath[1..];
@@ -57,7 +58,7 @@ namespace projectFrameCut.InteractableEditor
                 return null;
             availableFrames = availableFrames.Order().ToList();
 
-            (var origWidth, var origHeight) = PictureExtensions.GetDimensions(pngs[0]);
+            (var origWidth, var origHeight) = new Picture8bpp(pngs[0]).GetDimensions();
 
             var rawClipHeight = clip.Clip.HeightRequest > 0
                 ? clip.Clip.HeightRequest
@@ -72,7 +73,8 @@ namespace projectFrameCut.InteractableEditor
                 : (clip.origLength > 0 ? clip.origLength : clip.Clip.Width);
             // Subtract handle widths (30px each) to match the actual content column width
             var availableWidth = Math.Max(1, clipWidth - 60);
-            var countOfFrame = Math.Max(1, (int)(availableWidth / frameWidth)) - 1;
+            var countOfFrame = (int)(availableWidth / frameWidth) - 1;
+            if (countOfFrame <= 0) return null;
             if (Math.Abs((countOfFrame + 1f) * frameWidth - availableWidth) < frameWidth * 0.75f) countOfFrame++;
             var totalFramesWidth = countOfFrame * frameWidth;
             var spacing = countOfFrame > 1 ? (availableWidth - totalFramesWidth) / (countOfFrame - 1) : 0;
@@ -94,7 +96,7 @@ namespace projectFrameCut.InteractableEditor
                 VerticalOptions = LayoutOptions.Fill,
                 HorizontalOptions = LayoutOptions.Fill,
                 Spacing = spacing / 2,
-                Padding = 0,
+                Padding = 0
             };
             foreach (var item in frameToShow)
             {
@@ -124,7 +126,7 @@ namespace projectFrameCut.InteractableEditor
                     layout,
                     new Label
                     {
-                        Text = clip.DisplayName ?? clip.Id,
+                        Text = clip.DisplayName ?? clip.Id.ToString(),
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
                         BackgroundColor = Color.FromRgba("#80808080"),

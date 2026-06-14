@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual bool IsValueValid(object value) => true;
 
         EffectType IEffect.TypeOfEffect => EffectType.BindableEffect;
+        bool IEffect.IsReorderable => false; // reorder a IBindableArgumentEffect may cause the binding relationship to break, so we set it to false by default. 
 
     }
 
@@ -138,8 +140,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicate whether this result generator generates values with same method, or change method for each request.
         /// </summary>
         /// <remarks>
-        /// When this property is false, this effect will act like a <see cref="INormalEffect"/> where <see cref="GenerateResultStep(object, uint, int, int)"/>'s index will be ignored;
-        /// When this property is true, this effect will act like a <see cref="IContinuousEffect"/> where <see cref="GenerateResultStep(object, uint, int, int)"/> will be called for each frame to get the current method for generating result.
+        /// When this property is false, this effect will act like a <see cref="INormalEffect"/> where its index will be ignored;
+        /// When this property is true, this effect will act like a <see cref="IContinuousEffect"/> where it will be called for each frame.
         /// </remarks>
         public bool IsContinuous { get; }
 
@@ -161,10 +163,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Produce the final result based on the provided source value.
         /// </summary>
         public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Generate the final process step based on the provided source value.
-        /// </summary>
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
 
     public interface IBindableArgumentEffectManyInputResultGenerator : IBindableArgumentEffect
@@ -203,10 +201,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Produce the final result based on the provided source value.
         /// </summary>
         public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Generate the final process step based on the provided source value.
-        /// </summary>
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
 
     public interface IBindableArgumentAudioEffectValueProvider : IBindableArgumentEffect
@@ -249,8 +243,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicate whether this result generator generates values with same method, or change method for each request.
         /// </summary>
         /// <remarks>
-        /// When this property is false, this effect will act like a <see cref="IAudioNormalEffect"/> where <see cref="GenerateResultStep(object, uint, int, int)"/>'s index will be ignored;
-        /// When this property is true, this effect will act like a <see cref="IAudioContinuousEffect"/> where <see cref="GenerateResultStep(object, uint, int, int)"/> will be called for each frame to get the current method for generating result.
+        /// When this property is false, this effect will act like a <see cref="IAudioNormalEffect"/> where its index will be ignored;
+        /// When this property is true, this effect will act like a <see cref="IAudioContinuousEffect"/> where it will be called for each frame.
         /// </remarks>
         public bool IsContinuous { get; }
 

@@ -1,4 +1,6 @@
-﻿namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
+﻿using projectFrameCut.Drawing.Base;
+
+namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public interface IMixture : IEffect
     {
@@ -11,11 +13,10 @@
         /// </summary>
         IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight);
 
-        bool IEffect.Enabled { get => false; set => Logger.Log("Cannot enable a IMixture. It should be used within the render system.", "warn"); } 
-        int IEffect.RelativeWidth { get => -1; set => Logger.Log("Cannot set RelativeWidth for a IMixture. This operation is ignored.", "warn"); }
-        int IEffect.RelativeHeight { get => -1; set => Logger.Log("Cannot set RelativeHeight for a IMixture. This operation is ignored.", "warn"); }
-        int IEffect.Index { get => int.MaxValue; set => Logger.Log("Cannot set Index for a IMixture. This operation is ignored.", "warn"); }
-        bool IEffect.YieldProcessStep { get => false; }
+        bool IEffect.Enabled { get => false; set { } }
+        int IEffect.RelativeWidth { get => -1; set { } }
+        int IEffect.RelativeHeight { get => -1; set { } }
+        int IEffect.Index { get => int.MaxValue; set { } }
         EffectImplementType IEffect.ImplementType => EffectImplementType.HwAcceleration;
         EffectType IEffect.TypeOfEffect => EffectType.MixtureProvider;
     }

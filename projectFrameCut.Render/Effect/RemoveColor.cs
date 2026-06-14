@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -36,8 +37,8 @@ namespace projectFrameCut.Render.Effect
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string NeedComputer => "RemoveColorComputer";
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
         public string? BindedEffectGroupID { get; set; }
 
 
@@ -161,7 +162,7 @@ namespace projectFrameCut.Render.Effect
                     g = p16_out.g,
                     b = p16_out.b,
                     a = alpha,
-                    hasAlphaChannel = true
+                    HasAlphaChannel = true
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {
@@ -202,7 +203,7 @@ namespace projectFrameCut.Render.Effect
                     g = p8_out.g,
                     b = p8_out.b,
                     a = alpha,
-                    hasAlphaChannel = true
+                    HasAlphaChannel = true
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {
@@ -238,10 +239,6 @@ namespace projectFrameCut.Render.Effect
 
         }
 
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public class RemoveColorEffectFactory : IEffectFactory

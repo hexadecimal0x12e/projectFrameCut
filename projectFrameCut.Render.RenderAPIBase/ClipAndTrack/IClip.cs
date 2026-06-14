@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
@@ -29,17 +30,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
-        /// The unique identifier of this clip. <b>SHOULD BE A GUID.</b>
+        /// The unique identifier of this clip.
         /// </summary>
-        /// <remarks>
-        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that API V6.
-        /// </remarks>
-        public string Id { get; init; }
-
-        /// <summary>
-        /// The unique identifier of this clip. 
-        /// </summary>
-        public Guid IdAsGUID { get; init; }
+        public Guid Id { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
@@ -95,16 +88,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The source's frame time (1 / frame rate) of this clip, in seconds.
         /// </summary>
         public float FrameTime { get; init; }
-
-        /// <summary>
-        /// <b>Use <see cref="SpeedVarianceProviderInstance"/>. This property is not used, always return 1 and will be removed in API V6.</b>
-        /// The actual frame time's ratio.
-        /// </summary>
-        /// <remarks>
-        /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
-        /// </remarks>
-        [Obsolete("Use SpeedVarianceProviderInstance. This property is not used, always return 1 and will be removed in API V6.", false)]
-        public float SecondPerFrameRatio { get; init; }
 
         /// <summary>
         /// The ISpeedVarianceProvider for this clip. If this property is not null, the system will use it to get the actual speed ratio for each frame instead of using the SecondPerFrameRatio property. This allows more flexible speed variance effect, such as variable speed or speed ramping.
@@ -238,6 +221,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
         [DebuggerNonUserCode()]
         public uint? GetRelativeFrameIndex(uint targetFrame)
+            => TryGetRelativeFrameIndex(targetFrame, null) ?? throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + GetEffectiveDuration()}).");
+
+        [DebuggerNonUserCode()]
+        public uint? TryGetRelativeFrameIndex(uint targetFrame, uint? onFail)
         {
             long offsetFromClipStart = (long)targetFrame - StartFrame;
             var profile = SpeedVarianceMapCache.GetOrBuild(this);
@@ -250,8 +237,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
             if (offsetFromClipStart < 0 || offsetFromClipStart >= effectiveDuration)
             {
-                ulong endExclusive = (ulong)StartFrame + effectiveDuration;
-                throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {endExclusive}).");
+                return onFail;
             }
 
             ulong mappedOffset = profile.MapTimelineOffsetToSourceOffset((uint)offsetFromClipStart);
@@ -259,7 +245,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             ulong sourceIndexLong = ConvertTimelineFrameToSourceFrame(this, timelineIndexLong);
             if (sourceIndexLong > uint.MaxValue)
             {
-                throw new IndexOutOfRangeException($"Frame mapping overflow for frame #{targetFrame}.");
+                return onFail;
             }
 
             return (uint)sourceIndexLong;
@@ -444,20 +430,24 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
     internal static class SpeedVarianceMapCache
     {
         private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
+        private static readonly object CacheLock = new();
 
         public static SpeedVarianceProfile GetOrBuild(IClip clip)
         {
-            if (Cache.TryGetValue(clip, out var cached)
-                && cached.Duration == clip.Duration
-                && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+            lock (CacheLock)
             {
-                return cached;
-            }
+                if (Cache.TryGetValue(clip, out var cached)
+                    && cached.Duration == clip.Duration
+                    && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
+                {
+                    return cached;
+                }
 
-            Cache.Remove(clip);
-            var rebuilt = Build(clip);
-            Cache.Add(clip, rebuilt);
-            return rebuilt;
+                Cache.Remove(clip);
+                var rebuilt = Build(clip);
+                Cache.Add(clip, rebuilt);
+                return rebuilt;
+            }
         }
 
         private static SpeedVarianceProfile Build(IClip clip)
@@ -531,7 +521,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
         public string GroupDisplayName { get; set; }
 
-        public string[] ChildrenClips { get; set; }
+        public Guid[] ChildrenClips { get; set; }
 
         public string[] ChildrenSoundTracks { get; set; }
     }

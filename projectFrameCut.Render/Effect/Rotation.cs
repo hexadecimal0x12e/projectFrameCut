@@ -1,17 +1,14 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class RotationEffect_ImageSharp : INormalEffect
+    public class RotationEffect_IPicture : INormalEffect
     {
+        private TimeSpan? _elapsed;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Rotation";
@@ -37,8 +34,8 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -55,7 +52,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -71,7 +68,7 @@ namespace projectFrameCut.Render.Effect
                 expandCanvas = Convert.ToBoolean(expandVal);
             }
 
-            return new RotationEffect_ImageSharp
+            return new RotationEffect_IPicture
             {
                 Angle = angle,
                 ExpandCanvas = expandCanvas,
@@ -83,69 +80,9 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            return new RotationProcessStep(Angle, ExpandCanvas);
-        }
-    }
-
-    public class RotationProcessStep : IPictureProcessStep
-    {
-        private TimeSpan? _elapsed;
-        public string Name => "Rotation";
-        public Dictionary<string, object?> Properties { get; set; }
-
-        public float Angle { get; }
-        public bool ExpandCanvas { get; }
-
-        public RotationProcessStep(float angle, bool expandCanvas)
-        {
-            Angle = angle;
-            ExpandCanvas = expandCanvas;
-            Properties = new Dictionary<string, object?>
-            {
-                { nameof(Angle), Angle },
-                { nameof(ExpandCanvas), ExpandCanvas },
-            };
-        }
-
-        public IPicture Process(IPicture source)
-        {
             var sw = Stopwatch.StartNew();
 
-            int origWidth = source.Width;
-            int origHeight = source.Height;
-
-            var img = source.SaveToSixLaborsImage();
-            img.Mutate(ctx => ctx.Rotate(Angle));
-
-            if (!ExpandCanvas && (img.Width != origWidth || img.Height != origHeight))
-            {
-                // 居中裁剪回原始尺寸
-                int cropX = Math.Max(0, (img.Width - origWidth) / 2);
-                int cropY = Math.Max(0, (img.Height - origHeight) / 2);
-                int cropW = Math.Min(img.Width - cropX, origWidth);
-                int cropH = Math.Min(img.Height - cropY, origHeight);
-                img.Mutate(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
-
-                // 若裁剪后仍小于原始尺寸（极少数情况），映射到原始画布中心
-                if (img.Width < origWidth || img.Height < origHeight)
-                {
-                    int padLeft = (origWidth - img.Width) / 2;
-                    int padTop = (origHeight - img.Height) / 2;
-                    img.Mutate(ctx => ctx.Pad(origWidth, origHeight).Crop(new Rectangle(padLeft, padTop, origWidth, origHeight)));
-                }
-            }
-
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(img),
-                16 => new Picture16bpp(img),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            var result = RotationEffect.Process(source, Angle, ExpandCanvas);
 
             sw.Stop();
             _elapsed = sw.Elapsed;
@@ -153,25 +90,125 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            if (ExpandCanvas) return null;
-            return ctx => ctx.Rotate(Angle);
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
+        private PictureProcessStack GetProcessStack() => new PictureProcessStack
         {
             Elapsed = _elapsed,
             OperationDisplayName = "Rotation",
-            Operator = typeof(RotationProcessStep),
+            Operator = typeof(RotationEffect_IPicture),
             ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
+            
             Properties = new Dictionary<string, object>
             {
                 { nameof(Angle), Angle },
                 { nameof(ExpandCanvas), ExpandCanvas },
             }
         };
+    }
+
+    public class RotationEffect_HwAccel : INormalEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; } = "Rotation";
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+
+        public float Angle { get; init; }
+        public bool ExpandCanvas { get; init; } = false;
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            { "Angle", Angle },
+            { "ExpandCanvas", ExpandCanvas },
+        };
+
+        public string? NeedComputer => "RotationComputer";
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
+
+        public static List<string> ParametersNeeded { get; } = new List<string> { "Angle" };
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            { "Angle", "float" },
+            { "ExpandCanvas", "bool" },
+        };
+
+        public string TypeName => "Rotation";
+        public string? BindedEffectGroupID { get; set; }
+        public string Id { get; set; } = string.Empty;
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            float angle = Convert.ToSingle(parameters["Angle"]);
+            bool expandCanvas = false;
+            if (parameters.TryGetValue("ExpandCanvas", out var expandVal))
+            {
+                expandCanvas = Convert.ToBoolean(expandVal);
+            }
+            return new RotationEffect_HwAccel
+            {
+                Angle = angle,
+                ExpandCanvas = expandCanvas
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        {
+            if (Math.Abs(Angle % 360f) < float.Epsilon)
+                return source;
+
+            if (computer is null)
+                return RotationEffect.Process(source, Angle, ExpandCanvas);
+
+            float angleRad = Angle * MathF.PI / 180f;
+            float cos = MathF.Abs(MathF.Cos(angleRad));
+            float sin = MathF.Abs(MathF.Sin(angleRad));
+
+            int outW, outH;
+            if (ExpandCanvas)
+            {
+                outW = (int)MathF.Ceiling(source.Width * cos + source.Height * sin);
+                outH = (int)MathF.Ceiling(source.Width * sin + source.Height * cos);
+            }
+            else
+            {
+                outW = source.Width;
+                outH = source.Height;
+            }
+
+            var sw = Stopwatch.StartNew();
+            var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
+            var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, outW, outH, Angle]);
+
+            if (resultArr.Length != 4 ||
+                resultArr[0] is not float[] rOut ||
+                resultArr[1] is not float[] gOut ||
+                resultArr[2] is not float[] bOut ||
+                resultArr[3] is not float[] aOut)
+            {
+                throw new InvalidOperationException("RotationComputer did not return expected channel buffers.");
+            }
+
+            var result = HwAccelEffectHelper.BuildPicture(source, outW, outH, rOut, gOut, bOut, aOut, sourceHasAlpha);
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                Elapsed = sw.Elapsed,
+                OperationDisplayName = "Rotation (GPU)",
+                Operator = typeof(RotationEffect_HwAccel),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = new Dictionary<string, object> { { "Angle", Angle }, { "ExpandCanvas", ExpandCanvas } }
+            }).ToList();
+            return result;
+        }
     }
 
     public class RotationEffectFactory : IEffectFactory
@@ -186,7 +223,7 @@ namespace projectFrameCut.Render.Effect
             { "ExpandCanvas", "bool" },
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.HwAcceleration };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -196,8 +233,8 @@ namespace projectFrameCut.Render.Effect
             }
             return implementType switch
             {
-                EffectImplementType.ImageSharp => RotationEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }, implementType),
-                EffectImplementType.IPicture => RotationEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }, implementType),
+                EffectImplementType.IPicture => RotationEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }, implementType),
+                EffectImplementType.HwAcceleration => RotationEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object> { { "Angle", 0f } }),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
@@ -206,7 +243,7 @@ namespace projectFrameCut.Render.Effect
         {
             parameters ??= new Dictionary<string, object> { { "Angle", 0f } };
             if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
-            return RotationEffect_ImageSharp.FromParametersDictionary(parameters);
+            return RotationEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

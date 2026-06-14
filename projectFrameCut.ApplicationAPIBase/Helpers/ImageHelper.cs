@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using projectFrameCut.Drawing.Base;
 
 
 
@@ -135,23 +134,35 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// Convert a <see cref="IPicture"/> to a <see cref="ImageSource"/>.
         /// </summary>
         /// <param name="picture"></param>
+        /// <param name="cache"></param>
         /// <returns></returns>
         public static ImageSource ToImageSource(this IPicture picture)
         {
             if (picture == null) return null;
+            var ms = new MemoryStream();
+            picture.ToBitPerPixel(8).SaveToPng(ms);
+            var bytes = ms.ToArray();
+            return ImageSource.FromStream(() => new MemoryStream(bytes));
 
-            try
-            {
-                var ms = new MemoryStream();
-                using var img = picture.SaveToSixLaborsImage(16, true, false);
-                img.SaveAsPng(ms);
-                var bytes = ms.ToArray();
-                return ImageSource.FromStream(() => new MemoryStream(bytes));
-            }
-            finally
-            {
-            }
         }
 
+    }
+
+    public class IPictureImageSource : ImageSource, IStreamImageSource
+    {
+        public required IPicture Source;
+
+        public Task<Stream> GetStreamAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (Source.Disposed)
+                throw new ObjectDisposedException(nameof(IPictureImageSource));
+
+            using var ms = new MemoryStream();
+            Source.ToBitPerPixel(8).SaveToPng(ms);
+            ms.Position = 0;
+            return Task.FromResult<Stream>(ms);
+        }
     }
 }

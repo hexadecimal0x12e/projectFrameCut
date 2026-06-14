@@ -1,9 +1,8 @@
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,159 +10,6 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class PlaceEffect_IPicture : INormalEffect
-    {
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; }
-        public string Name { get; set; }
-        public int RelativeWidth { get; set; }
-        public int RelativeHeight { get; set; }
-
-
-        public int StartX { get; set; }
-        public int StartY { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"StartX", StartX},
-            {"StartY", StartY},
-        };
-
-
-
-        public string? NeedComputer => null;
-        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
-
-        public static List<string> ParametersNeeded { get; } = new List<string>
-        {
-            "StartX",
-            "StartY"
-        };
-
-        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"StartX","int" },
-            {"StartY","int" },
-        };
-
-        public string TypeName => "Place";
-
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
-        {
-            ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
-            {
-                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
-            }
-            if (parameters.Count != ParametersNeeded.Count)
-            {
-                throw new ArgumentException("Too many parameters provided.");
-            }
-
-
-            return new PlaceEffect_IPicture
-            {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                ImplementType = implementType,
-            };
-        }
-
-        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-            => Place(source, StartX, StartY, targetWidth, targetHeight);
-
-        public IPicture Place(IPicture source, int startX, int startY, int targetWidth, int targetHeight)
-        {
-            return GetStep(source, targetWidth, targetHeight).Process(source);
-
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            if (targetWidth <= 0 || targetHeight <= 0)
-            {
-                throw new ArgumentException("targetWidth and targetHeight must be positive");
-            }
-            int startX = StartX, startY = StartY;
-            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
-            {
-                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
-            }
-
-            return new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
-        }
-
-        public string? BindedEffectGroupID { get; set; }
-        public string Id { get; set; }
-    }
-
-    public class PlaceProcessStep : IPictureProcessStep
-    {
-        private TimeSpan? _elapsed;
-        public string Name => "Place";
-        public Dictionary<string, object?> Properties { get; set; } = new();
-
-        public int StartX { get; }
-        public int StartY { get; }
-        public int TargetWidth { get; }
-        public int TargetHeight { get; }
-
-        public PlaceProcessStep(int startX, int startY, int targetWidth, int targetHeight)
-        {
-            StartX = startX;
-            StartY = startY;
-            TargetWidth = targetWidth;
-            TargetHeight = targetHeight;
-            Properties = new Dictionary<string, object?>
-            {
-                { nameof(StartX), StartX },
-                { nameof(StartY), StartY },
-                { nameof(TargetWidth), TargetWidth },
-                { nameof(TargetHeight), TargetHeight }
-            };
-        }
-
-        public IPicture Process(IPicture source)
-        {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.PlacePicture(source, StartX, StartY, TargetWidth, TargetHeight, "Place", typeof(PlaceProcessStep));
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
-            return result;
-        }
-
-        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
-        {
-            // Not representable as a single IImageProcessingContext pipeline because
-            // placing creates a new target canvas and draws the source into it.
-            // Return null so callers know there's no single-context transform.
-            return null;
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "Place",
-            Operator = typeof(PlaceProcessStep),
-            ProcessingFuncStackTrace = new System.Diagnostics.StackTrace(true),
-            StepUsed = this,
-            Properties = new Dictionary<string, object>
-            {
-                { nameof(StartX), StartX },
-                { nameof(StartY), StartY },
-                { nameof(TargetWidth), TargetWidth },
-                { nameof(TargetHeight), TargetHeight }
-            }
-        };
-    }
-
     public class PlaceEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
@@ -184,8 +30,8 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => "PlaceComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -201,6 +47,11 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Place";
         public string? BindedEffectGroupID { get; set; }
+
+        void IEffect.Initialize()
+        {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+        }
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -250,7 +101,7 @@ namespace projectFrameCut.Render.Effect
 
             if (computer is null)
             {
-                return EffectHelper.PlacePicture(source, startX, startY, targetWidth, targetHeight, "Place", typeof(PlaceEffect_HwAccel));
+                return PlaceEffect.Process(source, startX, startY, targetWidth, targetHeight);
             }
 
             var sw = Stopwatch.StartNew();
@@ -297,10 +148,6 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
-        }
 
         private static (float[] r, float[] g, float[] b, float[] a) ExtractFloatChannels(IPicture source)
         {
@@ -329,13 +176,12 @@ namespace projectFrameCut.Render.Effect
 
         private static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a)
         {
-            if (source.bitPerPixel == 16)
+            if (source.BitPerPixel == 16)
             {
                 var picture = new Picture16bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    Tag = source.Tag,
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
                 picture.g = g.Select(v => (ushort)Math.Clamp(v, 0f, 65535f)).ToArray();
@@ -344,13 +190,12 @@ namespace projectFrameCut.Render.Effect
                 return picture;
             }
 
-            if (source.bitPerPixel == 8)
+            if (source.BitPerPixel == 8)
             {
                 var picture = new Picture8bpp(width, height)
                 {
-                    frameIndex = source.frameIndex,
-                    filePath = source.filePath,
-                    hasAlphaChannel = true,
+                    Tag = source.Tag,
+                    HasAlphaChannel = true,
                 };
                 picture.r = r.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
                 picture.g = g.Select(v => (byte)Math.Clamp(v, 0f, 255f)).ToArray();
@@ -361,6 +206,7 @@ namespace projectFrameCut.Render.Effect
 
             throw new NotSupportedException($"Specific pixel-mode is not supported.");
         }
+
     }
 
     public class PlaceEffectFactory : IEffectFactory
@@ -383,10 +229,11 @@ namespace projectFrameCut.Render.Effect
             {"StartY", "int"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.HwAcceleration };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
             if (implementType == EffectImplementType.NotSpecified)
             {
                 return BuildWithDefaultType(parameters);
@@ -394,7 +241,6 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.IPicture => PlaceEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 EffectImplementType.HwAcceleration => PlaceEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
@@ -402,7 +248,8 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
         {
-            return PlaceEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
+            return PlaceEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
     }
 }

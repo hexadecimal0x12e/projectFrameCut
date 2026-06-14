@@ -104,10 +104,10 @@ public partial class PluginSettingPage : ContentPage
                 [
                     internalBase,
 #if ANDROID
-                    new Render.AndroidOpenGL.Platforms.Android.OpenGLPlugin() { DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
+                    new Render.HwAccelEngine.HwAccelEnginePlugin() { DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
 
 #elif WINDOWS
-                    new projectFrameCut.Render.WindowsRender.ILGPUPlugin(),
+                    new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
 #elif iDevices
 
 #endif

@@ -29,9 +29,7 @@ public partial class GeneralSettingPage : ContentPage
             new Dictionary<string, string>
             {
                 { SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" },
-#if WINDOWS
-                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" } 
-#endif
+                { SettingLocalizedResources.GeneralCodec_SelectProvider_ExternalManual, "external" }
             }
             .Concat(
                 PluginManager.LoadedPlugins
@@ -89,6 +87,9 @@ public partial class GeneralSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
+            .AddSwitch("codec_EnableMemoryCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableMemoryCache, SettingLocalizedResources.GeneralCodec_EnableMemoryCache_Desc), IsBoolSettingTrue("codec_EnableMemoryCache"))
+            .AddSwitch("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
+            .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
@@ -364,6 +365,7 @@ public partial class GeneralSettingPage : ContentPage
                     else if (id == "external")
                     {
                         await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);
+#if WINDOWS
                         var libsDir = await FileSystemService.PickFolderAsync();
                         if (!string.IsNullOrWhiteSpace(libsDir))
                         {
@@ -376,6 +378,17 @@ public partial class GeneralSettingPage : ContentPage
                             WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
                             WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
                         }
+#else
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
+                            if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
+                            Directory.CreateDirectory(internalLibPath);
+                            var ffmpegPath = Path.Combine(MauiProgram.DataPath, "FFmpeg");
+                            foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
+                            {
+                                File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
+                            }
+#endif
                     }
                     else
                     {
@@ -403,6 +416,11 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     needReboot = true;
                     goto done;
+                case "codec_EnableDiskCache":
+                case "codec_EnableMemoryCache":
+                case "codec_defaultResizeProvider":
+                    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    return;
             }
 
             if (args.Value != null)
@@ -418,7 +436,6 @@ public partial class GeneralSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            // 处理异常并通知用户
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

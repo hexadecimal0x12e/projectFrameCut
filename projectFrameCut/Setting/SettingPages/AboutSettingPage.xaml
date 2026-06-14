@@ -43,7 +43,9 @@
             <Image Background="Black" x:Name="AppLogoIcon_Narrow" WidthRequest="120" HeightRequest="120" Source="appicon.png" HorizontalOptions="Center" />
             <Label FontSize="48" Text="{l:Localized Key=AppBrand}" HorizontalOptions="Center" />
             <Label x:Name="AppVersionLabel_Narrow" FontSize="24" Margin="0,1,0,8" Text="@Version" HorizontalOptions="Center" />
-            <Label x:Name="AppDetailVersionLabel_Narrow" FontSize="14" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" HorizontalOptions="Center" />
+            <ScrollView Orientation="Vertical" HeightRequest="90">
+                <Label x:Name="AppDetailVersionLabel_Narrow" FontSize="14" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" HorizontalOptions="Center" />
+            </ScrollView>
         </VerticalStackLayout>
 
         <WebView Grid.Row="1" Margin="0,8,0,0" MinimumHeightRequest="500" x:Name="AboutWebview" />

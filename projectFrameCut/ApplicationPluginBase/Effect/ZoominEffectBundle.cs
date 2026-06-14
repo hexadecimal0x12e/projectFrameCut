@@ -66,20 +66,22 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             int targetY = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "TargetX", EffectBundleUiHelper.ParamLabel("TargetX"), targetX.ToString(), "960");
-            EffectBundleUiHelper.AddNumericEntry(panel, "TargetY", EffectBundleUiHelper.ParamLabel("TargetY"), targetY.ToString(), "540");
+            panel.AddPositionTupleInputBox("zoomIn", new SingleLineLabel(EffectBundleUiHelper.L("_TargetPosition", "Target")), PositionTupleMode.XY, (targetX, targetY, 0, 0));
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "TargetX" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetX", args.Value))
+            switch (args.Id)
             {
-                Parameters["TargetX"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
-            }
-            else if (args.Id == "TargetY" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetY", args.Value))
-            {
-                Parameters["TargetY"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
+                case "zoomIn_X":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "TargetX", args.Value))
+                        Parameters["TargetX"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
+                    break;
+                case "zoomIn_Y":
+                    if (EffectBundleUiHelper.TrySetInt(Parameters, "TargetY", args.Value))
+                        Parameters["TargetY"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
+                    break;
             }
 
             return Parameters;

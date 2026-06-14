@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.Setting.SettingPages;
 
@@ -128,7 +128,6 @@ public partial class AdvancedSettingPage : ContentPage
                   .AddSwitch("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                   .AddSeparator())
         .AddText(SettingLocalizedResources.Advanced_Logging, fontSize: 20)
-        .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, SettingsManager.IsBoolSettingTrue("LogDiagnostics"), null)
         .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
         .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
         .AddSeparator()
@@ -140,20 +139,26 @@ public partial class AdvancedSettingPage : ContentPage
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
         .AddSeparator()
 
-        .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)
-        .AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
+        .AddText("IPicture", fontSize: 20)
+        //.AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
         .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
-        .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
-        .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
         .AddSwitch("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()
+        
+        .AddText(Localized.MainSettingsPage_Tab_Render, fontSize: 20)
+        .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
+        .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
+        .AddSwitch("render_DisallowVectorClipToMAUIPathInPreview", SettingLocalizedResources.Advanced_DisallowVectorClipToMAUIPathInPreview, IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true), null) //the vector dynamic preview is very problematic so disable it by default
+        .AddSwitch("render_DisallowViewBasedEffectInPreview", SettingLocalizedResources.Advanced_DisallowViewBasedEffectInPreview, IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview"), null)
+        .AddSeparator()
 
-        .AddText(SettingLocalizedResources.Advanced_Globalization, fontSize: 20)
+        .AddText(SettingLocalizedResources.Advanced_TextAndGlobalization, fontSize: 20)
         .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
         .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
+        .AddSwitch("diag_TypesettingEngineDiagMode", SettingLocalizedResources.Advanced_TypesettingEngineDiagMode, IsBoolSettingTrue("diag_TypesettingEngineDiagMode"), null)
         .AddSeparator()
 
         .AddText("UI", fontSize: 20)
@@ -428,12 +433,10 @@ public partial class AdvancedSettingPage : ContentPage
                     {
                         WriteSetting("render_SaveCheckpoint", "true");
                         Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                     }
                     else
                     {
                         WriteSetting("render_SaveCheckpoint", "false");
-                        IPicture.DiagImagePath = null;
                     }
                     break;
                 default:

@@ -4,6 +4,7 @@ using System.Text;
 using System.Linq;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Shared
 {
@@ -13,6 +14,7 @@ namespace projectFrameCut.Shared
         /// Get whether the array have any value.
         /// </summary>
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ArrayAny<T>([NotNullWhen(true)] this T[]? input)
         {
             if (input is null) return false;
@@ -23,6 +25,7 @@ namespace projectFrameCut.Shared
         /// Get whether the list have any value.
         /// </summary>
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ListAny<T>([NotNullWhen(true)] this List<T>? input)
         {
             if (input is null) return false;

@@ -74,7 +74,12 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 项目基于.NET 10和MAUI开发，请先确保你的电脑里安装了Visual Studio或者VS Code，**确认你安装了.NET 10 的SDK和MAUI的组件**，
 
-1. 你需要准备一个适用于Windows的**8.x** FFmpeg库(他们太大了，Git存储库里塞不下)，放在项目文件夹以外的地方。
+0. 配置projectFrameCut.Drawing库
+    a. 克隆[projectFrameCut.Drawing](https://github.com/hexadecimal0x12e/projectFrameCut.Drawing)项目到本地，和`projectFrameCut`项目放在同一层级的目录下。
+    b. 进入`projectFrameCut.Drawing`目录，运行`pack-all.ps1`编译这个库。
+    c. 对主项目(`projectFrameCut.sln`)进行还原。
+
+1. 准备一个适用于Windows的**8.x** FFmpeg库(他们太大了，Git存储库里塞不下)，放在项目文件夹以外的地方。
    按照下列结构放置文件
 
 ```
@@ -157,5 +162,6 @@ c:\path\to\your\folder\Android
 
 ### 许可和第三方库致谢
 projectFrameCut的主程序和核心渲染库（CRL）使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
+项目的核心Drawing库（projectFrameCut.Drawing）使用了LGPLv3 License。
 
 更多详情，请见[license.md](license.md)

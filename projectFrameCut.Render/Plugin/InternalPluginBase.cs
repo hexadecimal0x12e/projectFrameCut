@@ -30,7 +30,7 @@ public class InternalPluginBase : IPluginBase
 
     public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
-    public int PluginAPIMinorVersion => 1;
+    public int PluginAPIMinorVersion => 0;
 
     public string Name => "Internal fundamental plugin";
 
@@ -58,16 +58,16 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
-        {"Place",  new(() => new PlaceEffect_IPicture())},
-        {"Crop",  new(() => new CropEffect_ImageSharp())},
-        {"Resize",  new(() => new ResizeEffect_ImageSharp())},
-        {"Blur",  new(() => new BlurEffect_ImageSharp())},
-        {"Flip", new(() => new FlipEffect_ImageSharp()) },
-        {"Sharpen", new(() => new SharpenEffect_ImageSharp()) },
-        {"Vignette", new(() => new VignetteEffect_ImageSharp()) },
-        {"FadeOpacity", new(() => new FadeOpacityEffect_ImageSharp()) },
+        {"Place",  new(() => new PlaceEffect_HwAccel())},
+        {"Crop",  new(() => new CropEffect_IPicture())},
+        {"Resize",  new(() => new ResizeEffect_IPicture())},
+        {"Blur",  new(() => new BlurEffect_IPicture())},
+        {"Flip", new(() => new FlipEffect_IPicture()) },
+        {"Sharpen", new(() => new SharpenEffect_IPicture()) },
+        {"Vignette", new(() => new VignetteEffect_IPicture()) },
+        {"FadeOpacity", new(() => new FadeOpacityEffect_IPicture()) },
         {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
-        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_ImageSharp()) },
+        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_IPicture()) },
         {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
         {"AddMixture", new(() => new Compose.AddMixture()) },
         {"SubtractMixture", new(() => new Compose.SubtractMixture()) },
@@ -76,7 +76,8 @@ public class InternalPluginBase : IPluginBase
         {"OverlayBlendMixture", new(() => new Compose.OverlayBlendMixture()) },
         {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
         {"LightenMixture", new(() => new Compose.LightenMixture()) },
-        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) }
+        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) },
+        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -93,6 +94,8 @@ public class InternalPluginBase : IPluginBase
         {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
         {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
         {"Jitter", new JitterContinuousEffectFactory()},
+        {"ProgressPlacer", new ProgressPlacerFactory()},
+        {"TextFadeIn", new Effect.TextFadeInContinuousEffectFactory()},
         {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
         {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
         {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},
@@ -120,12 +123,15 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
-        {"Jitter", new(() => new JitterEffect()) }
+        {"Jitter", new(() => new JitterEffect()) },
+        {"ProgressPlacer", new(() => new ProgressPlacer()) },
+        {"Crop", new(() => new ProgressCropper_IPicture()) }
     };
 
     public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         {"ZoomIn", new ZoomInContinuousEffectFactory()},
+        {"Crop", new ProgressCropperEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -199,7 +205,7 @@ public class InternalPluginBase : IPluginBase
         return type switch
         {
             ClipMode.VideoClip => element.Deserialize<VideoClip>() ?? throw new NullReferenceException(),
-            ClipMode.PhotoClip => element.Deserialize<PhotoClip>() ?? throw new NullReferenceException(),
+            ClipMode.PhotoClip => HandlePhotoClip(element),
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
@@ -207,6 +213,26 @@ public class InternalPluginBase : IPluginBase
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
+    }
+
+    private static IClip HandlePhotoClip(JsonElement element)
+    {
+        bool isVect = false;
+        try
+        {
+            isVect = element.GetProperty("IsVector").GetBoolean();
+
+        }
+        catch { }
+
+        if (isVect || (element.TryGetProperty("FilePath", out var filePathProperty) && !string.IsNullOrEmpty(filePathProperty.GetString()) && (Path.GetExtension(filePathProperty.GetString()) ?? "").ToLowerInvariant() == ".svg"))
+        {
+            return element.Deserialize<VectorPhotoClip>() ?? throw new NullReferenceException();
+        }
+        else
+        {
+            return element.Deserialize<PhotoClip>() ?? throw new NullReferenceException();
+        }
     }
 
     ISoundTrack IPluginBase.SoundTrackCreator(JsonElement element)
@@ -242,7 +268,7 @@ public class InternalPluginBase : IPluginBase
     {
         try
         {
-            TextClip.GetFont(); //build font cache
+            TextClipFontRegistry.Initialize();
         }
         catch (Exception ex)
         {
@@ -256,4 +282,3 @@ public class InternalPluginBase : IPluginBase
     public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 
 }
-

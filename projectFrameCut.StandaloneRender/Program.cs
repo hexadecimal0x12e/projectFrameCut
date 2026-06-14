@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -8,6 +9,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
@@ -20,8 +22,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using static ILGPU.IR.BasicBlock;
 using static projectFrameCut.Shared.Logger;
+using projectFrameCut.Render.Effect;
+
+
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+using Microsoft.DiagnosticsHub;
+#endif
 
 namespace projectFrameCut.StandaloneRender
 {
@@ -35,6 +42,7 @@ namespace projectFrameCut.StandaloneRender
         {
             if (!args.Contains("--nolog"))
             {
+                Console.ForegroundColor = ConsoleColor.White;
                 MyLoggerExtensions.OnLog += (m, l) =>
                 {
                     if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
@@ -62,9 +70,21 @@ namespace projectFrameCut.StandaloneRender
 
                     Console.WriteLine($" {m}");
                 };
-                Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
-                Console.Write(GetInfo());
-                Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
+                try
+                {
+                    Assembly assembly = Assembly.GetExecutingAssembly();
+                    if (assembly is not null)
+                    {
+                        var ProgramConfig = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                        var ProgramCommit = new string((assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().ToArray());
+                        var AssemblyName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut StandaloneRender";
+                        Console.WriteLine($"{AssemblyName} v{assembly.GetName().Version} {ProgramConfig}@{ProgramCommit}");
+                        Console.WriteLine("Copyright (c) hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
+                        Console.WriteLine();
+                    }
+
+                }
+                catch { }
 
             }
             if (args.Contains("--logDiagnostic"))
@@ -92,20 +112,26 @@ namespace projectFrameCut.StandaloneRender
                     Arguments:
                     Mode 'render':
                         -project=<project dir>
-                        -output=<output file/folder>
+                        -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                         [-target=<video|audio|all>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
-                        [-Use16bpp=<true|false>]
-                        [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
-                        [-renderByLayer=<true|false>]
+                        [-maxParallelThreads=<number>]
+                        [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]
                         [-outputIntermediatePath=<intermediate output path>]
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                         [-diagReportPath=<path diag report output directory>]
+                        [-preferHwAccelDecoder=<true|false>]
+                        [-PictureResizer=<cpu|hwaccel>]
+                        [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
+                        [-VideoFrameMemoryCache=<true|false>]
+                        [-ApproximateMixture=<true|false>]
+
 
 
                     Mode 'bench':
@@ -175,6 +201,58 @@ namespace projectFrameCut.StandaloneRender
                 return TryResolveAssembly(requestedAssembly.Name!, probingPaths.ToArray(), keepInMemory: true);
             };
 
+            #region plugin loading
+
+            var plugins = new List<projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>
+                {
+                    new InternalPluginBase(),
+                    new ILGPUPlugin(),
+                };
+
+            if (switches.TryGetValue("pluginRoot", out var pluginRoot) && !string.IsNullOrWhiteSpace(pluginRoot))
+            {
+                if (Directory.Exists(pluginRoot))
+                {
+                    Log($"Loading external plugins from: {pluginRoot}");
+                    foreach (var dllPath in Directory.GetFiles(pluginRoot, "*.dll"))
+                    {
+                        try
+                        {
+                            var assembly = Assembly.LoadFrom(dllPath);
+                            var types = assembly.GetTypes();
+                            var ldr = types?.First(a => a.Name == "PluginLoader");
+                            if (ldr is null)
+                            {
+                                Log("No PluginLoader class found in assembly.", "warning");
+                                continue;
+                            }
+                            var ldrMethod = ldr.GetMethod("CreateInstance");
+                            var pluginObj = ldrMethod?.Invoke(null, ["stand-Alone", Path.GetDirectoryName(dllPath)]);
+                            if (pluginObj is IPluginBase plugin)
+                            {
+                                if (plugin.PluginAPIVersion != PluginAPIVersion)
+                                {
+                                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
+                                    continue;
+                                }
+                                plugins.Add(plugin);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Failed to load assembly {Path.GetFileName(dllPath)}: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    Log($"WARNING: Plugin root directory '{pluginRoot}' does not exist.");
+                }
+            }
+
+            PluginManager.Init(plugins);
+            Log($"{PluginManager.LoadedPlugins.Count} plugins loaded.");
+            #endregion
 
             switch (runningMode)
             {
@@ -195,7 +273,7 @@ namespace projectFrameCut.StandaloneRender
                     }
                     catch { throw; }
                 case "list_accels":
-                    Context context = Context.CreateDefault();
+                    Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                     var devices = context.Devices.ToList();
                     List<AcceleratorInfo> listAccels = new();
                     for (uint i = 0; i < devices.Count; i++)
@@ -213,12 +291,70 @@ namespace projectFrameCut.StandaloneRender
 
         }
 
+        private static bool TryParseCpuIndexList(string value, out int[] cpuIndexes, out string error)
+        {
+            var result = new SortedSet<int>();
+            foreach (var token in value.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (token.Contains('-', StringComparison.Ordinal))
+                {
+                    var parts = token.Split('-', 2, StringSplitOptions.TrimEntries);
+                    if (parts.Length != 2
+                        || !int.TryParse(parts[0], out int start)
+                        || !int.TryParse(parts[1], out int end))
+                    {
+                        cpuIndexes = [];
+                        error = $"Invalid CPU range '{token}'.";
+                        return false;
+                    }
+
+                    if (start > end)
+                    {
+                        (start, end) = (end, start);
+                    }
+
+                    if (start < 0)
+                    {
+                        cpuIndexes = [];
+                        error = $"CPU index cannot be negative in range '{token}'.";
+                        return false;
+                    }
+
+                    for (int i = start; i <= end; i++)
+                    {
+                        result.Add(i);
+                    }
+                    continue;
+                }
+
+                if (!int.TryParse(token, out int cpuIndex) || cpuIndex < 0)
+                {
+                    cpuIndexes = [];
+                    error = $"Invalid CPU index '{token}'.";
+                    return false;
+                }
+
+                result.Add(cpuIndex);
+            }
+
+            if (result.Count == 0)
+            {
+                cpuIndexes = [];
+                error = "No CPU indexes were provided.";
+                return false;
+            }
+
+            cpuIndexes = result.ToArray();
+            error = string.Empty;
+            return true;
+        }
+
         private static int InitAccel(ConcurrentDictionary<string, string> switches)
         {
             try
             {
 
-                Context context = Context.CreateDefault();
+                Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                 var devices = context.Devices.ToList();
                 List<Device> picked = new();
                 for (int i = 0; i < devices.Count; i++)
@@ -286,9 +422,12 @@ namespace projectFrameCut.StandaloneRender
                     Log($"Picked accelerator {item.Name} : {item.AcceleratorType}");
                 }
 
+
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
                 ILGPUPlugin.accelerators = accelerators;
+
+                if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.HwAccelPictureResizer();
                 return 0;
 
             }
@@ -331,16 +470,21 @@ namespace projectFrameCut.StandaloneRender
             width = int.Parse(outputOptions[0]);
             height = int.Parse(outputOptions[1]);
             fps = int.Parse(outputOptions[2]);
-
+            outputEncoder = outputOptions[4];
             if (!Enum.TryParse(outputOptions[3], out outputFormat) || outputFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
                 return 1;
             }
+            var fmpBPP = FFmpegHelper.GetAVPixelFormatBitsPerPixel(outputFormat);
+            var use16Bit = fmpBPP > 8;
 
-            outputEncoder = outputOptions[4];
+            if (fmpBPP <= 0)
+            {
+                Log($"Cannot auto determine bits per pixel for pixel format {outputOptions[3]}, auto-fallback to 16bpp rendering mode.", "warn");
+                use16Bit = trace;
+            }
 
-            var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
 
             if (!switches.ContainsKey("output"))
@@ -348,74 +492,22 @@ namespace projectFrameCut.StandaloneRender
                 Log("ERROR: No output path specified. Use -output=<output file> to specify the output path.");
                 return 1;
             }
-            var outputPath = switches["output"];
+            var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
-            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" : "8")}");
+            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output)");
 
-            #endregion
-
-            #region plugin loading
-
-            var plugins = new List<projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>
-                {
-                    new InternalPluginBase(),
-                    new ILGPUPlugin(),
-                };
-
-            if (switches.TryGetValue("pluginRoot", out var pluginRoot) && !string.IsNullOrWhiteSpace(pluginRoot))
-            {
-                if (Directory.Exists(pluginRoot))
-                {
-                    Log($"Loading external plugins from: {pluginRoot}");
-                    foreach (var dllPath in Directory.GetFiles(pluginRoot, "*.dll"))
-                    {
-                        try
-                        {
-                            var assembly = Assembly.LoadFrom(dllPath);
-                            var types = assembly.GetTypes();
-                            var ldr = types?.First(a => a.Name == "PluginLoader");
-                            if (ldr is null)
-                            {
-                                Log("No PluginLoader class found in assembly.", "warning");
-                                continue;
-                            }
-                            var ldrMethod = ldr.GetMethod("CreateInstance");
-                            var pluginObj = ldrMethod?.Invoke(null, ["stand-Alone", Path.GetDirectoryName(dllPath)]);
-                            if (pluginObj is IPluginBase plugin)
-                            {
-                                if (plugin.PluginAPIVersion != PluginAPIVersion)
-                                {
-                                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
-                                    continue;
-                                }
-                                plugins.Add(plugin);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"Failed to load assembly {Path.GetFileName(dllPath)}: {ex.Message}");
-                        }
-                    }
-                }
-                else
-                {
-                    Log($"WARNING: Plugin root directory '{pluginRoot}' does not exist.");
-                }
-            }
-
-            PluginManager.Init(plugins);
             #endregion
 
             #region read args
             if (!switches.ContainsKey("project"))
             {
-                Log("ERROR: No project file specified. Use -project=<project root dir> to specify the project file.");
+                Log("No project file specified. Use -project=<project root dir> to specify the project file.", "error");
                 return 1;
             }
             var workingPath = switches["project"];
             if (string.IsNullOrWhiteSpace(workingPath) || !Directory.Exists(workingPath))
             {
-                Log("ERROR: Invalid project path.");
+                Log("Invalid project path.", "error");
                 return 1;
             }
 
@@ -431,7 +523,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 if (!int.TryParse(gcopt, out GCOption) || (GCOption < 0 || GCOption > 2))
                 {
-                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.");
+                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.", "warn");
                     GCOption = 0;
                 }
             }
@@ -454,24 +546,107 @@ namespace projectFrameCut.StandaloneRender
                 Log($"Read {assets.Count} assets from asset database.");
             }
 
-            int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
-            bool blockWrite = false, renderByLayer = false;
-            if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            int maxParallelThreads = Environment.ProcessorCount;
+            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
+            int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
+            if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
+            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+            if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
+            if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
+            if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
-                maxParallelThreads = 1;
-                blockWrite = true;
+                if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {renderWorkerAffinityError}", "error");
+                    return 1;
+                }
+
+                try
+                {
+                    ThreadAffinityHelper.BuildAffinityMask(renderWorkerAffinityCpuIndexes);
+                }
+                catch (Exception ex)
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {ex.Message}", "error");
+                    return 1;
+                }
+
+                Log($"Manual render worker CPU affinity: {string.Join(", ", renderWorkerAffinityCpuIndexes)}");
+            }
+
+            if (!oneByOneRender)
+            {
+                if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
+                {
+                    try
+                    {
+                        var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                        foreach (var item in group)
+                        {
+                            Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
+                        }
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                                ? renderWorkerAffinityCpuIndexes!.Length
+                                : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
+
+                    }
+                    catch
+                    {
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
+                    }
+                    maxParallelThreads *= 2;
+                    preparerAffinityCpuIndexes = renderWorkerAffinityCpuIndexes.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(renderWorkerAffinityCpuIndexes).ToArray() : [];
+                }
+                else
+                {
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
+                }
+
+                var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                    ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
+                    : (enableThreadAffinity ? "auto" : "disabled");
+                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{YesNo(renderByLayer)}, Prepare in worker:{YesNo(prepareInWorker)}, Preparer affinity:{YesNo(enableThreadAffinity)}, Worker affinity:{workerAffinityLabel}");
+
             }
             else
             {
-                blockWrite = false;
+                Log("Working in serial mode.");
             }
-            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
 
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
+
+            if (switches.TryGetValue("VideoFrameDiskCacheRoot", out var vfdcRoot) && Directory.Exists(vfdcRoot))
+            {
+                IVideoSource.EnableDiskCache = true;
+                VideoFrameDiskCache.CacheBaseDir = vfdcRoot;
+            }
+            else
+            {
+                IVideoSource.EnableDiskCache = false;
+            }
+
+            IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
+
+            Log($"Video decoding: Prefer HWAccel: {YesNo(hwAccelDecode)}, Memory cache: {YesNo(IVideoSource.EnableMemoryCache)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
+
+            ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
+
+            Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
+
+            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
+            {
+                EffectHelper.ForcePreferToType = forcePreferToType;
+                Log($"Using forced effect implement type: {forcePreferToType}");
+            }
 
             #endregion
 
@@ -519,7 +694,9 @@ namespace projectFrameCut.StandaloneRender
 
             CancellationTokenSource cts = new();
             VideoBuilder builder = null!;
+            Renderer renderer = null!;
             var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
+            var keyboardInterrupt = !Environment.GetCommandLineArgs().Contains("--keyboardInterrupt");
             async Task composeVideo(string resultPath)
             {
                 var clips = JSONToIClips(timeline, assets, bpp);
@@ -536,59 +713,60 @@ namespace projectFrameCut.StandaloneRender
                     DoGCAfterEachWrite = GCOption > 0,
                     DisposeFrameAfterEachWrite = true,
                     Duration = timeline.Duration,
-                    BlockWrite = blockWrite,
+                    BlockWrite = oneByOneRender,
                 };
 
-                Renderer renderer = new Renderer
+                renderer = new Renderer
                 {
                     builder = builder,
                     Clips = clips,
                     Duration = timeline.Duration,
-                    MaxThreads = blockWrite ? 1 : maxParallelThreads,
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
-                    LogStaticsData = true,
+                    LogStaticsData = false,
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
                     EnableRenderWatchdogForceStart = false,
                     MaxRenderScheduleTimeout = 0,
-                    MinSchedulePreparedFrames = 1
+                    MinSchedulePreparedFrames = 1,
+                    MaxThreads = maxParallelThreads,
+                    RenderByLayers = renderByLayer,
+                    PrepareInWorkerThreads = prepareInWorker,
+                    OneByOneRender = oneByOneRender,
+                    EnableThreadAffinity = enableThreadAffinity,
+                    WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
                 };
+
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                var FrameDoneMark = new UserMarks("ProgressMark");
+#endif
 
                 if (!Environment.GetCommandLineArgs().Contains("--nolog"))
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                        FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
+#endif
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2}          \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame {(noSigInt ? "- Press Ctrl-C to interrupt render process.          " : "            ")} \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame          \r");
                         }
                     };
                 }
 
-                builder?.Build()?.Start();
+                builder?.Build(preparerAffinityCpuIndexes)?.Start();
                 renderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
                 try
                 {
-                    if (blockWrite)
-                    {
-                        await renderer.GoRenderSync(cts.Token);
-                    }
-                    else if (renderByLayer)
-                    {
-                        await renderer.GoRenderByLayer(cts.Token);
-                    }
-                    else
-                    {
-                        await renderer.GoRender(cts.Token);
-                    }
+                    await renderer.GoRender(cts.Token);
                     Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
@@ -600,8 +778,6 @@ namespace projectFrameCut.StandaloneRender
                     Log(ex, "Render error");
                     throw;
                 }
-
-
 
                 if (!string.IsNullOrWhiteSpace(diagReportPath))
                 {
@@ -620,7 +796,7 @@ namespace projectFrameCut.StandaloneRender
                 if (cts.IsCancellationRequested) return;
 
                 Log("Finish writing video...");
-                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration);
+                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration, (c, p) => Console.Write($"Frame #{c} added, completed {p:p2}.    \r"));
 
                 Log($"Releasing resources...");
 
@@ -679,15 +855,17 @@ namespace projectFrameCut.StandaloneRender
                 }
                 return;
             }
+            Task? keyboardTask = null;
+            int KeyQPressCount = 0;
 
             if (switches.TryGetValue("stopAfter", out var stopAfterStr) && int.TryParse(stopAfterStr, out var stopAfter)) //for Instrument testing, to avoid long time cause a lot huge log.
             {
                 Log($"stopAfter is set, render will stop after {stopAfter}s.");
 
-                Timer t = new((c) =>
+                Timer t = new(async (c) =>
                 {
                     Log($"Time's up! stopAfter's {stopAfter}s timeout reached, exiting...");
-                    cts.Cancel();
+                    await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
                     builder?.Interrupt();
                     Environment.Exit(255);
                 });
@@ -695,10 +873,65 @@ namespace projectFrameCut.StandaloneRender
                 t.Change(stopAfter * 1000, Timeout.Infinite);
 
             }
-            if (!noSigInt)
+            if (keyboardInterrupt)
+            {
+                if (!Console.IsInputRedirected)
+                {
+                    keyboardTask = Task.Run(async () =>
+                    {
+                        while (!cts.IsCancellationRequested)
+                        {
+                            if (Console.KeyAvailable)
+                            {
+                                var key = Console.ReadKey(intercept: true);
+
+                                switch (key.Key)
+                                {
+                                    case ConsoleKey.Escape:
+                                    case ConsoleKey.Q:
+                                        KeyQPressCount++;
+                                        if (KeyQPressCount > 5)
+                                        {
+                                            Console.WriteLine("Cancel signal receive! try cancelling render...");
+                                            await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                                            builder?.Interrupt();
+                                            Environment.Exit(255);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"Hit Escape/Q again to cancel render.");
+                                        }
+                                        break;
+
+                                    case ConsoleKey.S:
+                                        if (renderer is null)
+                                        {
+                                            Log("Render is not initialized yet.");
+                                        }
+                                        else
+                                        {
+                                            Log(renderer.GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
+                                        }
+                                        break;
+                                    case ConsoleKey.P:
+
+                                        break;
+                                }
+                            }
+
+                            await Task.Delay(50);
+                        }
+                    });
+
+                    Console.WriteLine($"Render job starts. Hit Escape/Q to cancel, or S to show status.");
+                }
+
+
+            }
+            else if (!noSigInt)
             {
                 var cancelled = false;
-                Console.CancelKeyPress += (s, e) =>
+                Console.CancelKeyPress += async (s, e) =>
                 {
                     e.Cancel = true;
                     if (cancelled) Process.GetCurrentProcess().Kill();
@@ -706,12 +939,9 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("You hit Ctrl-C! try cancelling render...");
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
-                    new Thread(async () =>
-                    {
-                        await cts.CancelAsync();
-                        builder?.Interrupt();
-                        Environment.Exit(255);
-                    }).Start();
+                    await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                    builder?.Interrupt();
+                    Environment.Exit(255);
                 };
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
             }
@@ -736,6 +966,7 @@ namespace projectFrameCut.StandaloneRender
                     string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await composeVideo(vidOutputPath);
                     composeAudio(audOutputPath);
+                    Console.WriteLine("Composing audio and video... this may take a few seconds.");
                     VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);
                     try
                     {
@@ -749,7 +980,9 @@ namespace projectFrameCut.StandaloneRender
                     return 1;
             }
 
-            Log($"All done, result is in '{outputPath}'.\r\nExiting...");
+            Log($"All done! Your result file is here:{Environment.NewLine}{outputPath}");
+            Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
             return 0;
         }
 

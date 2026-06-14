@@ -21,8 +21,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Opacity", 0.8f }
         };
 
-        public List<string> ParametersNeeded => FadeOpacityEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => FadeOpacityEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => FadeOpacityEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => FadeOpacityEffect_IPicture.ParametersType;
 
         public string TypeName => "FadeOpacity";
         public bool IsNormalEffect => true;

@@ -5,13 +5,17 @@ using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Setting.SettingPages;
 using projectFrameCut.Shared;
 using projectFrameCut.Template;
 using projectFrameCut.ViewModels;
@@ -25,10 +29,18 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using static System.Net.Mime.MediaTypeNames;
-using IPicture = projectFrameCut.Shared.IPicture;
 using Application = Microsoft.Maui.Controls.Application;
-using projectFrameCut.Setting.SettingPages;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.Compose;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Drawing.Vector.ImportExport;
+using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Effect;
+
+
 
 
 
@@ -49,6 +61,7 @@ namespace projectFrameCut;
 public partial class HomePage : ContentPage
 {
     private readonly ProjectsListViewModel _viewModel;
+    private string? _pendingMcpServerAddress;
 
     private const string CreateButtonName = "!!CreateButton!!";
 
@@ -112,16 +125,7 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
-            if (!IsFontLoaded)
-            {
-                var t = new Thread(TextServices.LoadFonts)
-                {
-                    Priority = ThreadPriority.BelowNormal,
-                    IsBackground = true
-                };
-                t.Start();
-                IsFontLoaded = true;
-            }
+
 #if WINDOWS
             try
             {
@@ -163,7 +167,7 @@ public partial class HomePage : ContentPage
                     var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
                     if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                     {
-                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover);
+                        await GoDraft(p, draft.ProjectName ?? "Project", isReadonly: false, throwOnException: false, skipAskForRecover: skipAskForRecover);
                         return;
 
                     }
@@ -197,7 +201,14 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = MauiProgram.CmdlineArgs.ToArray();
-            if (args.ArrayAny())
+            //var mcpDraftArg = args.FirstOrDefault(c => c.StartsWith("--mcpDraft=", StringComparison.OrdinalIgnoreCase));
+            var mcpServerArg = args.FirstOrDefault(c => c.StartsWith("--mcpServer=", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(mcpServerArg))
+            {
+                _pendingMcpServerAddress = mcpServerArg.Split('=', 2)[1];
+            }
+
+            if (string.IsNullOrWhiteSpace(path) && args.ArrayAny())
             {
                 var maybePath = args.OrderByDescending(s => s.Length).First();
                 if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
@@ -213,7 +224,19 @@ public partial class HomePage : ContentPage
             if (Preferences.ContainsKey("LaunchedPJFCUri"))
             {
                 path = Preferences.Get("LaunchedPJFCUri", "");
+                //if (TryParseMcpLaunchUri(path, out var draftPath, out var serverAddress))
+                //{
+                //    path = draftPath;
+                //    _pendingMcpDraftPath = draftPath;
+                //    _pendingMcpServerAddress = serverAddress;
+                //}
             }
+            //else if (TryParseMcpLaunchUri(path, out var parsedDraftPath, out var parsedServerAddress))
+            //{
+            //    path = parsedDraftPath;
+            //    _pendingMcpDraftPath = parsedDraftPath;
+            //    _pendingMcpServerAddress = parsedServerAddress;
+            //}
             LogDiagnostic($"Launch target from cli args:{path}");
             if (string.IsNullOrWhiteSpace(path)) return;
             switch (Path.GetExtension(path))
@@ -315,6 +338,44 @@ public partial class HomePage : ContentPage
             });
         }
     }
+
+    //private static bool TryParseMcpLaunchUri(string raw, out string draftPath, out string serverAddress)
+    //{
+    //    draftPath = string.Empty;
+    //    serverAddress = string.Empty;
+    //    if (string.IsNullOrWhiteSpace(raw))
+    //    {
+    //        return false;
+    //    }
+
+    //    if (!raw.StartsWith("pjfc:mcp?", StringComparison.OrdinalIgnoreCase))
+    //    {
+    //        return false;
+    //    }
+
+    //    var query = raw["pjfc:mcp?".Length..];
+    //    foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    //    {
+    //        var idx = segment.IndexOf('=');
+    //        if (idx <= 0)
+    //        {
+    //            continue;
+    //        }
+
+    //        var key = Uri.UnescapeDataString(segment[..idx].Replace('+', ' '));
+    //        var value = Uri.UnescapeDataString(segment[(idx + 1)..].Replace('+', ' '));
+    //        if (string.Equals(key, "draft", StringComparison.OrdinalIgnoreCase))
+    //        {
+    //            draftPath = value;
+    //        }
+    //        else if (string.Equals(key, "server", StringComparison.OrdinalIgnoreCase))
+    //        {
+    //            serverAddress = value;
+    //        }
+    //    }
+
+    //    return !string.IsNullOrWhiteSpace(draftPath) && !string.IsNullOrWhiteSpace(serverAddress);
+    //}
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -708,7 +769,7 @@ public partial class HomePage : ContentPage
                             }
                         }
                     }
-                    KeyValuePair<string, DraftStructureJSON?> newest = tmls.OrderByDescending(t => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
+                    KeyValuePair<string, DraftStructureJSON?> newest = tmls.Where(c => c.Value is not null && c.Value.SavedAt <= DateTime.Now).OrderByDescending(t => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
                     bool result = false;
                     await Dispatcher.DispatchAsync(async () =>
                     {
@@ -763,7 +824,7 @@ public partial class HomePage : ContentPage
                         }
                         else
                         {
-                            notfounds.Add(item.Value.Id, new AssetItem { AssetId = item.Value.Id, Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
+                            notfounds.Add(item.Value.Id.ToString(), new AssetItem { AssetId = item.Value.Id.ToString(), Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
                         }
                     }
                 }
@@ -857,6 +918,8 @@ public partial class HomePage : ContentPage
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
                                 LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
+                                DynamicPreviewResolutionDivisor = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewResolutionDivisor", 1, 1),
+                                DynamicPreviewTimeout = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewTimeout", 5000, 5000),
                                 UseDynamicPreview = SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"),
                                 ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
                                 AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"),
@@ -881,7 +944,7 @@ public partial class HomePage : ContentPage
                                 }
                             }
 #if WINDOWS
-                            ILGPU.Context context = ILGPU.Context.CreateDefault();
+                            ILGPU.Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                             var devices = context.Devices.ToList();
                             List<AcceleratorInfo> listAccels = new();
                             for (uint i = 0; i < devices.Count; i++)
@@ -895,9 +958,8 @@ public partial class HomePage : ContentPage
                                 SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
                                 Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
                             }
-                            var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
-                                                    .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                                    new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+                            var picked = listAccels.FirstOrDefault(c => c.index == SettingsManager.GetSettingAs<int>("accel_DeviceId", -1, -1), listAccels.First());
+                            var accelDevice = devices.FirstOrDefault(c => c.Name == picked.name, devices.First());
                             page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
                             await page.PostInit();
@@ -1014,18 +1076,20 @@ public partial class HomePage : ContentPage
                 });
             }
         });
-        await Dispatcher.DispatchAsync(() =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
             try
             {
                 cancelButton.IsVisible = false;
+                Content.InvalidateMeasure();
+                Content = origContent;
             }
             catch { }
         });
         initTimer.Stop();
         LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
         if (initTimer.Elapsed.TotalSeconds < 2) await Task.Delay(2000 - (int)initTimer.Elapsed.TotalMilliseconds);
-        Content = origContent;
+
 
         if (!cancelled && page != null && project != null)
         {
@@ -1045,6 +1109,23 @@ public partial class HomePage : ContentPage
                         Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;
                         await Navigation.PushAsync(page);
+                        if (!string.IsNullOrWhiteSpace(_pendingMcpServerAddress))
+                        {
+                            try
+                            {
+                                await McpClientLinkService.Shared.ConnectAsync(page, draftSourcePath, _pendingMcpServerAddress);
+                                page.SetStatusText($"MCP linked: {_pendingMcpServerAddress}");
+                            }
+                            catch (Exception linkEx)
+                            {
+                                Log(linkEx, "connect mcp client link", this);
+                                await DisplayAlertAsync(Localized._Warn, $"Failed to connect MCP server.\r\n{linkEx.Message}", Localized._OK);
+                            }
+                            finally
+                            {
+                                _pendingMcpServerAddress = null;
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -1091,6 +1172,7 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _ = McpClientLinkService.Shared.DisconnectAsync();
         try
         {
             if (lastPage is not null && Window is not null)
@@ -1099,7 +1181,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-        if(Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
+        if (Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
         {
             NoContentLayout.IsVisible = true;
         }
@@ -1132,7 +1214,8 @@ public partial class HomePage : ContentPage
         }
 #endif
 
-
+        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
+        DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
 
     }
 
@@ -1144,7 +1227,7 @@ public partial class HomePage : ContentPage
         try
         {
             haveDrafts = Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length != 0;
-        } 
+        }
         catch { }
         Task.Delay(5000).ContinueWith(async (_) =>
         {
@@ -1251,39 +1334,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-
-        if (!SettingsManager.IsSettingExists("UserName") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserName", "")))
-        {
-            try
-            {
-                var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("��", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("��", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
-                SettingsManager.WriteSetting("UserName", rnd.Generate());
-            }
-            catch
-            {
-                SettingsManager.WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
-
-            }
-        }
-
-
-        if (SettingsManager.IsBoolSettingTrue("render_SaveCheckpoint"))
-        {
-            Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-            IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
-            PictureProcesser.SaveDiagResult = true;
-            PictureProcesser.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
-
-        }
-        else
-        {
-            IPicture.DiagImagePath = null;
-            PictureProcesser.SaveDiagResult = false;
-        }
-        IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-        PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
-        PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-        PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
+        MainSettingsPage.SyncSettingToModules();
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 
@@ -1826,10 +1877,10 @@ public partial class HomePage : ContentPage
             element.isInfiniteLength = true;
             element.maxFrameCount = 0;
             element.ExtraData = new();
-            element.ExtraData["TextEntries"] = new List<TextClipEntry>
+            element.ExtraData["TextEntries"] = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
             {
                 template.First().Value with { text = $"Happy April fools day!" }
-            };
+            });
 
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "timeline.json"),

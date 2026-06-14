@@ -1,5 +1,7 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
@@ -16,7 +18,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -41,10 +43,8 @@ namespace projectFrameCut.DraftStuff
 
             ClipInfoBuilder.RebuildAllEffects(element);
 
-            if (element.Id.StartsWith("ghost_") || element.Id.StartsWith("shadow_"))
-            {
-                throw new InvalidOperationException("Ghost/Shadow clips cannot be exported as ClipDraftDTO.");
-            }
+            // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
+            // These clips are filtered upstream in the calling code.
 
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
@@ -68,7 +68,7 @@ namespace projectFrameCut.DraftStuff
                         if (border.BindingContext is not ClipElementUI elem) continue;
                         ClipInfoBuilder.RebuildAllEffects(elem);
 
-                        if (elem.Id.StartsWith("ghost_") || elem.Id.StartsWith("shadow_")) continue;
+                        // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
                         if (!includeUiOnlyClips && elem.ClipType == ClipMode.MarkingClip) continue;
 
                         double startPx = border.TranslationX;
@@ -78,7 +78,7 @@ namespace projectFrameCut.DraftStuff
                         uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
                         if (durationFrames == 0) durationFrames = 1;
 
-                        string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id : elem.DisplayName;
+                        string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
                         if (elem.ClipType == ClipMode.AudioClip)
                         {
@@ -91,7 +91,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 var dto = new SoundtrackDTO
                                 {
-                                    Id = elem.Id,
+                                    Id = elem.Id.ToString(),
                                     Name = name,
                                     FromPlugin = string.IsNullOrEmpty(elem.FromPlugin) ? InternalPluginBase.InternalPluginBaseID : elem.FromPlugin,
                                     TypeName = string.IsNullOrEmpty(elem.TypeName) ? "NormalTrack" : elem.TypeName,
@@ -196,7 +196,7 @@ namespace projectFrameCut.DraftStuff
             uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
             if (durationFrames == 0) durationFrames = 1;
 
-            string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id : elem.DisplayName;
+            string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
             if (elem.ClipType == ClipMode.AudioClip && wrapSoundtrackAsClip)
             {
@@ -231,6 +231,48 @@ namespace projectFrameCut.DraftStuff
 
             var normalizedMeta2 = NormalizeClipMetaData(elem.ExtraData, page.ProjectInfo.TargetFrameRate);
 
+            // For TextClips without explicit dimensions, compute the text bounds from TextEntries
+            int exportTargetWidth = elem.TargetWidth;
+            int exportTargetHeight = elem.TargetHeight;
+            if (elem.ClipType == ClipMode.TextClip
+                && exportTargetWidth <= 0
+                && elem.ExtraData is not null
+                && elem.ExtraData.TryGetValue("TextEntries", out var rawEntries))
+            {
+                try
+                {
+                    IReadOnlyList<TextEntry>? entries = rawEntries as IReadOnlyList<TextEntry>;
+                    if (entries is null && rawEntries is JsonElement je)
+                    {
+                        try { entries = je.Deserialize<IReadOnlyList<TextEntry>>(); }
+                        catch
+                        {
+                            // Fall back to old TextClipEntry format
+                            try
+                            {
+                                var oldEntries = je.Deserialize<IReadOnlyList<TextClipEntry>>();
+                                if (oldEntries is { Count: > 0 })
+                                    entries = TextEntryMigration.MigrateFromTextClipEntries(oldEntries);
+                            }
+                            catch { }
+                        }
+                    }
+                    if (entries is { Count: > 0 })
+                    {
+                        var bounds = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                        if (bounds.Width > 0 && bounds.Height > 0)
+                        {
+                            exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
+                            exportTargetHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+                        }
+                    }
+                }
+                catch
+                {
+                    // fall through to use elem.TargetWidth (0 or user-set)
+                }
+            }
+
             return new ClipDraftDTO
             {
                 Id = elem.Id,
@@ -249,8 +291,8 @@ namespace projectFrameCut.DraftStuff
                 IsInfiniteLength = elem.isInfiniteLength,
                 ShouldDisplayInUI = elem.ShouldDisplayInUI,
                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                TargetWidth = elem.TargetWidth,
-                TargetHeight = elem.TargetHeight,
+                TargetWidth = exportTargetWidth,
+                TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
                 MetaData = normalizedMeta2,
@@ -388,6 +430,18 @@ namespace projectFrameCut.DraftStuff
                 }
                 if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
                 clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
+                if (clipInstance is IVectorContentClip vc && clipInstance.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr && !string.IsNullOrEmpty(aaStr))
+                {
+                    var aaProp = typeof(IVectorContentClip).GetProperty("ClipAntiAliasMode");
+                    if (aaProp != null)
+                    {
+                        var aaType = Nullable.GetUnderlyingType(aaProp.PropertyType) ?? aaProp.PropertyType;
+                        if (Enum.TryParse(aaType, aaStr, ignoreCase: true, out var aaMode))
+                        {
+                            aaProp.SetValue(vc, aaMode);
+                        }
+                    }
+                }
                 if (clipInstance is null) throw new NullReferenceException();
                 clipsList.Add(clipInstance);
 
@@ -639,7 +693,7 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
-        public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
+        public static (ConcurrentDictionary<Guid, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
 
@@ -669,7 +723,7 @@ namespace projectFrameCut.DraftStuff
 
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(d => (int)d.LayerIndex) + 1);
 
-            var clipsDict = new ConcurrentDictionary<string, ClipElementUI>();
+            var clipsDict = new ConcurrentDictionary<Guid, ClipElementUI>();
 
             foreach (var dto in dtos.OrderBy(d => d.LayerIndex).ThenBy(d => d.StartFrame))
             {
@@ -682,7 +736,7 @@ namespace projectFrameCut.DraftStuff
                     startX: startPx,
                     width: widthPx,
                     trackIndex: (int)dto.LayerIndex,
-                    id: string.IsNullOrWhiteSpace(dto.Id) ? null : dto.Id,
+                    id: dto.Id == Guid.Empty ? null : dto.Id,
                     labelText: string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name,
                     background: ClipElementUI.DetermineAssetColor(dto.ClipType),
                     prototype: null,
@@ -690,7 +744,7 @@ namespace projectFrameCut.DraftStuff
                     maxFrames: maxFrames
                 );
 
-                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
+                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id.ToString() : dto.Name;
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
@@ -789,7 +843,7 @@ namespace projectFrameCut.DraftStuff
                     startX: startPx,
                     width: widthPx,
                     trackIndex: (int)dto.LayerIndex,
-                    id: string.IsNullOrWhiteSpace(dto.Id) ? null : dto.Id,
+                    id: Guid.TryParse(dto.Id, out var soundId) ? soundId : null,
                     labelText: string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name,
                     background: ClipElementUI.DetermineAssetColor(ClipMode.AudioClip),
                     prototype: null,
@@ -797,7 +851,7 @@ namespace projectFrameCut.DraftStuff
                     maxFrames: dto.Duration
                 );
 
-                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
+                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id.ToString() : dto.Name;
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
@@ -928,7 +982,7 @@ namespace projectFrameCut.DraftStuff
                 startX: clip.StartFrame,
                 width: widthPx,
                 trackIndex: (int)clip.LayerIndex,
-                id: string.IsNullOrWhiteSpace(clip.Id) ? null : clip.Id,
+                id: clip.Id,
                 labelText: string.IsNullOrWhiteSpace(clip.Name) ? null : clip.Name,
                 background: ClipElementUI.DetermineAssetColor(clip.ClipType),
                 prototype: null,
@@ -936,7 +990,7 @@ namespace projectFrameCut.DraftStuff
                 maxFrames: maxFrames
             );
 
-            element.DisplayName = string.IsNullOrWhiteSpace(clip.Name) ? element.Id : clip.Name;
+            element.DisplayName = string.IsNullOrWhiteSpace(clip.Name) ? element.Id.ToString() : clip.Name;
             element.origTrack = (int)clip.LayerIndex;
             element.origLength = widthPx;
             element.origX = clip.StartFrame;

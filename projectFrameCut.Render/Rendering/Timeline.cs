@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -61,8 +63,8 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else
                         {
-                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip.ToString());
-                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip.ToString());
+                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
+                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
                             if (leftClip == null || rightClip == null)
                             {
                                 Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
@@ -132,7 +134,7 @@ namespace projectFrameCut.Render.Rendering
             int targetWidth,
             int targetHeight,
             int targetPPB = 8,
-            Action<IEffect, IPicture>? AfterEffect = null,
+            Action<IEffect, IPicture>? AfterEffectCallback = null,
             bool autoCenterImplicitClip = false,
             int projectRelativeWidth = 0,
             int projectRelativeHeight = 0)
@@ -150,33 +152,25 @@ namespace projectFrameCut.Render.Rendering
                     ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
                     ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
                     IPicture effected = srcFrame.Clip;
-                    List<IPictureProcessStep> steps = new();
-                    bool lastIsProcessStep = false;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
                     foreach (var effect in effectsList)
                     {
-                        if (effect.YieldProcessStep != lastIsProcessStep)
-                        {
-                            if (steps.Count > 0)
-                            {
-                                effected = PictureProcesser.Process(steps, effected, targetPPB);
-                                steps.Clear();
-                            }
-                            lastIsProcessStep = effect.YieldProcessStep;
-                        }
-
                         if (effect is IContinuousEffect c)
                         {
-                            EffectProcessing.ProcessContinuousEffect(frameIndex, srcFrame.ParentClip, PluginManager.CreateComputer(effect.NeedComputer), ref effected, steps, ref lastIsProcessStep, effect, c, targetWidth, targetHeight);
-                        }
-                        else if (effect is IBindableArgumentEffect b)
-                        {
-                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
+                            int scopedStart = c.IsScoped ? c.StartPoint : (int)srcFrame.ParentClip.StartFrame;
+                            int scopedEnd = c.IsScoped ? c.EndPoint : (int)(srcFrame.ParentClip.StartFrame + srcFrame.ParentClip.GetEffectiveDuration());
+                            if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
+                            float continuousProgress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                            effected = c.Render(effected, continuousProgress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else if (effect is INormalEffect n)
                         {
-                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                        }
+                        else if (effect is IBindableArgumentEffect b)
+                        {
+                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
                         else if (effect is IClipPositionProvider p)
                         {
@@ -202,29 +196,31 @@ namespace projectFrameCut.Render.Rendering
                                 clipPos = new(x, y, w, h, false);
                             }
                         }
+                        else if (effect is IMixture or ISpeedVarianceProvider //these will be processed later; skip here
+                                        or ITextEffect or IContinuousTextEffect) //these are processed inside TextClip
+                        {
+                            
+                        }
                         else
                         {
                             throw new NotSupportedException($"The effect ClipType {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
                         }
-                        if (AfterEffect is not null)
+
+                        if (AfterEffectCallback is not null)
                         {
-                            if (steps.Count > 0)
+                            IPicture d = effected;
+                            int x = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
+                            int y = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
+                            if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
                             {
-                                AfterEffect?.Invoke(effect, PictureProcesser.Process(steps, effected, targetPPB));
+                                y += (targetHeight - effected.Height) / 2;
                             }
-                            else
+                            if (x != 0 || y != 0 || effected.Width != targetWidth || effected.Height != targetHeight)
                             {
-                                AfterEffect?.Invoke(effect, effected);
-
+                                d = PlaceEffect.Process(d, x, y, targetWidth, targetHeight);
                             }
+                            AfterEffectCallback(effect, d);
                         }
-
-
-                    }
-                    if (steps.Count > 0)
-                    {
-                        effected = PictureProcesser.Process(steps, effected, targetPPB);
-                        steps.Clear();
                     }
 
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
@@ -287,10 +283,10 @@ namespace projectFrameCut.Render.Rendering
                 result = ClassicOverlayMixture.Default
                                .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
-                if (PictureProcesser.SaveDiagResult)
+                if (MyLoggerExtensions.SaveDiagResult)
                 {
                     var opId = Guid.NewGuid();
-                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
+                    File.WriteAllText(Path.Combine(MyLoggerExtensions.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
                 }
                 return result;
             }
@@ -302,7 +298,7 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        private static PlaceEffect_IPicture Placer = new()
+        private static PlaceEffect_HwAccel Placer = new()
         {
             StartX = 0,
             StartY = 0
@@ -447,7 +443,7 @@ namespace projectFrameCut.Render.Rendering
                         long overlap = aEnd - bStart;
                         if (overlap > (long)allowedOverlapFrames)
                         {
-                            result.Add(new OverlapInfo($"{a.Id ?? "unknown ID"} ({a.Name ?? "unknown Name"})", $"{b.Id ?? "unknown ID"} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
+                            result.Add(new OverlapInfo($"{a.Id} ({a.Name ?? "unknown Name"})", $"{b.Id} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
                         }
                     }
                 }

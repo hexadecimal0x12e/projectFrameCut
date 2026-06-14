@@ -12,6 +12,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 {
     public class ClassicOverlayMixtureEffectBundle : IEffectBundle
     {
+        private static readonly string[] AccuracyModeOptions = ["Accurate", "Approximate"];
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Classic Overlay";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -38,12 +40,17 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
-        public Dictionary<string, object> Parameters { get; set; } = new();
+        public Dictionary<string, object> Parameters { get; set; } = new()
+        {
+            { "AccuracyMode", "Accurate" }
+        };
 
-        bool IEffectBundle.IsUserVisibleEffect => false;
 
-        public List<string> ParametersNeeded => [];
-        public Dictionary<string, string> ParametersType => new();
+        public List<string> ParametersNeeded => ["AccuracyMode"];
+        public Dictionary<string, string> ParametersType => new()
+        {
+            { "AccuracyMode", "string" }
+        };
 
         public IEffectFactory[] Create()
         {
@@ -54,14 +61,28 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
+            var mode = EffectBundleUiHelper.GetString(Parameters, "AccuracyMode", "Accurate");
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
                 "Classic Overlay Mixture\nblends each frame onto the layer below using alpha compositing.", 14));
+            panel.AddPicker(
+                "AccuracyMode",
+                EffectBundleUiHelper.L("ClassicOverlay_AccuracyMode", "Accuracy Mode"),
+                AccuracyModeOptions,
+                Array.IndexOf(AccuracyModeOptions, mode) >= 0 ? mode : "Accurate");
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
+            if (args.Id == "AccuracyMode")
+            {
+                var value = args.Value?.ToString();
+                if (value != null && Array.IndexOf(AccuracyModeOptions, value) >= 0)
+                {
+                    Parameters["AccuracyMode"] = value;
+                }
+            }
             return Parameters;
         }
 

@@ -58,7 +58,7 @@ public partial class EditSettingPage : ContentPage
                     return;
                 }
                 var accelDevice = devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices[0]);
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
+                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
                 LoadTextPreview = true;
             }
         }
@@ -294,15 +294,17 @@ public partial class EditSettingPage : ContentPage
                         b.AddSeparator();
                         var s = e.Value;
                         var sample = s.SampleText ?? "AaBbYyZz";
+#pragma warning disable CS0618 // 类型或成员已过时
                         TextClip t = new TextClip
                         {
-                            Id = s.StyleId,
+                            Id = Guid.Parse(s.StyleId),
                             Name = s.StyleId,
-                            TextEntries = new List<TextClipEntry>
+                            TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                             {
                                 e.Value with { text = sample }
-                            }
+                            })
                         };
+#pragma warning restore CS0618 // 类型或成员已过时
 
 
                         var fs = s.fontSize > 0 ? s.fontSize : 36;
@@ -406,6 +408,10 @@ public partial class EditSettingPage : ContentPage
 
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddSwitch("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"), null)
+            .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
+                c => c.AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
+                      .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
+            )
             .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"), 
                 c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"), null)
                       .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")

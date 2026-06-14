@@ -1,6 +1,7 @@
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
@@ -24,7 +25,6 @@ public partial class RenderSettingPage : ContentPage
     Dictionary<EffectImplementType, string> LocalizedImplementTypes = new Dictionary<EffectImplementType, string>
     {
             { EffectImplementType.NotSpecified , SettingLocalizedResources.RenderEffectImplement_NotSpecified },
-            { EffectImplementType.ImageSharp , SettingLocalizedResources.RenderEffectImplement_ImageSharp },
             { EffectImplementType.HwAcceleration , SettingLocalizedResources.RenderEffectImplement_HwAcceleration },
             { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
     };
@@ -34,6 +34,14 @@ public partial class RenderSettingPage : ContentPage
         {SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan, "vulkan" },
         {SettingLocalizedResources.Render_AndroidHwAccleImpType_OpenGL, "opengl" },
 
+    };
+
+    Dictionary<string, string> AntiAliasModeMapping = new Dictionary<string, string>
+    {
+        { SettingLocalizedResources.Render_AntiAliasMode_None, "none" },
+        { "SSAA 2x", "ssaa2x" },
+        { "SSAA 4x", "ssaa4x" },
+        { "SSAA 8x", "ssaa8x" },
     };
 
     string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
@@ -123,12 +131,22 @@ public partial class RenderSettingPage : ContentPage
             .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "60"), null)
             .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
             .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
+            .AddSeparator()
+            .AppendWhen(!IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true), p => p.AddSlider("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, 1, 64, (int)GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8)))
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null))
+            .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x"), null)
+            .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_ComposeOption, SettingLocalizedResources.Render_ComposeOption_Desc))
+            .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider, IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
+            .AddCheckbox("render_enableHwAccelRasterizer", SettingLocalizedResources.Render_EnableHwAccelRasterizer, IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true))
+            .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
+            .AddCheckbox("render_enableBatchProcess", SettingLocalizedResources.Render_EnableBatchProcess, IsBoolSettingTrueOrDefault("render_enableBatchProcess", true))
             .AddSeparator()
             .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
-            .AddSeparator()
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
-            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
+            .AddCheckbox("render_prepareInWorkerThreads", SettingLocalizedResources.Render_PrepareInWorkerThreads, IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true))
+            .AddCheckbox("render_allowEffectOutOfOrder", SettingLocalizedResources.Render_AllowEffectOutOfOrder, IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true))
+            .AppendWhen(IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true) && PluginManager.LoadedPlugins.Any(c => !c.Key.StartsWith("projectFrameCut.Render")), p => p.AddText(new Label { Text = SettingLocalizedResources.Render_PrepareInWorkerThreads_3rdPluginWarn, TextColor = Colors.Yellow }))
+            .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
             .AddSeparator();
 
 #if WINDOWS
@@ -150,7 +168,7 @@ public partial class RenderSettingPage : ContentPage
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AppendWhen(AcceleratorInfos?.Count() < 1, (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
-            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
+            .AddCheckbox("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
             .AppendWhen(AcceleratorInfos?.Count(c => c.Type != "CPU") < 2, (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
             .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out result) ? accels[result] : "", null);
 
@@ -162,13 +180,13 @@ public partial class RenderSettingPage : ContentPage
                 rootPPB
                     .AddSeparator()
                     .AddText(SettingLocalizedResources.Render_SelectAccel_MultiAccel, fontSize: 16)
-                    .AddSwitch("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
+                    .AddCheckbox("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
 
-                for (int i = 1; i < AcceleratorInfos.Length; i++) //nobody wants to use CPU accel
+                for (int i = 0; i < AcceleratorInfos.Length; i++) //nobody wants to use CPU accel
                 {
-                    var key = $"accel_multi_{i}";
+                    var key = $"accel_multi_{i + 1}";
                     var def = bool.TryParse(GetSetting(key, "false"), out var v) ? v : false;
-                    rootPPB.AddSwitch(key, $"{AcceleratorInfos[i].Type}: {AcceleratorInfos[i].name}", def, null);
+                    rootPPB.AddCheckbox(key, $"{AcceleratorInfos[i].Type}: {AcceleratorInfos[i].name}", def, null);
                 }
             }
         }
@@ -179,15 +197,22 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
+        rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
+            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
+            .AddSeparator();
 
 
         if (showMoreOpts)
         {
             rootPPB
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
+                .AddCheckbox("render_forceImpType_ForceHwAccel", SettingLocalizedResources.Render_ForceImpType_ForceHwAccel, IsBoolSettingTrue("render_forceImpType_ForceHwAccel"), null)
+                .AddCheckbox("render_forceImpType_ForceIPicture", SettingLocalizedResources.Render_ForceImpType_ForceIPicture, IsBoolSettingTrue("render_forceImpType_ForceIPicture"), null)
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
-                .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
-                .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric);
+                .AddCheckbox("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
+                .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric)
+                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc);
 
         }
         else
@@ -236,7 +261,7 @@ public partial class RenderSettingPage : ContentPage
                         var idxStr = str.Substring(str.IndexOf('#') + 1, str.IndexOf(':') - str.IndexOf('#') - 1);
                         if (uint.TryParse(idxStr, out var result))
                         {
-                            WriteSetting("accel_DeviceId", result.ToString());
+                            WriteSetting("accel_DeviceId", (result + 1).ToString());
                         }
                     }
                     return;
@@ -279,10 +304,10 @@ public partial class RenderSettingPage : ContentPage
                     {
                         // write this individual switch
                         WriteSetting(args.Id, args.Value?.ToString() ?? "false");
+                        var selected = new List<int>();
 
                         if (AcceleratorInfos != null && AcceleratorInfos.Length > 0)
                         {
-                            var selected = new List<int>();
                             for (int i = 0; i < AcceleratorInfos.Length; i++)
                             {
                                 if (bool.TryParse(GetSetting($"accel_multi_{i}", "false"), out var v) && v) selected.Add(i);
@@ -291,12 +316,20 @@ public partial class RenderSettingPage : ContentPage
                             else if (selected.Count == AcceleratorInfos.Length) WriteSetting("accel_MultiDeviceID", "all");
                             else WriteSetting("accel_MultiDeviceID", string.Join(',', selected));
                         }
+
+                        Dispatcher.Dispatch(() =>
+                        {
+                            if (rootPPB?.Components?["selectAllAccels"] is Microsoft.Maui.Controls.Switch selectAllSwitch)
+                            {
+                                selectAllSwitch.IsToggled = selected.Count == AcceleratorInfos?.Length;
+                            }
+                        });
                     }
                     catch (Exception ex)
                     {
                         Log(ex);
                     }
-                    BuildPPB();
+
                     return;
                 case "selectAllAccels":
                     try
@@ -322,7 +355,7 @@ public partial class RenderSettingPage : ContentPage
 
                     }
                     catch (Exception ex) { Log(ex); }
-                    BuildPPB();
+                    //BuildPPB();
                     return;
                 case "render_GCOption":
                     {
@@ -375,13 +408,52 @@ public partial class RenderSettingPage : ContentPage
                         }
                         return;
                     }
+                case "render_forceImpType_ForceHwAccel":
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                        
+                        if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel") && IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
+                        {
+                            WriteSetting("render_forceImpType_ForceIPicture", "False");
+                            BuildPPB();
+                        }
+
+                        break;
+                    }
+                case "render_forceImpType_ForceIPicture":
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+
+                        if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel") && IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
+                        {
+                            WriteSetting("render_forceImpType_ForceHwAccel", "False");
+                            BuildPPB();
+                        }
+                        break;
+                    }
+                case "render_enableThreadAffinity":
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
+                    BuildPPB();
+                    break;
+                case "render_preferredAntiAliasMode":
+                    {
+                        var mode = AntiAliasModeMapping.TryGetValue(args.Value as string, out var aaMode) ? aaMode : "ssaa4x";
+                        WriteSetting(args.Id, mode);
+                        break;
+                    }
+                default:
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
+                    break;
 
             }
 
-            //if (args.Value != null)
-            //{
-            //    WriteSetting(args.Id, args.Value?.ToString() ?? "");
-            //}
+
         }
         catch (Exception ex)
         {

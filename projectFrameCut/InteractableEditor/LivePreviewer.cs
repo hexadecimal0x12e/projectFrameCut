@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls.PlatformConfiguration;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -8,13 +9,12 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
-using SixLabors.ImageSharp.Formats.Png;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using IPicture = projectFrameCut.Shared.IPicture;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.LivePreview
 {
@@ -72,7 +72,7 @@ namespace projectFrameCut.LivePreview
                 autoCenterImplicitClip: true,
                 projectRelativeWidth: ProjectRelativeWidth,
                 projectRelativeHeight: ProjectRelativeHeight);
-            pic.SaveAsPng8bpp(destPath, encoder);
+            pic.ToBitPerPixel(8).SaveToPng(destPath);
             return destPath;
         }
 
@@ -101,11 +101,13 @@ namespace projectFrameCut.LivePreview
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            if (json.Clips is null) throw new NullReferenceException("Failed to get ClipDraftDTOs.");
+            var elements = json.Clips.Select(c => JsonSerializer.SerializeToElement(c)).ToList();
 
             var clipsList = new List<IClip>();
+            var reinitTasks = new List<Task>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in elements)
             {
                 if (clip.TryGetProperty("ClipType", out var clipTypeProp)
                     && clipTypeProp.ValueKind == JsonValueKind.Number
@@ -148,10 +150,11 @@ namespace projectFrameCut.LivePreview
                         }
                     }
                 }
-                await Task.Run(() => clipInstance.ReInit(8));
                 clipsList.Add(clipInstance);
-
+                reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
             }
+
+            await Task.WhenAll(reinitTasks);
 
             Clips = clipsList.ToArray();
             SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();
@@ -223,7 +226,7 @@ namespace projectFrameCut.LivePreview
             return audDestPath;
         }
 
-        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
+        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)
         {
 
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
@@ -257,11 +260,15 @@ namespace projectFrameCut.LivePreview
             renderer.OnProgressChanged += OnProgressChanged;
             await renderer.GoRender(token);
             renderer.OnProgressChanged -= OnProgressChanged;
-            audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
+
+            if (includeAudio)
+            {
+                audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
+            }
             builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
             builder.Dispose();
 
-            if (!string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
+            if (includeAudio && !string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
             {
                 await Task.Run(() => VideoAudioMuxer.MuxFromFiles(destPath, audDestPath, resultPath, true), token);
                 File.Delete(audDestPath);
@@ -275,11 +282,6 @@ namespace projectFrameCut.LivePreview
             LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {resultPath}");
             return resultPath;
         }
-
-        private static PngEncoder encoder = new()
-        {
-            BitDepth = PngBitDepth.Bit8,
-        };
 
         private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
         {

@@ -1,10 +1,9 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -19,8 +18,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => false;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public string TypeName => "MaskApplier";
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
@@ -39,19 +37,10 @@ namespace projectFrameCut.Render.Effect
                 return frame;
             }
 
-            return EffectHelper.ApplyMaskPicture(frame, maskPic, "MaskApplier", typeof(MaskApplier));
+            return MaskEffect.Process(frame, maskPic);
         }
 
         public bool IsValueValid(object value) => value is BitMaskPicture;
-
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
-        {
-            if (source is not BitMaskPicture maskPic)
-            {
-                throw new ArgumentException("Source is not a valid mask.", nameof(source));
-            }
-            return new MaskApplierProcessStep(maskPic);
-        }
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
@@ -67,49 +56,6 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Mask";
     }
 
-    public class MaskApplierProcessStep : IPictureProcessStep
-    {
-        private readonly BitMaskPicture _mask;
-        private TimeSpan? _elapsed;
-
-        public string Name => "MaskApplier";
-        public Dictionary<string, object?> Properties { get; set; } = new();
-
-        public MaskApplierProcessStep(BitMaskPicture mask)
-        {
-            _mask = mask;
-            Properties = new Dictionary<string, object?>
-            {
-                { "MaskWidth", mask.Width },
-                { "MaskHeight", mask.Height }
-            };
-        }
-
-        public IPicture Process(IPicture source)
-        {
-            var sw = Stopwatch.StartNew();
-            var result = EffectHelper.ApplyMaskPicture(source, _mask, "MaskApplier", typeof(MaskApplierProcessStep));
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
-            return result;
-        }
-
-        public PictureProcessStack GetProcessStack() => new PictureProcessStack
-        {
-            Elapsed = _elapsed,
-            OperationDisplayName = "MaskApplier",
-            Operator = typeof(MaskApplierProcessStep),
-            ProcessingFuncStackTrace = new StackTrace(true),
-            StepUsed = this,
-            Properties = new Dictionary<string, object>
-            {
-                { "MaskWidth", _mask.Width },
-                { "MaskHeight", _mask.Height }
-            }
-        };
-    }
-
     public class MaskApplierFactory : IBindableEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -118,7 +64,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded => MaskApplier.ParametersNeeded;
         public Dictionary<string, string> ParametersType => MaskApplier.ParametersType;
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
 
         public string? ID { get; set; }
         public string? BindedInputID { get; set; }
@@ -136,21 +82,17 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
             }
 
-            if (parameters != null)
-            {
-                return new MaskApplier { ImplementType = implementType };
-            }
             return new MaskApplier { ImplementType = implementType };
         }
 
         public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
-            return new MaskApplier { ImplementType = EffectImplementType.ImageSharp };
+            return new MaskApplier { ImplementType = EffectImplementType.IPicture };
         }
 
         public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
-            return new MaskApplier { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.ImageSharp : implementType };
+            return new MaskApplier { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType };
         }
     }
 }

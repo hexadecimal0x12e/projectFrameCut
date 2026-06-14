@@ -22,6 +22,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Name of the project.
         /// </summary>
         public string? ProjectName { get; set; }
+
         /// <summary>
         /// Determine the version of APIBase while the draft is saved.
         /// </summary>
@@ -34,6 +35,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Determine what plugins used in this project.
         /// </summary>
         public List<string> PluginUsed { get; set; } = new List<string>();
+
         /// <summary>
         /// The relative width of the draft.
         /// </summary>
@@ -58,24 +60,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Gets or sets the file system path to the thumbnail image associated with the item.
         /// </summary>
         public string? ThumbPath { get; set; } = null;
-        /// <summary>
-        /// The save slot indicator. -1 means unknown.
-        /// </summary>
-        [Obsolete("Use LastSnapshotID and SnapshotIDMapping instead.")]
-        public int SaveSlotIndicator = -1;
+
         /// <summary>
         /// Get or set the last changed time of the project.
         /// </summary>
         public DateTime? LastChanged { get; set; }
         /// <summary>
+        /// Get or set the last known draft snapshot's ID.
+        /// </summary>
+        public Guid LastSnapshotID { get; set; } = Guid.Empty;
+        /// <summary>
         /// Get whether the project was normally exited.
         /// </summary>
         public bool NormallyExited { get; set; } = false;
 
-        /// <summary>
-        /// Get or set the last known draft snapshot's ID.
-        /// </summary>
-        public Guid LastSnapshotID { get; set; } = Guid.Empty;
+
 
         /// <summary>
         /// Get a dictionary of linked-list for a mapping between snapshot IDs and their previous/next snapshot IDs. Used in branch/edition management.
@@ -272,7 +271,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string FromPlugin { get; set; } = string.Empty;
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string TypeName { get; set; } = string.Empty;
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; } = Guid.Empty;
         public string Name { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
         public uint SubLayerIndex { get; set; }
@@ -410,7 +409,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
             {
                 ".mp4" or ".mov" or ".avi" or ".mkv" or ".webm" => AssetType.Video,
                 ".mp3" or ".wav" or ".aac" or ".flac" or ".ogg" => AssetType.Audio,
-                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" => AssetType.Image,
+                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" or ".svg" => AssetType.Image,
                 ".ttf" or ".otf" => AssetType.Font,
                 _ => AssetType.Other
             };

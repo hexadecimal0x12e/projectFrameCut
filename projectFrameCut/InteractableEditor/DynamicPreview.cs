@@ -1,7 +1,16 @@
+using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
@@ -10,94 +19,176 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
-using Microsoft.Maui.Controls.Shapes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
-using IPicture = projectFrameCut.Shared.IPicture;
-using projectFrameCut.Asset;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using MauiPoint = Microsoft.Maui.Graphics.Point;
 using Path = System.IO.Path;
+using RenderITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using ShapesPath = Microsoft.Maui.Controls.Shapes.Path;
 
 namespace projectFrameCut.InteractableEditor;
 
-public sealed class DynamicPreview : ContentView, IDisposable
+public sealed class DynamicPreview : IDisposable
 {
-    private const double MinTextPreviewSize = 10d;
+    private const int ParallelPreparationThreshold = 2;
+    private const int MaxCachedFallbackFrames = 120;
+    private const int MaxDiskCachedFallbackFrames = 1500;
+    private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
+    private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
+    private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
+    private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
+    private static readonly IComparer<IClip> s_clipLayerComparer = Comparer<IClip>.Create(static (left, right) =>
+    {
+        var layerCompare = right.LayerIndex.CompareTo(left.LayerIndex);
+        if (layerCompare != 0)
+        {
+            return layerCompare;
+        }
 
-    public sealed record PreparedPreview(string ClipId, View? View, string? ErrorMessage, IClip? Source);
+        return right.SubLayerIndex.CompareTo(left.SubLayerIndex);
+    });
+    private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
+    private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
+    public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
 
-    private readonly ContentView _outputHost;
-    private readonly Label _placeholder;
+
+    public sealed class PreparedPreview
+    {
+        private readonly Func<View>? _viewFactory;
+        private View? _materializedView;
+
+        public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source)
+        {
+            ClipId = clipId;
+            _viewFactory = viewFactory;
+            ErrorMessage = errorMessage;
+            Source = source;
+        }
+
+        public Guid ClipId { get; }
+        public string? ErrorMessage { get; }
+        public IClip? Source { get; }
+
+        public View? View
+        {
+            get
+            {
+                if (_viewFactory is null) return null;
+                if (_materializedView is null)
+                    _materializedView = _viewFactory();
+                return _materializedView;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Intermediate result from Phase 1 (background source preparation), consumed by Phase 2 (UI-thread View building).
+    /// </summary>
+    private sealed class PreviewSourceData
+    {
+        public IClip Clip { get; init; } = null!;
+        public string? ErrorMessage { get; init; }
+
+        // Provider 直接返回的 View（SolidColorClip 创建的 BoxView、错误 Label 等无法提取 ImageSource 的情况）
+        public View? PreservedView { get; init; }
+        // dispatchable provider 制准备的图片源，Phase 2 传给 Generate 使用
+        public Drawing.Base.IPicture? PreparedPicture { get; init; }
+        // 从帧解码或 ImageSource.FromFile 获得的 ImageSource（最常用）
+        public ImageSource? FrameSource { get; init; }
+        // VectorClip 标记（实际数据在 Phase 2 从 clip 读取）
+        public bool HasVectorData { get; init; }
+        // 是否已执行全渲染回退（跳过 effect 叠加逻辑）
+        public bool UsedFullRenderFallback { get; init; }
+        // 已启用效果列表（Phase 2 叠加效果时需要）
+        public IReadOnlyList<IEffect>? EnabledEffects { get; init; }
+    }
+
     private IClip[]? _clips;
     private LivePreviewer? _previewer;
-    private uint _currentFrame;
     private long _renderVersion;
     private int _viewportWidth;
     private int _viewportHeight;
     private readonly object _clipsGate = new();
     private int _activePreviewOps;
     private readonly List<IClip[]> _pendingDisposeClipBatches = new();
+    private readonly ConcurrentDictionary<string, byte> _sourceColorFallbackLogKeys = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _missingProviderFallbackLogKeys = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _effectFallbackLogKeys = new(StringComparer.Ordinal);
+    private long _prepareVersion;
+    private readonly object _preparedOverlayCacheGate = new();
+    private IReadOnlyList<PreparedPreview> _lastPreparedOverlayPreviews = [];
 
     public DynamicPreview()
     {
-        _placeholder = new Label
-        {
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalTextAlignment = TextAlignment.Center,
-            VerticalTextAlignment = TextAlignment.Center,
-            TextColor = Colors.White,
-            BackgroundColor = Color.FromArgb("#66000000"),
-            Padding = new Thickness(12, 8),
-            IsVisible = false
-        };
 
-        _outputHost = new ContentView
-        {
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            IsVisible = false
-        };
-
-        Content = new Grid
-        {
-            Children =
-            {
-                _outputHost,
-                _placeholder,
-            }
-        };
-
-        HorizontalOptions = LayoutOptions.Fill;
-        VerticalOptions = LayoutOptions.Fill;
-        InputTransparent = true;
-        IsVisible = false;
     }
-
-    public ContentView OutputView => _outputHost;
 
     public IClip[]? Clips => _clips;
 
-    public uint CurrentFrame => _currentFrame;
+    /// <summary>
+    /// When true, all effects will be rendered in the Rendering pipeline 
+    /// and then the clip will be placed in canvas.
+    /// </summary>
+    public static bool DisableEffectDynamicPreview { get; set; } = false;
 
-    public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight)
+    /// <summary>
+    /// When true, IVectorContentClip clips fall back to bitmap rasterization
+    /// instead of being converted to MAUI Path elements. Default false (vector Path mode enabled).
+    /// </summary>
+    public static bool DisableVectorPreviewPaths { get; set; } = false;
+
+    /// <summary>
+    /// Divisor for preview resolution. 1 = full resolution, 2 = half, etc.
+    /// Reduces rendering load by scaling down canvas dimensions.
+    /// </summary>
+    public int PreviewResolutionDivisor { get; set; } = 1;
+
+    public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight, CancellationToken token)
     {
-        _currentFrame = frameIndex;
-        var clipsSnapshot = AcquireClipsSnapshot();
+        var prepareVersion = Interlocked.Increment(ref _prepareVersion);
         try
         {
-            var requests = ResolveRequests(clipsSnapshot, frameIndex);
-            var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
-            var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-            return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false).ConfigureAwait(false);
+            var dimensions = ResolveDimensions(targetWidth, targetHeight, CanvasWidth, CanvasHeight);
+            return await GetFinalRequests(frameIndex, targetWidth, targetHeight, prepareVersion, dimensions.canvasWidth, dimensions.canvasHeight, token).ConfigureAwait(false);
         }
         finally
         {
             ReleaseClipsSnapshot();
         }
+    }
+
+    public (int canvasWidth, int canvasHeight) ResolveDimensions(int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight)
+    {
+        var canvasWidth = ResolveCanvasSize(CanvasWidth, _viewportWidth, targetWidth);
+        var canvasHeight = ResolveCanvasSize(CanvasHeight, _viewportHeight, targetHeight);
+        var divisor = Math.Max(1, PreviewResolutionDivisor);
+        if (divisor > 1)
+        {
+            canvasWidth = Math.Max(1, canvasWidth / divisor);
+            canvasHeight = Math.Max(1, canvasHeight / divisor);
+        }
+
+        return (canvasWidth, canvasHeight);
+    }
+
+    public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int targetWidth, int targetHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token)
+    {
+        var clipsSnapshot = AcquireClipsSnapshot();
+        var requests = ResolveRequests(clipsSnapshot, frameIndex, canvasWidth, canvasHeight);
+        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
+        if (prepared is not null)
+        {
+            return prepared;
+        }
+        if (token.IsCancellationRequested) return null!;
+        return GetCachedOverlayPreparedPreviews();
     }
 
     public async Task UpdateDraft(DraftStructureJSON json)
@@ -106,6 +197,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
         var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
         var clipsList = new List<IClip>();
+        var reinitTasks = new List<Task>();
 
         foreach (var clip in elements.Cast<JsonElement>())
         {
@@ -150,10 +242,12 @@ public sealed class DynamicPreview : ContentView, IDisposable
                     }
                 }
             }
-            await Task.Run(() => clipInstance.ReInit(8));
             clipsList.Add(clipInstance);
+            reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
         }
-        
+
+        await Task.WhenAll(reinitTasks);
+
         var newClips = clipsList.ToArray();
 
         IClip[]? batchToDispose = null;
@@ -178,6 +272,43 @@ public sealed class DynamicPreview : ContentView, IDisposable
         {
             DisposeClipBatch(batchToDispose);
         }
+
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
+    }
+
+    public void SetClips(IClip[]? clips)
+    {
+        if (clips is null)
+        {
+            return;
+        }
+
+        IClip[]? batchToDispose = null;
+        lock (_clipsGate)
+        {
+            var oldClips = _clips;
+            _clips = clips;
+            if (oldClips is not null)
+            {
+                if (_activePreviewOps > 0)
+                {
+                    _pendingDisposeClipBatches.Add(oldClips);
+                }
+                else
+                {
+                    batchToDispose = oldClips;
+                }
+            }
+        }
+
+        if (batchToDispose is not null)
+        {
+            DisposeClipBatch(batchToDispose);
+        }
+
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
     }
 
     public void SetLivePreviewer(ref LivePreviewer? previewer)
@@ -198,131 +329,76 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
     }
 
-    public async Task<bool> RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
-    {
-        _currentFrame = frameIndex;
-        var renderVersion = Interlocked.Increment(ref _renderVersion);
-        var clipsSnapshot = AcquireClipsSnapshot();
-        IReadOnlyList<PreparedPreview> prepared;
-        var viewportWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
-        var viewportHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-        try
-        {
-            var requests = ResolveRequests(clipsSnapshot, frameIndex);
-            prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true).ConfigureAwait(false);
-        }
-        finally
-        {
-            ReleaseClipsSnapshot();
-        }
-
-        if (Dispatcher.IsDispatchRequired)
-        {
-            return await Dispatcher.DispatchAsync(() => ApplyPreparedRequests(prepared, renderVersion, viewportWidth, viewportHeight, targetWidth, targetHeight));
-        }
-
-        return ApplyPreparedRequests(prepared, renderVersion, viewportWidth, viewportHeight, targetWidth, targetHeight);
-    }
-
     public void Dispose()
     {
         Interlocked.Increment(ref _renderVersion);
+        Interlocked.Increment(ref _prepareVersion);
         DisposeClips();
-        _outputHost.Content = null;
+        ResetFallbackLogs();
+        CacheOverlayPreparedPreviews([]);
     }
-
-    private async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout)
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
         if (requests.Count == 0)
         {
             return [];
         }
 
-        var preparationTasks = requests
-            .Reverse()
-            .Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout)))
-            .ToArray();
+        var orderedRequests = new PreviewRequest[requests.Count];
+        for (var i = 0; i < requests.Count; i++)
+        {
+            orderedRequests[i] = requests[requests.Count - 1 - i];
+        }
 
-        return await Task.WhenAll(preparationTasks).ConfigureAwait(false);
+        var prepared = new PreparedPreview[orderedRequests.Length];
+
+        using var semaphore = new SemaphoreSlim(s_maxPreparationParallelism);
+        var tasks = new Task[orderedRequests.Length];
+
+        for (var i = 0; i < orderedRequests.Length; i++)
+        {
+            var index = i;
+            tasks[i] = ThrottledPrepareAsync(index);
+        }
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
+        {
+            return null;
+        }
+        if (prepared.Length > 0) CacheOverlayPreparedPreviews(prepared);
+        return prepared;
+
+        async Task ThrottledPrepareAsync(int index)
+        {
+            await semaphore.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (token.IsCancellationRequested) return;
+                if (checkVersion && prepareVersion != Volatile.Read(ref _prepareVersion)) return;
+
+                prepared[index] = await Task.Run(() =>
+                    GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
+                    token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is silent — the slot stays null, semaphore released in finally.
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
     }
 
-    private bool ApplyPreparedRequests(IReadOnlyList<PreparedPreview> prepared, long renderVersion, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
+    private static int ResolveCanvasSize(double canvasSize, int cachedSize, int fallbackSize)
     {
-        if (renderVersion != Interlocked.Read(ref _renderVersion))
+        if (canvasSize > 0)
         {
-            return false;
-        }
-
-        if (prepared.Count == 0)
-        {
-            _outputHost.Content = null;
-            _outputHost.IsVisible = false;
-            _placeholder.Text = string.Empty;
-            _placeholder.IsVisible = false;
-            IsVisible = false;
-            return false;
-        }
-
-        Microsoft.Maui.Controls.Grid composite = new()
-        {
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            InputTransparent = true
-        };
-
-        var renderedCount = 0;
-        string? lastErrorMessage = null;
-
-        foreach (var result in prepared)
-        {
-            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
-            {
-                lastErrorMessage = result.ErrorMessage;
-            }
-
-            if (result.View is not Microsoft.Maui.Controls.View generatedView)
-            {
-                continue;
-            }
-
-            generatedView.ZIndex = (int)((result.Source?.LayerIndex ?? 1) * 100);
-            composite.Children.Add(generatedView);
-            renderedCount++;
-        }
-
-        Microsoft.Maui.Controls.View? finalView = null;
-        if (renderedCount == 1)
-        {
-            if (composite.Children[0] is Microsoft.Maui.Controls.View singleView)
-            {
-                finalView = singleView;
-            }
-        }
-        else if (renderedCount > 1)
-        {
-            finalView = composite as Microsoft.Maui.Controls.View;
-        }
-
-        var alignedView = BuildViewportAlignedView(finalView, viewportWidth, viewportHeight, targetWidth, targetHeight);
-        _outputHost.Content = alignedView;
-        _outputHost.IsVisible = alignedView is not null;
-        _placeholder.Text = lastErrorMessage ?? string.Empty;
-        _placeholder.IsVisible = alignedView is null && !string.IsNullOrWhiteSpace(lastErrorMessage);
-        IsVisible = alignedView is not null || _placeholder.IsVisible;
-
-        return alignedView is not null;
-    }
-
-    private static int ResolveCanvasSize(double hostSize, double selfSize, int cachedSize, int fallbackSize)
-    {
-        if (hostSize > 0)
-        {
-            return Math.Max(1, (int)Math.Round(hostSize, MidpointRounding.AwayFromZero));
-        }
-
-        if (selfSize > 0)
-        {
-            return Math.Max(1, (int)Math.Round(selfSize, MidpointRounding.AwayFromZero));
+            return Math.Max(1, (int)Math.Round(canvasSize, MidpointRounding.AwayFromZero));
         }
 
         if (cachedSize > 0)
@@ -333,46 +409,104 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return Math.Max(1, fallbackSize);
     }
 
-    private static View? BuildViewportAlignedView(View? view, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
+    private static bool TryUpdatePreviewTreeInPlace(View existing, View incoming)
     {
-        if (view is null)
+        if (ReferenceEquals(existing, incoming))
         {
-            return null;
+            return true;
         }
 
-        var logicalWidth = Math.Max(1, targetWidth);
-        var logicalHeight = Math.Max(1, targetHeight);
-        var viewportRect = CalculateAspectFitRect(Math.Max(1, viewportWidth), Math.Max(1, viewportHeight), logicalWidth, logicalHeight);
-        var scale = viewportRect.Width / logicalWidth;
-        if (double.IsNaN(scale) || double.IsInfinity(scale) || scale <= 0)
+        if (existing.GetType() != incoming.GetType())
         {
-            scale = 1d;
+            return false;
         }
 
-        var logicalCanvas = new Grid
-        {
-            WidthRequest = logicalWidth,
-            HeightRequest = logicalHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true
-        };
-        logicalCanvas.Children.Add(view);
+        ApplySharedViewState(existing, incoming);
 
-        return new ContentView
+        switch (existing)
         {
-            Content = logicalCanvas,
-            WidthRequest = logicalWidth,
-            HeightRequest = logicalHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            AnchorX = 0,
-            AnchorY = 0,
-            Scale = scale,
-            TranslationX = viewportRect.X,
-            TranslationY = viewportRect.Y
-        };
+            case Image existingImage when incoming is Image incomingImage:
+                existingImage.Aspect = incomingImage.Aspect;
+                existingImage.Source = incomingImage.Source;
+                return true;
+            case ContentView existingContent when incoming is ContentView incomingContent:
+                if (incomingContent.Content is null)
+                {
+                    existingContent.Content = null;
+                    return true;
+                }
+
+                if (existingContent.Content is not View existingContentChild
+                    || incomingContent.Content is not View incomingContentChild)
+                {
+                    return false;
+                }
+
+                return TryUpdatePreviewTreeInPlace(existingContentChild, incomingContentChild);
+            case Grid existingGrid when incoming is Grid incomingGrid:
+                if (existingGrid.Children.Count != incomingGrid.Children.Count)
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < existingGrid.Children.Count; i++)
+                {
+                    if (existingGrid.Children[i] is not View existingGridChild
+                        || incomingGrid.Children[i] is not View incomingGridChild
+                        || !TryUpdatePreviewTreeInPlace(existingGridChild, incomingGridChild))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static void ApplySharedViewState(View target, View source)
+    {
+        target.WidthRequest = source.WidthRequest;
+        target.HeightRequest = source.HeightRequest;
+        target.MinimumWidthRequest = source.MinimumWidthRequest;
+        target.MinimumHeightRequest = source.MinimumHeightRequest;
+        target.MaximumWidthRequest = source.MaximumWidthRequest;
+        target.MaximumHeightRequest = source.MaximumHeightRequest;
+        target.HorizontalOptions = source.HorizontalOptions;
+        target.VerticalOptions = source.VerticalOptions;
+        target.Margin = source.Margin;
+        target.InputTransparent = source.InputTransparent;
+        target.AnchorX = source.AnchorX;
+        target.AnchorY = source.AnchorY;
+        target.Scale = source.Scale;
+        target.ScaleX = source.ScaleX;
+        target.ScaleY = source.ScaleY;
+        target.TranslationX = source.TranslationX;
+        target.TranslationY = source.TranslationY;
+        target.Rotation = source.Rotation;
+        target.RotationX = source.RotationX;
+        target.RotationY = source.RotationY;
+        target.Opacity = source.Opacity;
+        target.IsVisible = source.IsVisible;
+        target.ZIndex = source.ZIndex;
+        target.AutomationId = source.AutomationId;
+    }
+
+    public void CacheOverlayPreparedPreviews(IReadOnlyList<PreparedPreview> prepared)
+    {
+        lock (_preparedOverlayCacheGate)
+        {
+            _lastPreparedOverlayPreviews = prepared.Count == 0 ? [] : prepared.ToArray();
+        }
+    }
+
+    private IReadOnlyList<PreparedPreview> GetCachedOverlayPreparedPreviews()
+    {
+        lock (_preparedOverlayCacheGate)
+        {
+            return _lastPreparedOverlayPreviews;
+        }
     }
 
     private static Rect CalculateAspectFitRect(int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
@@ -407,96 +541,377 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return new Rect(offX, offY, drawW, drawH);
     }
 
-    private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout)
+    private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, CancellationToken token)
     {
-        var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message, applyClipTargetLayout);
-        return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
+        var sourceData = GenerateClipPreviewSource(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, token);
+        if (sourceData is null)
+        {
+            return new PreparedPreview(request.Clip.Id, null, "Failed to generate preview source.", request.Clip);
+        }
+
+        return new PreparedPreview(request.Clip.Id, () =>
+            BuildClipPreviewView(sourceData, request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
+            sourceData.ErrorMessage, request.Clip);
     }
 
-    private IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex)
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex, int canvasWidth = 0, int canvasHeight = 0)
     {
         if (clips is null || clips.Count == 0)
         {
             return [];
         }
 
-        return clips
-            .Where(c => c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
-            .Where(c => c.ContainsFrame(frameIndex))
-            .OrderByDescending(c => c.LayerIndex)
-            .ThenByDescending(c => c.SubLayerIndex)
-            .Select(clip => new PreviewRequest(clip, ResolveProvider(clip)))
-            .ToArray();
-    }
-
-    private View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message, bool applyClipTargetLayout)
-    {
-        message = null;
-        var clip = request.Clip;
-        if (clip is null)
+        var visibleClips = new List<IClip>(clips.Count);
+        for (var i = 0; i < clips.Count; i++)
         {
-            return null;
+            var clip = clips[i];
+            if (clip.ClipType == ClipMode.AudioClip || clip.ClipType == ClipMode.MarkingClip)
+            {
+                continue;
+            }
+
+            if (!clip.ContainsFrame(frameIndex))
+            {
+                continue;
+            }
+
+            visibleClips.Add(clip);
         }
 
-        var sourceColorAdjustEffects = clip.EffectsInstances?
-            .Where(e => e.Enabled)
-            .OfType<IColorAdjustEffect>()
-            .OrderBy(e => e.Index)
-            .ToArray() ?? Array.Empty<IColorAdjustEffect>();
-
-        View? generatedView = null;
-        var usedFullRenderFallback = false;
-        if (sourceColorAdjustEffects.Length == 0 && request.Provider is not null && request.Provider.IsAvailable(clip))
+        if (visibleClips.Count == 0)
         {
-            try
+            return [];
+        }
+
+        var clipIndex = new Dictionary<Guid, IClip>(clips.Count);
+        for (var i = 0; i < clips.Count; i++)
+        {
+            var sourceClip = clips[i];
+            if (sourceClip.Id != Guid.Empty)
             {
-                generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                clipIndex[sourceClip.Id] = sourceClip;
             }
-            catch (Exception ex)
+        }
+
+        visibleClips.Sort(s_clipLayerComparer);
+        var requests = new PreviewRequest[visibleClips.Count];
+        for (var i = 0; i < visibleClips.Count; i++)
+        {
+            var clip = visibleClips[i];
+            if (clip is TransformContainer transformClip)
             {
-                message = $"Failed to generate dynamic preview: {ex.Message}";
+                BindTransformRuntimeSources(transformClip, clipIndex);
+            }
+
+            if (clip is TextClip textClip)
+            {
+                var styleProvider = ResolveTextClipStyleProvider(clip);
+                if (styleProvider is not null)
+                {
+                    var savedParams = ReadTextStyleParameters(clip.ExtraData);
+                    if (savedParams is not null)
+                    {
+                        styleProvider.Parameters = savedParams;
+                    }
+
+                    clip.ExtraData ??= new Dictionary<string, object>(StringComparer.Ordinal);
+                    clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
+                    var resolvedEntries = TextMeasureHelper.ResolveEntries(textClip);
+                    if (resolvedEntries.Count == 0)
+                    {
+                        var entries = styleProvider.BuildEntries();
+                        if (entries.Length > 0)
+                        {
+                            var rebuiltEntries = new List<TextEntry>(entries);
+                            clip.ExtraData["TextEntries"] = rebuiltEntries;
+                            resolvedEntries = rebuiltEntries;
+                        }
+                    }
+
+                    if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0
+                        && canvasWidth > 0 && canvasHeight > 0)
+                    {
+                        if (resolvedEntries.Count > 0)
+                        {
+                            var bounds = TextMeasureHelper.MeasureBounds(textClip);
+                            textClip.TargetX = (int)Math.Round(bounds.X);
+                            textClip.TargetY = (int)Math.Round(bounds.Y);
+                            textClip.TargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
+                            textClip.TargetHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height));
+                            // Shift entries to clip-local space so the layout canvas
+                            // (TargetWidth × TargetHeight) matches the coordinate system.
+                            ShiftEntriesToClipLocal(resolvedEntries, textClip.TargetX, textClip.TargetY);
+                        }
+                        else
+                        {
+                            var rect = styleProvider.GetViewRect(canvasWidth, canvasHeight);
+                            if (!rect.IsDelta)
+                            {
+                                textClip.TargetX = rect.TargetX;
+                                textClip.TargetY = rect.TargetY;
+                                textClip.TargetWidth = Math.Max(1, rect.TargetWidth);
+                                textClip.TargetHeight = Math.Max(1, rect.TargetHeight);
+                            }
+                        }
+                    }
+                }
+                else if (textClip.TargetWidth <= 0 && textClip.TargetHeight <= 0)
+                {
+                    var bounds = TextMeasureHelper.MeasureBounds(textClip);
+                    if (bounds.Width > 0 && bounds.Height > 0)
+                    {
+                        textClip.TargetX = (int)bounds.X;
+                        textClip.TargetY = (int)bounds.Y;
+                        textClip.TargetWidth = (int)Math.Ceiling(bounds.Width);
+                        textClip.TargetHeight = (int)Math.Ceiling(bounds.Height);
+                        // Shift entries to clip-local space so the layout canvas
+                        // (TargetWidth × TargetHeight) matches the coordinate system.
+                        var rawEntries = TextMeasureHelper.ResolveEntries(textClip);
+                        if (rawEntries.Count > 0)
+                            ShiftEntriesToClipLocal(rawEntries, textClip.TargetX, textClip.TargetY);
+                    }
+                }
+            }
+
+            requests[i] = new PreviewRequest(clip, ResolveProvider(clip));
+        }
+
+        return requests;
+    }
+
+    private static void BindTransformRuntimeSources(TransformContainer transformClip, IReadOnlyDictionary<Guid, IClip> clipIndex)
+    {
+        if (transformClip.ExtraData is null || transformClip.Transform is not RenderITransform transform)
+        {
+            return;
+        }
+
+        if (clipIndex.TryGetValue(transform.BindedLeftClip, out var leftClip))
+        {
+            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.LeftClip] = leftClip;
+        }
+        else
+        {
+            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.LeftClip);
+        }
+
+        if (clipIndex.TryGetValue(transform.BindedRightClip, out var rightClip))
+        {
+            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.RightClip] = rightClip;
+        }
+        else
+        {
+            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.RightClip);
+        }
+    }
+
+    private PreviewSourceData? GenerateClipPreviewSource(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
+    {
+        var clip = request.Clip;
+        if (clip is null) return null;
+
+        var enabledEffects = GetEnabledEffectsSorted(clip.EffectsInstances);
+        List<IColorAdjustEffect>? sourceColorAdjustEffects = null;
+        for (var i = 0; i < enabledEffects.Length; i++)
+        {
+            if (token.IsCancellationRequested) return null;
+            if (enabledEffects[i] is IColorAdjustEffect colorAdjustEffect)
+            {
+                sourceColorAdjustEffects ??= new List<IColorAdjustEffect>(enabledEffects.Length);
+                sourceColorAdjustEffects.Add(colorAdjustEffect);
+            }
+        }
+        if (token.IsCancellationRequested) return null;
+
+        var willUseEffectFallback = DisableEffectDynamicPreview && enabledEffects.Length > 0;
+
+        View? preservedView = null;
+        ImageSource? frameSource = null;
+        IPicture? preparedPicture = null;
+        bool hasVectorData = false;
+        bool usedFullRenderFallback = false;
+        string? errorMessage = null;
+
+        if (willUseEffectFallback)
+        {
+            LogOnce(_effectFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
+        }
+        else if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
+        {
+            if (clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
+            {
+                // Vector 路径：Phase 1 只读数据，Phase 2 创建 MAUI Path
+                hasVectorData = true;
+            }
+            else if (request.Provider.IsPrepareGenerateDispatchable)
+            {
+                try
+                {
+                    preparedPicture = request.Provider.PrepareSource(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, token).GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = $"Failed to prepare preview source: {ex.Message}";
+                }
+            }
+            else
+            {
+                try
+                {
+                    var projectRelativeWidth = _previewer?.ProjectRelativeWidth > 0 ? _previewer.ProjectRelativeWidth : canvasWidth;
+                    var projectRelativeHeight = _previewer?.ProjectRelativeHeight > 0 ? _previewer.ProjectRelativeHeight : canvasHeight;
+                    DynamicPreviewRenderContext.Set(new DynamicPreviewRenderContext.State(
+                        Math.Max(1, projectRelativeWidth),
+                        Math.Max(1, projectRelativeHeight),
+                        Math.Max(1, targetWidth),
+                        Math.Max(1, targetHeight)));
+                    var providerView = request.Provider.Generate(clip, null, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+                    if (providerView is Image providerImage && providerImage.Source is not null)
+                    {
+                        // 提取 ImageSource，在 Phase 2 于 UI 线程重新创建 Image
+                        frameSource = providerImage.Source;
+                    }
+                    else
+                    {
+                        // 非 Image 控件（BoxView、Label 等）保留原 View
+                        preservedView = providerView;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = $"Failed to generate dynamic preview: {ex.Message}";
+                }
+                finally
+                {
+                    DynamicPreviewRenderContext.Set(null);
+                }
             }
         }
         else
         {
-            if (sourceColorAdjustEffects.Length > 0)
+            if (sourceColorAdjustEffects is { Count: > 0 })
             {
-                Log($"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
+                LogOnce(_sourceColorFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
             }
             else
             {
-                Log($"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
+                LogOnce(_missingProviderFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
             }
 
-            var useFullRenderFallback = _previewer is not null && sourceColorAdjustEffects.Length == 0;
-            generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback, sourceColorAdjustEffects);
-            usedFullRenderFallback = useFullRenderFallback;
+            // GenerateFrameFallbackView 返回的是 Image View，这里只取 ImageSource
+            var fallbackView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, fullRender: false, sourceColorAdjustEffects, token);
+            if (fallbackView is Image fallbackImage && fallbackImage.Source is not null)
+            {
+                frameSource = fallbackImage.Source;
+            }
+            else
+            {
+                preservedView = fallbackView;
+            }
         }
+        if (token.IsCancellationRequested) return null;
 
-        if (generatedView is null)
+        // willUseEffectFallback 路径：在后台线程做全部渲染（包含帧读取），只保留 ImageSource
+        if (willUseEffectFallback)
         {
+            var fallbackView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+            if (fallbackView is Image fbImage && fbImage.Source is not null)
+            {
+                frameSource = fbImage.Source;
+            }
+            else
+            {
+                preservedView = fallbackView;
+            }
+            usedFullRenderFallback = true;
+        }
+        else if (preservedView is null && frameSource is null && !hasVectorData)
+        {
+            // 没有任何结果时尝试 fallback
             try
             {
-                generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex);
+                var fallbackView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, token: token);
+                if (fallbackView is Image fbImage && fbImage.Source is not null)
+                {
+                    frameSource = fbImage.Source;
+                }
+                else
+                {
+                    preservedView = fallbackView;
+                }
             }
             catch (Exception ex)
             {
-                message = $"Failed to render fallback frame: {ex.Message}";
-                return null;
+                errorMessage = $"Failed to render fallback frame: {ex.Message}";
+                return new PreviewSourceData
+                {
+                    Clip = clip,
+                    ErrorMessage = errorMessage,
+                    EnabledEffects = enabledEffects,
+                };
             }
         }
 
-        if (generatedView is null)
+        return new PreviewSourceData
         {
-            return null;
+            Clip = clip,
+            ErrorMessage = errorMessage,
+            PreservedView = preservedView,
+            PreparedPicture = preparedPicture,
+            FrameSource = frameSource,
+            HasVectorData = hasVectorData,
+            EnabledEffects = enabledEffects,
+            UsedFullRenderFallback = usedFullRenderFallback,
+        };
+    }
+
+    /// <summary>
+    /// Phase 2: 在 UI 线程上从 PreviewSourceData 创建 MAUI View，叠加效果并应用布局。
+    /// </summary>
+    private View BuildClipPreviewView(PreviewSourceData source, PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout, CancellationToken token)
+    {
+        var clip = source.Clip;
+        var enabledEffects = source.EnabledEffects ?? [];
+
+        View generatedView;
+        if (source.PreparedPicture is not null && request.Provider is not null)
+        {
+            generatedView = request.Provider.Generate(clip, source.PreparedPicture, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+        }
+        else if (source.FrameSource is not null)
+        {
+            generatedView = new Image
+            {
+                Source = source.FrameSource,
+                Aspect = Aspect.Fill,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+            };
+        }
+        else if (source.PreservedView is not null)
+        {
+            generatedView = source.PreservedView;
+        }
+        else if (source.HasVectorData && clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
+        {
+            generatedView = BuildVectorPreviewView(vectorClip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
+        }
+        else
+        {
+            // No data to build a view from
+            return null!;
         }
 
-        if (clip.EffectsInstances?.Any() == true && !usedFullRenderFallback)
+        if (token.IsCancellationRequested) return null!;
+
+        // 叠加效果（effect stacking）
+        bool usedFullRenderFallback = source.UsedFullRenderFallback;
+        if (enabledEffects.Count > 0 && !usedFullRenderFallback && !DisableEffectDynamicPreview)
         {
-            foreach (var effect in clip.EffectsInstances
-                .Where(e => e.Enabled)
-                .OrderBy(e => e.Index))
+            for (var i = 0; i < enabledEffects.Count; i++)
             {
+                var effect = enabledEffects[i];
                 if (effect is IColorAdjustEffect || effect is IClipPositionProvider || effect is IContinuousClipPositionProvider)
                 {
                     continue;
@@ -505,60 +920,52 @@ public sealed class DynamicPreview : ContentView, IDisposable
                 var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
                 if (isLegacyLayoutEffect)
                 {
-                    // In prepared-preview mode, InteractableEditor owns clip placement/size.
-                    // Applying legacy internal place/resize here causes double layout scaling.
-                    if (!applyClipTargetLayout)
-                    {
-                        continue;
-                    }
-
-                    if (HasExplicitTargetRect(clip))
-                    {
-                        continue;
-                    }
+                    if (!applyClipTargetLayout) continue;
+                    if (HasExplicitTargetRect(clip)) continue;
                 }
                 var provider = ResolveEffectProvider(effect, generatedView.GetType());
-                if (provider?.IsAvailable(effect, generatedView.GetType()) ?? false)
+                if (provider is not null && IsEffectProviderAvailable(provider, effect, generatedView.GetType()))
                 {
-                    generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
+                    float previewProgress;
+                    if (effect is IContinuousEffect c && c.IsScoped)
+                    {
+                        int span = c.EndPoint - c.StartPoint;
+                        previewProgress = span > 0 ? Math.Clamp(((float)frameIndex - c.StartPoint) / span, 0f, 1f) : 1f;
+                    }
+                    else
+                    {
+                        float effectDuration = clip.GetEffectiveDuration();
+                        previewProgress = effectDuration > 0
+                            ? Math.Clamp(((float)frameIndex - clip.StartFrame) / effectDuration, 0f, 1f)
+                            : 1f;
+                    }
+                    generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex, previewProgress);
                 }
                 else
                 {
-                    Log($"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using frame fallback.");
-                    var useFullRenderFallback = _previewer is not null;
-                    generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex, useFullRenderFallback);
-                    usedFullRenderFallback = useFullRenderFallback;
+                    var effectKey = $"{clip.Id}:{effect.TypeName}:{effect.Name}";
+                    LogOnce(_effectFallbackLogKeys, effectKey, $"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using clip-local fallback.");
+                    generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
+                    usedFullRenderFallback = true;
                     break;
                 }
             }
         }
 
-        if (generatedView is null)
-        {
-            return null;
-        }
+        if (token.IsCancellationRequested) return null!;
 
         generatedView.AutomationId ??= $"clip={clip.ClipType},id={clip.Id}";
 
-        if (!applyClipTargetLayout)
-        {
-            if (clip.ClipType == ClipMode.TextClip)
-            {
-                return NormalizeTextPreparedPreviewToClipLocal(generatedView, clip, targetWidth, targetHeight);
-            }
-
-            return generatedView;
-        }
-
-        if (usedFullRenderFallback)
+        // 应用布局
+        if (!applyClipTargetLayout || usedFullRenderFallback)
         {
             return generatedView;
         }
 
-        return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight, frameIndex);
+        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
     }
 
-    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, int canvasWidth, int canvasHeight, uint frameIndex)
+    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int canvasWidth, int canvasHeight, uint frameIndex)
     {
         var baseW = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
         var baseH = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
@@ -567,7 +974,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
         double w = baseW;
         double h = baseH;
 
-        ApplyPositionProvidersToClip(clip, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
+        ApplyPositionProvidersToClip(clip, enabledEffects, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
 
         if (!HasExplicitTargetRect(clip))
         {
@@ -589,16 +996,16 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return input;
     }
 
-    private static void ApplyPositionProvidersToClip(IClip clip, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
+    private static void ApplyPositionProvidersToClip(IClip clip, IReadOnlyList<IEffect> enabledEffects, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
     {
-        var effects = clip.EffectsInstances;
-        if (effects is null || effects.Length == 0)
+        if (enabledEffects.Count == 0)
         {
             return;
         }
 
-        foreach (var effect in effects.Where(e => e.Enabled).OrderBy(e => ((IEffect)e).Index))
+        for (var i = 0; i < enabledEffects.Count; i++)
         {
+            var effect = enabledEffects[i];
             ClipPositionTuple pos;
             if (effect is IContinuousClipPositionProvider cp)
             {
@@ -659,413 +1066,22 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return input;
     }
 
-    private static View NormalizeTextPreparedPreviewToClipLocal(View input, IClip clip, int targetWidth, int targetHeight)
-    {
-        var viewportWidth = Math.Max(1d, targetWidth);
-        var viewportHeight = Math.Max(1d, targetHeight);
-        var hasMeasuredClipRect = TryResolveTextClipRectForPreparedPreview(clip, out var clipRect);
-
-        if (!hasMeasuredClipRect)
-        {
-            clipRect = new Rect(0, 0, viewportWidth, viewportHeight);
-        }
-
-        // Keep clamp behavior identical to InteractableEditor: preserve size, shift origin in-bounds.
-        var clippedW = Math.Clamp(clipRect.Width, MinTextPreviewSize, viewportWidth);
-        var clippedH = Math.Clamp(clipRect.Height, MinTextPreviewSize, viewportHeight);
-        var clippedX = Math.Clamp(clipRect.X, 0, viewportWidth - clippedW);
-        var clippedY = Math.Clamp(clipRect.Y, 0, viewportHeight - clippedH);
-        var clippedRect = new Rect(clippedX, clippedY, clippedW, clippedH);
-
-        var worldHost = new Grid
-        {
-            WidthRequest = viewportWidth,
-            HeightRequest = viewportHeight,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            TranslationX = -clippedRect.X,
-            TranslationY = -clippedRect.Y
-        };
-        worldHost.Children.Add(input);
-
-        var debugTag = $"txtLocal src={(hasMeasuredClipRect ? "measured" : "fallback")},crop={Math.Round(clippedRect.X)},{Math.Round(clippedRect.Y)},{Math.Round(clippedRect.Width)}x{Math.Round(clippedRect.Height)}";
-        return new ContentView
-        {
-            Content = worldHost,
-            WidthRequest = clippedRect.Width,
-            HeightRequest = clippedRect.Height,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-            AutomationId = debugTag,
-            Clip = new RectangleGeometry
-            {
-                Rect = new Rect(0, 0, clippedRect.Width, clippedRect.Height)
-            }
-        };
-    }
-
-    private static bool TryResolveTextClipRectForPreparedPreview(IClip clip, out Rect rect)
-    {
-        rect = default;
-        if (clip is not TextClip textClip)
-        {
-            return false;
-        }
-
-        if (!TryResolveTextEntriesForPreparedPreview(textClip, out var entries))
-        {
-            return false;
-        }
-
-        var hasBounds = false;
-        double minX = 0;
-        double minY = 0;
-        double maxX = 0;
-        double maxY = 0;
-
-        foreach (var entry in entries)
-        {
-            if (!TryMeasureTextEntryRectForPreparedPreview(entry, out var x, out var y, out var w, out var h))
-            {
-                continue;
-            }
-
-            var left = x;
-            var top = y;
-            var right = x + w;
-            var bottom = y + h;
-
-            if (!hasBounds)
-            {
-                minX = left;
-                minY = top;
-                maxX = right;
-                maxY = bottom;
-                hasBounds = true;
-            }
-            else
-            {
-                minX = Math.Min(minX, left);
-                minY = Math.Min(minY, top);
-                maxX = Math.Max(maxX, right);
-                maxY = Math.Max(maxY, bottom);
-            }
-        }
-
-        if (!hasBounds)
-        {
-            return false;
-        }
-
-        rect = new Rect(
-            minX,
-            minY,
-            Math.Max(MinTextPreviewSize, maxX - minX),
-            Math.Max(MinTextPreviewSize, maxY - minY));
-        return true;
-    }
-
-    private static bool TryResolveTextEntriesForPreparedPreview(TextClip clip, out List<TextClipEntry> entries)
-    {
-        entries = null!;
-
-        List<TextClipEntry>? extraEntries = null;
-
-        if (clip.ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
-        {
-            if (rawEntries is List<TextClipEntry> list && list.Count > 0)
-            {
-                extraEntries = list;
-            }
-
-            else if (rawEntries is JsonElement element)
-            {
-                try
-                {
-                    var parsed = element.Deserialize<List<TextClipEntry>>();
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-
-            else if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
-            {
-                try
-                {
-                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
-                    if (parsed is { Count: > 0 })
-                    {
-                        clip.ExtraData["TextEntries"] = parsed;
-                        extraEntries = parsed;
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        var selected = PickBetterTextEntries(extraEntries, clip.TextEntries);
-        if (selected.Count > 0)
-        {
-            entries = selected is List<TextClipEntry> selectedList
-                ? selectedList
-                : selected.ToList();
-            return true;
-        }
-
-        return false;
-    }
-
-    private static IReadOnlyList<TextClipEntry> PickBetterTextEntries(IReadOnlyList<TextClipEntry>? primary, IReadOnlyList<TextClipEntry>? fallback)
-    {
-        var p = primary ?? Array.Empty<TextClipEntry>();
-        var f = fallback ?? Array.Empty<TextClipEntry>();
-
-        var pHasVisibleText = p.Any(e => !string.IsNullOrWhiteSpace(e.text));
-        var fHasVisibleText = f.Any(e => !string.IsNullOrWhiteSpace(e.text));
-
-        if (pHasVisibleText && !fHasVisibleText)
-        {
-            return p;
-        }
-
-        if (fHasVisibleText && !pHasVisibleText)
-        {
-            return f;
-        }
-
-        return p.Count >= f.Count ? p : f;
-    }
-
-    private static bool TryMeasureTextEntryRectForPreparedPreview(TextClipEntry entry, out double x, out double y, out double w, out double h)
-    {
-        x = entry.x;
-        y = entry.y;
-        w = MinTextPreviewSize;
-        h = MinTextPreviewSize;
-
-        var rawText = entry.text ?? string.Empty;
-        var textForMeasure = string.IsNullOrEmpty(rawText) ? " " : rawText;
-        var dpi = entry.dpi ?? 72d;
-        var fontSize = Math.Max(1d, entry.fontSize * (dpi / 72d));
-        var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
-
-        if (entry.UseVerticalLayout)
-        {
-            var glyphCount = rawText.Count(c => c != '\n' && c != '\r');
-            if (glyphCount <= 0)
-            {
-                glyphCount = 1;
-            }
-
-            var lineAdvance = fontSize * Math.Max(0.1d, entry.lineSpacing);
-            w = Math.Max(MinTextPreviewSize, fontSize + strokeExtra);
-            h = Math.Max(MinTextPreviewSize, glyphCount * lineAdvance + strokeExtra);
-        }
-        else
-        {
-            var measurementLabel = new Label();
-            try
-            {
-                measurementLabel.Text = textForMeasure;
-                measurementLabel.FontSize = fontSize;
-                measurementLabel.FontFamily = string.IsNullOrWhiteSpace(entry.fontFamily) ? null : entry.fontFamily;
-                measurementLabel.FontAttributes = entry.fontStyle switch
-                {
-                    SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
-                    SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
-                    SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
-                    _ => FontAttributes.None
-                };
-
-                var wrappingWidth = entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0
-                    ? entry.wrappingWidth.Value
-                    : 0f;
-
-                if (wrappingWidth > 0)
-                {
-                    measurementLabel.WidthRequest = wrappingWidth;
-                    measurementLabel.LineBreakMode = LineBreakMode.WordWrap;
-                    var wrappedSize = measurementLabel.Measure(wrappingWidth, double.PositiveInfinity);
-                    w = wrappedSize.Width;
-                    h = wrappedSize.Height;
-                }
-                else
-                {
-                    measurementLabel.WidthRequest = -1;
-                    measurementLabel.LineBreakMode = LineBreakMode.NoWrap;
-                    var size = measurementLabel.Measure(double.PositiveInfinity, double.PositiveInfinity);
-                    w = size.Width;
-                    h = size.Height;
-                }
-            }
-            catch
-            {
-                var fallbackWidth = Math.Max(1, textForMeasure.Length) * fontSize * 0.6d;
-                var fallbackHeight = fontSize * 1.2d;
-                w = fallbackWidth;
-                h = fallbackHeight;
-            }
-
-            if (w <= 1d || h <= 1d)
-            {
-                EstimateTextEntryRectSize(entry, textForMeasure, fontSize, out var fallbackW, out var fallbackH);
-                w = fallbackW;
-                h = fallbackH;
-            }
-
-            w = Math.Max(MinTextPreviewSize, w + strokeExtra);
-            h = Math.Max(MinTextPreviewSize, h + strokeExtra);
-        }
-
-        switch (entry.horizontalAlignment)
-        {
-            case SixLabors.Fonts.HorizontalAlignment.Center:
-                x -= w / 2d;
-                break;
-            case SixLabors.Fonts.HorizontalAlignment.Right:
-                x -= w;
-                break;
-        }
-
-        switch (entry.verticalAlignment)
-        {
-            case SixLabors.Fonts.VerticalAlignment.Center:
-                y -= h / 2d;
-                break;
-            case SixLabors.Fonts.VerticalAlignment.Bottom:
-                y -= h;
-                break;
-        }
-
-        if (Math.Abs(entry.rotation) > 0.0001f)
-        {
-            var radians = entry.rotation * Math.PI / 180d;
-            var cos = Math.Cos(radians);
-            var sin = Math.Sin(radians);
-
-            static (double rx, double ry) Rotate(double px, double py, double cosV, double sinV)
-                => (px * cosV - py * sinV, px * sinV + py * cosV);
-
-            var p0 = Rotate(0, 0, cos, sin);
-            var p1 = Rotate(w, 0, cos, sin);
-            var p2 = Rotate(0, h, cos, sin);
-            var p3 = Rotate(w, h, cos, sin);
-
-            var minRx = Math.Min(Math.Min(p0.rx, p1.rx), Math.Min(p2.rx, p3.rx));
-            var minRy = Math.Min(Math.Min(p0.ry, p1.ry), Math.Min(p2.ry, p3.ry));
-            var maxRx = Math.Max(Math.Max(p0.rx, p1.rx), Math.Max(p2.rx, p3.rx));
-            var maxRy = Math.Max(Math.Max(p0.ry, p1.ry), Math.Max(p2.ry, p3.ry));
-
-            x = entry.x + minRx;
-            y = entry.y + minRy;
-            w = Math.Max(MinTextPreviewSize, maxRx - minRx);
-            h = Math.Max(MinTextPreviewSize, maxRy - minRy);
-        }
-
-        return true;
-    }
-
-    private static void EstimateTextEntryRectSize(TextClipEntry entry, string textForMeasure, double fontSize, out double width, out double height)
-    {
-        var lineHeight = Math.Max(1d, fontSize * Math.Max(0.8d, entry.lineSpacing));
-        var lineCount = 1;
-        foreach (var c in textForMeasure)
-        {
-            if (c == '\n')
-            {
-                lineCount++;
-            }
-        }
-
-        if (entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0)
-        {
-            width = Math.Max(1d, entry.wrappingWidth.Value);
-
-            var approxCharWidth = Math.Max(1d, fontSize * 0.56d);
-            var maxCharsPerLine = Math.Max(1, (int)Math.Floor(width / approxCharWidth));
-            var visualLines = 0;
-            var charsInLine = 0;
-
-            foreach (var c in textForMeasure)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
-
-                if (c == '\n')
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                    continue;
-                }
-
-                charsInLine++;
-                if (charsInLine >= maxCharsPerLine)
-                {
-                    visualLines++;
-                    charsInLine = 0;
-                }
-            }
-
-            if (charsInLine > 0 || visualLines == 0)
-            {
-                visualLines++;
-            }
-
-            height = Math.Max(lineCount, visualLines) * lineHeight;
-            return;
-        }
-
-        var maxCharsInLine = 0;
-        var currentChars = 0;
-        foreach (var c in textForMeasure)
-        {
-            if (c == '\r')
-            {
-                continue;
-            }
-
-            if (c == '\n')
-            {
-                if (currentChars > maxCharsInLine)
-                {
-                    maxCharsInLine = currentChars;
-                }
-
-                currentChars = 0;
-                continue;
-            }
-
-            currentChars++;
-        }
-
-        if (currentChars > maxCharsInLine)
-        {
-            maxCharsInLine = currentChars;
-        }
-
-        if (maxCharsInLine <= 0)
-        {
-            maxCharsInLine = 1;
-        }
-
-        width = maxCharsInLine * fontSize * 0.56d;
-        height = lineCount * lineHeight;
-    }
-
     private static bool HasExplicitTargetRect(IClip clip)
         => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+    private static void ShiftEntriesToClipLocal(IReadOnlyList<TextEntry> entries, int offsetX, int offsetY)
+    {
+        if (offsetX == 0 && offsetY == 0) return;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            if (e is not null)
+            {
+                e.X -= offsetX;
+                e.Y -= offsetY;
+            }
+        }
+    }
 
     private static bool HasLegacyInternalPlaceResizeEffects(IClip clip)
     {
@@ -1115,6 +1131,128 @@ public sealed class DynamicPreview : ContentView, IDisposable
         return null;
     }
 
+    [DebuggerStepThrough()]
+    private static ITextClipStyleProvider? ResolveTextClipStyleProvider(IClip clip)
+    {
+        var providerFrom = ReadExtraDataString(clip.ExtraData, TextStyleProviderFromKey);
+        var providerType = ReadExtraDataString(clip.ExtraData, TextStyleProviderTypeKey);
+        if (!string.IsNullOrWhiteSpace(providerFrom)
+            && !string.IsNullOrWhiteSpace(providerType)
+            && PluginManager.LoadedPlugins.TryGetValue(providerFrom, out var ownerPlugin)
+            && ownerPlugin is IApplicationPluginBase appPlugin
+            && appPlugin.TextClipStyleProvider.TryGetValue(providerType, out var factory))
+        {
+            return factory();
+        }
+
+        if (PluginManager.LoadedPlugins.TryGetValue(clip.FromPlugin, out var clipOwner)
+            && clipOwner is IApplicationPluginBase clipPlugin)
+        {
+            return ResolveTextClipStyleProviderFromDictionary(clipPlugin.TextClipStyleProvider, clip);
+        }
+
+        return null;
+    }
+
+    private static ITextClipStyleProvider? ResolveTextClipStyleProviderFromDictionary(
+        IReadOnlyDictionary<string, Func<ITextClipStyleProvider>> providers, IClip clip)
+    {
+        if (providers.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(clip.TypeName)
+            && providers.TryGetValue(clip.TypeName, out var typedProvider))
+        {
+            return typedProvider();
+        }
+
+        var clipModeName = clip.ClipType.ToString();
+        if (providers.TryGetValue(clipModeName, out var modeProvider))
+        {
+            return modeProvider();
+        }
+
+        var fallback = providers.Values.FirstOrDefault();
+        return fallback is null ? null : fallback();
+    }
+
+    private static string? ReadExtraDataString(Dictionary<string, object>? data, string key)
+    {
+        if (data == null || !data.TryGetValue(key, out var raw) || raw is null)
+        {
+            return null;
+        }
+
+        if (raw is string s)
+        {
+            return s;
+        }
+
+        if (raw is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.String)
+            {
+                return je.GetString();
+            }
+            return je.ToString();
+        }
+
+        return raw.ToString();
+    }
+
+    private static Dictionary<string, string>? ReadTextStyleParameters(Dictionary<string, object>? data)
+    {
+        if (TryReadStringDictionary(data, TextStyleParametersKey, out var parameters))
+        {
+            return parameters;
+        }
+
+        if (TryReadStringDictionary(data, TextStyleParametersKey, out var providerParameters))
+        {
+            return providerParameters;
+        }
+
+        return null;
+    }
+
+    private static bool TryReadStringDictionary(Dictionary<string, object>? data, string key, out Dictionary<string, string> values)
+    {
+        values = null!;
+        if (data == null || !data.TryGetValue(key, out var raw) || raw is null)
+        {
+            return false;
+        }
+
+        if (raw is Dictionary<string, string> stringDict)
+        {
+            values = new Dictionary<string, string>(stringDict);
+            return true;
+        }
+
+        if (raw is Dictionary<string, object> objDict)
+        {
+            values = objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty, StringComparer.Ordinal);
+            return true;
+        }
+
+        if (raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var prop in je.EnumerateObject())
+            {
+                dict[prop.Name] = prop.Value.ValueKind == JsonValueKind.String
+                    ? (prop.Value.GetString() ?? string.Empty)
+                    : prop.Value.ToString();
+            }
+            values = dict;
+            return true;
+        }
+
+        return false;
+    }
+
     private static IClipDynamicPreviewProvider? ResolveProviderFromDictionary(IReadOnlyDictionary<string, IClipDynamicPreviewProvider> providers, IClip clip)
     {
         if (providers.Count == 0)
@@ -1150,12 +1288,29 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
     }
 
-    private View GenerateFrameFallbackView(IClip clip, int targetWidth, int targetHeight, uint frameIndex, bool fullRender = false, IReadOnlyList<IColorAdjustEffect>? sourceColorAdjustEffects = null)
+    private View GenerateFrameFallbackView(IClip clip, int targetWidth, int targetHeight, uint frameIndex, bool fullRender = false, IReadOnlyList<IColorAdjustEffect>? sourceColorAdjustEffects = null, CancellationToken token = default)
     {
+        if (token.IsCancellationRequested) return null!;
         IPicture frame = null!;
         if (!fullRender)
         {
-            frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+            var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
+            var needsClone = sourceColorAdjustEffects is { Count: > 0 };
+            if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: needsClone))
+            {
+                if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                    && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+                {
+                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                }
+
+                if (frame is not null)
+                {
+                    if (frame.Disposed) Debugger.Break();
+                    CacheFallbackFrame(cacheKey, frame);
+                    EnqueueFallbackDiskPersist(cacheKey, frame);
+                }
+            }
         }
         else
         {
@@ -1166,7 +1321,22 @@ public sealed class DynamicPreview : ContentView, IDisposable
             else
             {
                 // Full-render fallback needs LivePreviewer; when unavailable, degrade to clip-local frame fallback.
-                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
+                if (!TryGetCachedFallbackFrame(cacheKey, out frame, deepCopy: false))
+                {
+                    if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                        && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+                    {
+                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                    }
+
+                    if (frame is not null)
+                    {
+                        if (frame.Disposed) Debugger.Break();
+                        CacheFallbackFrame(cacheKey, frame);
+                        EnqueueFallbackDiskPersist(cacheKey, frame);
+                    }
+                }
             }
         }
 
@@ -1185,6 +1355,8 @@ public sealed class DynamicPreview : ContentView, IDisposable
             }
         }
 
+        if (token.IsCancellationRequested) return null!;
+
         return new Image
         {
             Source = frame.ToImageSource(),
@@ -1194,17 +1366,79 @@ public sealed class DynamicPreview : ContentView, IDisposable
         };
     }
 
-    private static View ApplyEffectPreview(View input, IEffect effect, int targetWidth, int targetHeight, uint frameIndex)
+    private static View GenerateClipEffectFallbackView(IClip clip, IReadOnlyList<IEffect> enabledEffects, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
     {
-        var provider = ResolveEffectProvider(effect, input.GetType());
-        if (provider is null)
+        var cacheKey = new FallbackFrameCacheKey(clip.Id, targetWidth, targetHeight, frameIndex, ResolveFallbackSourceFingerprint(clip));
+        if (!TryGetCachedFallbackFrame(cacheKey, out var frame))
         {
-            return input;
+            if (!TryGetResizedFallbackFrame(cacheKey, out frame)
+                && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
+            {
+                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+            }
+
+            if (frame is not null)
+            {
+                if (frame.Disposed) Debugger.Break();
+                CacheFallbackFrame(cacheKey, frame);
+                EnqueueFallbackDiskPersist(cacheKey, frame);
+            }
+        }
+        if (token.IsCancellationRequested) return null;
+
+        if (frame is null)
+        {
+            return new Image
+            {
+                Source = null,
+                Aspect = Aspect.Fill,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+            };
         }
 
+        for (var i = 0; i < enabledEffects.Count; i++)
+        {
+            if (token.IsCancellationRequested) return null;
+            var effect = enabledEffects[i];
+            if (effect is IClipPositionProvider or IContinuousClipPositionProvider)
+            {
+                continue;
+            }
+
+            if (IsLegacyInternalLayoutEffect(effect))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (effect is INormalEffect normalEffect)
+                {
+                    frame = normalEffect.Render(frame, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Clip {clip.Id}/{clip.Name}'s effect {effect.TypeName}/{effect.Name} failed during clip-local fallback: {ex.Message}");
+            }
+        }
+        if (token.IsCancellationRequested) return null;
+
+        return new Image
+        {
+            Source = frame.ToImageSource(),
+            Aspect = Aspect.Fill,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+        };
+    }
+
+    private static View ApplyEffectPreview(View input, IEffect effect, IEffectDynamicPreviewProvider provider, int targetWidth, int targetHeight, uint frameIndex, float progress)
+    {
         try
         {
-            return provider.Generate(effect, input, input.GetType(), targetWidth, targetHeight, frameIndex) ?? input;
+            return provider.Generate(effect, input, input.GetType(), targetWidth, targetHeight, frameIndex, progress) ?? input;
         }
         catch
         {
@@ -1254,6 +1488,47 @@ public sealed class DynamicPreview : ContentView, IDisposable
         {
             return false;
         }
+    }
+
+    private static IEffect[] GetEnabledEffectsSorted(IEffect[]? effects)
+    {
+        if (effects is null || effects.Length == 0)
+        {
+            return Array.Empty<IEffect>();
+        }
+
+        var enabledEffects = new List<IEffect>(effects.Length);
+        for (var i = 0; i < effects.Length; i++)
+        {
+            var effect = effects[i];
+            if (effect.Enabled)
+            {
+                enabledEffects.Add(effect);
+            }
+        }
+
+        if (enabledEffects.Count <= 1)
+        {
+            return enabledEffects.ToArray();
+        }
+
+        enabledEffects.Sort(static (left, right) => left.Index.CompareTo(right.Index));
+        return enabledEffects.ToArray();
+    }
+
+    private static void LogOnce(ConcurrentDictionary<string, byte> gate, string key, string message)
+    {
+        if (gate.TryAdd(key, 0))
+        {
+            Log(message);
+        }
+    }
+
+    private void ResetFallbackLogs()
+    {
+        _sourceColorFallbackLogKeys.Clear();
+        _missingProviderFallbackLogKeys.Clear();
+        _effectFallbackLogKeys.Clear();
     }
 
     private void DisposeClips()
@@ -1346,6 +1621,798 @@ public sealed class DynamicPreview : ContentView, IDisposable
         }
     }
 
-    private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
+    private static bool TryGetCachedFallbackFrame(FallbackFrameCacheKey key, out IPicture frame, bool deepCopy = true)
+    {
+        if (s_fallbackFrameCache.TryGetValue(key, out var cached))
+        {
+            cached.Touch();
+            frame = deepCopy ? cached.Frame.Clone() : cached.Frame;
+            return true;
+        }
+
+        var diskPath = ResolveFallbackDiskCachePath(key);
+        if (File.Exists(diskPath))
+        {
+            try
+            {
+                frame = new Picture8bpp(diskPath);
+                CacheFallbackFrame(key, frame);
+                TouchFallbackDiskEntry(diskPath);
+                return true;
+            }
+            catch
+            {
+            }
+        }
+
+        frame = null!;
+        return false;
+    }
+
+    private static bool TryGetResizedFallbackFrame(FallbackFrameCacheKey targetKey, out IPicture resizedFrame)
+    {
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        FallbackFrameCacheKey? bestKey = null;
+
+        foreach (var kvp in s_fallbackFrameCache)
+        {
+            var k = kvp.Key;
+            if (k.ClipId == targetKey.ClipId && k.SourceFingerprint == targetKey.SourceFingerprint && k.FrameIndex == targetKey.FrameIndex)
+            {
+                if (k.TargetWidth == targetKey.TargetWidth && k.TargetHeight == targetKey.TargetHeight)
+                    continue;
+
+                int delta = Math.Abs(k.TargetWidth - targetKey.TargetWidth) + Math.Abs(k.TargetHeight - targetKey.TargetHeight);
+                int area = k.TargetWidth * k.TargetHeight;
+
+                if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+                {
+                    bestDelta = delta;
+                    bestArea = area;
+                    bestKey = k;
+                }
+            }
+        }
+
+        if (bestKey is null || !s_fallbackFrameCache.TryGetValue(bestKey.Value, out var cached))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        cached.Touch();
+        var source = cached.Frame.Clone();
+        var resized = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+        if (ReferenceEquals(resized, source))
+        {
+            resizedFrame = source;
+        }
+        else
+        {
+            resizedFrame = resized.BitPerPixel == IPicture.PicturePixelMode.BytePicture
+                ? resized
+                : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+        }
+        return true;
+    }
+
+    private static List<(int width, int height)> ResolveFallbackDiskCacheSizes(Guid clipId, long sourceFingerprint)
+    {
+        var sizes = new List<(int width, int height)>();
+        var baseDir = Path.Combine(DiskCacheRoot, SanitizePathSegment(clipId.ToString()));
+        if (!Directory.Exists(baseDir))
+            return sizes;
+
+        var fingerprintStr = sourceFingerprint.ToString("X16");
+        try
+        {
+            foreach (var subDir in Directory.EnumerateDirectories(baseDir))
+            {
+                var name = Path.GetFileName(subDir);
+                var parts = name.Split('x');
+                if (parts.Length == 2
+                    && int.TryParse(parts[0], out var w)
+                    && int.TryParse(parts[1], out var h)
+                    && w > 0 && h > 0
+                    && Directory.Exists(Path.Combine(subDir, fingerprintStr)))
+                {
+                    sizes.Add((w, h));
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return sizes;
+    }
+
+    private static bool TryGetResizedFallbackFromDisk(FallbackFrameCacheKey targetKey, out IPicture resizedFrame)
+    {
+        var sizes = ResolveFallbackDiskCacheSizes(targetKey.ClipId, targetKey.SourceFingerprint);
+        if (sizes.Count == 0)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        int bestDelta = int.MaxValue;
+        int bestArea = -1;
+        (int width, int height) bestSize = default;
+
+        foreach (var (w, h) in sizes)
+        {
+            if (w == targetKey.TargetWidth && h == targetKey.TargetHeight)
+                continue;
+
+            int delta = Math.Abs(w - targetKey.TargetWidth) + Math.Abs(h - targetKey.TargetHeight);
+            int area = w * h;
+
+            if (delta < bestDelta || (delta == bestDelta && area > bestArea))
+            {
+                bestDelta = delta;
+                bestArea = area;
+                bestSize = (w, h);
+            }
+        }
+
+        if (bestDelta == int.MaxValue)
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        var diskKey = new FallbackFrameCacheKey(targetKey.ClipId, bestSize.width, bestSize.height, targetKey.FrameIndex, targetKey.SourceFingerprint);
+        var diskPath = ResolveFallbackDiskCachePath(diskKey);
+        if (!File.Exists(diskPath))
+        {
+            resizedFrame = null!;
+            return false;
+        }
+
+        try
+        {
+            resizedFrame = new Picture8bpp(diskPath).Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+            TouchFallbackDiskEntry(diskPath);
+            return true;
+        }
+        catch
+        {
+            resizedFrame = null!;
+            return false;
+        }
+    }
+
+    private static void CacheFallbackFrame(FallbackFrameCacheKey key, IPicture frame)
+    {
+        s_fallbackFrameCache[key] = new CachedFallbackFrame(frame);
+        TrimFallbackCacheIfNeeded();
+    }
+
+    private static void TrimFallbackCacheIfNeeded()
+    {
+        if (s_fallbackFrameCache.Count <= MaxCachedFallbackFrames)
+        {
+            return;
+        }
+
+        var removeCount = s_fallbackFrameCache.Count - MaxCachedFallbackFrames;
+        foreach (var stale in s_fallbackFrameCache.OrderBy(x => x.Value.LastAccessTicks).Take(removeCount).ToArray())
+        {
+            if (s_fallbackFrameCache.TryRemove(stale.Key, out var removed))
+            {
+                try
+                {
+                    removed.Frame.Dispose();
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+
+    private static void EnqueueFallbackDiskPersist(FallbackFrameCacheKey key, IPicture frame)
+    {
+        var diskPath = ResolveFallbackDiskCachePath(key);
+        Task.Run(() =>
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(diskPath);
+                if (!string.IsNullOrWhiteSpace(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                frame.SaveToPng(diskPath);
+                TouchFallbackDiskEntry(diskPath);
+                TrimFallbackDiskCacheIfNeeded();
+            }
+            catch
+            {
+            }
+        });
+    }
+
+    private static long ResolveFallbackSourceFingerprint(IClip clip)
+    {
+        var sourcePath = clip.FilePath;
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return clip.Id.GetHashCode();
+        }
+
+        try
+        {
+            var info = new FileInfo(sourcePath);
+            if (!info.Exists)
+            {
+                return StringComparer.Ordinal.GetHashCode(sourcePath);
+            }
+
+            unchecked
+            {
+                return (info.Length * 397L) ^ info.LastWriteTimeUtc.Ticks;
+            }
+        }
+        catch
+        {
+            return StringComparer.Ordinal.GetHashCode(sourcePath);
+        }
+    }
+
+    private static string ResolveFallbackDiskCachePath(FallbackFrameCacheKey key)
+    {
+        var clipId = SanitizePathSegment(key.ClipId.ToString());
+        var dimension = $"{key.TargetWidth}x{key.TargetHeight}";
+        var fingerprint = key.SourceFingerprint.ToString("X16");
+        return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{key.FrameIndex}.png");
+    }
+
+    [DebuggerStepThrough()]
+    private static string SanitizePathSegment(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "_";
+        }
+
+        var chars = raw.ToCharArray();
+        var invalids = Path.GetInvalidFileNameChars();
+        for (var i = 0; i < chars.Length; i++)
+        {
+            if (invalids.Contains(chars[i]))
+            {
+                chars[i] = '_';
+            }
+        }
+
+        return new string(chars);
+    }
+
+    private static void TouchFallbackDiskEntry(string? diskPath)
+    {
+        if (!string.IsNullOrWhiteSpace(diskPath))
+        {
+            s_fallbackDiskFrameAccess[diskPath] = DateTime.UtcNow.Ticks;
+        }
+    }
+
+    private static void TrimFallbackDiskCacheIfNeeded()
+    {
+        if (s_fallbackDiskFrameAccess.Count <= MaxDiskCachedFallbackFrames)
+        {
+            return;
+        }
+
+        var removeCount = s_fallbackDiskFrameAccess.Count - MaxDiskCachedFallbackFrames;
+        foreach (var stale in s_fallbackDiskFrameAccess.OrderBy(entry => entry.Value).Take(removeCount))
+        {
+            if (s_fallbackDiskFrameAccess.TryRemove(stale.Key, out _))
+            {
+                try
+                {
+                    if (File.Exists(stale.Key))
+                    {
+                        File.Delete(stale.Key);
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+
+    #region Vector to MAUI Path conversion
+
+    static int MaxVectorPathSize = 65535; // This is a safeguard limit to prevent creating excessively large paths that could crash the app. The actual maximum size may depend on the platform and device capabilities.
+    private static int s_deviceMaxSize = 0; // Cached device limit, set once from CanvasDevice on Windows
+
+    private static int GetDeviceMaxSize()
+    {
+        if (s_deviceMaxSize == 0)
+        {
+#if WINDOWS
+            try
+            {
+                using var device = new Microsoft.Graphics.Canvas.CanvasDevice();
+                s_deviceMaxSize = device.MaximumBitmapSizeInPixels;
+            }
+            catch
+            {
+                s_deviceMaxSize = MaxVectorPathSize;
+            }
+#else
+            s_deviceMaxSize = MaxVectorPathSize;
+#endif
+        }
+        return s_deviceMaxSize;
+    }
+
+    private static View BuildVectorPreviewView(
+        IVectorContentClip vectorClip,
+        int canvasWidth, int canvasHeight,
+        int targetWidth, int targetHeight,
+        uint frameIndex)
+    {
+        var clipW = vectorClip.TargetWidth > 0 ? vectorClip.TargetWidth : Math.Max(1, canvasWidth);
+        var clipH = vectorClip.TargetHeight > 0 ? vectorClip.TargetHeight : Math.Max(1, canvasHeight);
+
+        var vectorPicture = vectorClip.GetVectorPictureRelativeToStartPointOfSource(vectorClip.GetRelativeFrameIndex(frameIndex) ?? vectorClip.GetEffectiveDuration(), clipW, clipH);
+
+        var container = new AbsoluteLayout
+        {
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+        };
+
+        var elements = vectorPicture.Elements;
+        if (elements is null || elements.Count == 0)
+            return container;
+
+        var sortedElements = elements.OrderBy(e => e.LayerIndex);
+        var deviceLimit = GetDeviceMaxSize();
+        var skippedSegmentCount = 0;
+
+        foreach (var element in sortedElements)
+        {
+            var segments = element.Draw();
+            if (segments is null || segments.Length == 0)
+                continue;
+
+            float scaleX, scaleY, originX, originY;
+            if (element.UseUniformScale)
+            {
+                float us = Math.Min(clipW, clipH);
+                scaleX = us;
+                scaleY = us;
+                originX = element.BaseX * clipW + element.RelativeX * us;
+                originY = element.BaseY * clipH + element.RelativeY * us;
+            }
+            else
+            {
+                scaleX = clipW;
+                scaleY = clipH;
+                originX = element.RelativeX * clipW;
+                originY = element.RelativeY * clipH;
+            }
+
+            // Skip this entire element if the base scale alone already exceeds device limits
+            if (scaleX > deviceLimit || scaleY > deviceLimit)
+            {
+                skippedSegmentCount++;
+                continue;
+            }
+
+            float cosA = 0, sinA = 0;
+            bool hasRotation = MathF.Abs(element.Rotation) > 0.0001f;
+            if (hasRotation)
+            {
+                cosA = MathF.Cos(element.Rotation);
+                sinA = MathF.Sin(element.Rotation);
+            }
+
+            foreach (var segment in segments)
+            {
+                if (segment is null) continue;
+                try
+                {
+                    var path = CreatePathFromSegment(segment, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                    if (path is not null)
+                        container.Children.Add(path);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    skippedSegmentCount++;
+                    break;
+                }
+                catch (Exception ex) when (ex.Message.Contains("CanvasImageSource") || ex.Message.Contains("MaximumBitmapSize"))
+                {
+                    break;
+                }
+            }
+        }
+
+        if (skippedSegmentCount > 0)
+        {
+            Log($"Vector preview: skipped {skippedSegmentCount} oversize segment(s) exceeding device limit of {deviceLimit}.","error");
+        }
+
+        if(skippedSegmentCount >= sortedElements.Count())
+        {
+            throw new ArgumentOutOfRangeException($"all vector segment exceeds device limit of {deviceLimit}. Please check your source, or disable Vector dynamic previewing function.");
+        }
+
+        return container;
+    }
+
+    private static void ValidateAbsoluteBounds(float absoluteX, float absoluteY, int deviceLimit)
+    {
+        if (float.IsNaN(absoluteX) || float.IsNaN(absoluteY) ||
+            float.IsInfinity(absoluteX) || float.IsInfinity(absoluteY) ||
+            MathF.Abs(absoluteX) > deviceLimit || MathF.Abs(absoluteY) > deviceLimit)
+        {
+            throw new ArgumentOutOfRangeException($"Vector coordinate ({absoluteX}, {absoluteY}) exceeds device limit of {deviceLimit}");
+        }
+    }
+
+    private static void ValidateSegmentExtent(float width, float height, int deviceLimit)
+    {
+        if (width > deviceLimit || height > deviceLimit)
+        {
+            throw new ArgumentOutOfRangeException($"Vector segment extent ({width}, {height}) exceeds device limit of {deviceLimit}");
+        }
+    }
+
+    private static ShapesPath? CreatePathFromSegment(
+        VectorSegment segment,
+        float scaleX, float scaleY,
+        float originX, float originY,
+        bool hasRotation, float cosA, float sinA,
+        int deviceLimit)
+    {
+        Geometry? geometry = null;
+
+        switch (segment)
+        {
+            case StraightLineVectorSegment s:
+                geometry = CreateLineGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case RoundedRectangleVectorSegment s:
+                geometry = CreateRoundedRectGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case RectangleVectorSegment s:
+                geometry = CreateRectGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case EllipseVectorSegment s:
+                geometry = CreateEllipseGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case CubicBezierVectorSegment s:
+                geometry = CreateCubicBezierGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case QuadraticBezierVectorSegment s:
+                geometry = CreateQuadraticBezierGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case ArcVectorSegment s:
+                geometry = CreateArcGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case PolygonVectorSegment s:
+                geometry = CreatePolygonGeometry(s.Points, s.Holes, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+            case PolylineVectorSegment s:
+                geometry = CreatePolylineGeometry(s.Points, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                break;
+        }
+
+        if (geometry is null) return null;
+
+        bool hasFill = segment.FillA > 0;
+        bool hasStroke = segment.Thickness > 0 && segment.StrokeA > 0;
+
+        return new ShapesPath
+        {
+            Data = geometry,
+            Fill = hasFill
+                ? new SolidColorBrush(Color.FromRgba(segment.FillR / 65535f, segment.FillG / 65535f, segment.FillB / 65535f, segment.FillA))
+                : null,
+            Stroke = hasStroke
+                ? new SolidColorBrush(Color.FromRgba(segment.StrokeR / 65535f, segment.StrokeG / 65535f, segment.StrokeB / 65535f, segment.StrokeA))
+                : null,
+            StrokeThickness = hasStroke ? segment.Thickness : 0,
+        };
+    }
+
+    private static MauiPoint NToP(float nx, float ny, float scaleX, float scaleY, float originX, float originY, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        if (rot)
+        {
+            float rx = nx * cosA - ny * sinA;
+            float ry = nx * sinA + ny * cosA;
+            float absX = rx * scaleX + originX;
+            float absY = ry * scaleY + originY;
+            ValidateAbsoluteBounds(absX, absY, deviceLimit);
+            return new MauiPoint(absX, absY);
+        }
+        float ax = nx * scaleX + originX;
+        float ay = ny * scaleY + originY;
+        ValidateAbsoluteBounds(ax, ay, deviceLimit);
+        return new MauiPoint(ax, ay);
+    }
+
+    private static Geometry CreateLineGeometry(StraightLineVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        var start = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var end = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+
+        ValidateSegmentExtent((float)Math.Abs(end.X - start.X), (float)Math.Abs(end.Y - start.Y), deviceLimit);
+
+        var figure = new PathFigure { StartPoint = start, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new LineSegment { Point = end });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateRectGeometry(RectangleVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        if (!rot)
+        {
+            var topLeft = NToP(s.X, s.Y, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            ValidateSegmentExtent(s.Width * sx, s.Height * sy, deviceLimit);
+            return new RectangleGeometry
+            {
+                Rect = new Rect(topLeft.X, topLeft.Y, s.Width * sx, s.Height * sy)
+            };
+        }
+
+        var p0 = NToP(s.X, s.Y, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p1 = NToP(s.X + s.Width, s.Y, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p2 = NToP(s.X + s.Width, s.Y + s.Height, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p3 = NToP(s.X, s.Y + s.Height, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+
+        ValidateSegmentExtent((float)Math.Abs(p1.X - p0.X), (float)Math.Abs(p2.Y - p1.Y), deviceLimit);
+
+        return BuildPolygonPathGeometry([p0, p1, p2, p3], closeFigure: true, deviceLimit);
+    }
+
+    private static Geometry CreateRoundedRectGeometry(RoundedRectangleVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        float nX = s.X, nY = s.Y, nW = s.Width, nH = s.Height;
+        float r = Math.Min(s.CornerRadius, Math.Min(nW, nH) * 0.5f);
+
+        if (!rot)
+        {
+            var pg = new PathGeometry();
+            var figure = new PathFigure { IsClosed = true, IsFilled = true };
+
+            float pxR = r * sx, pyR = r * sy;
+            var c0 = NToP(nX + r, nY, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c1 = NToP(nX + nW - r, nY, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c2 = NToP(nX + nW, nY + r, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c3 = NToP(nX + nW, nY + nH - r, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c4 = NToP(nX + nW - r, nY + nH, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c5 = NToP(nX + r, nY + nH, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c6 = NToP(nX, nY + nH - r, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            var c7 = NToP(nX, nY + r, sx, sy, ox, oy, false, 0, 0, deviceLimit);
+            ValidateSegmentExtent(nW * sx, nH * sy, deviceLimit);
+            figure.StartPoint = c0;
+            figure.Segments.Add(new LineSegment { Point = c1 });
+            figure.Segments.Add(new ArcSegment { Point = c2, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c3 });
+            figure.Segments.Add(new ArcSegment { Point = c4, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c5 });
+            figure.Segments.Add(new ArcSegment { Point = c6, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+            figure.Segments.Add(new LineSegment { Point = c7 });
+            figure.Segments.Add(new ArcSegment { Point = c0, Size = new Size(pxR, pyR), IsLargeArc = false, SweepDirection = SweepDirection.Clockwise });
+
+            pg.Figures.Add(figure);
+            return pg;
+        }
+
+        // Rotated: approximate as 4-corner polygon (corner rounding is secondary for preview)
+        var p0 = NToP(nX, nY, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p1 = NToP(nX + nW, nY, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p2 = NToP(nX + nW, nY + nH, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        var p3 = NToP(nX, nY + nH, sx, sy, ox, oy, true, cosA, sinA, deviceLimit);
+        return BuildPolygonPathGeometry([p0, p1, p2, p3], closeFigure: true, deviceLimit);
+    }
+
+    private static Geometry CreateEllipseGeometry(EllipseVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        var center = NToP(s.X, s.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        ValidateSegmentExtent(s.RadiusX * sx * 2, s.RadiusY * sy * 2, deviceLimit);
+        return new EllipseGeometry
+        {
+            Center = center,
+            RadiusX = s.RadiusX * sx,
+            RadiusY = s.RadiusY * sy,
+        };
+    }
+
+    private static Geometry CreateCubicBezierGeometry(CubicBezierVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        var p1 = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var p2 = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var p3 = NToP(s.X3, s.Y3, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var p4 = NToP(s.X4, s.Y4, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        ValidateSegmentExtent(
+            (float)(Math.Max(Math.Max(p1.X, p2.X), Math.Max(p3.X, p4.X)) - Math.Min(Math.Min(p1.X, p2.X), Math.Min(p3.X, p4.X))),
+            (float)(Math.Max(Math.Max(p1.Y, p2.Y), Math.Max(p3.Y, p4.Y)) - Math.Min(Math.Min(p1.Y, p2.Y), Math.Min(p3.Y, p4.Y))),
+            deviceLimit);
+
+        var figure = new PathFigure { StartPoint = p1, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new BezierSegment { Point1 = p2, Point2 = p3, Point3 = p4 });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateQuadraticBezierGeometry(QuadraticBezierVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        var p1 = NToP(s.X1, s.Y1, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var p2 = NToP(s.X2, s.Y2, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var p3 = NToP(s.X3, s.Y3, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        ValidateSegmentExtent(
+            (float)(Math.Max(Math.Max(p1.X, p2.X), p3.X) - Math.Min(Math.Min(p1.X, p2.X), p3.X)),
+            (float)(Math.Max(Math.Max(p1.Y, p2.Y), p3.Y) - Math.Min(Math.Min(p1.Y, p2.Y), p3.Y)),
+            deviceLimit);
+        var figure = new PathFigure { StartPoint = p1, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new QuadraticBezierSegment { Point1 = p2, Point2 = p3 });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreateArcGeometry(ArcVectorSegment s,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        float startAngle = s.StartAngle;
+        float endAngle = s.StartAngle + s.SweepAngle;
+
+        // Compute start/end in normalized space
+        float startNX = s.X + s.RadiusX * MathF.Cos(startAngle);
+        float startNY = s.Y + s.RadiusY * MathF.Sin(startAngle);
+        float endNX = s.X + s.RadiusX * MathF.Cos(endAngle);
+        float endNY = s.Y + s.RadiusY * MathF.Sin(endAngle);
+
+        var startPt = NToP(startNX, startNY, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+        var endPt = NToP(endNX, endNY, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit);
+
+        bool isLargeArc = MathF.Abs(s.SweepAngle) > MathF.PI;
+        var sweepDir = s.SweepAngle >= 0 ? SweepDirection.Clockwise : SweepDirection.CounterClockwise;
+        ValidateSegmentExtent(s.RadiusX * sx * 2, s.RadiusY * sy * 2, deviceLimit);
+        var figure = new PathFigure { StartPoint = startPt, IsClosed = false };
+        figure.Segments.Add(new ArcSegment
+        {
+            Point = endPt,
+            Size = new Size(s.RadiusX * sx, s.RadiusY * sy),
+            RotationAngle = 0,
+            IsLargeArc = isLargeArc,
+            SweepDirection = sweepDir,
+        });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry CreatePolygonGeometry(Drawing.Vector.Point[] points, Drawing.Vector.Point[][]? holes,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        if (points is null || points.Length == 0)
+            return null!;
+
+        var pg = new PathGeometry();
+        if (holes is { Length: > 0 })
+            pg.FillRule = FillRule.EvenOdd;
+
+        var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
+        var mainFigure = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
+        if (pts.Length > 1)
+        {
+            var segPoints = new PointCollection();
+            for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+            ValidateSegmentExtent(
+                (float)(pts.Max(p => p.X) - pts.Min(p => p.X)),
+                (float)(pts.Max(p => p.Y) - pts.Min(p => p.Y)),
+                deviceLimit);
+            mainFigure.Segments.Add(new PolyLineSegment { Points = segPoints });
+        }
+        pg.Figures.Add(mainFigure);
+
+        if (holes is not null)
+        {
+            foreach (var hole in holes)
+            {
+                if (hole is null || hole.Length == 0) continue;
+                var holePts = hole.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
+                var holeFigure = new PathFigure { StartPoint = holePts[0], IsClosed = true, IsFilled = true };
+                if (holePts.Length > 1)
+                {
+                    var holeSegPoints = new PointCollection();
+                    for (int i = 1; i < holePts.Length; i++) holeSegPoints.Add(holePts[i]);
+                    holeFigure.Segments.Add(new PolyLineSegment { Points = holeSegPoints });
+                }
+                pg.Figures.Add(holeFigure);
+            }
+        }
+
+        return pg;
+    }
+
+    private static Geometry CreatePolylineGeometry(Drawing.Vector.Point[] points,
+        float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
+    {
+        if (points is null || points.Length < 2)
+            return null!;
+
+        var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
+        var figure = new PathFigure { StartPoint = pts[0], IsClosed = false, IsFilled = false };
+        var segPoints = new PointCollection();
+        for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+        ValidateSegmentExtent(
+            (float)(pts.Max(p => p.X) - pts.Min(p => p.X)),
+            (float)(pts.Max(p => p.Y) - pts.Min(p => p.Y)),
+            deviceLimit);
+        figure.Segments.Add(new PolyLineSegment { Points = segPoints });
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    private static Geometry BuildPolygonPathGeometry(IReadOnlyList<MauiPoint> pts, bool closeFigure, int deviceLimit)
+    {
+        if (pts.Count == 0) return null!;
+
+        var figure = new PathFigure { StartPoint = pts[0], IsClosed = closeFigure, IsFilled = closeFigure };
+        if (pts.Count > 1)
+        {
+            var segPoints = new PointCollection();
+            for (int i = 1; i < pts.Count; i++) segPoints.Add(pts[i]);
+            ValidateSegmentExtent(
+                (float)(pts.Max(p => p.X) - pts.Min(p => p.X)),
+                (float)(pts.Max(p => p.Y) - pts.Min(p => p.Y)),
+                deviceLimit);
+            figure.Segments.Add(new PolyLineSegment { Points = segPoints });
+        }
+
+        var pg = new PathGeometry();
+        pg.Figures.Add(figure);
+        return pg;
+    }
+
+    #endregion
+
+    public sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
+
+    private sealed class CachedFallbackFrame
+    {
+        public CachedFallbackFrame(IPicture frame)
+        {
+            Frame = frame.Clone();
+            Frame.CanBeDisposed = false;
+            Touch();
+        }
+
+        public IPicture Frame { get; }
+        public long LastAccessTicks { get; private set; }
+
+        public void Touch() => LastAccessTicks = DateTime.UtcNow.Ticks;
+    }
+
+    private readonly record struct FallbackFrameCacheKey(Guid ClipId, int TargetWidth, int TargetHeight, uint FrameIndex, long SourceFingerprint);
 
 }

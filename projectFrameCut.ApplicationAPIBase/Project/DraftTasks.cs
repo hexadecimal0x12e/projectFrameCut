@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using projectFrameCut.ApplicationAPIBase.LocalizedResources;
+using projectFrameCut.ApplicationAPIBase.Localize;
 
 namespace projectFrameCut.ApplicationAPIBase.Project
 {

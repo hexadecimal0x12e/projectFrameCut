@@ -1,6 +1,8 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
@@ -21,7 +23,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
-            { "Crop", () => new Effect.CropEffectBundle() },
+            { "Crop", () => new Effect.CropEffectBundle() }, 
             { "Place", () => new Effect.PlaceEffectBundle() },
             { "Resize", () => new Effect.ResizeEffectBundle() },
             { "Flip", () => new Effect.FlipEffectBundle() },
@@ -32,6 +34,17 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
             { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
             { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
+            { "ProgressPlacer", () => new Effect.ProgressPlacerEffectBundle() },
+            { "ProgressCrop", () => new Effect.ProgressCropEffectBundle() },
+            { "TextFadeIn", () => new Effect.TextFadeInEffectBundle() },
+        };
+
+        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>
+        {
+            { "Basic", () => new BasicTextStyleProvider() },
+            { "Title", () => new TitleTextStyleProvider() },
+            { "Pinyin", () => new PinyinTextStyleProvider() },
+            { "LlmTranslate", () => new LlmTranslateTextStyleProvider() },
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;
@@ -41,13 +54,14 @@ namespace projectFrameCut.ApplicationPluginBase
             { "VideoClip", new VideoClipDynamicPreviewProvider() },
             { "PhotoClip", new PhotoClipDynamicPreviewProvider() },
             { "SolidColorClip", new SolidColorClipDynamicPreviewProvider() },
+            { "TransformClip", new TransformClipDynamicPreviewProvider() },
             { "TextClip", new TextClipDynamicPreviewProvider() },
         };
 
         public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider => new Dictionary<string, IEffectDynamicPreviewProvider>
         {
             //{ "Blur", new BlurEffectDynamicPreviewProvider() },
-            { "Crop", new CropEffectDynamicPreviewProvider() },
+            //{ "Crop", new CropEffectDynamicPreviewProvider() },
             { "Jitter", new JitterEffectDynamicPreviewProvider() },
             { "Place", new PlaceEffectDynamicPreviewProvider() },
             { "PointPlacer", new PointPlacerEffectDynamicPreviewProvider() },
@@ -72,7 +86,7 @@ namespace projectFrameCut.ApplicationPluginBase
 
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
-            ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
         }
 
 

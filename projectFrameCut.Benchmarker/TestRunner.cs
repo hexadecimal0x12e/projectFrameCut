@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Render.Effect;
+﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -22,7 +24,7 @@ namespace projectFrameCut.Benchmarker
                 var sw = Stopwatch.StartNew();
                 if (instance is IContinuousEffect c)
                 {
-                    c.Render(src, 0, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
+                    c.Render(src, 0f, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
                 }
                 else
                 {
@@ -33,7 +35,7 @@ namespace projectFrameCut.Benchmarker
             }
         }
 
-        private static Picture8bpp MakeNoise(int width, int height)
+        public static Picture8bpp MakeNoise(int width, int height)
         {
             var pic = new Picture8bpp(width, height);
             var rnd = new Random();
@@ -43,9 +45,9 @@ namespace projectFrameCut.Benchmarker
             rnd.NextBytes(pic.b);
 
             // mark process stack for diagnostic
-            pic.ProcessStack = new List<projectFrameCut.Shared.PictureProcessStack>
+            pic.ProcessStack = new List<projectFrameCut.Drawing.Base.PictureProcessStack>
             {
-                new projectFrameCut.Shared.PictureProcessStack
+                new projectFrameCut.Drawing.Base.PictureProcessStack
                 {
                     OperationDisplayName = "Generated noise",
                     Operator = typeof(Picture8bpp),

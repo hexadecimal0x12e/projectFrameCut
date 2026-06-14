@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -20,8 +21,7 @@ namespace projectFrameCut.Render.Effect
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; set; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; set; } = EffectImplementType.IPicture;
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>();
 
@@ -50,27 +50,8 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            var step = new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
-            return step.Process(frame);
+            return PlaceEffect.Process(frame, startX, startY, targetWidth, targetHeight);
         }
-
-        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
-        {
-            if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
-            var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
-            var pt = func.Invoke(prog);
-            var x = pt.X;
-            var y = pt.Y;
-            int startX = x, startY = y;
-            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
-            {
-                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
-            }
-
-            return new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
-        }
-
 
         public bool IsValueValid(object value)
         {
@@ -98,7 +79,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.IPicture };
 
 
         public string? ID { get; set; }
@@ -121,7 +102,7 @@ namespace projectFrameCut.Render.Effect
 
             if (e is PointPlacer pointPlacer)
             {
-                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.ImageSharp : implementType;
+                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType;
             }
 
             if (e is IBindableArgumentEffect be)

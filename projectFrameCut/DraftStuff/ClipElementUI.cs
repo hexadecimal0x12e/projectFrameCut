@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -21,7 +22,7 @@ namespace projectFrameCut.DraftStuff
     [DebuggerDisplay("{DisplayName}, {ClipType} ({Id})")]
     public class ClipElementUI : IClipElementUI
     {
-        public required string Id { get; set; }
+        public required Guid Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
         [JsonIgnore]
@@ -45,11 +46,18 @@ namespace projectFrameCut.DraftStuff
         public double origLength { get; set; } = 0;
         public double origX { get; set; } = 0;
 
+        public bool IsMoveable { get; set; } = true;
+        public bool IsHorizontalResizable { get; set; } = true;
+        public bool IsVerticalResizable { get; set; } = true;
+        public bool CanSnapWhilePlacing { get; set; } = true;
+        public bool CanSnapWhileResizing { get; set; } = true;
+
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>
         /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
         /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
         /// </summary>
+        // this is a legacy thing and pretty confusing
         public bool isInfiniteLength { get; set; } = false;
         public uint maxFrameCount { get; set; } = 0;
         public uint relativeStartFrame { get; set; } = 0u;
@@ -73,6 +81,18 @@ namespace projectFrameCut.DraftStuff
         }
 
         public string? ClipColor { get; set; } = null;
+
+        /// <summary>
+        /// Indicates whether this clip is a temporary "ghost" overlay used during drag-and-drop operations.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsGhost { get; set; } = false;
+
+        /// <summary>
+        /// Indicates whether this clip is a temporary "shadow" overlay used during drag-and-drop operations.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsShadow { get; set; } = false;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
@@ -106,7 +126,7 @@ namespace projectFrameCut.DraftStuff
 
         public void UpdateSourceDuration()
         {
-            if (ClipType != ClipMode.VideoClip || ClipType != ClipMode.AudioClip || ClipType != ClipMode.ExtendClip)
+            if (ClipType != ClipMode.VideoClip && ClipType != ClipMode.AudioClip && ClipType != ClipMode.ExtendClip)
             {
                 isInfiniteLength = true;
                 return;
@@ -138,16 +158,21 @@ namespace projectFrameCut.DraftStuff
                 {
                     var color = Color.FromArgb(ClipColor);
                     Clip.Background = new SolidColorBrush(color);
+                    return;
                 }
                 catch
                 {
-                    // Invalid color string, use default
-                    Clip.Background = DetermineAssetColor(ClipType);
+                    // Invalid color string, fall through to generate a new one
                 }
             }
-            else
+
+            // Generate a random color and persist it so the clip keeps the same color
+            // across reloads instead of getting a different random color each time.
+            var brush = DetermineAssetColor(ClipType);
+            Clip.Background = brush;
+            if (brush is SolidColorBrush scb)
             {
-                Clip.Background = DetermineAssetColor(ClipType);
+                ClipColor = scb.Color.ToArgbHex();
             }
         }
 
@@ -202,6 +227,7 @@ namespace projectFrameCut.DraftStuff
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text,
             _ => EffectTarget.Video
         };
 
@@ -214,7 +240,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     new Label
                     {
-                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id[^4..]}" : DisplayName,
+                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
                         LineBreakMode = LineBreakMode.TailTruncation,
                         MaxLines = 1,
                         HorizontalOptions = LayoutOptions.Center,
@@ -311,7 +337,7 @@ namespace projectFrameCut.DraftStuff
         double startX,
         double width,
         int trackIndex,
-        string? id = null,
+        Guid? id = null,
         string? labelText = null,
         Brush? background = null,
         Border? prototype = null,
@@ -320,7 +346,7 @@ namespace projectFrameCut.DraftStuff
         View? ContentOverride = null)
         {
 
-            string cid = id ?? Guid.NewGuid().ToString();
+            Guid cid = id ?? Guid.NewGuid();
 
             // Build UI
             var clipBorder = new Border
@@ -389,7 +415,7 @@ namespace projectFrameCut.DraftStuff
 
             var titleLabel = new Label
             {
-                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid[^4..]}" : labelText,
+                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid.ToString()[^4..]}" : labelText,
                 LineBreakMode = LineBreakMode.TailTruncation,
                 MaxLines = 1,
                 HorizontalOptions = LayoutOptions.Center,
@@ -464,29 +490,69 @@ namespace projectFrameCut.DraftStuff
             return ClipMode.Special; // fallback
         }
 
+        private static readonly Brush[] _defaultClipColorPalette = new Brush[]
+        {
+            new SolidColorBrush(Color.FromRgb(255, 107, 107)),  // 柔和红
+            new SolidColorBrush(Color.FromRgb(78, 205, 196)),   // 青绿
+            new SolidColorBrush(Color.FromRgb(255, 159, 67)),   // 橙色
+            new SolidColorBrush(Color.FromRgb(69, 162, 255)),   // 蓝色
+            new SolidColorBrush(Color.FromRgb(255, 214, 10)),   // 黄色
+            new SolidColorBrush(Color.FromRgb(175, 82, 222)),   // 紫色
+            new SolidColorBrush(Color.FromRgb(46, 213, 115)),   // 绿色
+            new SolidColorBrush(Color.FromRgb(255, 82, 82)),    // 珊瑚红
+            new SolidColorBrush(Color.FromRgb(100, 181, 246)),  // 浅蓝
+            new SolidColorBrush(Color.FromRgb(255, 138, 101)),  // 深橙
+            new SolidColorBrush(Color.FromRgb(129, 199, 132)),  // 浅绿
+            new SolidColorBrush(Color.FromRgb(186, 104, 200)),  // 紫罗兰
+            new SolidColorBrush(Color.FromRgb(255, 171, 145)),  // 桃色
+            new SolidColorBrush(Color.FromRgb(128, 222, 234)),  // 青色
+            new SolidColorBrush(Color.FromRgb(240, 98, 146)),   // 粉红
+        };
+
+        private static Brush[]? _clipColorPalette;
+
+        private static Brush[] GetPalette()
+        {
+            if (_clipColorPalette == null)
+            {
+                _clipColorPalette = TryLoadPaletteFromFile() ?? _defaultClipColorPalette;
+            }
+            return _clipColorPalette;
+        }
+
+        private static Brush[]? TryLoadPaletteFromFile()
+        {
+            try
+            {
+                var palettePath = Path.Combine(MauiProgram.DataPath, "palette.json");
+                if (!System.IO.File.Exists(palettePath)) return null;
+
+                var json = System.IO.File.ReadAllText(palettePath);
+                var hexColors = JsonSerializer.Deserialize<string[]>(json);
+                if (hexColors == null || hexColors.Length == 0) return null;
+
+                var brushes = new Brush[hexColors.Length];
+                for (int i = 0; i < hexColors.Length; i++)
+                {
+                    brushes[i] = new SolidColorBrush(Color.FromArgb(hexColors[i]));
+                }
+                return brushes;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public static Brush DetermineAssetColor(ClipMode? mode)
         {
-            return mode switch
-            {
-                ClipMode.VideoClip => new SolidColorBrush(Colors.CornflowerBlue),
-                ClipMode.PhotoClip => new SolidColorBrush(Colors.MediumSeaGreen),
-                ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
-                ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
-                ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
-                ClipMode.MarkingClip => new SolidColorBrush(Color.FromRgba(51, 136, 255, 96)),
-                ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
-                _ => new SolidColorBrush(Colors.Gray),
-            };
+            var palette = GetPalette();
+            return palette[Random.Shared.Next(palette.Length)];
         }
         public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null)
         {
-            return type switch
-            {
-                AssetType.Video => new SolidColorBrush(Colors.CornflowerBlue),
-                AssetType.Image => new SolidColorBrush(Colors.MediumSeaGreen),
-                AssetType.Audio => new SolidColorBrush(Colors.Goldenrod),
-                _ => DetermineAssetColor(mode)
-            };
+            var palette = GetPalette();
+            return palette[Random.Shared.Next(palette.Length)];
         }
 
     }

@@ -319,11 +319,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarGrid is not null)
             {
                 ContextMenuProvider
-                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Close ?? "Close", () => OnCloseTapped(this, EventArgs.Empty))
-                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Maximize ?? "Maximize", Maximize)
-                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Minimize ?? "Minimize", Minimize);
+                    .AddCommand(Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_Close ?? "Close", () => OnCloseTapped(this, EventArgs.Empty))
+                    .AddCommand(Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_Maximize ?? "Maximize", Maximize)
+                    .AddCommand(Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_Minimize ?? "Minimize", Minimize);
 #if WINDOWS || MACCATALYST
-                ContextMenuProvider.AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "To standalone window", async () => await OpenInNewWindow());
+                ContextMenuProvider.AddCommand(Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "To standalone window", async () => await OpenInNewWindow());
 #endif
 
                 var gesture = new TapGestureRecognizer
@@ -937,7 +937,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </param>
         public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = true)
         {
-            if (ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized is not ApplicationAPIBaseLocalizerBase b) b = ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            if (ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized is not ApplicationAPIBaseLocalizerBase b) b = ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
             if (DeviceInfo.Idiom == DeviceIdiom.Phone)
             {
                 await DisplayAlertAsync(b._Error, b.MultiWindowView_PopOut_NotSupport, b._OK);
@@ -978,7 +978,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     {
                         var p = await DisplayAlertAsync(b._Info, b.MultiWindowView_StageManagerUnsupportedWarn, b.MultiWindowView_DockPrompt_NotPromptAgain, b._OK);
                         if (p) Preferences.Default.Set("MultiWindowView_StageManagerUnsupportedWarn_NotPromptAgain", true);
-                        await DisplayAlertAsync(LocalizedResources.APIBaseLocalizedResources.Localized._Info, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_StageManagerUnsupportedWarn, "OK");
+                        await DisplayAlertAsync(Localize.APIBaseLocalizedResources.Localized._Info, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_StageManagerUnsupportedWarn, "OK");
                     }
                 }
 
@@ -1063,7 +1063,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
             };
             backbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoBack), source: this));
-            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_GoBack);
+            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoBack);
             var fwdbtn = new Button
             {
                 Text = "►",
@@ -1074,7 +1074,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
             };
             fwdbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoForward), source: this));
-            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_GoForward);
+            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoForward);
             var dockBtn = new Button
             {
                 Text = "↙",
@@ -1085,7 +1085,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 #endif
                 Command = new Command(() => OnDockTapped(this, EventArgs.Empty))
             };
-            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
+            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
 #if WINDOWS || MACCATALYST
             var hostingPage = new ContentPage
             {

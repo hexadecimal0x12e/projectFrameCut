@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 5;
+        public const int CurrentPluginAPIVersion = 6;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -124,11 +124,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an blank IEffect instance from the given id.
         /// </summary>
+        /// <remarks>
+        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectProvider"/>
+        /// </remarks>
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
 
         /// <summary>
         /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
+        /// <remarks>
+        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectFactoryProvider"/>
+        /// </remarks>
         public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
 
         /// <summary>
@@ -244,11 +250,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru, EffectImplementType implementType = EffectImplementType.NotSpecified)
         {
+#pragma warning disable CS0618 // we need to handle fallback for deprecated implement types for compatibility, but we don't want to have Obsolete warning in the main logic.
+            if (implementType == EffectImplementType.ImageSharp_Deprecated) implementType = EffectImplementType.IPicture;
+            if (stru.ImplementType == EffectImplementType.ImageSharp_Deprecated) stru.ImplementType = EffectImplementType.IPicture;
+#pragma warning restore CS0618 
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
                 effect.BindedEffectGroupID = s.BindedEffectGroupID;
-                if(effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
+                if (effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
                 {
                     effect.RelativeWidth = s.RelativeWidth;
                     effect.RelativeHeight = s.RelativeHeight;
