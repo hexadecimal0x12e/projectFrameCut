@@ -698,7 +698,7 @@ public partial class TestPage : ContentPage
                 PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P10LE.ToString()
             };
             w.Initialize();
-            TextClip c = new TextClip { Id = "1", Name = "1" };
+            TextClip c = new TextClip { Id = Guid.Parse("00000000-0000-0000-0000-000000000001"), Name = "1" };
             TextEntry te = new TextEntry
             {
                 FillR = 65535,

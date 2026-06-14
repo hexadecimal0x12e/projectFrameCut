@@ -24,6 +24,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
@@ -1862,7 +1864,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var nextId = Guid.NewGuid();
                 var prevClip = new SolidColorClip
                 {
-                    Id = prevId.ToString(),
+                    Id = prevId,
                     Name = "_preview_prev",
                     StartFrame = 0,
                     Duration = (uint)frameCount,
@@ -1874,7 +1876,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 };
                 var nextClip = new SolidColorClip
                 {
-                    Id = nextId.ToString(),
+                    Id = nextId,
                     Name = "_preview_next",
                     StartFrame = (uint)frameCount,
                     Duration = (uint)frameCount,
@@ -3374,16 +3376,89 @@ public class TextStyleItemViewModel
     public required string Name { get; set; } = string.Empty;
     public required string SampleText { get; set; } = string.Empty;
     public required TextClipEntry ActualTemplate { get; set; } = default!;
+    private ImageSource? _previewSource;
+
+    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+
+    private string ComputeCacheKey()
+    {
+        var t = ActualTemplate;
+        var sb = new StringBuilder();
+        sb.Append(Id).Append('|');
+        sb.Append(SampleText ?? "AaBbYyZz").Append('|');
+        sb.Append(t.fontFamily ?? "").Append('|');
+        sb.Append(t.fontSize).Append('|');
+        sb.Append(t.fontStyle).Append('|');
+        sb.Append(t.r).Append('|');
+        sb.Append(t.g).Append('|');
+        sb.Append(t.b).Append('|');
+        sb.Append(t.a).Append('|');
+        sb.Append(t.horizontalAlignment).Append('|');
+        sb.Append(t.verticalAlignment).Append('|');
+        sb.Append(t.wrappingWidth).Append('|');
+        sb.Append(t.applyKerning).Append('|');
+        sb.Append(t.lineSpacing).Append('|');
+        sb.Append(t.rotation).Append('|');
+        sb.Append(t.strokeWidth).Append('|');
+        sb.Append(t.strokeR).Append('|');
+        sb.Append(t.strokeG).Append('|');
+        sb.Append(t.strokeB).Append('|');
+        sb.Append(t.dpi).Append('|');
+        sb.Append(t.ScaleWithTarget).Append('|');
+        sb.Append(t.UseVerticalLayout).Append('|');
+        sb.Append(t.KeepNonCJKTextAsHorizontal).Append('|');
+        sb.Append(t.x).Append('|');
+        sb.Append(t.y);
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Convert.ToHexString(hash);
+    }
+
+    private string? TryLoadFromDiskCache()
+    {
+        var dir = PreviewCacheDir;
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, ComputeCacheKey() + ".png");
+        return File.Exists(path) ? path : null;
+    }
+
+    private void SaveToDiskCache(byte[] pngBytes)
+    {
+        try
+        {
+            var dir = PreviewCacheDir;
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, ComputeCacheKey() + ".png");
+            File.WriteAllBytes(path, pngBytes);
+        }
+        catch
+        {
+            // disk cache is best-effort
+        }
+    }
+
     public ImageSource PreviewSource
     {
         get
         {
+            if (_previewSource != null)
+                return _previewSource;
+
             try
             {
+                // Try disk cache first
+                var cachedPath = TryLoadFromDiskCache();
+                if (cachedPath != null)
+                {
+                    var cachedBytes = File.ReadAllBytes(cachedPath);
+                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
+                    return _previewSource;
+                }
+
                 var sample = SampleText ?? "AaBbYyZz";
                 TextClip t = new TextClip
                 {
-                    Id = Id,
+                    Id = Guid.Parse(Id),
                     Name = Id,
                     TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                     {
@@ -3396,7 +3471,16 @@ public class TextStyleItemViewModel
                 var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
                 var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-                return img.ToImageSource();
+
+                // Encode to PNG once, share between disk cache and ImageSource
+                var bpp8 = img.ToBitPerPixel(8);
+                using var ms = new MemoryStream();
+                bpp8.SaveToPng(ms);
+                var pngBytes = ms.ToArray();
+
+                SaveToDiskCache(pngBytes);
+                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
+                return _previewSource;
             }
             catch
             {
@@ -3422,12 +3506,43 @@ public class TextStyleProviderItemViewModel
     public required Dictionary<string, string> Parameters { get; set; } = new();
     public required string BasicText { get; set; } = string.Empty;
 
+    private ImageSource? _previewSource;
+
+    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+
+    private string ComputeCacheKey()
+    {
+        var sb = new StringBuilder();
+        sb.Append(Id).Append('|');
+        sb.Append(BasicText ?? "").Append('|');
+        foreach (var kvp in Parameters.OrderBy(k => k.Key))
+        {
+            sb.Append(kvp.Key).Append('=').Append(kvp.Value).Append('|');
+        }
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Convert.ToHexString(hash);
+    }
+
     public ImageSource PreviewSource
     {
         get
         {
+            if (_previewSource != null)
+                return _previewSource;
+
             try
             {
+                // Try disk cache first
+                var dir = PreviewCacheDir;
+                Directory.CreateDirectory(dir);
+                var cachePath = Path.Combine(dir, ComputeCacheKey() + ".png");
+                if (File.Exists(cachePath))
+                {
+                    var cachedBytes = File.ReadAllBytes(cachePath);
+                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
+                    return _previewSource;
+                }
+
                 var entries = Provider.BuildEntries();
                 if (entries.Length == 0)
                 {
@@ -3436,7 +3551,7 @@ public class TextStyleProviderItemViewModel
 
                 TextClip t = new TextClip
                 {
-                    Id = Id,
+                    Id = Guid.Parse(Id),
                     Name = Id,
                     TextEntries = entries.ToList()
                 };
@@ -3447,7 +3562,26 @@ public class TextStyleProviderItemViewModel
                 var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
 
                 var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
-                return img.ToImageSource();
+
+                // Encode to PNG once, share between disk cache and ImageSource
+                var bpp8 = img.ToBitPerPixel(8);
+                using var ms = new MemoryStream();
+                bpp8.SaveToPng(ms);
+                var pngBytes = ms.ToArray();
+
+                // Save to disk cache (best-effort)
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    File.WriteAllBytes(cachePath, pngBytes);
+                }
+                catch
+                {
+                    // disk cache is best-effort
+                }
+
+                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
+                return _previewSource;
             }
             catch
             {

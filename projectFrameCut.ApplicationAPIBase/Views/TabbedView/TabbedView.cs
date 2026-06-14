@@ -379,16 +379,42 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 return;
             }
 
-            if (selectedItem.Content == null && _pendingTabContents.TryGetValue(selectedItem, out var pendingContent) && pendingContent != null)
+            try
             {
-                selectedItem.Content = pendingContent;
-                _pendingTabContents[selectedItem] = null;
-            }
+                var selectedContent = selectedItem.Content;
+                if (selectedContent == null && _pendingTabContents.TryGetValue(selectedItem, out var pendingContent))
+                {
+                    // Keep the tab content detached from TabbedViewItem itself.
+                    // Otherwise the same View instance would be mounted both under
+                    // TabbedViewItem and under ContentPresenter, which causes MAUI/WinUI
+                    // to throw when switching tabs.
+                    selectedContent = pendingContent;
+                }
 
-            var selectedContent = selectedItem.Content;
-            if (ContentPresenter.Content != selectedContent)
+                if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                {
+                    if (Dispatcher.IsDispatchRequired)
+                    {
+                        await Dispatcher.DispatchAsync(() =>
+                        {
+                            // Re-check on UI thread because another UpdateSelection call may
+                            // have already assigned the same view before this queued work runs.
+                            if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                            {
+                                ContentPresenter.Content = selectedContent;
+                            }
+                        });
+                    }
+                    else
+                    {
+                        ContentPresenter.Content = selectedContent;
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                ContentPresenter.Content = selectedContent;
+                Log(ex, $"Place tab {selectedItem.Tag}/{selectedItem.Header} content in the tabview of {Parent}({Parent.GetType().Name})", this);
+                await (Shell.Current?.DisplayAlertAsync(Localize.APIBaseLocalizedResources.Localized._Error, Localize.APIBaseLocalizedResources.Localized.TabView_Error(selectedItem?.Header?.ToString() ?? selectedItem?.Tag ?? "?"), Localize.APIBaseLocalizedResources.Localized._OK) ?? Task.CompletedTask);
             }
 
 

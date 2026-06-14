@@ -1,10 +1,12 @@
+using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using static projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources;
-using projectFrameCut.Shared;
-using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
+using projectFrameCut.Shared;
 using System.Diagnostics;
+using static projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources;
 
 namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
@@ -96,6 +98,71 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         #endregion
 
         #region font 
+
+        public static PropertyPanelBuilder AddDialogFontPicker(
+            this PropertyPanelBuilder builder,
+            string componentId,
+            PropertyPanelItemLabel label,
+            string title,
+            string? selectedFontName,
+            IEnumerable<FontItem> fontItems,
+            IDraftPage draftPage,
+            Action<FontItem>? fontChangedCallback = null,
+            Func<FontItem, Task<ImageSource>>? previewRenderer = null,
+            Action<Button>? buttonSetter = null)
+        {
+            var availableFonts = fontItems?
+                .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.FontName))
+                .GroupBy(x => x.FontName, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList() ?? [];
+
+            if (availableFonts.Count == 0)
+                return builder;
+
+            var selectedFont = availableFonts.FirstOrDefault(x => string.Equals(x.FontName, selectedFontName, StringComparison.OrdinalIgnoreCase))
+                ?? availableFonts.First();
+
+            var selectFontButton = new Button
+            {
+                Text = selectedFont.DisplayName ?? selectedFont.FontName,
+                HorizontalOptions = LayoutOptions.Fill,
+                BackgroundColor = Color.FromArgb("#1AFFFFFF"),
+                TextColor = AppInfo.RequestedTheme switch { AppTheme.Light => Colors.Black, _ => Colors.White },
+                FontSize = 13,
+                Padding = new Thickness(8, 4),
+                CornerRadius = 6
+            };
+            buttonSetter?.Invoke(selectFontButton);
+
+            var dialogPicker = new FontPicker
+            {
+                FontsSource = availableFonts,
+                PreviewRenderer = previewRenderer,
+                Title = title ?? "Font Picker",
+                SelectedFont = selectedFont,
+                VerticalOptions = LayoutOptions.Fill
+            };
+
+            dialogPicker.SelectedFontChanged += async (_, font) =>
+            {
+                if (font == null)
+                    return;
+
+                selectedFont = font;
+                selectFontButton.Text = font.DisplayName ?? font.FontName;
+                fontChangedCallback?.Invoke(font);
+                await draftPage.HidePopup(true);
+            };
+
+            selectFontButton.Clicked += async (_, _) =>
+            {
+                dialogPicker.SelectedFont = selectedFont;
+                await draftPage.ShowAPopup(dialogPicker, mode: "dialog");
+            };
+
+            return builder.AddCustomChild(label, selectFontButton, componentId);
+        }
 
         public static double MeasureTextLength(string text, float fontSize = 14f)
         {

@@ -30,7 +30,7 @@ namespace projectFrameCut.InteractableEditor
         private View? BuildVideoPreview()
         {
             var clipId = clip.Id;
-            var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId);
+            var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId.ToString());
             if (clip.SourcePath?.StartsWith('$') ?? false)
             {
                 var assetId = clip.SourcePath[1..];
@@ -126,7 +126,7 @@ namespace projectFrameCut.InteractableEditor
                     layout,
                     new Label
                     {
-                        Text = clip.DisplayName ?? clip.Id,
+                        Text = clip.DisplayName ?? clip.Id.ToString(),
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
                         BackgroundColor = Color.FromRgba("#80808080"),

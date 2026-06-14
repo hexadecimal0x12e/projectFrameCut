@@ -14,7 +14,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
     private const int PrefetchForwardCount = 8;
     private const int PrefetchBackwardCount = 1;
 
-    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<VideoFrameCacheKey, CachedVideoFrame>> _perClipCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<Guid, ConcurrentDictionary<VideoFrameCacheKey, CachedVideoFrame>> _perClipCache = new();
     private static readonly ConcurrentDictionary<VideoPrefetchContextKey, VideoPrefetchContext> _prefetchContexts = new();
     private static readonly ConcurrentDictionary<string, long> _diskFrameAccess = new(StringComparer.Ordinal);
 
@@ -333,7 +333,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
     private static string ResolveDiskCachePath(VideoFrameCacheKey frameKey)
     {
-        var clipId = SanitizePathSegment(frameKey.ClipId);
+        var clipId = SanitizePathSegment(frameKey.ClipId.ToString());
         var dimension = $"{frameKey.CanvasWidth}x{frameKey.CanvasHeight}";
         var fingerprint = frameKey.SourceFingerprint.ToString("X16");
         return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{frameKey.FrameIndex}.png");
@@ -396,6 +396,6 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
     }
 
     private readonly record struct RenderedVideoFrame(IPicture Frame, string? DiskPath);
-    private sealed record VideoFrameCacheKey(string ClipId, int CanvasWidth, int CanvasHeight, uint FrameIndex, long SourceFingerprint);
-    private sealed record VideoPrefetchContextKey(string ClipId, int CanvasWidth, int CanvasHeight, long SourceFingerprint);
+    private sealed record VideoFrameCacheKey(Guid ClipId, int CanvasWidth, int CanvasHeight, uint FrameIndex, long SourceFingerprint);
+    private sealed record VideoPrefetchContextKey(Guid ClipId, int CanvasWidth, int CanvasHeight, long SourceFingerprint);
 }

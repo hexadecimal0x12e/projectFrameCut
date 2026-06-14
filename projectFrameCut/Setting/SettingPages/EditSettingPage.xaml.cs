@@ -297,7 +297,7 @@ public partial class EditSettingPage : ContentPage
 #pragma warning disable CS0618 // 类型或成员已过时
                         TextClip t = new TextClip
                         {
-                            Id = s.StyleId,
+                            Id = Guid.Parse(s.StyleId),
                             Name = s.StyleId,
                             TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                             {

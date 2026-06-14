@@ -88,7 +88,7 @@ public partial class AboutSettingPage : ContentPage
                 try
                 {
                     var appType = Assembly.GetExecutingAssembly();
-                    programDate = !appType.IsDynamic && Path.Exists(appType.Location) ? $"on {File.GetLastWriteTime(appType.Location):yyyy-MM-dd HH:mm:ss}" : "unknown";
+                    programDate = !appType.IsDynamic && Path.Exists(appType.Location) ? $"on {File.GetLastWriteTime(appType.Location):yyyy-MM-dd HH:mm:ss}" : "";
                 }
                 catch
                 {

@@ -72,6 +72,10 @@ namespace projectFrameCut.ApplicationAPIBase.Text
         /// Indicate whether shows a default Editor in Property panel.
         /// </summary>
         public virtual bool ShowLayoutModePicker => true;
+        /// <summary>
+        /// Indicate whether shows a default <see cref="Views.Pickers.FontPicker"/> in Property panel.
+        /// </summary>
+        public virtual bool ShowFontPicker => true;
 
         /// <summary>
         /// Build the actual entry/entries to rendering in a TextClip form <see cref="Parameters"/>

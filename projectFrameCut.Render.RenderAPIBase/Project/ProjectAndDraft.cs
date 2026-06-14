@@ -271,7 +271,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string FromPlugin { get; set; } = string.Empty;
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string TypeName { get; set; } = string.Empty;
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; } = Guid.Empty;
         public string Name { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
         public uint SubLayerIndex { get; set; }

@@ -55,7 +55,7 @@ namespace projectFrameCut.Render.Benchmark
                 // 背景：纯色 + 裁剪/缩放 + 连续缩放(ZoomIn)
                 new SolidColorClip
                 {
-                    Id = "bench-solid-bg-001",
+                    Id = Guid.NewGuid(),
                     Name = "Benchmark Solid BG",
                     LayerIndex = 0,
                     StartFrame = 0,
@@ -80,7 +80,7 @@ namespace projectFrameCut.Render.Benchmark
                 // 叠加文字：多段文字 + 抖动(Jitter) + 位置(Place) + 缩放(Resize)
                 new TextClip
                 {
-                    Id = "bench-text-001",
+                    Id = Guid.NewGuid(),
                     Name = "Benchmark Text Overlay",
                     LayerIndex = 1,
                     StartFrame = 0,
@@ -104,7 +104,7 @@ namespace projectFrameCut.Render.Benchmark
                 // 色键块：纯绿 -> RemoveColor(抠绿) -> Place（可用于测试透明叠加链路）
                 new SolidColorClip
                 {
-                    Id = "bench-solid-key-001",
+                    Id = Guid.NewGuid(),
                     Name = "Benchmark Keyed Solid",
                     LayerIndex = 2,
                     StartFrame = 120,
@@ -129,7 +129,7 @@ namespace projectFrameCut.Render.Benchmark
                 // 第二段文字：更大的字 + ZoomIn + Crop（让效果栈更丰富）
                 new TextClip
                 {
-                    Id = "bench-text-002",
+                    Id = Guid.NewGuid(),
                     Name = "Benchmark Text Center",
                     LayerIndex = 1,
                     StartFrame = 360,

@@ -97,9 +97,9 @@ public partial class FontPicker : ContentView
         set => SetValue(FontsSourceProperty, value);
     }
 
-    public Func<FontItem, Task<ImageSource>> PreviewRenderer
+    public Func<FontItem, Task<ImageSource>>? PreviewRenderer
     {
-        get => (Func<FontItem, Task<ImageSource>>)GetValue(PreviewRendererProperty);
+        get => (Func<FontItem, Task<ImageSource>>?)GetValue(PreviewRendererProperty);
         set => SetValue(PreviewRendererProperty, value);
     }
 

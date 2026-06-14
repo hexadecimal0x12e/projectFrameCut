@@ -824,7 +824,7 @@ public partial class HomePage : ContentPage
                         }
                         else
                         {
-                            notfounds.Add(item.Value.Id, new AssetItem { AssetId = item.Value.Id, Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
+                            notfounds.Add(item.Value.Id.ToString(), new AssetItem { AssetId = item.Value.Id.ToString(), Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
                         }
                     }
                 }
@@ -1076,18 +1076,20 @@ public partial class HomePage : ContentPage
                 });
             }
         });
-        await Dispatcher.DispatchAsync(() =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
             try
             {
                 cancelButton.IsVisible = false;
+                Content.InvalidateMeasure();
+                Content = origContent;
             }
             catch { }
         });
         initTimer.Stop();
         LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
         if (initTimer.Elapsed.TotalSeconds < 2) await Task.Delay(2000 - (int)initTimer.Elapsed.TotalMilliseconds);
-        Content = origContent;
+
 
         if (!cancelled && page != null && project != null)
         {

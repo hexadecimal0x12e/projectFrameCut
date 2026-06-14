@@ -89,13 +89,13 @@ namespace projectFrameCut.InteractableEditor
         private const double MinSize = 10;
         private const double SnapThresholdDisplayPx = 10.0;
 
-        private readonly Dictionary<string, ClipOverlayState> _clipStates = new(StringComparer.Ordinal);
+        private readonly Dictionary<Guid, ClipOverlayState> _clipStates = new();
         private readonly object _clipStatesLock = new();
-        private readonly Dictionary<string, object> _previewSourceClips = new(StringComparer.Ordinal);
+        private readonly Dictionary<Guid, object> _previewSourceClips = new();
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
-        private Func<string, Task>? _overlayClipTappedCallback;
-        private Func<string, Task>? _overlayClipDoubleTappedCallback;
+        private Func<Guid, Task>? _overlayClipTappedCallback;
+        private Func<Guid, Task>? _overlayClipDoubleTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
         private Func<Task>? _referenceLinesChangedCallback;
         private Action<string, uint, ClipPositionTuple>? _keyframeCandidateCapturedCallback;
@@ -125,10 +125,10 @@ namespace projectFrameCut.InteractableEditor
 
         #region properties
 
-        public ConcurrentDictionary<string, ClipElementUI> Clips { get; private set; } = new();
+        public ConcurrentDictionary<Guid, ClipElementUI> Clips { get; private set; } = new();
 
         // 用于直接显示DraftPage中的所有clips
-        private IReadOnlyDictionary<string, ClipElementUI>? _allClips;
+        private IReadOnlyDictionary<Guid, ClipElementUI>? _allClips;
         private ConcurrentDictionary<string, AssetItem>? _assets;
         private uint _currentFrame;
         private double _framePerPixel = 1d;
@@ -254,9 +254,9 @@ namespace projectFrameCut.InteractableEditor
         private sealed class ClipOverlayState
         {
             private readonly InteractableEditor _owner;
-            public string ClipId { get; init; }
+            public Guid ClipId { get; init; }
 
-            public ClipOverlayState(InteractableEditor owner, string clipId, string? displayName = null)
+            public ClipOverlayState(InteractableEditor owner, Guid clipId, string? displayName = null)
             {
                 _owner = owner;
                 ClipId = clipId;
@@ -662,7 +662,7 @@ namespace projectFrameCut.InteractableEditor
             _previewRefreshCallback = refreshCallback;
         }
 
-        public void ConfigureOverlayClipTap(Func<string, Task>? tapCallback)
+        public void ConfigureOverlayClipTap(Func<Guid, Task>? tapCallback)
         {
             _overlayClipTappedCallback = tapCallback;
             foreach (var state in _clipStates.Values)
@@ -672,7 +672,7 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
-        public void ConfigureOverlayClipDoubleTap(Func<string, Task>? doubleTapCallback)
+        public void ConfigureOverlayClipDoubleTap(Func<Guid, Task>? doubleTapCallback)
         {
             _overlayClipDoubleTappedCallback = doubleTapCallback;
         }
@@ -741,7 +741,7 @@ namespace projectFrameCut.InteractableEditor
         private ClipOverlayState GetOrCreateClipState(ClipElementUI clip)
             => GetOrCreateClipState(clip.Id, clip.DisplayName);
 
-        private ClipOverlayState GetOrCreateClipState(string clipId, string? displayName = null)
+        private ClipOverlayState GetOrCreateClipState(Guid clipId, string? displayName = null)
         {
             ClipOverlayState state;
             lock (_clipStatesLock)
@@ -803,7 +803,7 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return !_isHandleResizeInProgress
-                && !string.IsNullOrWhiteSpace(state.ClipId);
+                && state.ClipId != Guid.Empty;
         }
 
         private bool ShouldShowPreviewHost(ClipOverlayState state)
@@ -937,7 +937,7 @@ namespace projectFrameCut.InteractableEditor
             return false;
         }
 
-        private async Task InvokeOverlayClipTappedAsync(Func<string, Task> callback, string clipId)
+        private async Task InvokeOverlayClipTappedAsync(Func<Guid, Task> callback, Guid clipId)
         {
             try
             {
@@ -949,7 +949,7 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
-        private async Task InvokeOverlayClipDoubleTappedAsync(Func<string, Task> callback, string clipId)
+        private async Task InvokeOverlayClipDoubleTappedAsync(Func<Guid, Task> callback, Guid clipId)
         {
             try
             {
@@ -993,7 +993,7 @@ namespace projectFrameCut.InteractableEditor
                 Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
                 false);
 
-            callback(_currentClip.Id, _currentFrame, keyframePosition);
+            callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition);
         }
 
         private void SetActiveState(ClipOverlayState? state)
@@ -1348,13 +1348,13 @@ namespace projectFrameCut.InteractableEditor
         /// 从DraftPage设置所有clips数据并设置回调以显示当前帧的所有clips
         /// </summary>
         public void SetClipsFromDraftPage(
-            IReadOnlyDictionary<string, ClipElementUI> allClips,
+            IReadOnlyDictionary<Guid, ClipElementUI> allClips,
             double framePerPixel,
             double tracksZoomOffset = 1d,
             float secondPerFrameRatio = 1f)
         {
-            Clips = allClips as ConcurrentDictionary<string, ClipElementUI>
-                ?? new ConcurrentDictionary<string, ClipElementUI>(allClips);
+            Clips = allClips as ConcurrentDictionary<Guid, ClipElementUI>
+                ?? new ConcurrentDictionary<Guid, ClipElementUI>(allClips);
             _allClips = allClips;
             _framePerPixel = framePerPixel;
             _tracksZoomOffset = tracksZoomOffset;
@@ -1362,7 +1362,7 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
-        public Task UpdateClips(ConcurrentDictionary<string, ClipElementUI> clips)
+        public Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips)
         {
             Clips = clips;
             _allClips = clips;
@@ -1599,7 +1599,7 @@ namespace projectFrameCut.InteractableEditor
             ReorderClipStateRootsByZIndex();
         }
 
-        private void UpdatePreviewDebugOverlay(ClipOverlayState state, string clipId, double logicalW, double logicalH, double displayW, double displayH)
+        private void UpdatePreviewDebugOverlay(ClipOverlayState state, Guid clipId, double logicalW, double logicalH, double displayW, double displayH)
         {
             if (state.DebugLabel.IsVisible == ShowPreviewDebugOverlay) return;
             if (!ShowPreviewDebugOverlay)
@@ -1611,7 +1611,7 @@ namespace projectFrameCut.InteractableEditor
             var content = state.PreviewHost.Content;
             var contentType = content?.GetType().Name ?? "null";
             var contentDebugTag = content?.AutomationId;
-            var shortClipId = clipId.Length > 8 ? clipId[..8] : clipId;
+            var shortClipId = clipId.ToString().Length > 8 ? clipId.ToString()[..8] : clipId.ToString();
             var info = $"dbg:{shortClipId} view:{state.HasPreviewView}/{state.PreviewHost.IsVisible} show:{ShouldShowPreviewHost(state)} sup:{ShouldSuppressPreviewForResize(clipId)}"
                 + Environment.NewLine
                 + $"L:{Math.Round(logicalW)}x{Math.Round(logicalH)} D:{Math.Round(displayW)}x{Math.Round(displayH)} T:{contentType}";
@@ -1677,12 +1677,12 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            var knownStates = new HashSet<string>(StringComparer.Ordinal);
+            var knownStates = new HashSet<Guid>();
             var hasVisiblePreview = false;
 
             foreach (var prepared in preparedPreviews)
             {
-                if (string.IsNullOrWhiteSpace(prepared.ClipId))
+                if (prepared.ClipId == Guid.Empty)
                 {
                     continue;
                 }
@@ -1750,14 +1750,14 @@ namespace projectFrameCut.InteractableEditor
             return hasVisiblePreview;
         }
 
-        private bool TryResolveClipRect(string clipId, bool ignorePosotionProvider, out double x, out double y, out double w, out double h, out ClipMode clipType, out bool isCurrentClip)
+        private bool TryResolveClipRect(Guid clipId, bool ignorePosotionProvider, out double x, out double y, out double w, out double h, out ClipMode clipType, out bool isCurrentClip)
         {
             x = 0;
             y = 0;
             w = _videoWidth;
             h = _videoHeight;
             clipType = ClipMode.AudioClip;
-            isCurrentClip = _currentClip is not null && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal);
+            isCurrentClip = _currentClip is not null && _currentClip.Id == clipId;
 
             if (isCurrentClip)
             {
@@ -1820,9 +1820,7 @@ namespace projectFrameCut.InteractableEditor
                 // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
                 if (uiClip.TargetWidth <= 0 && uiClip.TargetHeight <= 0)
                 {
-                    AssetItem? clipAsset = null;
-                    _assets?.TryGetValue(uiClip.Id, out clipAsset);
-                    ComputeFittedRectFromAsset(clipAsset, uiClip, _videoWidth, _videoHeight, ref w, ref h);
+                    ComputeFittedRectFromAsset(null, uiClip, _videoWidth, _videoHeight, ref w, ref h);
                     if (w <= 0) w = _videoWidth;
                     if (h <= 0) h = _videoHeight;
                 }
@@ -1909,7 +1907,7 @@ namespace projectFrameCut.InteractableEditor
             }
 
             var activeClips = _allClips.Values.Where(IsClipVisibleInCurrentFrame);
-            var activeClipIds = activeClips.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+            var activeClipIds = activeClips.Select(c => c.Id).ToHashSet();
 
             // 遍历所有clips，筛选出在当前帧范围内的clips
             foreach (var clip in activeClips)
@@ -1933,9 +1931,7 @@ namespace projectFrameCut.InteractableEditor
                 // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
                 if (clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
                 {
-                    AssetItem? clipAsset = null;
-                    _assets?.TryGetValue(clip.Id, out clipAsset);
-                    ComputeFittedRectFromAsset(clipAsset, clip, _videoWidth, _videoHeight, ref w, ref h);
+                    ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
                     if (w <= 0) w = _videoWidth;
                     if (h <= 0) h = _videoHeight;
                 }
@@ -1974,7 +1970,7 @@ namespace projectFrameCut.InteractableEditor
                 double displayH = h * scale;
 
                 bool isCurrentClip = _currentClip is not null
-                    && string.Equals(_currentClip.Id, clip.Id, StringComparison.Ordinal);
+                    && _currentClip.Id == clip.Id;
                 bool showHandles = isCurrentClip;
                 bool showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 
@@ -2018,7 +2014,7 @@ namespace projectFrameCut.InteractableEditor
             ReorderClipStateRootsByZIndex();
         }
 
-        private void UpdateClipStateZIndex(ClipOverlayState state, string clipId)
+        private void UpdateClipStateZIndex(ClipOverlayState state, Guid clipId)
         {
             if (_allClips is not null && _allClips.TryGetValue(clipId, out var allClip))
             {
@@ -2026,7 +2022,7 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            if (_currentClip is not null && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal))
+            if (_currentClip is not null && _currentClip.Id == clipId)
             {
                 state.Root.ZIndex = ResolveClipOverlayZIndex(_currentClip);
                 return;
@@ -2100,10 +2096,6 @@ namespace projectFrameCut.InteractableEditor
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
         {
             if (!clip.ShouldDisplayInUI)
-                return false;
-
-            if (clip.Id.StartsWith("ghost_", StringComparison.Ordinal)
-                || clip.Id.StartsWith("shadow_", StringComparison.Ordinal))
                 return false;
 
             if (IsNonVisualClipType(clip.ClipType))
@@ -2465,16 +2457,16 @@ namespace projectFrameCut.InteractableEditor
         private bool IsInteractiveManipulationInProgress
             => _isClipPanInProgress || _isHandleResizeInProgress;
 
-        private bool ShouldKeepExistingPreviewFrame(string clipId)
+        private bool ShouldKeepExistingPreviewFrame(Guid clipId)
             => _isClipPanInProgress
                 && !_isHandleResizeInProgress
                 && _currentClip is not null
-                && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal);
+                && _currentClip.Id == clipId;
 
-        private bool ShouldSuppressPreviewForResize(string clipId)
+        private bool ShouldSuppressPreviewForResize(Guid clipId)
             => _isHandleResizeInProgress
                 && _currentClip is not null
-                && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal);
+                && _currentClip.Id == clipId;
 
         private void RequestInteractivePreviewRefreshIfMissing(ClipOverlayState state)
         {
@@ -2609,7 +2601,7 @@ namespace projectFrameCut.InteractableEditor
             var currentId = _currentClip.Id;
             foreach (var clip in _allClips.Values)
             {
-                if (string.Equals(clip.Id, currentId, StringComparison.Ordinal))
+                if (clip.Id == currentId)
                     continue;
                 if (!IsClipVisibleInCurrentFrame(clip))
                     continue;

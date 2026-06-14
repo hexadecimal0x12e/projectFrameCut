@@ -19,7 +19,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     {
         ArgumentNullException.ThrowIfNull(clip);
         var clips = Workspace.Draft.Clips.OfType<ClipDraftDTO>().ToList();
-        int index = clips.FindIndex(c => string.Equals(c.Id, clip.Id, StringComparison.Ordinal));
+        int index = clips.FindIndex(c => c.Id == clip.Id);
         if (index >= 0)
         {
             clips[index] = clip;
@@ -56,7 +56,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     {
         var clips = Workspace.Draft.Clips.OfType<ClipDraftDTO>().ToList();
         int before = clips.Count;
-        clips.RemoveAll(c => string.Equals(c.Id, id, StringComparison.Ordinal));
+        clips.RemoveAll(c => c.Id == Guid.Parse(id));
         Workspace.Draft.Clips = clips.Cast<object>().ToArray();
         return clips.Count != before;
     }
@@ -129,7 +129,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     }
 
     public ClipDraftDTO? FindClip(string id)
-        => Workspace.Draft.Clips.OfType<ClipDraftDTO>().FirstOrDefault(c => string.Equals(c.Id, id, StringComparison.Ordinal));
+        => Workspace.Draft.Clips.OfType<ClipDraftDTO>().FirstOrDefault(c => c.Id == Guid.Parse(id));
 
     public EffectInfo? GetEffectInfo(string typeName)
     {

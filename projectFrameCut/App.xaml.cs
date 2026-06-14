@@ -128,7 +128,7 @@ namespace projectFrameCut
                     {
                         if (!watchdogService.IsThreadFrozen || frozenFromShown) return;
                         count++;
-                        if(count % 10 == 0)
+                        if (count % 10 == 0)
                         {
                             new Thread(Helper.HelperProgram.FrozenMain)
                             {
@@ -245,6 +245,21 @@ namespace projectFrameCut
                 if (nativeWindow.Content is NavigationView && !force)
                     return;
 
+                nativeWindow.Closed += async (s, e) =>
+                {
+                    if (AppShell.instance.CurrentPage is DraftPage pg)
+                    {
+                        try
+                        {
+                            await pg.Save(true, new ApplicationAPIBase.Project.ClipUpdateEventArgs { Reason = ApplicationAPIBase.Project.ClipUpdateReason.Unknown, DetailInfo = "Auto-save when closing window" });
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "Auto-saving project when closing window", this);
+                        }
+                    }
+                };
+
                 nativeWindow.SystemBackdrop = new DesktopAcrylicBackdrop();
 
                 var originalContent = nativeWindow.Content;
@@ -317,7 +332,7 @@ namespace projectFrameCut
                                     break;
                                 case "TemplateViewPage":
                                     await Shell.Current.Navigation.PushAsync(new TemplateViewPage());
-                                    break; 
+                                    break;
                                 case "Assets":
                                     await Shell.Current.Navigation.PushAsync(new AssetsLibraryPage());
                                     break;

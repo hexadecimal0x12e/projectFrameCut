@@ -14,7 +14,7 @@ public static class TimelineMcpLiveService
         => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips.OfType<ClipDraftDTO>().OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).ToList();
 
     public static ClipDraftDTO? GetClip(DraftPage page, string id)
-        => page.Clips.TryGetValue(id, out var clip) ? DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false) : null;
+        => Guid.TryParse(id, out var guid) && page.Clips.TryGetValue(guid, out var clip) ? DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false) : null;
 
     public static ClipElementUI ReplaceClip(DraftPage page, ClipDraftDTO dto)
     {
@@ -25,7 +25,7 @@ public static class TimelineMcpLiveService
 
     public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip))
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
@@ -52,7 +52,7 @@ public static class TimelineMcpLiveService
 
     public static ClipElementUI ApplyClipPatch(DraftPage page, string clipId, Dictionary<string, object?> patch)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip))
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
@@ -105,7 +105,7 @@ public static class TimelineMcpLiveService
 
     public static IEffect AddEffect(DraftPage page, string clipId, EffectAndMixtureJSONStructure effect)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip))
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
@@ -148,7 +148,7 @@ public static class TimelineMcpLiveService
 
     public static bool RemoveEffect(DraftPage page, string clipId, string effectKey)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip) || clip.Effects is null)
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.Effects is null)
         {
             return false;
         }
@@ -164,7 +164,7 @@ public static class TimelineMcpLiveService
 
     public static IEffectBundle AddEffectBundle(DraftPage page, string clipId, IEffectBundle bundle)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip))
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
@@ -178,7 +178,7 @@ public static class TimelineMcpLiveService
 
     public static bool RemoveEffectBundle(DraftPage page, string clipId, Guid bundleId)
     {
-        if (!page.Clips.TryGetValue(clipId, out var clip) || clip.EffectBundles is null)
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectBundles is null)
         {
             return false;
         }

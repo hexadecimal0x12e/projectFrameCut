@@ -1669,7 +1669,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u56FA\u5B9A\u5927\u5C0F",
+        "Value": "\u56FA\u5B9A\u5927\u5C0F\uFF08\u6839\u636E\u5B57\u53F7\u8BA1\u7B97\u5927\u5C0F\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4174,7 +4174,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Fixed Size",
+        "Value": "Fixed Size (Based on Font Size)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6338,7 +6338,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u56FA\u5B9A\u5927\u5C0F",
+        "Value": "\u56FA\u5B9A\u5927\u5C0F\uFF08\u6839\u64DA\u5B57\u578B\u5927\u5C0F\u8A08\u7B97\u5927\u5C0F\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8574,7 +8574,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u56FA\u5B9A\u30B5\u30A4\u30BA",
+        "Value": "\u56FA\u5B9A\u30B5\u30A4\u30BA\uFF08\u30D5\u30A9\u30F3\u30C8\u30B5\u30A4\u30BA\u306B\u57FA\u3065\u304F\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10790,7 +10790,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\uACE0\uC815 \uD06C\uAE30",
+        "Value": "\uACE0\uC815 \uD06C\uAE30(\uAE00\uC790 \uD06C\uAE30\uC5D0 \uB530\uB77C \uD06C\uAE30 \uACC4\uC0B0)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12983,7 +12983,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Taille fixe",
+        "Value": "Taille fixe (calcul\u00E9e en fonction de la taille de police)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15190,7 +15190,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u5B9A\u5C3A\u5BF8",
+        "Value": "\u5B9A\u5927\u5C0F\uFF0C\u4F9D\u5B57\u865F\u8A08\u4E4B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17420,7 +17420,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u062D\u062C\u0645 \u062B\u0627\u0628\u062A",
+        "Value": "\u062D\u062C\u0645 \u062B\u0627\u0628\u062A (\u0645\u062D\u0633\u0648\u0628 \u062D\u0633\u0628 \u062D\u062C\u0645 \u0627\u0644\u062E\u0637)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19628,7 +19628,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Feste Gr\u00F6\u00DFe",
+        "Value": "Feste Gr\u00F6\u00DFe (basierend auf der Schriftgr\u00F6\u00DFe berechnet)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21812,7 +21812,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Tama\u00F1o fijo",
+        "Value": "Tama\u00F1o fijo (calculado seg\u00FAn el tama\u00F1o de fuente)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24011,7 +24011,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Dimensione fissa",
+        "Value": "Dimensione fissa (calcolata in base alla dimensione del carattere)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26223,7 +26223,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Sta\u0142y rozmiar",
+        "Value": "Sta\u0142y rozmiar (obliczany na podstawie rozmiaru czcionki)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28423,7 +28423,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Tamanho fixo",
+        "Value": "Tamanho fixo (calculado com base no tamanho da fonte)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30642,7 +30642,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440",
+        "Value": "\u0424\u0438\u043A\u0441\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440 (\u0432\u044B\u0447\u0438\u0441\u043B\u044F\u0435\u0442\u0441\u044F \u043F\u043E \u0440\u0430\u0437\u043C\u0435\u0440\u0443 \u0448\u0440\u0438\u0444\u0442\u0430)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32843,7 +32843,7 @@
       },
       {
         "Id": "TextOption_LayoutMode_FixedSize",
-        "Value": "Sabit Boyut",
+        "Value": "Sabit boyut (yaz\u0131 tipi boyutuna g\u00F6re hesaplan\u0131r)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

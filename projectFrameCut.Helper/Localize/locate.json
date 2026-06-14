@@ -12,6 +12,22 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u63D0\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "AdminPrompt",
         "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u4E0D\u80FD\u5728\u7BA1\u7406\u5458\u8EAB\u4EFD\u4E0B\u8FD0\u884C\u3002\r\u8BF7\u5C1D\u8BD5\u5728\u6CA1\u6709\u7BA1\u7406\u5458\u6743\u9650\u7684\u4E0A\u4E0B\u6587\u91CC\u91CD\u65B0\u6253\u5F00\u7A0B\u5E8F\u3002",
         "Mode": "InterpolationString",
@@ -22,6 +38,14 @@
       {
         "Id": "AppLoading",
         "Value": "\u52A0\u8F7D\u5E94\u7528\u7A0B\u5E8F...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u7528\u6CD5\uFF1Apjfc:runtimeConfig [mode] [arg]\r\u53EF\u7528\u6A21\u5F0F\uFF1A\r- config: \u5199\u5165\u6B64\u5B9E\u4F8B\u7684\u8FD0\u884C\u65F6\u914D\u7F6E\uFF0C\u53C2\u6570\u4E3AJSON\u8BCD\u5178\r- reset: \u91CD\u7F6E\u6B64\u5B9E\u4F8B\u7684\u8FD0\u884C\u65F6\u914D\u7F6E\r- help: \u663E\u793A\u6B64\u6D88\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -153,30 +177,6 @@
         "Id": "UnsupportedOSPrompt",
         "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u9700\u8981\u5728 Windows 10 2004 / LTSC 2021 (build 19041) \u6216\u8005\u66F4\u65B0\u7684\u7248\u672C\u4E0A\u8FD0\u884C\u3002\r\u8BF7\u8003\u8651\u5347\u7EA7\u4F60\u7684\u7CFB\u7EDF\u3002",
         "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "_Info",
-        "Value": "\u63D0\u793A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "_Done",
-        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ConfigHandler_HelpText",
-        "Value": "\u7528\u6CD5\uFF1Apjfc:runtimeConfig [mode] [arg]\r\u53EF\u7528\u6A21\u5F0F\uFF1A\r- config: \u5199\u5165\u6B64\u5B9E\u4F8B\u7684\u8FD0\u884C\u65F6\u914D\u7F6E\uFF0C\u53C2\u6570\u4E3AJSON\u8BCD\u5178\r- reset: \u91CD\u7F6E\u6B64\u5B9E\u4F8B\u7684\u8FD0\u884C\u65F6\u914D\u7F6E\r- help: \u663E\u793A\u6B64\u6D88\u606F",
-        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
@@ -341,6 +341,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "Sorry, {HelperProgram.AppTitle} has crashed.\r\nThe program will restart automatically, and your project will be automatically recovered.\r\nTo disable this feature, go to Settings \u003E General \u003E Do not restart after crash.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Operation completed successfully.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Info",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Usage: pjfc:runtimeConfig [mode] [arg]\rAvailable modes:\r- config: Write the runtime configuration for this instance, argument is a JSON dictionary\r- reset: Reset the runtime configuration for this instance\r- help: Show this message",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -510,6 +537,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u63D0\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u7528\u6CD5\uFF1Apjfc:runtimeConfig [mode] [arg]\r\u53EF\u7528\u6A21\u5F0F\uFF1A\r- config: \u5BEB\u5165\u6B64\u5BE6\u4F8B\u7684\u904B\u884C\u6642\u914D\u7F6E\uFF0C\u53C3\u6578\u70BAJSON\u5B57\u5178\r- reset: \u91CD\u7F6E\u6B64\u5BE6\u4F8B\u7684\u904B\u884C\u6642\u914D\u7F6E\r- help: \u986F\u793A\u6B64\u8A0A\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -671,6 +725,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001{HelperProgram.AppTitle} \u304C\u30AF\u30E9\u30C3\u30B7\u30E5\u3057\u307E\u3057\u305F\u3002\r\u30D7\u30ED\u30B0\u30E9\u30E0\u306F\u81EA\u52D5\u518D\u8D77\u52D5\u3057\u3001\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306F\u81EA\u52D5\u5FA9\u65E7\u3055\u308C\u307E\u3059\u3002\r\u3053\u306E\u6A5F\u80FD\u3092\u7121\u52B9\u306B\u3059\u308B\u306B\u306F\u3001[\u8A2D\u5B9A] \u003E [\u4E00\u822C] \u003E [\u30AF\u30E9\u30C3\u30B7\u30E5\u5F8C\u306B\u518D\u8D77\u52D5\u3057\u306A\u3044] \u306B\u79FB\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u304A\u77E5\u3089\u305B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u4F7F\u3044\u65B9\uFF1Apjfc:runtimeConfig [mode] [arg]\r\u4F7F\u7528\u53EF\u80FD\u306A\u30E2\u30FC\u30C9\uFF1A\r- config: \u3053\u306E\u30A4\u30F3\u30B9\u30BF\u30F3\u30B9\u306E\u5B9F\u884C\u6642\u8A2D\u5B9A\u3092\u66F8\u304D\u8FBC\u3080\u3002\u5F15\u6570\u306FJSON\u8F9E\u66F8\r- reset: \u3053\u306E\u30A4\u30F3\u30B9\u30BF\u30F3\u30B9\u306E\u5B9F\u884C\u6642\u8A2D\u5B9A\u3092\u30EA\u30BB\u30C3\u30C8\u3059\u308B\r- help: \u3053\u306E\u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u8868\u793A\u3059\u308B",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -840,6 +921,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\uC0AC\uC6A9\uBC95: pjfc:runtimeConfig [mode] [arg]\r\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uBAA8\uB4DC:\r- config: \uC774 \uC778\uC2A4\uD134\uC2A4\uC758 \uB7F0\uD0C0\uC784 \uAD6C\uC131\uC744 \uC791\uC131\uD569\uB2C8\uB2E4. \uC778\uC218\uB294 JSON \uC0AC\uC804\uC785\uB2C8\uB2E4.\r- reset: \uC774 \uC778\uC2A4\uD134\uC2A4\uC758 \uB7F0\uD0C0\uC784 \uAD6C\uC131\uC744 \uCD08\uAE30\uD654\uD569\uB2C8\uB2E4.\r- help: \uC774 \uBA54\uC2DC\uC9C0\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\uC54C\uB9BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -1001,6 +1109,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "D\u00E9sol\u00E9, {HelperProgram.AppTitle} a plant\u00E9.\rLe programme va red\u00E9marrer automatiquement, votre projet sera automatiquement restaur\u00E9.\rPour d\u00E9sactiver cette fonctionnalit\u00E9, allez dans Param\u00E8tres - G\u00E9n\u00E9ral - Ne pas red\u00E9marrer apr\u00E8s un plantage.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Op\u00E9ration r\u00E9ussie.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Info",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Usage : pjfc:runtimeConfig [mode] [arg]\rModes disponibles :\r- config : \u00E9crit la configuration d\u0027ex\u00E9cution de cette instance, le param\u00E8tre est un dictionnaire JSON\r- reset : r\u00E9initialise la configuration d\u0027ex\u00E9cution de cette instance\r- help : affiche ce message",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -1170,6 +1305,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u6210\u77E3\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u7528\u4E4B\u6CD5\uFF1Apjfc:runtimeConfig [mode] [arg]\r\u53EF\u7528\u6A21\u5F0F\uFF1A\r- config\uFF1A\u8BB0\u5F55\u6B64\u5B9E\u4F8B\u4E4B\u8FD0\u884C\u65F6\u914D\u7F6E\uFF0C\u53C2\u6570\u4E3AJSON\u5B57\u5178\r- reset\uFF1A\u91CD\u7F6E\u6B64\u5B9E\u4F8B\u4E4B\u8FD0\u884C\u65F6\u914D\u7F6E\r- help\uFF1A\u793A\u6B64\u6D88\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -1331,6 +1493,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "\u0646\u0623\u0633\u0641\u060C {HelperProgram.AppTitle} \u0642\u062F \u062A\u0639\u0637\u0644.\r\u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627\u060C \u0648\u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0645\u0634\u0631\u0648\u0639\u0643 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627.\r\u0644\u062A\u0639\u0637\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629\u060C \u0627\u0646\u062A\u0642\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A - \u0639\u0627\u0645 - \u0639\u062F\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0628\u0639\u062F \u0627\u0644\u062A\u0639\u0637\u0644.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u062A\u0645\u062A \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0628\u0646\u062C\u0627\u062D.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u062A\u0644\u0645\u064A\u062D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645: pjfc:runtimeConfig [mode] [arg]\r\u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u0645\u062A\u0627\u062D\u0629:\r- config: \u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A \u0644\u0647\u0630\u0647 \u0627\u0644\u0645\u062B\u064A\u0644\u060C \u0627\u0644\u0645\u0639\u0644\u0645\u0629 \u0647\u064A \u0642\u0627\u0645\u0648\u0633 JSON\r- reset: \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A \u0644\u0647\u0630\u0647 \u0627\u0644\u0645\u062B\u064A\u0644\r- help: \u0639\u0631\u0636 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -1500,6 +1689,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Vorgang erfolgreich abgeschlossen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Hinweis",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Verwendung: pjfc:runtimeConfig [mode] [arg]\rVerf\u00FCgbare Modi:\r- config: Schreibt die Laufzeitkonfiguration dieser Instanz, Parameter ist ein JSON-W\u00F6rterbuch\r- reset: Setzt die Laufzeitkonfiguration dieser Instanz zur\u00FCck\r- help: Zeigt diese Nachricht an",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -1661,6 +1877,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "Lo sentimos, {HelperProgram.AppTitle} se ha bloqueado.\rEl programa se reiniciar\u00E1 autom\u00E1ticamente y tu proyecto se restaurar\u00E1 autom\u00E1ticamente.\rPara desactivar esta funci\u00F3n, ve a Configuraci\u00F3n - General - No reiniciar despu\u00E9s de un bloqueo.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Operaci\u00F3n completada con \u00E9xito.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Uso: pjfc:runtimeConfig [mode] [arg]\rModos disponibles:\r- config: Escribe la configuraci\u00F3n en tiempo de ejecuci\u00F3n de esta instancia, el argumento es un diccionario JSON\r- reset: Restablece la configuraci\u00F3n en tiempo de ejecuci\u00F3n de esta instancia\r- help: Muestra este mensaje",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -1830,6 +2073,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Operazione completata con successo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informazione",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Utilizzo: pjfc:runtimeConfig [mode] [arg]\rModalit\u00E0 disponibili:\r- config: scrive la configurazione runtime di questa istanza, l\u0027argomento \u00E8 un dizionario JSON\r- reset: resetta la configurazione runtime di questa istanza\r- help: mostra questo messaggio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -1991,6 +2261,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "Przepraszamy, {HelperProgram.AppTitle} uleg\u0142 awarii.\rProgram uruchomi si\u0119 automatycznie, a tw\u00F3j projekt zostanie automatycznie przywr\u00F3cony.\rAby wy\u0142\u0105czy\u0107 t\u0119 funkcj\u0119, przejd\u017A do Ustawienia-Og\u00F3lne-Nie uruchamiaj ponownie po awarii.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informacja",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Operacja zako\u0144czona sukcesem.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "U\u017Cycie: pjfc:runtimeConfig [mode] [arg]\rDost\u0119pne tryby:\r- config: zapisz konfiguracj\u0119 czasu wykonania dla tego wyst\u0105pienia, argument to s\u0142ownik JSON\r- reset: zresetuj konfiguracj\u0119 czasu wykonania dla tego wyst\u0105pienia\r- help: wy\u015Bwietl t\u0119 wiadomo\u015B\u0107",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
@@ -2160,6 +2457,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "Informa\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Uso: pjfc:runtimeConfig [mode] [arg]\rModos dispon\u00EDveis:\r- config: Escrever a configura\u00E7\u00E3o de tempo de execu\u00E7\u00E3o desta inst\u00E2ncia, o argumento \u00E9 um dicion\u00E1rio JSON\r- reset: Redefinir a configura\u00E7\u00E3o de tempo de execu\u00E7\u00E3o desta inst\u00E2ncia\r- help: Exibir esta mensagem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Opera\u00E7\u00E3o conclu\u00EDda com sucesso.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -2325,6 +2649,33 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: pjfc:runtimeConfig [mode] [arg]\r\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0435 \u0440\u0435\u0436\u0438\u043C\u044B:\r- config: \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0433\u043E \u044D\u043A\u0437\u0435\u043C\u043F\u043B\u044F\u0440\u0430, \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 - JSON-\u0441\u043B\u043E\u0432\u0430\u0440\u044C\r- reset: \u0441\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0433\u043E \u044D\u043A\u0437\u0435\u043C\u043F\u043B\u044F\u0440\u0430\r- help: \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u044D\u0442\u043E \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -2486,6 +2837,33 @@
         "Id": "CrashForm_AutoRebootSoon",
         "Value": "\u00DCzg\u00FCn\u00FCz, {HelperProgram.AppTitle} \u00E7\u00F6kt\u00FC.\rProgram otomatik olarak yeniden ba\u015Flat\u0131lacak ve projeniz otomatik olarak kurtar\u0131lacakt\u0131r.\rBu \u00F6zelli\u011Fi devre d\u0131\u015F\u0131 b\u0131rakmak i\u00E7in Ayarlar \u003E Genel \u003E \u00C7\u00F6kme sonras\u0131 yeniden ba\u015Flatma yapma b\u00F6l\u00FCm\u00FCne gidin.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u0130pucu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "\u0130\u015Flem ba\u015Far\u0131yla tamamland\u0131.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ConfigHandler_HelpText",
+        "Value": "Kullan\u0131m: pjfc:runtimeConfig [mode] [arg]\r\nKullan\u0131labilir modlar:\r\n- config: Bu \u00F6rne\u011Fin \u00E7al\u0131\u015Fma zaman\u0131 yap\u0131land\u0131rmas\u0131n\u0131 yaz, parametre JSON s\u00F6zl\u00FC\u011F\u00FCd\u00FCr\r\n- reset: Bu \u00F6rne\u011Fin \u00E7al\u0131\u015Fma zaman\u0131 yap\u0131land\u0131rmas\u0131n\u0131 s\u0131f\u0131rla\r\n- help: Bu mesaj\u0131 g\u00F6ster",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",

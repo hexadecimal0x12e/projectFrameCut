@@ -22,7 +22,10 @@
       "Bash(dotnet test *)",
       "PowerShell(Test-Path *)",
       "PowerShell(Get-Item *)",
-      "PowerShell(splc-edit *)"
+      "PowerShell(splc-edit *)",
+      "Bash(findstr *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(dotnet restore *)"
     ],
     "deny": [
       "Bash(Select-*)",

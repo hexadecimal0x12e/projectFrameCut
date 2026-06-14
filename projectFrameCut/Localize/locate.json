@@ -2830,6 +2830,46 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u6EDA\u52A8\u65F6\u95F4\u7EBF\u81F3\u5F53\u524D\u64AD\u653E\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u9501\u5B9A\u65F6\u95F4\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u5411\u5DE6\u6EDA\u52A8\u65F6\u95F4\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u5411\u53F3\u6EDA\u52A8\u65F6\u95F4\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u89E3\u9501\u65F6\u95F4\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_View_ToggleTaskbar",
         "Value": "\u5207\u6362\u4EFB\u52A1\u680F\u663E\u793A\u72B6\u6001",
         "Mode": "ConstString",
@@ -9770,7 +9810,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "No adjacent clip on the right side of the selected clip.",
+        "Value": "There is no supported adjacent clip to the right of the selected clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9779,7 +9819,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "There is no adjacent clip to the left of the selected clip.",
+        "Value": "The selected clip has no supported adjacent clip on its left.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10424,7 +10464,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Adding \u0022{name}\u0022. You can:\r- Click on an empty area on the track to add at the clicked position.\r- Use the arrow keys to move, and press Enter to confirm the position.\r- Press Esc to cancel this operation.",
+        "Value": "To place \u0022{name}\u0022:\r- Click an empty spot on the track to add at the clicked position.\r- Use the arrow keys to move, and press Enter to confirm the position.\r- Press Esc to cancel this operation.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -10438,7 +10478,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Instructions for adding a clip by clicking or using keyboard",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -11616,7 +11656,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignore template scope (show all templates)",
+        "Value": "Show all templates",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14139,6 +14179,60 @@
       {
         "Id": "VideoCacheManagePage_Tile",
         "Value": "Disk Cache Management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Scroll timeline to current playhead position",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Lock Timeline",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Scroll Timeline Left",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Scroll timeline to the right",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Unlock Timeline",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Scale proportionally",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17387,7 +17481,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u9078\u4E2D\u7247\u6BB5\u7684\u53F3\u908A\u6C92\u6709\u76F8\u9130\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9078\u53D6\u7684\u7247\u6BB5\u7684\u53F3\u908A\u6C92\u6709\u53D7\u652F\u63F4\u7684\u76F8\u9130\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17396,7 +17490,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u9078\u4E2D\u7684\u7247\u6BB5\u5DE6\u908A\u6C92\u6709\u76F8\u9130\u7684\u7247\u6BB5\u3002",
+        "Value": "\u9078\u53D6\u7684\u7247\u6BB5\u5DE6\u908A\u6C92\u6709\u652F\u63F4\u7684\u76F8\u9130\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18041,7 +18135,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u9EDE\u64CA\u8ECC\u9053\u4E0A\u7A7A\u9592\u7684\u5730\u65B9\u4F86\u5728\u9EDE\u64CA\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u9375\u76E4\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u9375\u4F86\u79FB\u52D5\uFF0C\u6309Enter\u4F86\u78BA\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u4F86\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u8981\u653E\u7F6E\u300C{name}\u300D\uFF1A\r- \u9EDE\u64CA\u8ECC\u9053\u4E0A\u7A7A\u9592\u7684\u5730\u65B9\u4F86\u5728\u9EDE\u64CA\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u9375\u76E4\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u9375\u4F86\u79FB\u52D5\uFF0C\u6309 Enter \u4F86\u78BA\u5B9A\u4F4D\u7F6E\u3002\r- \u6309 Esc \u4F86\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -19233,7 +19327,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u5FFD\u7565\u6A21\u677F\u4F5C\u7528\u57DF\uFF08\u986F\u793A\u6240\u6709\u7684\u6A21\u677F\uFF09",
+        "Value": "\u986F\u793A\u6240\u6709\u7BC4\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21746,6 +21840,60 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u6EFE\u52D5\u6642\u9593\u8EF8\u81F3\u76EE\u524D\u64AD\u653E\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u5411\u53F3\u6EFE\u52D5\u6642\u9593\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u89E3\u9396\u6642\u9593\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u9396\u5B9A\u6642\u9593\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u6309\u6BD4\u4F8B\u7E2E\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u5411\u5DE6\u6EFE\u52D5\u6642\u9593\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -25007,7 +25155,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u9078\u629E\u3057\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u53F3\u5074\u306B\u306F\u96A3\u63A5\u3059\u308B\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+        "Value": "\u9078\u629E\u3057\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u53F3\u5074\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u308B\u96A3\u63A5\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25016,7 +25164,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u9078\u629E\u3055\u308C\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u5DE6\u5074\u306B\u306F\u96A3\u63A5\u3059\u308B\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
+        "Value": "\u9078\u629E\u3057\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u5DE6\u96A3\u306B\u5BFE\u5FDC\u3059\u308B\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25661,7 +25809,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u300C{name}\u300D\u3092\u8FFD\u52A0\u4E2D\u3067\u3059\u3002\u4EE5\u4E0B\u306E\u64CD\u4F5C\u304C\u53EF\u80FD\u3067\u3059\uFF1A\r- \u30C8\u30E9\u30C3\u30AF\u4E0A\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u3092\u30AF\u30EA\u30C3\u30AF\u3059\u308B\u3068\u3001\u30AF\u30EA\u30C3\u30AF\u3057\u305F\u4F4D\u7F6E\u306B\u8FFD\u52A0\u3055\u308C\u307E\u3059\u3002\r- \u30AD\u30FC\u30DC\u30FC\u30C9\u306E\u77E2\u5370\u30AD\u30FC\u3067\u79FB\u52D5\u3057\u3001Enter\u30AD\u30FC\u3067\u4F4D\u7F6E\u3092\u78BA\u5B9A\u3057\u307E\u3059\u3002\r- Esc\u30AD\u30FC\u3067\u64CD\u4F5C\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3057\u307E\u3059\u3002",
+        "Value": "\u300C{name}\u300D\u3092\u914D\u7F6E\u3059\u308B\u306B\u306F\uFF1A\r- \u30C8\u30E9\u30C3\u30AF\u4E0A\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u3001\u30AF\u30EA\u30C3\u30AF\u3057\u305F\u4F4D\u7F6E\u306B\u8FFD\u52A0\u3057\u307E\u3059\u3002\r- \u30AD\u30FC\u30DC\u30FC\u30C9\u306E\u4E0A\u4E0B\u5DE6\u53F3\u30AD\u30FC\u3067\u79FB\u52D5\u3057\u3001Enter\u30AD\u30FC\u3067\u4F4D\u7F6E\u3092\u78BA\u5B9A\u3057\u307E\u3059\u3002\r- Esc\u30AD\u30FC\u3067\u64CD\u4F5C\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3057\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -25675,7 +25823,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u6DFB\u52A0\u7247\u6BB5\u65F6\u7684\u64CD\u4F5C\u63D0\u793A",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -26853,7 +27001,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u306E\u30B9\u30B3\u30FC\u30D7\u3092\u7121\u8996\uFF08\u3059\u3079\u3066\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8868\u793A\uFF09",
+        "Value": "\u3059\u3079\u3066\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29353,6 +29501,60 @@
       {
         "Id": "VideoCacheManagePage_Tile",
         "Value": "\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u56FA\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u53F3\u306B\u30B9\u30AF\u30ED\u30FC\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u73FE\u5728\u306E\u518D\u751F\u4F4D\u7F6E\u306B\u30B9\u30AF\u30ED\u30FC\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u306E\u30ED\u30C3\u30AF\u89E3\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u89E3\u9501\u65F6\u95F4\u7EBF",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u6BD4\u4F8B\u62E1\u5927\u7E2E\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u5DE6\u306B\u30B9\u30AF\u30ED\u30FC\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32616,7 +32818,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC624\uB978\uCABD\uC5D0 \uC778\uC811\uD55C \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC624\uB978\uCABD\uC5D0 \uC9C0\uC6D0\uB418\uB294 \uC778\uC811 \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32625,7 +32827,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC67C\uCABD\uC5D0 \uC778\uC811\uD55C \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC67C\uCABD\uC5D0 \uC9C0\uC6D0\uB418\uB294 \uC778\uC811 \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33270,7 +33472,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u300C{name}\u300D\uC744(\uB97C) \uCD94\uAC00 \uC911\uC785\uB2C8\uB2E4. \uD560 \uC218 \uC788\uB294 \uC791\uC5C5:\r- \uD2B8\uB799\uC758 \uBE48 \uACF3\uC744 \uD074\uB9AD\uD558\uC5EC \uD574\uB2F9 \uC704\uCE58\uC5D0 \uCD94\uAC00\uD569\uB2C8\uB2E4.\r- \uD0A4\uBCF4\uB4DC\uC758 \uBC29\uD5A5\uD0A4(\u2191\u2193\u2190\u2192)\uB85C \uC774\uB3D9\uD55C \uD6C4 Enter\uB97C \uB20C\uB7EC \uC704\uCE58\uB97C \uD655\uC815\uD569\uB2C8\uB2E4.\r- Esc\uB97C \uB204\uB974\uBA74 \uC774 \uC791\uC5C5\uC744 \uCDE8\uC18C\uD569\uB2C8\uB2E4.",
+        "Value": "\u300C{name}\u300D\uC744(\uB97C) \uBC30\uCE58\uD558\uB824\uBA74:\n- \uD2B8\uB799\uC758 \uBE48 \uACF3\uC744 \uD074\uB9AD\uD558\uC5EC \uD574\uB2F9 \uC704\uCE58\uC5D0 \uCD94\uAC00\uD558\uC138\uC694.\n- \uD0A4\uBCF4\uB4DC\uC758 \uD654\uC0B4\uD45C \uD0A4(\u2191\u2193\u2190\u2192)\uB97C \uC0AC\uC6A9\uD558\uC5EC \uC774\uB3D9\uD558\uACE0 Enter \uD0A4\uB85C \uC704\uCE58\uB97C \uD655\uC778\uD558\uC138\uC694.\n- Esc \uD0A4\uB97C \uB204\uB974\uBA74 \uC791\uC5C5\uC774 \uCDE8\uC18C\uB429\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -33284,7 +33486,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u5728\u6DFB\u52A0\u526A\u8F91\u7247\u6BB5\u65F6\u663E\u793A\u7684\u8BF4\u660E\u6587\u5B57\uFF0C\u5F15\u5BFC\u7528\u6237\u901A\u8FC7\u70B9\u51FB\u3001\u952E\u76D8\u63A7\u5236\u7B49\u65B9\u5F0F\u5B8C\u6210\u6DFB\u52A0\u64CD\u4F5C",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -34459,7 +34661,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\uD15C\uD50C\uB9BF \uBC94\uC704 \uBB34\uC2DC (\uBAA8\uB4E0 \uD15C\uD50C\uB9BF \uD45C\uC2DC)",
+        "Value": "\uBAA8\uB4E0 \uD15C\uD50C\uB9BF \uD45C\uC2DC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36947,6 +37149,60 @@
       {
         "Id": "VideoCacheManagePage_Tile",
         "Value": "\uB514\uC2A4\uD06C \uCE90\uC2DC \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\uD0C0\uC784\uB77C\uC778 \uC7A0\uAE08",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\uD0C0\uC784\uB77C\uC778\uC744 \uC67C\uCABD\uC73C\uB85C \uC2A4\uD06C\uB864",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\uD0C0\uC784\uB77C\uC778\uC744 \uD604\uC7AC \uC7AC\uC0DD \uC704\uCE58\uB85C \uC2A4\uD06C\uB864",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\uD0C0\uC784\uB77C\uC778 \uC624\uB978\uCABD\uC73C\uB85C \uC2A4\uD06C\uB864",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\uD0C0\uC784\uB77C\uC778 \uC7A0\uAE08 \uD574\uC81C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\uBE44\uC728\uC5D0 \uB530\uB77C \uD06C\uAE30 \uC870\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -40204,7 +40460,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Il n\u0027y a pas de clip adjacent \u00E0 droite du clip s\u00E9lectionn\u00E9.",
+        "Value": "Aucun clip adjacent pris en charge \u00E0 droite du clip s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -40213,7 +40469,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Il n\u0027y a pas de clip adjacent \u00E0 gauche du clip s\u00E9lectionn\u00E9.",
+        "Value": "Aucun segment adjacent pris en charge \u00E0 gauche du segment s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -40858,7 +41114,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Ajout de \u00AB {name} \u00BB en cours. Vous pouvez :\r- Cliquer sur un endroit libre de la piste pour ajouter \u00E0 l\u0027emplacement cliqu\u00E9.\r- Utiliser les touches fl\u00E9ch\u00E9es du clavier pour vous d\u00E9placer, puis appuyer sur Entr\u00E9e pour valider la position.\r- Appuyer sur \u00C9chap pour annuler cette action.",
+        "Value": "Pour placer \u00AB {name} \u00BB :\r- Cliquez sur un endroit libre de la piste pour ajouter \u00E0 l\u0027endroit cliqu\u00E9.\r- Utilisez les touches fl\u00E9ch\u00E9es du clavier pour vous d\u00E9placer, puis appuyez sur Entr\u00E9e pour confirmer la position.\r- Appuyez sur \u00C9chap pour annuler cette op\u00E9ration.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -40872,6 +41128,7 @@
             "Value": ""
           }
         ],
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -42048,7 +42305,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignorer la port\u00E9e du mod\u00E8le (afficher tous les mod\u00E8les)",
+        "Value": "Afficher tous les mod\u00E8les",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44545,6 +44802,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Faire d\u00E9filer la timeline jusqu\u0027\u00E0 la position de lecture actuelle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u83DC\u5355\u9879\uFF1A\u5C06\u65F6\u95F4\u7EBF\u6EDA\u52A8\u5230\u5F53\u524D\u64AD\u653E\u4F4D\u7F6E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Verrouiller la chronologie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Faire d\u00E9filer la chronologie vers la gauche",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "D\u00E9filer la chronologie vers la droite",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "D\u00E9verrouiller la chronologie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Redimensionner proportionnellement",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -45502,7 +45813,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u6240\u9009\u7247\u6BB5\u4E4B\u5DE6\u4FA7\uFF0C\u65E0\u76F8\u90BB\u4E4B\u7247\u6BB5\u3002",
+        "Value": "\u6240\u9009\u7247\u6BB5\u4E4B\u5DE6\uFF0C\u65E0\u53D7\u652F\u6301\u4E4B\u90BB\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -45511,7 +45822,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u53F3\u65E0\u90BB\u6BB5\uFF0C\u4E0D\u53EF\u52A0\u7109\u3002",
+        "Value": "\u6240\u9009\u7247\u6BB5\u4E4B\u53F3\u4FA7\u65E0\u76F8\u90BB\u53EF\u652F\u6301\u4E4B\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -48457,7 +48768,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u4ECA\u6DFB\u300C{name}\u300D\u3002\u541B\u53EF\uFF1A\r- \u64CA\u8ECC\u4E0A\u7A7A\u8655\uFF0C\u5247\u65BC\u64CA\u8655\u6DFB\u52A0\u3002\r- \u4EE5\u9375\u76E4\u4E0A\u4E0B\u5DE6\u53F3\u9375\u79FB\u4E4B\uFF0C\u6309Enter\u4EE5\u5B9A\u5176\u4F4D\u3002\r- \u6309Esc\u4EE5\u6B62\u6B64\u8209\u3002",
+        "Value": "\u6B32\u7F6E\u300C{name}\u300D\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u4E4B\u5904\uFF0C\u5373\u4E8E\u6240\u51FB\u5904\u6DFB\u52A0\u3002\r- \u4EE5\u952E\u76D8\u4E0A\u4E0B\u5DE6\u53F3\u952E\u79FB\u4E4B\uFF0C\u6309Enter\u5B9A\u5176\u4F4D\u3002\r- \u6309Esc\u7F62\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -48471,7 +48782,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u767D\u8BDD\u539F\u6587\u4E3A\uFF1A\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -49648,11 +49959,11 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u5FFD\u7565\u6A21\u677F\u4F5C\u7528\u57DF\uFF08\u663E\u793A\u6240\u6709\u6A21\u677F\uFF09",
+        "Value": "\u76E1\u793A\u8AF8\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u663E\u793A\u6240\u6709\u6A21\u677F",
         "DontTranslate": false
       },
       {
@@ -52153,6 +52464,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u79FB\u65F6\u7EBF\u81F3\u73B0\u64AD\u5904",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u5411\u5DE6\u6EFE\u52D5\u6642\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u9396\u6642\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u89E3\u9396\u6642\u7DDA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u4F9D\u6BD4\u4F8B\u7E2E\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u53F3\u79FB\u65F6\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -53110,7 +53475,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0642\u0637\u0639 \u0645\u062C\u0627\u0648\u0631 \u0639\u0644\u0649 \u064A\u0633\u0627\u0631 \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u0645\u062D\u062F\u062F.",
+        "Value": "\u0627\u0644\u062C\u0632\u0621 \u0627\u0644\u0645\u062D\u062F\u062F \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u062C\u0632\u0621 \u0645\u062C\u0627\u0648\u0631 \u0645\u062F\u0639\u0648\u0645 \u0639\u0644\u0649 \u064A\u0633\u0627\u0631\u0647.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -53119,7 +53484,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0642\u0627\u0637\u0639 \u0645\u062C\u0627\u0648\u0631\u0629 \u0639\u0644\u0649 \u064A\u0645\u064A\u0646 \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u0645\u062D\u062F\u062F.",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0642\u0627\u0637\u0639 \u0645\u062C\u0627\u0648\u0631\u0629 \u0645\u062F\u0639\u0648\u0645\u0629 \u0639\u0644\u0649 \u064A\u0645\u064A\u0646 \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u0645\u062D\u062F\u062F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -56062,7 +56427,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u062C\u0627\u0631\u064D \u0625\u0636\u0627\u0641\u0629 \u00AB{name}\u00BB. \u064A\u0645\u0643\u0646\u0643:\r- \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0645\u0643\u0627\u0646 \u0641\u0627\u0631\u063A \u0641\u064A \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0642\u0637\u0639 \u0641\u064A \u0645\u0648\u0636\u0639 \u0627\u0644\u0646\u0642\u0631.\r- \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0641\u0627\u062A\u064A\u062D \u0627\u0644\u0623\u0633\u0647\u0645 \u0639\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0641\u0627\u062A\u064A\u062D \u0644\u0644\u062A\u062D\u0631\u0643\u060C \u062B\u0645 \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 Enter \u0644\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0645\u0648\u0636\u0639.\r- \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 Esc \u0644\u0625\u0644\u063A\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
+        "Value": "\u0644\u0648\u0636\u0639 \u00AB{name}\u00BB:\r- \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0645\u0643\u0627\u0646 \u0641\u0627\u0631\u063A \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0639\u0646\u0635\u0631 \u0641\u064A \u0645\u0643\u0627\u0646 \u0627\u0644\u0646\u0642\u0631.\r- \u0627\u0633\u062A\u062E\u062F\u0645 \u0645\u0641\u0627\u062A\u064A\u062D \u0627\u0644\u0623\u0633\u0647\u0645 \u0639\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0641\u0627\u062A\u064A\u062D \u0644\u0644\u062A\u062D\u0631\u0643\u060C \u062B\u0645 \u0627\u0636\u063A\u0637 Enter \u0644\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0648\u0636\u0639.\r- \u0627\u0636\u063A\u0637 Esc \u0644\u0625\u0644\u063A\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -57253,7 +57618,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u062A\u062C\u0627\u0647\u0644 \u0646\u0637\u0627\u0642 \u0627\u0644\u0642\u0627\u0644\u0628 (\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0642\u0648\u0627\u0644\u0628)",
+        "Value": "\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0642\u0648\u0627\u0644\u0628",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -59753,6 +60118,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0632\u0645\u0646\u064A \u0625\u0644\u0649 \u0645\u0648\u0636\u0639 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062D\u0627\u0644\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u062A\u0623\u0645\u064A\u0646 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u0645\u0631\u0631 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A \u0625\u0644\u0649 \u0627\u0644\u064A\u0645\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u0641\u062A\u062D \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0625\u0644\u0649 \u0627\u0644\u064A\u0633\u0627\u0631 \u0641\u064A \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u062D\u062C\u0645 \u0628\u0646\u0633\u0628\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -60710,7 +61129,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Links vom ausgew\u00E4hlten Clip befindet sich kein benachbarter Clip.",
+        "Value": "Links des ausgew\u00E4hlten Clips gibt es keinen unterst\u00FCtzten benachbarten Clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -60719,7 +61138,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Auf der rechten Seite des ausgew\u00E4hlten Clips befindet sich kein benachbarter Clip.",
+        "Value": "Der ausgew\u00E4hlte Clip hat rechts keinen unterst\u00FCtzten angrenzenden Clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -63665,7 +64084,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "F\u00FCge \u201E{name}\u201C hinzu. Du kannst:\r\n- Auf eine leere Stelle auf der Spur klicken, um den Clip an der angeklickten Position hinzuzuf\u00FCgen.\r\n- Die Pfeiltasten auf der Tastatur verwenden, um dich zu bewegen, und Enter dr\u00FCcken, um die Position zu best\u00E4tigen.\r\n- Esc dr\u00FCcken, um diesen Vorgang abzubrechen.",
+        "Value": "Um \u201E{name}\u201C zu platzieren:\r- Klicken Sie auf eine freie Stelle auf der Spur, um den Clip an der angeklickten Position hinzuzuf\u00FCgen.\r- Verwenden Sie die Pfeiltasten auf der Tastatur, um zu navigieren, und dr\u00FCcken Sie Enter, um die Position zu best\u00E4tigen.\r- Dr\u00FCcken Sie Esc, um diesen Vorgang abzubrechen.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -64856,7 +65275,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Vorlagenbereich ignorieren (alle Vorlagen anzeigen)",
+        "Value": "Alle Vorlagen anzeigen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -67354,6 +67773,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Zeitleiste zur aktuellen Wiedergabeposition scrollen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Zeitleiste nach rechts scrollen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Zeitleiste sperren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Zeitleiste entsperren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Proportional skalieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Zeitleiste nach links scrollen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -68310,7 +68783,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "No hay ning\u00FAn clip adyacente a la izquierda del clip seleccionado.",
+        "Value": "No hay clips compatibles adyacentes a la izquierda del clip seleccionado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -68319,7 +68792,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "No hay ning\u00FAn clip adyacente a la derecha del clip seleccionado.",
+        "Value": "El clip seleccionado no tiene un clip adyacente compatible a su derecha.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -71263,7 +71736,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Estoy a\u00F1adiendo \u00AB{name}\u00BB. Puedes:\r- Hacer clic en un espacio vac\u00EDo de la pista para a\u00F1adirlo en esa posici\u00F3n.\r- Usar las teclas de direcci\u00F3n del teclado para moverte y presionar Enter para confirmar la posici\u00F3n.\r- Presionar Esc para cancelar esta operaci\u00F3n.",
+        "Value": "Para colocar \u00AB{name}\u00BB:\r- Haga clic en un lugar vac\u00EDo de la pista para agregarlo en la posici\u00F3n del clic.\r- Use las teclas de flecha (arriba, abajo, izquierda, derecha) para moverse y presione Enter para confirmar la posici\u00F3n.\r- Presione Esc para cancelar esta operaci\u00F3n.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -72454,7 +72927,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignorar \u00E1mbito de la plantilla (mostrar todas las plantillas)",
+        "Value": "Mostrar todas las plantillas",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -74950,6 +75423,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Desplazar la l\u00EDnea de tiempo a la posici\u00F3n de reproducci\u00F3n actual",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Desplazar la l\u00EDnea temporal a la derecha",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Bloquear l\u00EDnea de tiempo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Desbloquear l\u00EDnea de tiempo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Escalar proporcionalmente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Desplazar l\u00EDnea de tiempo a la izquierda",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -75906,7 +76433,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Il frammento selezionato non ha frammenti adiacenti a sinistra.",
+        "Value": "Il clip selezionato non ha clip adiacenti supportati alla sua sinistra.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -75915,7 +76442,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Non ci sono clip adiacenti a destra del clip selezionato.",
+        "Value": "Non ci sono clip adiacenti supportate a destra della clip selezionata.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -78860,7 +79387,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Aggiunta di \u0022{name}\u0022 in corso. Puoi:\r- Fare clic su uno spazio vuoto nella traccia per aggiungere nel punto selezionato.\r- Usare i tasti freccia sulla tastiera per spostarti, quindi premere Invio per confermare la posizione.\r- Premere Esc per annullare l\u0027operazione.",
+        "Value": "Per posizionare \u00AB{name}\u00BB:\r- Clicca su uno spazio vuoto sulla timeline per aggiungere nella posizione cliccata.\r- Usa i tasti freccia su/gi\u00F9/sinistra/destra per spostarti, premi Invio per confermare la posizione.\r- Premi Esc per annullare l\u0027operazione.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -78874,7 +79401,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Testo informativo che spiega come posizionare un clip sulla traccia",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -80051,7 +80578,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignora ambito modelli (mostra tutti)",
+        "Value": "Mostra tutti i modelli",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -82551,6 +83078,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Scorri la timeline alla posizione di riproduzione corrente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Blocca timeline",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Scorri la timeline a destra",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Sblocca timeline",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Scorri a sinistra la timeline",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Ridimensionamento proporzionale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -83507,7 +84088,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Po lewej stronie zaznaczonego klipu nie ma s\u0105siedniego klipu.",
+        "Value": "Po lewej stronie wybranego klipu nie ma obs\u0142ugiwanego s\u0105siedniego klipu.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -83516,7 +84097,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Po prawej stronie wybranego klipu nie ma s\u0105siedniego klipu.",
+        "Value": "Po prawej stronie wybranego klipu nie ma obs\u0142ugiwanego s\u0105siedniego klipu.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -86461,7 +87042,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Dodawanie \u201E{name}\u201D. Mo\u017Cesz:\r- Klikn\u0105\u0107 wolne miejsce na \u015Bcie\u017Cce, aby doda\u0107 w miejscu klikni\u0119cia.\r- U\u017Cy\u0107 klawiszy strza\u0142ek na klawiaturze do poruszania si\u0119, a nast\u0119pnie nacisn\u0105\u0107 Enter, aby zatwierdzi\u0107 pozycj\u0119.\r- Nacisn\u0105\u0107 Esc, aby anulowa\u0107 t\u0119 operacj\u0119.",
+        "Value": "Umie\u015B\u0107 \u201E{name}\u201D: \r- Kliknij wolne miejsce na \u015Bcie\u017Cce, aby doda\u0107 w miejscu klikni\u0119cia.\r- U\u017Cyj klawiszy strza\u0142ek do przesuwania, a nast\u0119pnie naci\u015Bnij Enter, aby potwierdzi\u0107 pozycj\u0119.\r- Naci\u015Bnij Esc, aby anulowa\u0107 t\u0119 operacj\u0119.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -87651,7 +88232,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignoruj zakres szablon\u00F3w (poka\u017C wszystkie szablony)",
+        "Value": "Poka\u017C wszystkie szablony",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -90150,6 +90731,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Zablokuj o\u015B czasu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Przewi\u0144 o\u015B czasu w lewo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Odblokuj o\u015B czasu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Przewi\u0144 o\u015B czasu w prawo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Skaluj proporcjonalnie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Przewi\u0144 o\u015B czasu do bie\u017C\u0105cej pozycji odtwarzania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -91107,7 +91742,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "N\u00E3o h\u00E1 um clipe adjacente \u00E0 esquerda do clipe selecionado.",
+        "Value": "N\u00E3o h\u00E1 clipe adjacente suportado \u00E0 esquerda do clipe selecionado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -91116,7 +91751,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "N\u00E3o h\u00E1 segmentos adjacentes \u00E0 direita do segmento selecionado.",
+        "Value": "N\u00E3o h\u00E1 clipes adjacentes suportados \u00E0 direita do clipe selecionado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -94060,7 +94695,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Adicionando \u0022{name}\u0022. Voc\u00EA pode:\r\n- Clicar em um espa\u00E7o vazio na faixa para adicionar na posi\u00E7\u00E3o clicada.\r\n- Usar as teclas de seta do teclado para mover e pressionar Enter para confirmar a posi\u00E7\u00E3o.\r\n- Pressionar Esc para cancelar esta opera\u00E7\u00E3o.",
+        "Value": "Para colocar \u00AB{name}\u00BB:\r- Clique em um espa\u00E7o vazio na linha do tempo para adicionar na posi\u00E7\u00E3o clicada.\r- Use as teclas de seta (cima, baixo, esquerda, direita) para mover e pressione Enter para confirmar a posi\u00E7\u00E3o.\r- Pressione Esc para cancelar esta opera\u00E7\u00E3o.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -94074,7 +94709,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Instru\u00E7\u00F5es para o usu\u00E1rio sobre como adicionar um clipe de m\u00EDdia.",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -95249,7 +95884,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "Ignorar escopo do modelo (mostrar todos os modelos)",
+        "Value": "Exibir todos os modelos",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -97745,6 +98380,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Rolar a linha do tempo para a posi\u00E7\u00E3o atual de reprodu\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Bloquear linha do tempo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Rolar para a esquerda na linha do tempo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Rolar a linha do tempo para a direita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Desbloquear linha do tempo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Escala proporcional",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -98701,7 +99390,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "\u0421\u043B\u0435\u0432\u0430 \u043E\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u043D\u0435\u0442 \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0433\u043E \u043A\u043B\u0438\u043F\u0430.",
+        "Value": "\u0423 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430 \u0441\u043B\u0435\u0432\u0430 \u043D\u0435\u0442 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C\u043E\u0433\u043E \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0433\u043E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -98710,7 +99399,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "\u0423 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u043D\u0435\u0442 \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u0441\u043F\u0440\u0430\u0432\u0430.",
+        "Value": "\u0421\u043F\u0440\u0430\u0432\u0430 \u043E\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u043D\u0435\u0442 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C\u043E\u0433\u043E \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0433\u043E \u043A\u043B\u0438\u043F\u0430.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -101654,7 +102343,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u00AB{name}\u00BB. \u0412\u044B \u043C\u043E\u0436\u0435\u0442\u0435:\r- \u0429\u0435\u043B\u043A\u043D\u0443\u0442\u044C \u043D\u0430 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u043C \u043C\u0435\u0441\u0442\u0435 \u0434\u043E\u0440\u043E\u0436\u043A\u0438, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043A\u043B\u0438\u043F \u0432 \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u0443\u044E \u043F\u043E\u0437\u0438\u0446\u0438\u044E.\r- \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0441\u043E \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u044F \u0438 Enter \u0434\u043B\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u043F\u043E\u0437\u0438\u0446\u0438\u0438.\r- \u041D\u0430\u0436\u0430\u0442\u044C Esc \u0434\u043B\u044F \u043E\u0442\u043C\u0435\u043D\u044B \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438.",
+        "Value": "\u0427\u0442\u043E\u0431\u044B \u0440\u0430\u0437\u043C\u0435\u0441\u0442\u0438\u0442\u044C \u00AB{name}\u00BB:\r- \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043C\u0435\u0441\u0442\u043E \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u043C\u0435\u0441\u0442\u0435 \u043A\u043B\u0438\u043A\u0430.\r- \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0441\u043E \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u044F, \u043D\u0430\u0436\u043C\u0438\u0442\u0435 Enter, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \u043F\u043E\u0437\u0438\u0446\u0438\u044E.\r- \u041D\u0430\u0436\u043C\u0438\u0442\u0435 Esc, \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u044D\u0442\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044E.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -101668,6 +102357,7 @@
             "Value": ""
           }
         ],
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -102845,7 +103535,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u0418\u0433\u043D\u043E\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0448\u0430\u0431\u043B\u043E\u043D\u0430 (\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432\u0441\u0435 \u0448\u0430\u0431\u043B\u043E\u043D\u044B)",
+        "Value": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432\u0441\u0435 \u0448\u0430\u0431\u043B\u043E\u043D\u044B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -105346,6 +106036,60 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "\u041F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043F\u043E\u0437\u0438\u0446\u0438\u0438 \u0432\u043E\u0441\u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "\u0417\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "\u041F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443 \u0432\u043B\u0435\u0432\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "\u041F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443 \u0432\u043F\u0440\u0430\u0432\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "\u0420\u0430\u0437\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "\u041F\u0440\u043E\u043F\u043E\u0440\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -106303,7 +107047,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Se\u00E7ilen klibin solunda kom\u015Fu bir klip yok.",
+        "Value": "Se\u00E7ilen klibin solunda desteklenen bir kom\u015Fu klip yok.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -106312,7 +107056,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Se\u00E7ilen klibin sa\u011F\u0131nda biti\u015Fik bir klip yok.",
+        "Value": "Se\u00E7ilen klibin sa\u011F\u0131nda desteklenen biti\u015Fik klip yok.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -109256,7 +110000,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "{name} ekleniyor. \u015Eunlar\u0131 yapabilirsiniz:\r- Par\u00E7adaki bo\u015F bir yere t\u0131klayarak, t\u0131klad\u0131\u011F\u0131n\u0131z konuma ekleyin.\r- Klavyedeki y\u00F6n tu\u015Flar\u0131n\u0131 kullanarak gezinin ve Enter ile konumu onaylay\u0131n.\r- \u0130ptal etmek i\u00E7in Esc tu\u015Funa bas\u0131n.",
+        "Value": "\u300C{name}\u300D yerle\u015Ftirmek i\u00E7in:\r- T\u0131klamak istedi\u011Finiz yere eklemek i\u00E7in zaman \u00E7izelgesinde bo\u015F bir yere t\u0131klay\u0131n.\r- Ta\u015F\u0131mak i\u00E7in klavyedeki y\u00F6n tu\u015Flar\u0131n\u0131 kullan\u0131n, Enter tu\u015Funa basarak konumu onaylay\u0131n.\r- Bu i\u015Flemi iptal etmek i\u00E7in Esc tu\u015Funa bas\u0131n.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -109270,6 +110014,7 @@
             "Value": ""
           }
         ],
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -110445,7 +111190,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_ShowAll",
-        "Value": "\u015Eablon kapsam\u0131n\u0131 yoksay (t\u00FCm \u015Fablonlar\u0131 g\u00F6ster)",
+        "Value": "T\u00FCm \u015Fablonlar\u0131 g\u00F6ster",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -112936,6 +113681,60 @@
       {
         "Id": "VideoCacheManagePage_MaxSize_None",
         "Value": "S\u0131n\u0131rs\u0131z",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
+        "Value": "Zaman \u00E7izgisini ge\u00E7erli oynatma konumuna kayd\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
+        "Value": "Zaman \u00C7izelgesini Kilitle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u9501\u5B9A\u65F6\u95F4\u7EBF",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
+        "Value": "Zaman \u00C7izelgesini Sola Kayd\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ScrollRight",
+        "Value": "Zaman \u00E7izelgesini sa\u011Fa kayd\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_UnLockScroll",
+        "Value": "Zaman \u00E7izelgesinin kilidini a\u00E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_AspectRatio",
+        "Value": "Orant\u0131l\u0131 \u00D6l\u00E7eklendirme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -268,67 +268,25 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return entries.ToArray();
         }
 
+        Label glyphWarning = new Label
+        {
+            TextColor = Colors.OrangeRed,
+            FontSize = 12,
+            IsVisible = false,
+            LineBreakMode = LineBreakMode.WordWrap
+        };
+
+        void UpdateGlyphWarning()
+        {
+            var warning = TextServices.GetMissingGlyphWarning(GetOrDefault(FontKey, "HarmonyOS Sans SC Medium"), BasicText, ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize));
+            glyphWarning.Text = warning;
+            glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
+        }
+
         public PropertyPanelBuilder BuildPropertyPanel()
         {
             var panel = new PropertyPanelBuilder();
-            var currentText = BasicText;
-            var currentFont = GetOrDefault(FontKey, "HarmonyOS Sans SC Medium");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
-            var glyphWarning = new Label
-            {
-                TextColor = Colors.OrangeRed,
-                FontSize = 12,
-                IsVisible = false,
-                LineBreakMode = LineBreakMode.WordWrap
-            };
-
-            void UpdateGlyphWarning()
-            {
-                var warning = TextServices.GetMissingGlyphWarning(currentFont, currentText, fontSize);
-                glyphWarning.Text = warning;
-                glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
-            }
-
-            // BasicText editor is managed centrally by ClipInfoBuilder.
-
-            var fontOptions = TextServices.LoadedFonts.Keys.OrderBy(c => c).ToArray();
-            if (fontOptions.Length > 0)
-            {
-                currentFont = fontOptions.Contains(currentFont) ? currentFont : fontOptions.First();
-                panel.AddPicker(FontKey, "Font", fontOptions, currentFont, picker =>
-                {
-#if iDevices
-                    picker.Closed += (s, e) =>
-                    {
-                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
-                        {
-                            currentFont = selectedFont;
-                            UpdateGlyphWarning();
-                        }
-                    };
-#else
-                    picker.SelectedIndexChanged += (s, e) =>
-                    {
-                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
-                        {
-                            currentFont = selectedFont;
-                            UpdateGlyphWarning();
-                        }
-                    };
-#endif
-                });
-            }
-            else
-            {
-                panel.AddEntry(FontKey, "Font", currentFont, "HarmonyOS Sans SC Medium", entry =>
-                {
-                    entry.TextChanged += (s, e) =>
-                    {
-                        currentFont = e.NewTextValue ?? string.Empty;
-                        UpdateGlyphWarning();
-                    };
-                }, EntryUpdateEventCallMode.OnAnyTextChange);
-            }
 
             UpdateGlyphWarning();
             panel.AddCustomChild(glyphWarning);
@@ -352,9 +310,11 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 case TextKey:
                     BasicText = args.Value?.ToString() ?? string.Empty;
                     _parameters[TextKey] = BasicText;
+                    UpdateGlyphWarning();
                     break;
                 case FontKey:
                     _parameters[FontKey] = args.Value?.ToString() ?? "HarmonyOS Sans SC Medium";
+                    UpdateGlyphWarning();
                     break;
                 case SizeKey:
                     if (TryParseFloat(args.Value, out var size))

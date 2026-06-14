@@ -19,8 +19,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private VideoDecoderPool? _decoderPool;
         private string? _decoderPoolKey;
 
-        public required string Id { get; init; }
-        public Guid IdAsGUID { get; init => field = Guid.TryParse(Id, out value) ? value : throw new InvalidDataException("A clip's ID field SHOULD BE a valid guid."); }
+        public required Guid Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }

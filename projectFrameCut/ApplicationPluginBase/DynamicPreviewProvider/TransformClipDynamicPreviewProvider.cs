@@ -252,7 +252,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
     {
         if (transformClip.ExtraData.TryGetValue(runtimeKey, out var runtimeValue)
             && runtimeValue is IClip runtimeClip
-            && runtimeClip.IdAsGUID == expectedClipId)
+            && runtimeClip.Id == expectedClipId)
         {
             clip = runtimeClip;
             return true;
@@ -269,7 +269,7 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
             && File.Exists(videoClip.FilePath))
         {
             return TryGetFrameFromCache(
-                clipId: clip.Id,
+                clipId: clip.Id.ToString(),
                 sourcePath: videoClip.FilePath,
                 targetWidth: targetWidth,
                 targetHeight: targetHeight,

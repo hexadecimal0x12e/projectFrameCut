@@ -64,7 +64,7 @@ public sealed class DynamicPreview : IDisposable
         private readonly Func<View>? _viewFactory;
         private View? _materializedView;
 
-        public PreparedPreview(string clipId, Func<View>? viewFactory, string? errorMessage, IClip? source)
+        public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source)
         {
             ClipId = clipId;
             _viewFactory = viewFactory;
@@ -72,7 +72,7 @@ public sealed class DynamicPreview : IDisposable
             Source = source;
         }
 
-        public string ClipId { get; }
+        public Guid ClipId { get; }
         public string? ErrorMessage { get; }
         public IClip? Source { get; }
 
@@ -182,7 +182,7 @@ public sealed class DynamicPreview : IDisposable
     {
         var clipsSnapshot = AcquireClipsSnapshot();
         var requests = ResolveRequests(clipsSnapshot, frameIndex, canvasWidth, canvasHeight);
-        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
+        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
         if (prepared is not null)
         {
             return prepared;
@@ -584,11 +584,11 @@ public sealed class DynamicPreview : IDisposable
             return [];
         }
 
-        var clipIndex = new Dictionary<string, IClip>(clips.Count, StringComparer.Ordinal);
+        var clipIndex = new Dictionary<Guid, IClip>(clips.Count);
         for (var i = 0; i < clips.Count; i++)
         {
             var sourceClip = clips[i];
-            if (!string.IsNullOrWhiteSpace(sourceClip.Id))
+            if (sourceClip.Id != Guid.Empty)
             {
                 clipIndex[sourceClip.Id] = sourceClip;
             }
@@ -680,14 +680,14 @@ public sealed class DynamicPreview : IDisposable
         return requests;
     }
 
-    private static void BindTransformRuntimeSources(TransformContainer transformClip, IReadOnlyDictionary<string, IClip> clipIndex)
+    private static void BindTransformRuntimeSources(TransformContainer transformClip, IReadOnlyDictionary<Guid, IClip> clipIndex)
     {
         if (transformClip.ExtraData is null || transformClip.Transform is not RenderITransform transform)
         {
             return;
         }
 
-        if (clipIndex.TryGetValue(transform.BindedLeftClip.ToString(), out var leftClip))
+        if (clipIndex.TryGetValue(transform.BindedLeftClip, out var leftClip))
         {
             transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.LeftClip] = leftClip;
         }
@@ -696,7 +696,7 @@ public sealed class DynamicPreview : IDisposable
             transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.LeftClip);
         }
 
-        if (clipIndex.TryGetValue(transform.BindedRightClip.ToString(), out var rightClip))
+        if (clipIndex.TryGetValue(transform.BindedRightClip, out var rightClip))
         {
             transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.RightClip] = rightClip;
         }
@@ -735,7 +735,7 @@ public sealed class DynamicPreview : IDisposable
 
         if (willUseEffectFallback)
         {
-            LogOnce(_effectFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
+            LogOnce(_effectFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
         }
         else if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
         {
@@ -792,11 +792,11 @@ public sealed class DynamicPreview : IDisposable
         {
             if (sourceColorAdjustEffects is { Count: > 0 })
             {
-                LogOnce(_sourceColorFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
+                LogOnce(_sourceColorFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has source color-adjust effects, using frame fallback for source rendering.");
             }
             else
             {
-                LogOnce(_missingProviderFallbackLogKeys, clip.Id, $"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
+                LogOnce(_missingProviderFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} does not have a dynamic preview provider, using frame fallback.");
             }
 
             // GenerateFrameFallbackView 返回的是 Image View，这里只取 ImageSource
@@ -1697,10 +1697,10 @@ public sealed class DynamicPreview : IDisposable
         return true;
     }
 
-    private static List<(int width, int height)> ResolveFallbackDiskCacheSizes(string clipId, long sourceFingerprint)
+    private static List<(int width, int height)> ResolveFallbackDiskCacheSizes(Guid clipId, long sourceFingerprint)
     {
         var sizes = new List<(int width, int height)>();
-        var baseDir = Path.Combine(DiskCacheRoot, SanitizePathSegment(clipId));
+        var baseDir = Path.Combine(DiskCacheRoot, SanitizePathSegment(clipId.ToString()));
         if (!Directory.Exists(baseDir))
             return sizes;
 
@@ -1841,7 +1841,7 @@ public sealed class DynamicPreview : IDisposable
         var sourcePath = clip.FilePath;
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
-            return StringComparer.Ordinal.GetHashCode(clip.Id ?? string.Empty);
+            return clip.Id.GetHashCode();
         }
 
         try
@@ -1865,7 +1865,7 @@ public sealed class DynamicPreview : IDisposable
 
     private static string ResolveFallbackDiskCachePath(FallbackFrameCacheKey key)
     {
-        var clipId = SanitizePathSegment(key.ClipId);
+        var clipId = SanitizePathSegment(key.ClipId.ToString());
         var dimension = $"{key.TargetWidth}x{key.TargetHeight}";
         var fingerprint = key.SourceFingerprint.ToString("X16");
         return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{key.FrameIndex}.png");
@@ -2413,6 +2413,6 @@ public sealed class DynamicPreview : IDisposable
         public void Touch() => LastAccessTicks = DateTime.UtcNow.Ticks;
     }
 
-    private readonly record struct FallbackFrameCacheKey(string ClipId, int TargetWidth, int TargetHeight, uint FrameIndex, long SourceFingerprint);
+    private readonly record struct FallbackFrameCacheKey(Guid ClipId, int TargetWidth, int TargetHeight, uint FrameIndex, long SourceFingerprint);
 
 }

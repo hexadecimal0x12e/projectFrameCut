@@ -211,7 +211,7 @@ namespace projectFrameCut.Render.Rendering
 
             var clip = new TextClip
             {
-                Id = "", Name = "", LayerIndex = 0,
+                Id = Guid.Empty, Name = "", LayerIndex = 0,
                 TextEntries = new List<TextEntry>
                 {
                     new TextEntry

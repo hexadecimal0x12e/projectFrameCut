@@ -98,7 +98,7 @@ namespace projectFrameCut.Render.Rendering
 
         public bool running { get; private set; } = false;
 
-        ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
+        ConcurrentDictionary<Guid, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<string, IPicture> ImmutableContentCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
 
@@ -109,7 +109,7 @@ namespace projectFrameCut.Render.Rendering
         // Layer-by-layer render: stores rendered layer results before merge
         ConcurrentDictionary<(uint Frame, int LayerOrdinal), IPicture>? LayerResults;
 
-        ConcurrentDictionary<string, IEffect[]> EffectCache = new();
+        ConcurrentDictionary<Guid, IEffect[]> EffectCache = new();
         ConcurrentDictionary<string, object> BindableEffectResultCache = new();
 
         int ThreadWorking = 0, Finished = 0;
@@ -136,14 +136,14 @@ namespace projectFrameCut.Render.Rendering
 
         // Per-clip lock objects to serialize effect processing for the same clip across threads
         // (IEffect instances in EffectCache are shared and may be stateful)
-        private ConcurrentDictionary<string, object> _clipEffectLocks = new();
+        private ConcurrentDictionary<Guid, object> _clipEffectLocks = new();
 
         // Thread-local pool for frame-level cache dictionaries to reduce GC pressure
         private ThreadLocal<Stack<Dictionary<string, object>>> _frameLocalCachePool =
             new(() => new Stack<Dictionary<string, object>>(4));
 
         // Cache for clip effects to avoid repeated ToList() conversions
-        private ConcurrentDictionary<string, List<IEffect>> _clipEffectsListCache = new();
+        private ConcurrentDictionary<Guid, List<IEffect>> _clipEffectsListCache = new();
 
         static ClipEquabilityComparer clipEquabilityComparer = new();
 
@@ -257,7 +257,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         if (frame != null)
                         {
-                            if (IsClipGeneratedByAI.TryGetValue(item.IdAsGUID, out var aiMark) && aiMark)
+                            if (IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)
                             {
                                 frame = EffectProcessing.ProcessAIWatermark(frame, null);
                             }
@@ -703,7 +703,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                             if (frame != null)
                             {
-                                if (IsClipGeneratedByAI.TryGetValue(item.IdAsGUID, out var aiMark) && aiMark)
+                                if (IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)
                                 {
                                     frame = EffectProcessing.ProcessAIWatermark(frame, null);
                                 }
@@ -1378,7 +1378,7 @@ namespace projectFrameCut.Render.Rendering
                     framesToRender.Add((clip, null));
                     continue;
                 }
-                if (IsClipGeneratedByAI.TryGetValue(clip.IdAsGUID, out var aiMark) && aiMark)
+                if (IsClipGeneratedByAI.TryGetValue(clip.Id, out var aiMark) && aiMark)
                 {
                     frame = EffectProcessing.ProcessAIWatermark(frame, null);
 
@@ -1659,7 +1659,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        frame = HDRPicture16bpp.ToHDRPictureBySignal(frame, PerClipHDRBrightness.TryGetValue(clip.IdAsGUID, out var b) ? b : SDRClipsBrightnessInHDRMode);
+                        frame = HDRPicture16bpp.ToHDRPictureBySignal(frame, PerClipHDRBrightness.TryGetValue(clip.Id, out var b) ? b : SDRClipsBrightnessInHDRMode);
                     }
 
 
@@ -2242,7 +2242,6 @@ namespace projectFrameCut.Render.Rendering
                         Clips[clipIdx] = new ImmutableContentTextClip
                         {
                             Id = textClip.Id,
-                            IdAsGUID = textClip.IdAsGUID,
                             Name = textClip.Name,
                             LayerIndex = textClip.LayerIndex,
                             SubLayerIndex = textClip.SubLayerIndex,
@@ -2280,7 +2279,7 @@ namespace projectFrameCut.Render.Rendering
                     else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
                     else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
                 }
-                if (isAI) IsClipGeneratedByAI.TryAdd(item.IdAsGUID, isAI);
+                if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
 
                 if (HasExplicitTargetRect(item))
@@ -2298,8 +2297,8 @@ namespace projectFrameCut.Render.Rendering
 
             }
 
-            IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be a GUID."));
-            PerClipHDRBrightness = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be a GUID."), c => c.ExtraData.TryGetValue("HDRBrightness", out var value) ? Convert.ToInt32(value) : SDRClipsBrightnessInHDRMode);
+            IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => c.Id);
+            PerClipHDRBrightness = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => c.Id, c => c.ExtraData.TryGetValue("HDRBrightness", out var value) ? Convert.ToInt32(value) : SDRClipsBrightnessInHDRMode);
 
         }
 

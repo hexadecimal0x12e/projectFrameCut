@@ -30,17 +30,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
-        /// The unique identifier of this clip. <b>SHOULD BE A GUID.</b>
+        /// The unique identifier of this clip.
         /// </summary>
-        /// <remarks>
-        /// Starting from API V5, this property will be changed to <see cref="System.Guid"/> and the <see cref="IdAsGUID"/> property will be removed at that API V6.
-        /// </remarks>
-        public string Id { get; init; }
-
-        /// <summary>
-        /// The unique identifier of this clip. 
-        /// </summary>
-        public Guid IdAsGUID { get; init; }
+        public Guid Id { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
@@ -529,7 +521,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
         public string GroupDisplayName { get; set; }
 
-        public string[] ChildrenClips { get; set; }
+        public Guid[] ChildrenClips { get; set; }
 
         public string[] ChildrenSoundTracks { get; set; }
     }

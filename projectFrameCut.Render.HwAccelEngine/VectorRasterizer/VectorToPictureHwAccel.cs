@@ -8,8 +8,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 {
     /// <summary>
     /// GPU-accelerated vector-to-raster converter.
-    /// On Windows (ILGPU) uses compute shader rasterization; on other platforms
-    /// falls back to the CPU scanline renderer (<see cref="VectorToIPicture"/>).
+    /// On Windows uses ILGPU compute shader rasterization; on Android uses
+    /// OpenGL ES 3.1 or Vulkan compute; on other platforms falls back to the
+    /// CPU scanline renderer.
     /// </summary>
     public class VectorToPictureHwAccel : IVectorPictureRasterizer
     {
@@ -43,6 +44,28 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             if (scaleFactor > 1)
                 return DownsampleToOutput(result, width, height, scaleFactor, renderWidth);
 
+            return result;
+#elif ANDROID
+            // Build flat GPU primitives from the vector picture
+            var primitives = PrimitiveBuilder.Build(canvas, renderWidth, renderHeight);
+            if (primitives.Count == 0)
+            {
+                Logger.Log("Trying to render a blank rect.", "error");
+                return Picture16bpp.GenerateSolidColor(width, height, 128 * 257, 0, 128 * 257, 1f);
+            }
+
+            IPicture result;
+            if (projectFrameCut.Render.HwAccelEngine.Platforms.Android.ComputerHelper.UseVulkanBackend)
+            {
+                result = Platforms.Android.VulkanVectorRasterizer.Render(primitives, renderWidth, renderHeight, transparentBackground);
+            }
+            else
+            {
+                result = Platforms.Android.OpenGLVectorRasterizer.Render(primitives, renderWidth, renderHeight, transparentBackground);
+            }
+
+            if (scaleFactor > 1)
+                return DownsampleToOutput(result, width, height, scaleFactor, renderWidth);
             return result;
 #else
             // Platform without GPU compute backend — fall back to CPU

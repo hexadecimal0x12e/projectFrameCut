@@ -29,14 +29,14 @@ namespace projectFrameCut.AIAssistance
             List<AIFunction> toolCalls = new List<AIFunction>
             {
                 AIFunctionFactory.Create(() => currentPage is null ? Array.Empty<ClipDraftDTO>() : TimelineMcpLiveService.ListClips(currentPage).ToArray(), "get_all_clips","Get all clips inside this project."),
-                AIFunctionFactory.Create(() => currentPage?.SelectedClip is null ? null : TimelineMcpLiveService.GetClip(currentPage, currentPage.SelectedClip.Id), "get_selected_clip_info","Get the clip selected by the user's info."),
+                AIFunctionFactory.Create(() => currentPage?.SelectedClip is null ? null : TimelineMcpLiveService.GetClip(currentPage, currentPage.SelectedClip.Id.ToString()), "get_selected_clip_info","Get the clip selected by the user's info."),
                 AIFunctionFactory.Create((string Id, ClipDraftDTO Clip) =>
                 {
                     if (currentPage is null)
                     {
                         return;
                     }
-                    Clip.Id = Id;
+                    Clip.Id = Guid.Parse(Id);
                     TimelineMcpLiveService.ReplaceClip(currentPage, Clip);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                 }, "set_clip_info","Set a specific clip's information."),

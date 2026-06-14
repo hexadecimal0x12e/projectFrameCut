@@ -22,7 +22,7 @@ namespace projectFrameCut.DraftStuff
     [DebuggerDisplay("{DisplayName}, {ClipType} ({Id})")]
     public class ClipElementUI : IClipElementUI
     {
-        public required string Id { get; set; }
+        public required Guid Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
         [JsonIgnore]
@@ -81,6 +81,18 @@ namespace projectFrameCut.DraftStuff
         }
 
         public string? ClipColor { get; set; } = null;
+
+        /// <summary>
+        /// Indicates whether this clip is a temporary "ghost" overlay used during drag-and-drop operations.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsGhost { get; set; } = false;
+
+        /// <summary>
+        /// Indicates whether this clip is a temporary "shadow" overlay used during drag-and-drop operations.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsShadow { get; set; } = false;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
@@ -228,7 +240,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     new Label
                     {
-                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id[^4..]}" : DisplayName,
+                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
                         LineBreakMode = LineBreakMode.TailTruncation,
                         MaxLines = 1,
                         HorizontalOptions = LayoutOptions.Center,
@@ -325,7 +337,7 @@ namespace projectFrameCut.DraftStuff
         double startX,
         double width,
         int trackIndex,
-        string? id = null,
+        Guid? id = null,
         string? labelText = null,
         Brush? background = null,
         Border? prototype = null,
@@ -334,7 +346,7 @@ namespace projectFrameCut.DraftStuff
         View? ContentOverride = null)
         {
 
-            string cid = id ?? Guid.NewGuid().ToString();
+            Guid cid = id ?? Guid.NewGuid();
 
             // Build UI
             var clipBorder = new Border
@@ -403,7 +415,7 @@ namespace projectFrameCut.DraftStuff
 
             var titleLabel = new Label
             {
-                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid[^4..]}" : labelText,
+                Text = string.IsNullOrWhiteSpace(labelText) ? $"Unnamed clip {cid.ToString()[^4..]}" : labelText,
                 LineBreakMode = LineBreakMode.TailTruncation,
                 MaxLines = 1,
                 HorizontalOptions = LayoutOptions.Center,

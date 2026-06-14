@@ -15,19 +15,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     {
         public static bool DiagMode = false;
 
-        public required string Id { get; init; }
-        public Guid IdAsGUID
-        {
-            get;
-            init
-            {
-                if (!Guid.TryParse(Id, out field))
-                {
-                    Log($"A clip's ID field should be a valid guid. The input field has an invalid data '{Id}'", "warn");
-                    field = Guid.Empty;
-                }
-            }
-        }
+        public required Guid Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public uint SubLayerIndex { get; init; }

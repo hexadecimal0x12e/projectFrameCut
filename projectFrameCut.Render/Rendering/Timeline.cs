@@ -63,8 +63,8 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else
                         {
-                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip.ToString());
-                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip.ToString());
+                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
+                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
                             if (leftClip == null || rightClip == null)
                             {
                                 Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
@@ -443,7 +443,7 @@ namespace projectFrameCut.Render.Rendering
                         long overlap = aEnd - bStart;
                         if (overlap > (long)allowedOverlapFrames)
                         {
-                            result.Add(new OverlapInfo($"{a.Id ?? "unknown ID"} ({a.Name ?? "unknown Name"})", $"{b.Id ?? "unknown ID"} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
+                            result.Add(new OverlapInfo($"{a.Id} ({a.Name ?? "unknown Name"})", $"{b.Id} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
                         }
                     }
                 }

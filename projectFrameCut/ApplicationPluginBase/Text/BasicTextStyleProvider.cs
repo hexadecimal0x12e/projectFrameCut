@@ -209,76 +209,31 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             return [entry];
         }
 
+        Label glyphWarning = new Label
+        {
+            TextColor = Colors.OrangeRed,
+            FontSize = 12,
+            IsVisible = false,
+            LineBreakMode = LineBreakMode.WordWrap
+        };
+
+        void UpdateGlyphWarning()
+        {
+            var warning = TextServices.GetMissingGlyphWarning(GetOrDefault(FontKey, "HarmonyOS Sans SC Medium"), BasicText, ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize));
+            glyphWarning.Text = warning;
+            glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
+        }
+
         public PropertyPanelBuilder BuildPropertyPanel()
         {
             var panel = new PropertyPanelBuilder();
-            var currentText = BasicText;
-            var currentFont = GetOrDefault(FontKey, "HarmonyOS Sans SC Medium");
             var fontSize = ParseFloat(GetOrDefault(SizeKey, DefaultFontSize.ToString(CultureInfo.InvariantCulture)), DefaultFontSize);
             var currentFontStyle = ParseFontStyle(GetOrDefault(FontStyleKey, ClipFontStyle.Regular.ToString()), ClipFontStyle.Regular);
-
-            var glyphWarning = new Label
-            {
-                TextColor = Colors.OrangeRed,
-                FontSize = 12,
-                IsVisible = false,
-                LineBreakMode = LineBreakMode.WordWrap
-            };
-
-            void UpdateGlyphWarning()
-            {
-                var warning = TextServices.GetMissingGlyphWarning(currentFont, currentText, fontSize);
-                glyphWarning.Text = warning;
-                glyphWarning.IsVisible = !string.IsNullOrWhiteSpace(warning);
-            }
 
             panel.AddCustomChild(glyphWarning);
             // BasicText editor is managed centrally by ClipInfoBuilder.
             UpdateGlyphWarning();
-
-            var fontOptions = TextServices.LoadedFonts.Keys.OrderBy(c => c).ToArray();
-            if (fontOptions.Length > 0)
-            {
-                currentFont = fontOptions.Contains(currentFont) ? currentFont : fontOptions.First();
-                panel.AddPicker(FontKey, PPLocalizedResources.TextOption_Font, fontOptions, currentFont, picker =>
-                {
-                    picker.TextColor = Colors.Black;
-#if iDevices
-                    picker.Closed += (s, e) =>
-                    {
-                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
-                        {
-                            currentFont = selectedFont;
-                            UpdateGlyphWarning();
-                        }
-                    };
-#else
-                    picker.SelectedIndexChanged += (s, e) =>
-                    {
-                        if (picker.SelectedItem is string selectedFont && !string.IsNullOrWhiteSpace(selectedFont))
-                        {
-                            currentFont = selectedFont;
-                            UpdateGlyphWarning();
-                        }
-                    };
-#endif
-                });
-            }
-            else
-            {
-                panel.AddEntry(FontKey, PPLocalizedResources.TextOption_Font, currentFont, "HarmonyOS Sans SC Medium", entry =>
-                {
-                    entry.TextChanged += (s, e) =>
-                    {
-                        currentFont = e.NewTextValue ?? string.Empty;
-                        UpdateGlyphWarning();
-                    };
-                }, EntryUpdateEventCallMode.OnAnyTextChange);
-            }
-
-            UpdateGlyphWarning();
-
-            panel.AddEntry(SizeKey, PPLocalizedResources.TextOption_Size, fontSize.ToString(), "18", c => c.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocusedAndValueChanged);
+            panel.AddEntry(SizeKey, PPLocalizedResources.TextOption_Size, fontSize.ToString(), "18", c => { c.Keyboard = Keyboard.Numeric; if (LayoutMode is TextClipLayoutMode.FillClip or TextClipLayoutMode.FixedHeight) { c.IsReadOnly = true; c.TextColor = Colors.Gray; } }, EntryUpdateEventCallMode.OnUnfocusedAndValueChanged);
             panel.AddPicker(FontStyleKey, PPLocalizedResources.TextOption_Style, new[] { ClipFontStyle.Regular.ToString(), ClipFontStyle.Bold.ToString(), ClipFontStyle.Italic.ToString(), ClipFontStyle.BoldItalic.ToString() }, currentFontStyle.ToString());
             panel.AddCustomChild(PPLocalizedResources.TextOption_Color, invoker => BuildColorPickerField(
                 ColorKey,
@@ -308,9 +263,11 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 case TextKey:
                     BasicText = args.Value?.ToString() ?? string.Empty;
                     _parameters[TextKey] = BasicText;
+                    UpdateGlyphWarning();
                     break;
                 case FontKey:
                     _parameters[FontKey] = args.Value?.ToString() ?? "HarmonyOS Sans SC Medium";
+                    UpdateGlyphWarning();
                     break;
                 case SizeKey:
                     if (TryParseFloat(args.Value, out var size))
@@ -611,16 +568,20 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var currentColor = ParseColorOrFallback(currentHex, Colors.White);
             var swatch = new Border
             {
-                WidthRequest = 24, HeightRequest = 24,
+                WidthRequest = 24,
+                HeightRequest = 24,
                 StrokeShape = new RoundRectangle { CornerRadius = 5 },
-                StrokeThickness = 1, Stroke = Colors.White.WithAlpha(0.2f),
+                StrokeThickness = 1,
+                Stroke = Colors.White.WithAlpha(0.2f),
                 Background = new SolidColorBrush(currentColor),
                 VerticalOptions = LayoutOptions.Center
             };
             var valueLabel = new Label
             {
-                Text = currentHex, TextColor = Colors.White,
-                VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation
+                Text = currentHex,
+                TextColor = Colors.White,
+                VerticalOptions = LayoutOptions.Center,
+                LineBreakMode = LineBreakMode.TailTruncation
             };
 
             async Task OpenPickerAsync()

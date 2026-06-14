@@ -2140,9 +2140,22 @@ namespace projectFrameCut.DraftStuff
 
             var providerPpb = styleProvider.BuildPropertyPanel();
             var providerHost = new PropertyPanelBuilder();
+            var fontItems = TextServices.LoadedFonts
+                            .Select(x => x.Value)
+                            .GroupBy(c => TextHelper.DetectTextLanguage(c.DisplayName))
+                            .OrderByDescending(g => g.Count())
+                            .SelectMany(g => g)
+                            .ToList();
             providerHost.AddText(new SingleLineLabel(styleProvider.TypeName, 18, FontAttributes.Bold));
             providerHost.AddSeparator();
-            TryUseDialogFontPicker(providerPpb, styleProvider, (s) => HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", s, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : "")));
+            //providerPpb.UseDialogFontPicker(
+            //    page,
+            //    "FontFamily",
+            //   ,
+            //    styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
+            //   ,
+            //    ,
+            //    PPLocalizedResources.TextOption_Font);
 
             // Add LayoutMode picker managed centrally via ITextClipStyleProvider.LayoutMode
             Dictionary<string, TextClipLayoutMode> LocalizedLayoutOptionKVP = new Dictionary<string, TextClipLayoutMode>
@@ -2195,6 +2208,25 @@ namespace projectFrameCut.DraftStuff
                 },
                 "Text", styleProvider.BasicText)
                 .AddButton(Localized._Apply, (_, _) => { })
+            )
+            .AppendWhen(styleProvider.ShowFontPicker, 
+                c => c.AddDialogFontPicker(
+                "FontFamily", 
+                PPLocalizedResources.TextOption_Font, 
+                PPLocalizedResources.TextOption_Font, 
+                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null, 
+                fontItems, 
+                page,
+                font =>
+                {
+                    if (font.InnerFont is not null)
+                        TextClipFontRegistry.RegisterFontFace(font.InnerFont);
+                    else if (!string.IsNullOrWhiteSpace(font.Path))
+                        TextClipFontRegistry.AddFont(font.Path);
+
+                    HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", font.FontName, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : string.Empty));
+                }, 
+                TextServices.RenderFontPreviewAsync)
             )
             .AddFromAnother(providerPpb, styleProvider)
             .AddSeparator()
@@ -2328,90 +2360,6 @@ namespace projectFrameCut.DraftStuff
             providerHost.PropertyChanged += HandlePanelChange;
 
             return providerHost.BuildWithScrollView();
-
-            void TryUseDialogFontPicker(PropertyPanelBuilder providerPanel, ITextClipStyleProvider provider, Action<string> fontChangedCallback)
-            {
-                const string fontFamilyKey = "FontFamily";
-                if (!providerPanel.Components.TryGetValue(fontFamilyKey, out var rawComponent) || rawComponent is not Picker fontPicker)
-                    return;
-                if (fontPicker.Parent is not Grid parentGrid)
-                    return;
-
-                var pickerOptions = (fontPicker.ItemsSource as IEnumerable<object>)?
-                    .Select(x => x?.ToString())
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
-                if (pickerOptions.Count == 0 || !pickerOptions.All(TextServices.LoadedFonts.ContainsKey))
-                    return;
-
-                var fontItems = TextServices.LoadedFonts
-                    .Select(x => x.Value)
-                    .GroupBy(c => TextHelper.DetectTextLanguage(c.DisplayName))
-                    .OrderByDescending(g => g.Count())
-                    .SelectMany(g => g)
-                    .ToList();
-                if (fontItems.Count == 0)
-                    return;
-
-                var currentFontName = provider.Parameters.TryGetValue(fontFamilyKey, out var fromParams) && !string.IsNullOrWhiteSpace(fromParams)
-                    ? fromParams
-                    : (fontPicker.SelectedItem as string) ?? fontItems.First().FontName;
-                var currentFont = fontItems.FirstOrDefault(x => x.FontName == currentFontName);
-
-                var selectFontButton = new Button
-                {
-                    Text = currentFont?.DisplayName ?? currentFontName,
-                    HorizontalOptions = LayoutOptions.Fill,
-                    BackgroundColor = Color.FromArgb("#1AFFFFFF"),
-                    TextColor = AppInfo.RequestedTheme switch { AppTheme.Light => Colors.Black, _ => Colors.White },
-                    FontSize = 13,
-                    Padding = new Thickness(8, 4),
-                    CornerRadius = 6
-                };
-
-                var dialogPicker = new FontPicker
-                {
-                    FontsSource = fontItems,
-                    PreviewRenderer = TextServices.RenderFontPreviewAsync,
-                    Title = PPLocalizedResources.TextOption_Font,
-                    SelectedFont = currentFont
-                };
-
-                dialogPicker.SelectedFontChanged += (_, font) =>
-                {
-                    if (font == null) return;
-
-                    if (font.InnerFont is not null)
-                        TextClipFontRegistry.RegisterFontFace(font.InnerFont);
-                    else if (!string.IsNullOrWhiteSpace(font.Path))
-                        TextClipFontRegistry.AddFont(font.Path);
-
-                    selectFontButton.Text = font.DisplayName;
-                    fontChangedCallback(font.FontName);
-                    page.Dispatcher.Dispatch(async () => await page.HidePopup());
-                };
-
-                selectFontButton.Clicked += (_, _) =>
-                {
-                    page.Dispatcher.Dispatch(async () =>
-                    {
-                        await page.ShowAPopup(dialogPicker, mode: "dialog");
-                    });
-                };
-
-                var row = Grid.GetRow(fontPicker);
-                var column = Grid.GetColumn(fontPicker);
-                var rowSpan = Grid.GetRowSpan(fontPicker);
-                var columnSpan = Grid.GetColumnSpan(fontPicker);
-
-                parentGrid.Remove(fontPicker);
-                parentGrid.Add(selectFontButton);
-                Grid.SetRow(selectFontButton, row);
-                Grid.SetColumn(selectFontButton, column);
-                Grid.SetRowSpan(selectFontButton, rowSpan);
-                Grid.SetColumnSpan(selectFontButton, columnSpan);
-                providerPanel.Components[fontFamilyKey] = selectFontButton;
-            }
         }
 
         private static void GetAndUpdateTextClipEntries(ClipElementUI clip, out string? providerFrom, out ITextClipStyleProvider? styleProvider)
@@ -4980,9 +4928,8 @@ namespace projectFrameCut.DraftStuff
                         c is not null
                         && c.Id != clip.Id
                         && c.ShouldDisplayInUI
-                        && !string.IsNullOrWhiteSpace(c.Id)
-                        && !c.Id.StartsWith("ghost_")
-                        && !c.Id.StartsWith("shadow_")
+                        && !c.IsGhost
+                        && !c.IsShadow
                         && c.origTrack == clip.origTrack);
 
                     stack.Children.Add(new BoxView

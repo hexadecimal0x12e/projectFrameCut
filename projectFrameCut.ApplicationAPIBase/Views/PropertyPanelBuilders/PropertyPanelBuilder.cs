@@ -958,6 +958,50 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
         }
 
+        /// <summary>
+        /// Replaces a registered component view while preserving its container position when possible.
+        /// </summary>
+        /// <param name="id">The component identifier previously registered in <see cref="Components"/>.</param>
+        /// <param name="replacement">The new view instance to place into the panel.</param>
+        /// <returns><see langword="true"/> if the component was found and replaced; otherwise <see langword="false"/>.</returns>
+        public bool ReplaceComponent(string id, View replacement)
+        {
+            if (string.IsNullOrWhiteSpace(id) || replacement is null)
+                return false;
+
+            if (!Components.TryGetValue(id, out var original))
+                return false;
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                if (ReferenceEquals(children[i], original))
+                {
+                    children[i] = replacement;
+                    Components[id] = replacement;
+                    return true;
+                }
+
+                if (children[i] is Grid grid && grid.Children.Contains(original))
+                {
+                    var row = Grid.GetRow(original);
+                    var column = Grid.GetColumn(original);
+                    var rowSpan = Grid.GetRowSpan(original);
+                    var columnSpan = Grid.GetColumnSpan(original);
+
+                    grid.Remove(original);
+                    grid.Add(replacement);
+                    Grid.SetRow(replacement, row);
+                    Grid.SetColumn(replacement, column);
+                    Grid.SetRowSpan(replacement, rowSpan);
+                    Grid.SetColumnSpan(replacement, columnSpan);
+                    Components[id] = replacement;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
 
         /// <summary>
