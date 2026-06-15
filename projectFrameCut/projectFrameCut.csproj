@@ -160,7 +160,8 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<PackageReference Include="System.Management" Version="10.0.0" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260610101" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>

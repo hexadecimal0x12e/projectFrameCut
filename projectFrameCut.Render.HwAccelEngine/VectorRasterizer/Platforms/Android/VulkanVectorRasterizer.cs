@@ -121,7 +121,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
             int pixelCount)
         {
             return $$"""
-#version 450
+{{'#'}}version 450
 layout(local_size_x = {{WorkGroupSize}}) in;
 
 layout(set = 0, binding = 0, std430) buffer _Dummy { float _d[]; };
@@ -141,11 +141,11 @@ void main()
     float cy = float(y) + 0.5;
 
     float pr, pg, pb, pa;
-    #if {{transparentBg}}
+    {{'#'}}if {{transparentBg}}
         pr = 0.0; pg = 0.0; pb = 0.0; pa = 0.0;
-    #else
+    {{'#'}}else
         pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
-    #endif
+    {{'#'}}endif
 
     for (int p = 0; p < {{primCount}}; p++)
     {

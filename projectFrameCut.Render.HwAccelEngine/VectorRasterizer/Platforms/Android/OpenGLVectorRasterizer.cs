@@ -179,124 +179,125 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         private static string BuildShader(int primCount, int width, int height, int transparentBg,
             int pixelCount, int glPad)
         {
-            return $$"""
-#version 310 es
-layout(local_size_x = {{WorkGroupSize}}) in;
+            return 
+                $$"""
+                {{'#'}}version 310 es
+                layout(local_size_x = {{WorkGroupSize}}) in;
 
-layout(std430, binding = 0) buffer _Dummy { float _d[]; };
-layout(std430, binding = 1) buffer PrimInfoBuf { float primInfo[]; };
-layout(std430, binding = 2) buffer PrimDataBuf { float primData[]; };
-layout(std430, binding = 6) buffer OutBuf { float outPacked[]; };
+                layout(std430, binding = 0) buffer _Dummy { float _d[]; };
+                layout(std430, binding = 1) buffer PrimInfoBuf { float primInfo[]; };
+                layout(std430, binding = 2) buffer PrimDataBuf { float primData[]; };
+                layout(std430, binding = 6) buffer OutBuf { float outPacked[]; };
 
-void main()
-{
-    uint i = gl_GlobalInvocationID.x;
-    if (i >= uint({{pixelCount}}))
-        return;
+                void main()
+                {
+                    uint i = gl_GlobalInvocationID.x;
+                    if (i >= uint({{pixelCount}}))
+                        return;
 
-    int x = int(i % uint({{width}}));
-    int y = int(i / uint({{width}}));
-    float cx = float(x) + 0.5;
-    float cy = float(y) + 0.5;
+                    int x = int(i % uint({{width}}));
+                    int y = int(i / uint({{width}}));
+                    float cx = float(x) + 0.5;
+                    float cy = float(y) + 0.5;
 
-    float pr, pg, pb, pa;
-    #if {{transparentBg}}
-        pr = 0.0; pg = 0.0; pb = 0.0; pa = 0.0;
-    #else
-        pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
-    #endif
+                    float pr, pg, pb, pa;
+                    {{'#'}}if {{transparentBg}}
+                        pr = 0.0; pg = 0.0; pb = 0.0; pa = 0.0;
+                    {{'#'}}else
+                        pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
+                    {{'#'}}endif
 
-    for (int p = 0; p < {{primCount}}; p++)
-    {
-        int type = int(primInfo[p * 2]);
-        int dataBase = p * {{FloatsPerPrimitive}};
+                    for (int p = 0; p < {{primCount}}; p++)
+                    {
+                        int type = int(primInfo[p * 2]);
+                        int dataBase = p * {{FloatsPerPrimitive}};
 
-        float sr = primData[dataBase + 0];
-        float sg = primData[dataBase + 1];
-        float sb = primData[dataBase + 2];
-        float sa = primData[dataBase + 3];
-        if (sa <= 0.0)
-            continue;
+                        float sr = primData[dataBase + 0];
+                        float sg = primData[dataBase + 1];
+                        float sb = primData[dataBase + 2];
+                        float sa = primData[dataBase + 3];
+                        if (sa <= 0.0)
+                            continue;
 
-        float bbMinX = primData[dataBase + 10];
-        float bbMinY = primData[dataBase + 11];
-        float bbMaxX = primData[dataBase + 12];
-        float bbMaxY = primData[dataBase + 13];
-        if (cx < bbMinX || cx > bbMaxX || cy < bbMinY || cy > bbMaxY)
-            continue;
+                        float bbMinX = primData[dataBase + 10];
+                        float bbMinY = primData[dataBase + 11];
+                        float bbMaxX = primData[dataBase + 12];
+                        float bbMaxY = primData[dataBase + 13];
+                        if (cx < bbMinX || cx > bbMaxX || cy < bbMinY || cy > bbMaxY)
+                            continue;
 
-        bool covered = false;
+                        bool covered = false;
 
-        if (type == 0)
-        {
-            float v0x = primData[dataBase + 4];
-            float v0y = primData[dataBase + 5];
-            float v1x = primData[dataBase + 6];
-            float v1y = primData[dataBase + 7];
-            float v2x = primData[dataBase + 8];
-            float v2y = primData[dataBase + 9];
+                        if (type == 0)
+                        {
+                            float v0x = primData[dataBase + 4];
+                            float v0y = primData[dataBase + 5];
+                            float v1x = primData[dataBase + 6];
+                            float v1y = primData[dataBase + 7];
+                            float v2x = primData[dataBase + 8];
+                            float v2y = primData[dataBase + 9];
 
-            float dX = cx - v0x, dY = cy - v0y;
-            float dX1 = v1x - v0x, dY1 = v1y - v0y;
-            float dX2 = v2x - v0x, dY2 = v2y - v0y;
-            float dot00 = dX1 * dX1 + dY1 * dY1;
-            float dot01 = dX1 * dX2 + dY1 * dY2;
-            float dot02 = dX1 * dX + dY1 * dY;
-            float dot11 = dX2 * dX2 + dY2 * dY2;
-            float dot12 = dX2 * dX + dY2 * dY;
-            float invDen = dot00 * dot11 - dot01 * dot01;
-            if (invDen != 0.0)
-            {
-                float invDet = 1.0 / invDen;
-                float u = (dot11 * dot02 - dot01 * dot12) * invDet;
-                float v = (dot00 * dot12 - dot01 * dot02) * invDet;
-                covered = u >= 0.0 && v >= 0.0 && u + v <= 1.0;
-            }
-        }
-        else if (type == 1)
-        {
-            float x0 = primData[dataBase + 4];
-            float y0 = primData[dataBase + 5];
-            float x1 = primData[dataBase + 6];
-            float y1 = primData[dataBase + 7];
-            float thickness = primData[dataBase + 8];
+                            float dX = cx - v0x, dY = cy - v0y;
+                            float dX1 = v1x - v0x, dY1 = v1y - v0y;
+                            float dX2 = v2x - v0x, dY2 = v2y - v0y;
+                            float dot00 = dX1 * dX1 + dY1 * dY1;
+                            float dot01 = dX1 * dX2 + dY1 * dY2;
+                            float dot02 = dX1 * dX + dY1 * dY;
+                            float dot11 = dX2 * dX2 + dY2 * dY2;
+                            float dot12 = dX2 * dX + dY2 * dY;
+                            float invDen = dot00 * dot11 - dot01 * dot01;
+                            if (invDen != 0.0)
+                            {
+                                float invDet = 1.0 / invDen;
+                                float u = (dot11 * dot02 - dot01 * dot12) * invDet;
+                                float v = (dot00 * dot12 - dot01 * dot02) * invDet;
+                                covered = u >= 0.0 && v >= 0.0 && u + v <= 1.0;
+                            }
+                        }
+                        else if (type == 1)
+                        {
+                            float x0 = primData[dataBase + 4];
+                            float y0 = primData[dataBase + 5];
+                            float x1 = primData[dataBase + 6];
+                            float y1 = primData[dataBase + 7];
+                            float thickness = primData[dataBase + 8];
 
-            float dx = x1 - x0;
-            float dy = y1 - y0;
-            float lenSq = dx * dx + dy * dy;
-            if (lenSq >= 1e-6)
-            {
-                float t = ((cx - x0) * dx + (cy - y0) * dy) / lenSq;
-                t = clamp(t, 0.0, 1.0);
-                float nx = x0 + t * dx;
-                float ny = y0 + t * dy;
-                float dist = sqrt((cx - nx) * (cx - nx) + (cy - ny) * (cy - ny));
-                covered = dist <= thickness * 0.5;
-            }
-        }
+                            float dx = x1 - x0;
+                            float dy = y1 - y0;
+                            float lenSq = dx * dx + dy * dy;
+                            if (lenSq >= 1e-6)
+                            {
+                                float t = ((cx - x0) * dx + (cy - y0) * dy) / lenSq;
+                                t = clamp(t, 0.0, 1.0);
+                                float nx = x0 + t * dx;
+                                float ny = y0 + t * dy;
+                                float dist = sqrt((cx - nx) * (cx - nx) + (cy - ny) * (cy - ny));
+                                covered = dist <= thickness * 0.5;
+                            }
+                        }
 
-        if (!covered)
-            continue;
+                        if (!covered)
+                            continue;
 
-        float blendA = pa + sa * (1.0 - pa);
-        if (blendA > 1e-6)
-        {
-            pr = (sr * sa + pr * pa * (1.0 - sa)) / blendA;
-            pg = (sg * sa + pg * pa * (1.0 - sa)) / blendA;
-            pb = (sb * sa + pb * pa * (1.0 - sa)) / blendA;
-        }
-        pa = blendA;
+                        float blendA = pa + sa * (1.0 - pa);
+                        if (blendA > 1e-6)
+                        {
+                            pr = (sr * sa + pr * pa * (1.0 - sa)) / blendA;
+                            pg = (sg * sa + pg * pa * (1.0 - sa)) / blendA;
+                            pb = (sb * sa + pb * pa * (1.0 - sa)) / blendA;
+                        }
+                        pa = blendA;
 
-        if (pa >= 1.0 - 1e-6)
-            break;
-    }
+                        if (pa >= 1.0 - 1e-6)
+                            break;
+                    }
 
-    outPacked[i] = pr;
-    outPacked[i + {{pixelCount}}] = pg;
-    outPacked[i + {{pixelCount * 2}}] = pb;
-    outPacked[i + {{pixelCount * 3}}] = pa;
-}
-""";
+                    outPacked[i] = pr;
+                    outPacked[i + {{pixelCount}}] = pg;
+                    outPacked[i + {{pixelCount * 2}}] = pb;
+                    outPacked[i + {{pixelCount * 3}}] = pa;
+                }
+                """;
         }
 
         private static float[] PadArray(float[] src, int targetLen)
