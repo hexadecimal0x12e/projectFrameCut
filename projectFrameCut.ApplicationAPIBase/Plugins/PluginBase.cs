@@ -111,6 +111,69 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         {
             return [];
         }
+
+        public static string GetWhatProvided(IApplicationPluginBase pluginBase)
+        {
+            // re-use the base IPluginBase metadata dump
+            var baseInfo = PluginMetadata.GetWhatProvided(pluginBase);
+            // strip the trailing newline so we can append our own sections
+            baseInfo = baseInfo.TrimEnd('\r', '\n');
+
+            StringBuilder sb = new(baseInfo);
+            sb.AppendLine();
+            sb.AppendLine();
+
+            // ----- Effect Bundles -----
+            if (pluginBase.EffectBundleProvider.Any())
+            {
+                sb.AppendLine("EffectBundle:");
+                foreach (var item in pluginBase.EffectBundleProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Text Style Providers -----
+            if (pluginBase.TextClipStyleProvider.Any())
+            {
+                sb.AppendLine("TextClipStyleProvider:");
+                foreach (var item in pluginBase.TextClipStyleProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Clip Dynamic Previews -----
+            if (pluginBase.ClipDynamicPreviewProvider.Any())
+            {
+                sb.AppendLine("ClipDynamicPreviewProvider:");
+                foreach (var item in pluginBase.ClipDynamicPreviewProvider)
+                {
+                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
+                }
+            }
+
+            // ----- Effect Dynamic Previews -----
+            if (pluginBase.EffectDynamicPreviewProvider.Any())
+            {
+                sb.AppendLine("EffectDynamicPreviewProvider:");
+                foreach (var item in pluginBase.EffectDynamicPreviewProvider)
+                {
+                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
+                }
+            }
+
+            // ----- Setting Page -----
+            var dummy = pluginBase;
+            var settingPage = pluginBase.SettingPageProvider(ref dummy);
+            sb.AppendLine(settingPage is not null
+                ? "SettingPage: Yes"
+                : "SettingPage: None");
+
+            return sb.ToString();
+        }
     }
+
+
 
 }

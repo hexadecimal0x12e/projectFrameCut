@@ -40,6 +40,7 @@ using System.Text.Json.Serialization;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Vector;
 
 
 
@@ -1074,8 +1075,33 @@ public partial class TestPage : ContentPage
 
     private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
     {
-        await DisplayAlert("Info", JsonSerializer.Serialize(ppb.Properties), "ok");
+        if (PpbTestGrid.Content is null) return;
+        ControlTreeHelper h = new(PpbTestGrid.Content);
+        var controls = h.GetAllValues();
+        ControlIdPicker.ItemsSource = controls.Select(c => c.Key).ToList();
+        ControlIdPicker.SelectedIndexChanged += (s, e) =>
+        {
+            if (ControlIdPicker.SelectedItem is string selectedId && h.GetAllItems().TryGetValue(selectedId, out var control) && control is not null)
+            {
+                ControlValueEntry.Text = control?.Value?.ToString() ?? "null";
+                ControlValueEntry.IsReadOnly = !control.IsWritable;
+            }
+        };
+        //await DisplayAlertAsync("PPB Data", string.Join("\n", h.GetAllItems().Where(c => c.Value.IsWritable).Select(c => $"{c.Key}: {c.Value}")) + "\r\n\r\n---\r\n\r\n" + string.Join("\n", h.GetAllItems().Select(c => $"{c.Key}: {c.Value}")), "OK");
     }
+
+    private void SetValueButton_Clicked(System.Object sender, System.EventArgs e)
+    {
+        if (PpbTestGrid.Content is null) return;
+        var selectedId = ControlIdPicker.SelectedItem as string;
+        ControlTreeHelper h = new(PpbTestGrid.Content);
+        if (h.GetAllItems().TryGetValue(selectedId ?? "", out var control) && control is not null && control.IsWritable)
+        {
+            control.Set(ControlValueEntry.Text);
+        }
+
+    }
+
     #endregion
 
     #region runtime
@@ -1272,6 +1298,7 @@ public partial class TestPage : ContentPage
         SettingsManager.WriteSetting("StoreModeOverride", "disable");
 
     }
+
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {

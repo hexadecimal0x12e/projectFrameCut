@@ -18,6 +18,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
         public event EventHandler<TabbedViewItem>? OnTabSwitched;
 
+        public View DisplayingContent => ContentPresenter.Content;
+
         public TabbedView()
         {
             InitializeComponent();

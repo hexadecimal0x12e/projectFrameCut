@@ -1564,7 +1564,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var element = _draftPage.CreateAndAddClip(
                 startX: startX,
-                width: _draftPage.FrameToPixel(300),
+                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
                 trackIndex: trackIndex,
                 id: null,
                 labelText: text,
@@ -1624,7 +1624,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var element = _draftPage.CreateAndAddClip(
                 startX: startX,
-                width: _draftPage.FrameToPixel(300),
+                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
                 trackIndex: trackIndex,
                 id: null,
                 labelText: text,

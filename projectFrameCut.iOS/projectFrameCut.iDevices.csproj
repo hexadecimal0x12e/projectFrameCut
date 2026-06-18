@@ -74,11 +74,11 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.50" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.1.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.71" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.71" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.71" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />

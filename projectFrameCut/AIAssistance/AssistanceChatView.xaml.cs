@@ -1377,7 +1377,7 @@ public partial class AssistanceChatView : ContentView
             AIFunctionFactory.Create(() => DateTime.Now.ToString("G"), "get_datetime", "Get current date and time."),
             AIFunctionFactory.Create((string title, string cancel, string[] verbs) => (Parent as MultiWindowItem)?.DisplayActionSheetAsync(title, cancel, null, verbs) , "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
             AIFunctionFactory.Create((string title, string message, string True, string False) => (Parent as MultiWindowItem)?.DisplayAlertAsync(title, message, True, False) , "display_dialog", "Display a Dialog to ask user for True/False question (Yes/No). Null or blank result means user canceled this dialogue."),
-            AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => (Parent as MultiWindowItem)?.DisplayPromptAsync(title, message,Localized._Cancel, Localized._OK, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
+            AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => (Parent as MultiWindowItem)?.DisplayPromptAsync(title, message, Localized._OK, Localized._Cancel, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
              .. ToolCallFactories?.Invoke() ?? [],
         ];
         LogDiagnostic($"Tools:\r\n{string.Join("\r\n", tools.Select(t => JsonSerializer.Serialize(t, new JsonSerializerOptions { WriteIndented = true })))}");
@@ -1461,8 +1461,10 @@ public partial class AssistanceChatView : ContentView
             return;
         }
 
-        MainThread.BeginInvokeOnMainThread(() =>
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
+            // 等布局稳定后再滚动，避免 MeasureAllItems 重新布局导致的跳动
+            await Task.Delay(30);
             AIChatHistoryView.ScrollTo(_messages[^1], position: ScrollToPosition.End, animate: true);
         });
     }
@@ -1516,6 +1518,12 @@ public partial class AssistanceChatView : ContentView
 
 public sealed partial class ChatMessageItem : INotifyPropertyChanged
 {
+    public ChatMessageItem()
+    {
+        ToggleReasoningCommand = new Microsoft.Maui.Controls.Command(() => IsReasoningExpanded = !IsReasoningExpanded);
+        ToggleToolCallsCommand = new Microsoft.Maui.Controls.Command(() => IsToolCallsExpanded = !IsToolCallsExpanded);
+    }
+
     public required string Sender { get; init; }
 
     private string _message = string.Empty;
@@ -1574,6 +1582,56 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     }
 
     public bool HasToolCalls => !string.IsNullOrWhiteSpace(_toolCallsText);
+
+    private bool _isReasoningExpanded = true;
+
+    public bool IsReasoningExpanded
+    {
+        get => _isReasoningExpanded;
+        set
+        {
+            if (_isReasoningExpanded == value)
+            {
+                return;
+            }
+
+            _isReasoningExpanded = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ReasoningToggleIcon));
+        }
+    }
+
+    private bool _isToolCallsExpanded = true;
+
+    public bool IsToolCallsExpanded
+    {
+        get => _isToolCallsExpanded;
+        set
+        {
+            if (_isToolCallsExpanded == value)
+            {
+                return;
+            }
+
+            _isToolCallsExpanded = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ToolCallsToggleIcon));
+        }
+    }
+
+    public string ReasoningToggleIcon => IsReasoningExpanded ? "▼" : "▶";
+
+    public string ToolCallsToggleIcon => IsToolCallsExpanded ? "▼" : "▶";
+
+    /// <summary>
+    /// 切换思维链展开/折叠的命令
+    /// </summary>
+    public System.Windows.Input.ICommand ToggleReasoningCommand { get; }
+
+    /// <summary>
+    /// 切换工具调用展开/折叠的命令
+    /// </summary>
+    public System.Windows.Input.ICommand ToggleToolCallsCommand { get; }
 
     public bool IsUser { get; init; }
 

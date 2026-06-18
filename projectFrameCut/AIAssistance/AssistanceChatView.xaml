@@ -10,7 +10,8 @@
                         x:Name="AIChatHistoryView"
                         SelectionMode="None"
                         Margin="0,0,0,4"
-                        ItemSizingStrategy="MeasureAllItems">
+                        ItemSizingStrategy="MeasureAllItems"
+                        ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="ai:ChatMessageItem">
                     <Grid Padding="2">
@@ -20,54 +21,145 @@
                                 Margin="2"
                                 MaximumWidthRequest="560"
                                 HorizontalOptions="Start"
-                                BackgroundColor="Transparent">
+                                BackgroundColor="Transparent"
+                                Stroke="{AppThemeBinding Light=#FFE0E0E0, Dark=#FF444444}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding IsUser}" Value="True">
                                     <Setter Property="HorizontalOptions" Value="End"/>
                                 </DataTrigger>
                             </Border.Triggers>
-                            <VerticalStackLayout Spacing="4">
+                            <VerticalStackLayout Spacing="6">
+                                <!-- Sender -->
                                 <Label Text="{Binding Sender}"
                                        FontAttributes="Bold"
-                                       FontSize="12"/>
-                                <Border StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 8"
-                                        Padding="8,6"
-                                        IsVisible="False">
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light=#FF333333, Dark=#FFDDDDDD}"/>
+
+                                <!-- ===== Thinking / Reasoning Section ===== -->
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 6"
+                                        Padding="0"
+                                        IsVisible="False"
+                                        BackgroundColor="{AppThemeBinding Light=#FFF0F4FA, Dark=#FF1E2633}">
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding HasReasoning}" Value="True">
                                             <Setter Property="IsVisible" Value="True"/>
                                         </DataTrigger>
                                     </Border.Triggers>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding ReasoningText}"
-                                               FontSize="12"
-                                               LineBreakMode="WordWrap"/>
+                                    <VerticalStackLayout Spacing="0">
+                                        <!-- Toggle header -->
+                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                              Padding="6,4,6,4"
+                                              BackgroundColor="{AppThemeBinding Light=#FFE8EEF6, Dark=#FF28303F}">
+                                            <Grid.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding ToggleReasoningCommand}"/>
+                                            </Grid.GestureRecognizers>
+                                            <Label Grid.Column="0"
+                                                   Text="{Binding ReasoningToggleIcon}"
+                                                   FontSize="9"
+                                                   VerticalOptions="Center"
+                                                   Margin="0,0,4,0"
+                                                   TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFAAAAAA}"/>
+                                            <Label Grid.Column="1"
+                                                   Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light=#FF445566, Dark=#FF8899BB}"/>
+                                            <Label Grid.Column="2"
+                                                   FontSize="10"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light=#FF888888, Dark=#FF777777}"
+                                                   Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
+                                                   IsVisible="False">
+                                                <!-- Collapsed indicator "..." shown when reasoning collapsed -->
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsReasoningExpanded}" Value="False">
+                                                        <Setter Property="Text" Value="…"/>
+                                                        <Setter Property="IsVisible" Value="True"/>
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </Grid>
+                                        <!-- Reasoning content -->
+                                        <Border StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 0,0,6,6"
+                                                Padding="8,6"
+                                                IsVisible="{Binding IsReasoningExpanded}"
+                                                BackgroundColor="Transparent">
+                                            <Label Text="{Binding ReasoningText}"
+                                                   FontSize="11"
+                                                   LineBreakMode="WordWrap"
+                                                   TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFBBBBBB}"/>
+                                        </Border>
                                     </VerticalStackLayout>
                                 </Border>
-                                <Border StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 8"
-                                        Padding="8,6"
-                                        IsVisible="False">
+
+                                <!-- ===== Tool Calls Section ===== -->
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 6"
+                                        Padding="0"
+                                        IsVisible="False"
+                                        BackgroundColor="{AppThemeBinding Light=#FFF5F0E8, Dark=#FF282420}">
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
                                             <Setter Property="IsVisible" Value="True"/>
                                         </DataTrigger>
                                     </Border.Triggers>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding ToolCallsText}"
-                                               FontSize="12"
-                                               LineBreakMode="WordWrap"/>
+                                    <VerticalStackLayout Spacing="0">
+                                        <!-- Toggle header -->
+                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                              Padding="6,4,6,4"
+                                              BackgroundColor="{AppThemeBinding Light=#FFEDE5D8, Dark=#FF333028}">
+                                            <Grid.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding ToggleToolCallsCommand}"/>
+                                            </Grid.GestureRecognizers>
+                                            <Label Grid.Column="0"
+                                                   Text="{Binding ToolCallsToggleIcon}"
+                                                   FontSize="9"
+                                                   VerticalOptions="Center"
+                                                   Margin="0,0,4,0"
+                                                   TextColor="{AppThemeBinding Light=#FF886644, Dark=#FFBB9966}"/>
+                                            <Label Grid.Column="1"
+                                                   Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light=#FF776644, Dark=#FFCCAA77}"/>
+                                            <Label Grid.Column="2"
+                                                   FontSize="10"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light=#FF888888, Dark=#FF777777}"
+                                                   IsVisible="False">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsToolCallsExpanded}" Value="False">
+                                                        <Setter Property="Text" Value="…"/>
+                                                        <Setter Property="IsVisible" Value="True"/>
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </Grid>
+                                        <!-- Tool calls content -->
+                                        <Border StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 0,0,6,6"
+                                                Padding="8,6"
+                                                IsVisible="{Binding IsToolCallsExpanded}"
+                                                BackgroundColor="Transparent">
+                                            <Label Text="{Binding ToolCallsText}"
+                                                   FontSize="11"
+                                                   FontFamily="Consolas"
+                                                   LineBreakMode="WordWrap"
+                                                   TextColor="{AppThemeBinding Light=#FF776644, Dark=#FFDDBB88}"/>
+                                        </Border>
                                     </VerticalStackLayout>
                                 </Border>
+
+                                <!-- Message text -->
                                 <Label Text="{Binding Message}"
-                                       LineBreakMode="WordWrap"/>
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFEEEEEE}"/>
+
+                                <!-- Feedback buttons -->
                                 <HorizontalStackLayout Spacing="8"
                                                        Margin="0,4,0,0"
                                                        IsVisible="{Binding CanSubmitFeedback}">
@@ -77,6 +169,8 @@
                                             Padding="8,2"
                                             FontSize="12"
                                             MinimumHeightRequest="30"
+                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
+                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
                                             IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
                                             Clicked="AIReplyFeedbackGoodButton_Clicked"/>
                                     <Button FontFamily="Icons"
@@ -85,6 +179,8 @@
                                             Padding="8,2"
                                             FontSize="12"
                                             MinimumHeightRequest="30"
+                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
+                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
                                             IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
                                             Clicked="AIReplyFeedbackBadButton_Clicked"/>
                                     <Button FontFamily="Icons"
@@ -93,6 +189,8 @@
                                             Padding="8,2"
                                             FontSize="12"
                                             MinimumHeightRequest="30"
+                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
+                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
                                             IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
                                             Clicked="AIReplyFeedbackReportButton_Clicked"/>
                                 </HorizontalStackLayout>
@@ -102,11 +200,16 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
+        <!-- Bottom info bar -->
         <Grid Grid.Row="1">
-            <Label FontSize="12" TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
+            <Label FontSize="12"
+                   TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}"
+                   HorizontalOptions="Center"
+                   Text="{l:Localized Key=AIAssistant_InfoGrayText}"/>
         </Grid>
 
-        
+        <!-- Input area -->
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
             <Entry x:Name="AIInputButton"
                    Grid.Column="0"
@@ -119,8 +222,6 @@
                     HorizontalOptions="Center"
                     Text="{l:Localized Key=AIAssistant_ChatView_Send}"
                     Clicked="AISendButton_Clicked"/>
-
-
         </Grid>
     </Grid>
 </ContentView>

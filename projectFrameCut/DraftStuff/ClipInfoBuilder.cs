@@ -231,6 +231,8 @@ namespace projectFrameCut.DraftStuff
             return tabbedView;
         }
 
+        public View CurrentContent => tabbedView;
+
         #endregion
 
         #region general
@@ -2165,10 +2167,10 @@ namespace projectFrameCut.DraftStuff
                 { PPLocalizedResources.TextOption_LayoutMode_FixedSize, TextClipLayoutMode.FixedSize },
             }; //FixedHeight mode is buggy so hide now
             providerHost
-            .AppendWhen(styleProvider.ShowLayoutModePicker, 
+            .AppendWhen(styleProvider.ShowLayoutModePicker,
                 c => c.AddPicker("LayoutMode", PPLocalizedResources.TextOption_LayoutMode, LocalizedLayoutOptionKVP.Keys.ToArray(), LocalizedLayoutOptionKVP.ReverseLookup(styleProvider.LayoutMode, PPLocalizedResources.TextOption_LayoutMode_FixedWidth), picker =>
                 {
-    #if iDevices
+#if iDevices
                     picker.Closed += (s, e) =>
                     {
                         if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
@@ -2178,7 +2180,7 @@ namespace projectFrameCut.DraftStuff
                             HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
                         }
                     };
-    #else
+#else
                     picker.SelectedIndexChanged += (s, e) =>
                     {
                         if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
@@ -2188,7 +2190,7 @@ namespace projectFrameCut.DraftStuff
                             HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
                         }
                     };
-    #endif
+#endif
                 })
             )
             .AppendWhen(styleProvider.ShowDefaultTextEditor,
@@ -2209,13 +2211,13 @@ namespace projectFrameCut.DraftStuff
                 "Text", styleProvider.BasicText)
                 .AddButton(Localized._Apply, (_, _) => { })
             )
-            .AppendWhen(styleProvider.ShowFontPicker, 
+            .AppendWhen(styleProvider.ShowFontPicker,
                 c => c.AddDialogFontPicker(
-                "FontFamily", 
-                PPLocalizedResources.TextOption_Font, 
-                PPLocalizedResources.TextOption_Font, 
-                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null, 
-                fontItems, 
+                "FontFamily",
+                PPLocalizedResources.TextOption_Font,
+                PPLocalizedResources.TextOption_Font,
+                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
+                fontItems,
                 page,
                 font =>
                 {
@@ -2225,7 +2227,7 @@ namespace projectFrameCut.DraftStuff
                         TextClipFontRegistry.AddFont(font.Path);
 
                     HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", font.FontName, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : string.Empty));
-                }, 
+                },
                 TextServices.RenderFontPreviewAsync)
             )
             .AddFromAnother(providerPpb, styleProvider)
@@ -2357,7 +2359,7 @@ namespace projectFrameCut.DraftStuff
                 }
             }
             ;
-            providerHost.PropertyChanged += HandlePanelChange;
+            providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
 
             return providerHost.BuildWithScrollView();
         }

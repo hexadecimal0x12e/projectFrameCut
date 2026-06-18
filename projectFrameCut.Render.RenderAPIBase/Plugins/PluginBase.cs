@@ -631,14 +631,44 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public static string GetWhatProvided(IPluginBase pluginBase)
         {
             StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            //if (pluginBase.ClipProvider.Any())
-            //{
-            //    providedContent.AppendLine("Clips:");
-            //    foreach (var item in pluginBase.ClipProvider)
-            //    {
-            //        providedContent.AppendLine($"- {item.Key}");
-            //    }
-            //}
+
+            // ----- Content Sources -----
+            if (pluginBase.VideoSourceProvider.Any())
+            {
+                providedContent.AppendLine("VideoSource:");
+                foreach (var item in pluginBase.VideoSourceProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.AudioSourceProvider.Any())
+            {
+                providedContent.AppendLine("AudioSource:");
+                foreach (var item in pluginBase.AudioSourceProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.SoundTrackProvider.Any())
+            {
+                providedContent.AppendLine("SoundTrack:");
+                foreach (var item in pluginBase.SoundTrackProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Transforms -----
+            if (pluginBase.TransformProvider.Any())
+            {
+                providedContent.AppendLine("Transform:");
+                foreach (var item in pluginBase.TransformProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Effects -----
             var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
             if (effectTypes.Any())
             {
@@ -669,7 +699,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
-
+            // ----- Computers / Mixtures -----
             if (pluginBase.ComputerProvider.Any())
             {
                 providedContent.AppendLine("Computer:");
@@ -678,14 +708,48 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     providedContent.AppendLine($"- {item.Key}");
                 }
             }
-            if (pluginBase.VideoSourceProvider.Any())
+
+            // ----- Output / Export -----
+            if (pluginBase.VideoWriterProvider.Any())
             {
-                providedContent.AppendLine("VideoSource:");
-                foreach (var item in pluginBase.VideoSourceProvider)
+                providedContent.AppendLine("VideoWriter:");
+                foreach (var item in pluginBase.VideoWriterProvider)
                 {
                     providedContent.AppendLine($"- {item.Key}");
                 }
             }
+
+            // ----- Localization -----
+            if (pluginBase.LocalizationProvider.Any())
+            {
+                providedContent.AppendLine("Localization:");
+                foreach (var locale in pluginBase.LocalizationProvider.Keys)
+                {
+                    var count = pluginBase.LocalizationProvider[locale]?.Count ?? 0;
+                    providedContent.AppendLine($"- {locale} ({count} entries)");
+                }
+            }
+
+            // ----- Configuration -----
+            if (pluginBase.Configuration.Any())
+            {
+                providedContent.AppendLine("Configuration Keys:");
+                foreach (var kv in pluginBase.Configuration)
+                {
+                    providedContent.AppendLine($"- {kv.Key} = {kv.Value}");
+                }
+            }
+
+            // ----- Custom Properties -----
+            if (pluginBase.Properties.Any())
+            {
+                providedContent.AppendLine("Properties:");
+                foreach (var kv in pluginBase.Properties)
+                {
+                    providedContent.AppendLine($"- {kv.Key} = {kv.Value}");
+                }
+            }
+
             return providedContent.ToString();
         }
     }

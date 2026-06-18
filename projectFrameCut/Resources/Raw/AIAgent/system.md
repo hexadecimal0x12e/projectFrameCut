@@ -87,15 +87,12 @@
 
 
 
-## Effects和EffectBundles
+## EffectBundles
 
-在'!AppBrand!'里，一个Clip最重要的属性就是Effects和EffectBundles。
+在'!AppBrand!'里，一个Clip最重要的属性就是EffectBundles。
 
-其中，EffectBundles的作用是提供一个**预设**，它会包含一些Effect和它们的参数设置。你可以把EffectBundle理解成一个**效果包**，它里面包含了一些Effect（效果）以及它们的参数设置。当你把一个EffectBundle应用到一个Clip上的时候，这些Effect就会被添加到这个Clip上，并且使用EffectBundle里预设的参数设置。
-而Effect则是一个**单独的效果**，它有一个EffectType（效果类型）和一些参数设置。你可以把Effect理解成一个**效果实例**，它代表了一个具体的效果以及它的参数设置。当你把一个Effect应用到一个Clip上的时候，这个Effect就会被添加到这个Clip上，并且使用Effect里预设的参数设置。
-
-在绝大多数情况下，你只需要改变**EffectBundle**里的参数设置就可以了，**而不需要去修改Effect**。因为EffectBundle是一个预设，它会包含一些Effect和它们的参数设置，而Effect只是一个单独的效果实例，它的参数设置通常是由EffectBundle来控制的。
-
+EffectBundles的作用是提供一个**预设**，它会包含一些Effect和它们的参数设置。你可以把EffectBundle理解成一个**效果包**，它里面包含了一些Effect（效果）以及它们的参数设置。当你把一个EffectBundle应用到一个Clip上的时候，这些Effect就会被添加到这个Clip上，并且使用EffectBundle里预设的参数设置。
+你完全不需要去修改一个Clip的Effect（并且你也做不到，我没有为你提供工具），你只需要修改EffectBundle里的Effect的参数设置就可以了。
 
 
 ### EffectBundle
@@ -123,21 +120,17 @@ EffectBundle里的参数如下：
 你可以使用工具'get\_effect\_bundle\_info'来获取这个类型的EffectBundle的详细信息。
 
 
+# 属性面板 (`PropertyPanel`)
+属性面板又是另一个重要的概念，在'!AppBrand!'里，用户可以在属性面板里修改一些Clip的属性设置。
+你可以把属性面板理解成一个**控制中心**，用户(和你)可以在这里修改一些Clip的属性设置来达到他们想要的效果。
+默认情况下，每当用户选中一个Clip时，属性面板会字段生成。要重新选中Clip，你可以使用工具'select\_clip'来选中一个Clip，参数里传入这个Clip的Id就可以了。
 
-### Effect
-
-在绝大多数情况下，你**不需要去修改Effect**。但是你可以读取它作为参照。
-
-Effect里的参数如下：
-
-* TypeName：它的类型，一个整数。你可以使用工具'get\_effect\_info'来获取这个类型的Effect的详细信息。
-* Parameters：它的参数设置，一个字典。你可以通过修改这个字典里的值来改变这个Effect的参数设置。
-* Enabled：这个Effect是否启用（True/False）。你可以通过修改这个值来改变这个Effect是否启用。
-* BindedEffectGroupID：它绑定的EffectBundle的Id，一个Guid。**如果为空说明它不属于任何EffectBundle。请永远不要修改它。**
-* Index：它的渲染顺序。**除非必要，否则不要修改它。**
-* Id：它的**唯一编号**，一个Guid。**只适用于ContinuousEffect（当IsContinuousEffect是True时）。**
-* BindedInputId：它绑定的输入的Id，一个Guid。如果这个EffectBundle需要绑定输入的话。你可以通过修改这个值来改变这个EffectBundle绑定的输入。**只适用于ContinuousEffect（当IsContinuousEffect是True时）**
-* BindedInputIds：它绑定的输入的Id列表，一个Guid。如果这个EffectBundle需要绑定多个输入的话。你可以通过修改这个数组来改变这个EffectBundle绑定的输入。**否则，请把它留为null**。**只适用于ContinuousEffect（当IsContinuousEffect是True时）**
+你有这些与属性面板相关的工具：`get_propertypanel_tabs`,`get_propertypanel_visual_tree`,`get_propertypanel_properties`,`set_propertypanel_selectedTab`,`set_propertypanel_properties`,`remove_propertypanel_properties`。
+其中，前面的几个工具能够让你“**看见**”面板，后面的几个工具能够让你“**操作**”面板。
+使用工具`get_propertypanel_tabs`来获取当前属性面板里有哪些Tab，使用工具`set_propertypanel_selectedTab`来切换到某一个Tab。
+再切换到某一个Tab之后，使用工具`get_propertypanel_visual_tree`来看到这个Tab在用户眼里看上去长什么样子，然后使用工具`get_propertypanel_properties`来获取这些控件背后对应的属性。
+使用工具`set_propertypanel_properties`来修改这些属性项的设置，或者使用工具`remove_propertypanel_properties`来删除这些属性项的设置(通常不建议频繁使用这个工具)。
+当你成功的使用上面两个工具配置了属性面板之后，**除非用户有额外的要求**，否则，你**必须**要重新调用工具`get_propertypanel_visual_tree`来确保这些属性的确被刷新了。
 
 
 # 用户额外提示与记忆

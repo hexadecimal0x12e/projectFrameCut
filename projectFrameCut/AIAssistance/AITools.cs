@@ -1,19 +1,20 @@
 ﻿using Microsoft.Extensions.AI;
 using OpenAI.Chat;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Asset;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.Shared;
 using projectFrameCut.Services;
+using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization.Metadata;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
 
@@ -22,38 +23,47 @@ namespace projectFrameCut.AIAssistance
     public static class AITools
     {
         private static DraftPage? currentPage;
+        static readonly System.Text.Json.JsonSerializerOptions serializerOptions = new() { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals | System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString, TypeInfoResolver = new DefaultJsonTypeInfoResolver() };
 
         public static Func<IEnumerable<AIFunction>>? BuildToolCalls(ref DraftPage page, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            void update() => handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
             currentPage = page;
+            if (currentPage is null) throw new InvalidOperationException("Current page is not set. Please set the current page before building tool calls.");
             List<AIFunction> toolCalls = new List<AIFunction>
             {
-                AIFunctionFactory.Create(() => currentPage is null ? Array.Empty<ClipDraftDTO>() : TimelineMcpLiveService.ListClips(currentPage).ToArray(), "get_all_clips","Get all clips inside this project."),
-                AIFunctionFactory.Create(() => currentPage?.SelectedClip is null ? null : TimelineMcpLiveService.GetClip(currentPage, currentPage.SelectedClip.Id.ToString()), "get_selected_clip_info","Get the clip selected by the user's info."),
-                AIFunctionFactory.Create((string Id, ClipDraftDTO Clip) =>
-                {
-                    if (currentPage is null)
-                    {
-                        return;
-                    }
-                    Clip.Id = Guid.Parse(Id);
-                    TimelineMcpLiveService.ReplaceClip(currentPage, Clip);
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                }, "set_clip_info","Set a specific clip's information."),
-                AIFunctionFactory.Create((string clipId, uint layerIndex, uint startFrame) =>
+                AIFunctionFactory.Create((Guid AssetID, int startPosition, int track) => TimelineMcpLiveService.AddFromAsset(currentPage, AssetID.ToString(), startPosition, track), "add_from_assets","Add a new clip from a assets inside this project and/or in the user environment.", serializerOptions),
+                AIFunctionFactory.Create((string styleId, string text, int startPosition, int track) => TimelineMcpLiveService.AddAText(currentPage, styleId, text, startPosition, track), "add_text_clip","Add a new text clip with a specific style inside this project.", serializerOptions),
+                AIFunctionFactory.Create((bool includeDraftWide = true, bool includeGlobalWide = true) => TimelineMcpLiveService.GetAllAvailableAssets(currentPage,includeDraftWide,includeGlobalWide,false), "environment_get_assets","Get all assets inside this project and/or in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.ToDraftDTO(currentPage), "get_draft_info","Get the overall draft structure of this project. The structure used here is exactly the same as how the user's project is saved on disk or cloud.",serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.ListClips(currentPage), "get_all_clips","Get all clips inside this project. To get the specific information of a clip, either use tool 'get_draft_info', or use 'select_clip' tool to select it and then use the 'get_propertypanel_properties' or 'get_propertypanel_visual_tree'.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetClip(currentPage, currentPage?.SelectedClip?.Id), "get_selected_clip","Get the selected clip inside this project. To get more specific information of a clip, use the tool 'get_propertypanel_properties' or 'get_propertypanel_visual_tree'.", serializerOptions),
+                AIFunctionFactory.Create((Guid id) => TimelineMcpLiveService.SelectAClip(currentPage, id), "select_clip","Select a clip by its ID by the info given by either 'get_draft_info' or 'get_all_clips'.",serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetPropertyPanelViewTree(currentPage), "get_propertypanel_visual_tree","Get the property panel's visual tree and control's content for the selected clip.",serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetPropertyPanelViewTabs(currentPage), "get_propertypanel_tabs","Get the property panel's tabs.",serializerOptions),
+                AIFunctionFactory.Create((string tag) => TimelineMcpLiveService.SetPropertyPanelViewTabs(currentPage, tag) ? "Success" : $"Operation failed, maybe because '{tag}' does not exist.", "set_propertypanel_selectedTab","Set the property panel's tab selection by the id given by tool 'get_propertypanel_tabs'.",serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetPropertyPanelProperties(currentPage), "get_propertypanel_properties","Get the current property panel's properties for the selected clip.",serializerOptions),
+                AIFunctionFactory.Create((string keyToModify, object value) => { var result = TimelineMcpLiveService.SetPropertyPanelProperties(currentPage, keyToModify, value); update(); return result; }, "set_propertypanel_properties","Write a specific property in the current property panel's properties to the selected clip.",serializerOptions),
+                AIFunctionFactory.Create((string keyToModify) => { var result = TimelineMcpLiveService.RemovePropertyPanelProperties(currentPage, keyToModify); update();  return result;  }, "remove_propertypanel_properties","Delete a property in the current property panel's properties to the selected clip.",serializerOptions),
+                AIFunctionFactory.Create(async (string clipId, uint layerIndex, uint startFrame) =>
                 {
                     if (currentPage is null) return null;
                     var moved = TimelineMcpLiveService.MoveClip(currentPage, clipId, layerIndex, startFrame);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return DraftImportAndExportHelper.ExportClipElementFromDraftPage(currentPage, moved, false);
-                }, "move_clip","Move one clip to another track or frame."),
-                AIFunctionFactory.Create((string clipId, Dictionary<string, object?> patch) =>
+                }, "move_clip","Move one clip to another track or frame.", serializerOptions),
+                AIFunctionFactory.Create(async (string clipId, string typeName) =>
                 {
                     if (currentPage is null) return null;
-                    var updated = TimelineMcpLiveService.ApplyClipPatch(currentPage, clipId, patch);
+                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == typeName).Value?.Invoke();
+                    if (pageBundle is null) return null;
+                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, pageBundle);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return DraftImportAndExportHelper.ExportClipElementFromDraftPage(currentPage, updated, false);
-                }, "patch_clip","Patch a clip's properties."),
+                    return added.GetEffectBundleItem();
+                }, "add_effect_bundle_to_clip","Add an effect bundle on the selected clip."),
                 AIFunctionFactory.Create((string clipId, Guid bundleId) =>
                 {
                     if (currentPage is null) return false;
@@ -61,37 +71,6 @@ namespace projectFrameCut.AIAssistance
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return removed;
                 }, "remove_effect_bundle_from_clip","Remove an effect bundle from a clip by id."),
-                AIFunctionFactory.Create((string clipId, EffectBundleJSONStructure bundle) =>
-                {
-                    if (currentPage is null) return null;
-                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == bundle.BundleTypeName).Value?.Invoke();
-                    if (pageBundle is null) return null;
-                    pageBundle.Id = bundle.Id;
-                    pageBundle.Name = bundle.Name;
-                    pageBundle.Parameters = bundle.Parameters;
-                    pageBundle.Enabled = bundle.Enabled;
-                    pageBundle.BindedInputId = bundle.BindedInputId;
-                    pageBundle.BindedOutputId = bundle.BindedOutputId;
-                    pageBundle.BindedInputIds = bundle.BindedInputIds?.ToList();
-                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, pageBundle);
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return added.GetEffectBundleItem();
-                }, "add_effect_bundle_to_clip","Add or replace an effect bundle on the selected clip."),
-                AIFunctionFactory.Create((string clipId, string effectKey) =>
-                {
-                    if (currentPage is null) return false;
-                    var removed = TimelineMcpLiveService.RemoveEffect(currentPage, clipId, effectKey);
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return removed;
-                }, "remove_effect_from_clip","Remove one effect from a clip by name or id."),
-                AIFunctionFactory.Create((string clipId, EffectAndMixtureJSONStructure effect) =>
-                {
-                    if (currentPage is null) return null;
-                    var added = TimelineMcpLiveService.AddEffect(currentPage, clipId, effect);
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return added.GetInfo();
-                }, "add_effect_to_clip","Add or replace one effect on a clip."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Select(c => c.Value.EffectProvider).FirstOrDefault(c => c.Keys.Contains(Type))?[Type]?.Invoke()?.GetInfo(), "get_effect_info","Get a specific effect's information."),
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),

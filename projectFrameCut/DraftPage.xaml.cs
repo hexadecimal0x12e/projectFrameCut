@@ -1317,10 +1317,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         return element;
     }
 
-    public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null)
+    public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null, double startPoint = 0)
     {
         var elem = ClipElementUI.CreateClip(
-                           startX: 0,
+                           startX: startPoint,
                            width: FrameToPixel(asset.isInfiniteLength ? SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300) : AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.TargetFrameRate)),
                            trackIndex: trackIndex,
                            labelText: asset.Name,
@@ -2685,12 +2685,26 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task SelectAClip()
+    public async Task SelectAClip(Guid? id = null)
     {
-        var clipsKVP = Clips.ToDictionary(c => $"{c.Value.DisplayName} ({(string.IsNullOrWhiteSpace(c.Value.TypeName) ? c.Value.ClipType.ToString() : c.Value.TypeName)},{c.Value.Id})", c => c.Value);
-        var selection = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_Select, Localized._Cancel, null, clipsKVP.Keys.ToArray());
-        if (string.IsNullOrWhiteSpace(selection) || !clipsKVP.TryGetValue(selection, out var c)) return;
-        SelectTapGesture_Tapped(c.Clip, null!);
+        ClipElementUI? clip = null;
+        if (id is null)
+        {
+            var clipsKVP = Clips.ToDictionary(c => $"{c.Value.DisplayName} ({(string.IsNullOrWhiteSpace(c.Value.TypeName) ? c.Value.ClipType.ToString() : c.Value.TypeName)},{c.Value.Id})", c => c.Value);
+            var selection = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_Select, Localized._Cancel, null, clipsKVP.Keys.ToArray());
+            if (string.IsNullOrWhiteSpace(selection) || !clipsKVP.TryGetValue(selection, out clip)) return;
+        }
+        else if (id is Guid g)
+        {
+            if (!Clips.TryGetValue(g, out clip)) throw new KeyNotFoundException($"Clip with ID {id} not found");
+        }
+
+        if(clip is null)
+        {
+            throw new InvalidOperationException("The selected clip ID is invalid");
+        }
+
+        SelectTapGesture_Tapped(clip.Clip, null!);
     }
 
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)

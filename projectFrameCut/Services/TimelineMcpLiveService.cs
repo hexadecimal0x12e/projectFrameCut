@@ -1,26 +1,225 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
+using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
+using System.Collections;
+using System.Text.Json;
 
 namespace projectFrameCut.Services;
 
 public static class TimelineMcpLiveService
 {
-    public static IReadOnlyList<ClipDraftDTO> ListClips(DraftPage page)
-        => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips.OfType<ClipDraftDTO>().OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).ToList();
+    public static DraftStructureJSON ToDraftDTO(DraftPage page)
+        => DraftImportAndExportHelper.ExportFromDraftPage(page, false);
 
-    public static ClipDraftDTO? GetClip(DraftPage page, string id)
-        => Guid.TryParse(id, out var guid) && page.Clips.TryGetValue(guid, out var clip) ? DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false) : null;
+    public static IEnumerable ListClips(DraftPage page)
+        => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips.OfType<ClipDraftDTO>().OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).Select(c => new { id = c.Id, displayName = c.Name, type = c.ClipType.ToString() });
+
+    public static ClipDraftDTO? GetClip(DraftPage page, Guid? id)
+        => id.HasValue && page.Clips.TryGetValue(id.Value, out var clip) ? DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false) : null;
 
     public static ClipElementUI ReplaceClip(DraftPage page, ClipDraftDTO dto)
     {
         var element = DraftImportAndExportHelper.ConvertToElement(dto);
         UpsertClipElement(page, element);
         return element;
+    }
+
+    public static IEnumerable GetAllAvailableEffects()
+    {
+        var effects = EffectServices.GetAvailableEffectBundles();
+        var locNames = EffectServices.GetLocalizedEffectNames();
+        return effects.Select(c => c.Value()).Select((e) => new { type = e.TypeName, localizedDisplayName = locNames.TryGetValue(e.TypeName, out var name) ? name : e.TypeName, effectTarget = e.Target, typeOfEffect = e.TypeOfEffect, @params = e.ParametersType, fromPlugin = e.FromPlugin });
+    }
+
+    public static IEnumerable GetAllAvailablePlugins()
+    {
+        return PluginManager.LoadedPlugins.Values.Select(p => new { id = p.PluginID, name = p.Name, displayName = p.ReadLocalizationItem("_PluginBase_Name_", p.Name), provides = p is IApplicationPluginBase ab ? IApplicationPluginBase.GetWhatProvided(ab) : PluginMetadata.GetWhatProvided(p) });
+    }
+
+    public static IEnumerable GetAllAvailableTextStyles()
+    {
+        return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.TextClipStyleProvider).Select(c => new { id = c.Key, fromPlugin = c.Value().FromPlugin, typeName = c.Value().TypeName, displayName = PluginManager.GetLocalizationItem("DisplayName_TextStyle_" + c.Key, c.Key) });    
+    }
+
+    public static IEnumerable<AssetItem> GetAllAvailableAssets(DraftPage? page, bool includeDraftWide, bool includeGlobal, bool includeRemote)
+    {
+        List<AssetItem> assets = new();
+        if (includeDraftWide && page is not null) assets.AddRange(page.Assets.Values);
+        if (includeGlobal) assets.AddRange(Asset.AssetDatabase.Assets.Values);
+        return assets;
+    }
+
+    public static IEnumerable GetPropertyPanelViewTabs(DraftPage? page)
+    {
+        if (page?.infoBuilder?.CurrentContent is not TabbedView tv) throw new InvalidOperationException("No Tab view in property panel.");
+        return tv.TabItems.Select(t => new { tag = t.Tag, header = t.Header, isSelected = t.IsSelected });
+    }
+
+    public static bool SetPropertyPanelViewTabs(DraftPage? page, string tag)
+    {
+        if (page?.infoBuilder?.CurrentContent is not TabbedView tv) throw new InvalidOperationException("No Tab view in property panel.");
+        tv.SelectByTag(tag);
+        return tv.SelectedItem.Tag == tag;
+    }
+
+    public static string GetPropertyPanelViewTree(DraftPage? page)
+    {
+        if (page?.infoBuilder?.CurrentContent is null) throw new InvalidOperationException("No content in property panel.");
+        return new ApplicationAPIBase.Helpers.ControlTreeHelper(page.infoBuilder.CurrentContent).DumpTree();
+    }
+
+
+    public static IEnumerable GetPropertyPanelProperties(DraftPage? page)
+    {
+        if (page?.infoBuilder?.CurrentContent is not TabbedView tv) throw new InvalidOperationException("No content in property panel.");
+        if (tv?.DisplayingContent.BindingContext is not PropertyPanelBuilder ppb) throw new InvalidOperationException("No PropertyPanelBuilder available in the view.");
+        return ppb.Properties;
+    }
+
+    internal static IEnumerable SetPropertyPanelProperties(DraftPage page, string keyToModify, object value)
+    {
+        if (page?.infoBuilder?.CurrentContent is not TabbedView tv) throw new InvalidOperationException("No content in property panel.");
+        if (tv?.DisplayingContent.BindingContext is not PropertyPanelBuilder ppb) throw new InvalidOperationException("No PropertyPanelBuilder available in the view.");
+        if (!ppb.Properties.TryGetValue(keyToModify, out var currentValue) || currentValue is null)
+            throw new KeyNotFoundException($"Property '{keyToModify}' not found.");
+        var oldType = currentValue.GetType();
+        try
+        {
+            var old = ppb.Properties.ToDictionary(C => C.Key, c => c.Value);
+            old[keyToModify] = ConvertPropertyValue(value, oldType) ?? throw new InvalidOperationException($"Failed to convert value to type '{oldType}'.");
+            return ppb.WithProperties(old).Properties;
+
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to set property '{keyToModify}' of type {oldType}: {Environment.NewLine}{ex}{Environment.NewLine}Try again with a proper value.", ex);
+        }
+    }
+
+    private static object? ConvertPropertyValue(object value, Type targetType)
+    {
+        var nonNullableTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        if (value is JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind == JsonValueKind.Null
+                ? null
+                : JsonSerializer.Deserialize(jsonElement.GetRawText(), nonNullableTargetType);
+        }
+
+        if (nonNullableTargetType.IsInstanceOfType(value))
+        {
+            return value;
+        }
+
+        return Convert.ChangeType(value, nonNullableTargetType);
+    }
+
+    internal static IEnumerable RemovePropertyPanelProperties(DraftPage page, string keyToModify)
+    {
+        if (page?.infoBuilder?.CurrentContent is not TabbedView tv) throw new InvalidOperationException("No content in property panel.");
+        if (tv?.DisplayingContent.BindingContext is not PropertyPanelBuilder ppb) throw new InvalidOperationException("No content in property panel.");
+        return ppb.WithProperties(ppb.Properties.Where(c => c.Key != keyToModify).ToDictionary(c => c.Key, c => c.Value)).Properties;
+    }
+
+
+    internal static async Task SelectAClip(DraftPage page, Guid id)
+    {
+        await page.SelectAClip(id);
+    }
+
+    internal static async Task AddFromAsset(DraftPage page, string assetId, int startPosition, int track)
+    {
+        if (page.Assets.TryGetValue(assetId, out var value) || AssetDatabase.Assets.TryGetValue(assetId, out value))
+        {
+            var elem = page.CreateFromAsset(value, track, assetId, null, startPosition);
+            await page.Dispatcher.DispatchAsync(() =>
+            {
+                page.RegisterClip(elem, true);
+                page.AddAClip(elem);
+            });
+        }
+        else
+        {
+            throw new KeyNotFoundException($"Cannot find asset with id {assetId} either in draft wide, or in global wide.");
+        }
+    }
+
+    internal static async Task AddAText(DraftPage page, string styleId, string text, int startPosition, int track)
+    {
+        var pvd = PluginManager.LoadedPlugins.Values
+            .OfType<IApplicationPluginBase>()
+            .SelectMany(c => c.TextClipStyleProvider)
+            .FirstOrDefault(C => C.Key == styleId);
+        if (pvd.Value?.Invoke() is ITextClipStyleProvider providerItem)
+        {
+            var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
+            provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+            provider.BasicText = text;
+
+            var entries = provider.BuildEntries();
+            var textLang = TextHelper.DetectTextLanguage(text);
+            if (textLang != TextLanguage.English)
+            {
+                var fontOverride = textLang switch
+                {
+                    TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
+                    TextLanguage.Japanese => "Noto Sans JP Regular",
+                    TextLanguage.Korean => "Noto Sans KR Regular",
+                    TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
+                    _ => "Noto Sans"
+                };
+                entries = entries
+                    .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
+                    .ToArray();
+            }
+
+            // 必须在 UI 线程上创建和添加 Clip，CreateAndAddClip 内部已调用 RegisterClip + AddAClip
+            ClipElementUI? element = null;
+            await page.Dispatcher.DispatchAsync(() =>
+            {
+                element = page.CreateAndAddClip(
+                    startX: startPosition,
+                    width: page.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
+                    trackIndex: track,
+                    id: null,
+                    labelText: text,
+                    background: new SolidColorBrush(Colors.MediumPurple),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: 0
+                );
+
+                element.ClipType = ClipMode.TextClip;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = true;
+                element.maxFrameCount = 0;
+                element.ExtraData = new();
+                element.ExtraData["TextEntries"] = entries.ToList();
+                element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
+                element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
+                element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+            });
+        }
+        else
+        {
+            throw new KeyNotFoundException($"Cannot find text style provider with id {styleId}.");
+        }
+
     }
 
     public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame)
@@ -45,8 +244,11 @@ public static class TimelineMcpLiveService
         clip.SubLayerIndex = targetTrack;
         clip.Clip.TranslationX = page.FrameToPixel(startFrame);
         clip.origX = clip.Clip.TranslationX;
-        page.AddAClip(clip);
-        page.RegisterClip(clip, true);
+        page.Dispatcher.Dispatch(() =>
+        {
+            page.RegisterClip(clip, true);
+            page.AddAClip(clip);
+        });
         return clip;
     }
 
