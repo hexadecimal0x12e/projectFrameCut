@@ -1474,6 +1474,7 @@ public partial class HomePage : ContentPage
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
 #if WINDOWS
+                AppShell.instance.CollapseNavView();
                 AppShell.instance.HideNavView();
 #endif
                 await Navigation.PushAsync(renderPage);

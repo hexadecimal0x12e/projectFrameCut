@@ -18,7 +18,7 @@ public partial class SetupPage : ContentPage
     private async void Button_Clicked(object sender, EventArgs e)
     {
 #if WINDOWS
-        await App.ShowNavBar();
+        App.ShowNavBar();
         if (CreateDesktopShortcutCheckbox.IsChecked)
         {
             try

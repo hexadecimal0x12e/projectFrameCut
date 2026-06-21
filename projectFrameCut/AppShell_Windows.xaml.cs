@@ -8,6 +8,13 @@
             instance = this;
             Title = Localized.AppBrand;
 #if WINDOWS
+            // Must be set explicitly because the XAML file is never loaded via
+            // InitializeComponent(). Without this, MAUI Shell creates flyout
+            // items (ShellFlyoutItemView) whose ShellView property resolves to
+            // null when the RootNavigationView is measured, causing a
+            // NullReferenceException on startup.
+            FlyoutBehavior = FlyoutBehavior.Disabled;
+
             if (placeDefaultItem && (this.Items == null || this.Items.Count == 0))
             {
                 var shellContent = new Microsoft.Maui.Controls.ShellContent
@@ -56,15 +63,9 @@
 
 
 
-        public async void ShowNavView()
-        {
-            await App.ShowNavBar();
-        }
-
-        public void HideNavView()
-        {
-            App.HideNavBar();
-        }
+        public void ShowNavView() => App.ShowNavBar();
+        public void HideNavView() => App.HideNavBar();
+        public void CollapseNavView() => App.CollapseNavView();
 
     }
 }

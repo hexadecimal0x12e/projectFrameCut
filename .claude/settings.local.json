@@ -25,7 +25,14 @@
       "PowerShell(splc-edit *)",
       "Bash(findstr *)",
       "PowerShell(Get-ChildItem *)",
-      "PowerShell(dotnet restore *)"
+      "PowerShell(dotnet restore *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "Bash(git clone *)",
+      "Read(//c/Users/azert/.claude/temp/maui-source/src/Controls/src/Core/Platform/**)",
+      "Read(//c/Users/azert/.claude/temp/**)",
+      "PowerShell(git clone *)"
     ],
     "deny": [
       "Bash(Select-*)",

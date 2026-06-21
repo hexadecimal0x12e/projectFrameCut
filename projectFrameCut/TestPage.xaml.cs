@@ -1,46 +1,46 @@
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
+using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+using projectFrameCut.APIClient;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
-
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Processing.Converting;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.Drawing.Processing.Converting;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using Color = Microsoft.Maui.Graphics.Color;
+using DatePicker = Microsoft.Maui.Controls.DatePicker;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-
-using projectFrameCut.Render.Compose;
-using DatePicker = Microsoft.Maui.Controls.DatePicker;
-using projectFrameCut.APIClient;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using Color = Microsoft.Maui.Graphics.Color;
-using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.Render.ClipsAndTracks;
-using System.Text.Encodings.Web;
-using System.Text.Json.Serialization.Metadata;
-using System.Text;
-using FFmpeg.AutoGen;
-using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Drawing.Text.FontHelper;
-using System.Text.Json.Serialization;
-using projectFrameCut.Drawing.Base;
-using projectFrameCut.Render.HwAccelEngine;
-using projectFrameCut.Drawing.Text.Entry;
-using projectFrameCut.Drawing.Vector;
 
 
 
@@ -1299,6 +1299,42 @@ public partial class TestPage : ContentPage
 
     }
 
+    private async void ShowCMTPopupButton_Clicked(object sender, EventArgs e)
+    {
+        await this.ShowPopupAsync(new Label
+        {
+            Text = "This is a very important message!"
+        }, new PopupOptions
+        {
+            CanBeDismissedByTappingOutsideOfPopup = true,
+            Shape = new RoundRectangle
+            {
+                CornerRadius = new CornerRadius(20, 20, 20, 20),
+                StrokeThickness = 2,
+                Stroke = Colors.LightGray
+            }
+        });
+    }
+
+    bool isNavPaneVisible = true;
+
+    private void ToggleNavPaneButton_Clicked(object sender, EventArgs e)
+    {
+        if (isNavPaneVisible)
+        {
+            AppShell.instance.HideNavView();
+        }
+        else
+        {
+            AppShell.instance.ShowNavView();
+        }
+        isNavPaneVisible = !isNavPaneVisible;
+    }
+
+    private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button{Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
+    }
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {
