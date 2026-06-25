@@ -1,9 +1,10 @@
-namespace projectFrameCut.AIAssistance;
+﻿namespace projectFrameCut.AIAssistance;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper;
 using projectFrameCut.Setting.SettingManager;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -93,14 +94,17 @@ public partial class AssistanceChatView : ContentView
 
     private void AddAssistantWelcomeMessage()
     {
-        _messages.Add(new ChatMessageItem
+        string text = _chatClient is null
+            ? Localized.AIAssistant_ChatView_MissingConfig
+            : Localized.AIAssistant_ChatView_WelcomeText;
+        var item = new ChatMessageItem
         {
             Sender = "Assistant P",
-            Message = _chatClient is null
-                ? Localized.AIAssistant_ChatView_MissingConfig
-                : Localized.AIAssistant_ChatView_WelcomeText,
+            Message = text,
             IsUser = false,
-        });
+        };
+        item.ContentViews.Add(Markdown2XAML.Convert(text));
+        _messages.Add(item);
     }
 
     private async Task SendMessageAsync()
@@ -152,6 +156,10 @@ public partial class AssistanceChatView : ContentView
         ChatMessageItem? streamingItem = null;
         StringBuilder textBuilder = new();
         StringBuilder reasoningBuilder = new();
+        var converter = new Markdown2XAML.StreamConverter();
+        ThinkingCardView? thinkingCard = null;
+        ToolCallCardView? toolCallCard = null;
+        View? partialView = null;
         try
         {
             if (_chatClient is null)
@@ -181,28 +189,97 @@ public partial class AssistanceChatView : ContentView
                     {
                         textChunk = ExtractContentChunk(update);
                     }
+
+                    string reasoningChunk = ExtractReasoningChunk(update);
+
+                    bool toolCallChanged = TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText);
+
+                    // Skip if nothing to process
+                    if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged)
+                        continue;
+
+                    // Capture values for main-thread dispatch
+                    string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
+                    string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
+                    string capturedToolCalls = toolCallsText;
+
                     if (!string.IsNullOrEmpty(textChunk))
                     {
                         textBuilder.Append(textChunk);
-                        SetMessageText(streamingItem, textBuilder.ToString());
+                        capturedText = textBuilder.ToString();
                     }
-
-                    string reasoningChunk = ExtractReasoningChunk(update);
                     if (!string.IsNullOrEmpty(reasoningChunk))
                     {
                         reasoningBuilder.Append(reasoningChunk);
-                        SetReasoningText(streamingItem, reasoningBuilder.ToString());
+                        capturedReasoning = reasoningBuilder.ToString();
                     }
 
-                    if (TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText))
+                    MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        SetToolCallsText(streamingItem, toolCallsText);
-                    }
+                        // --- Text: feed through StreamConverter ---
+                        if (!string.IsNullOrEmpty(textChunk))
+                        {
+                            streamingItem.Message = capturedText;
 
+                            // Remove stale partial view
+                            if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                                streamingItem.ContentViews.Remove(partialView);
+
+                            // Add newly completed views
+                            foreach (View view in converter.Feed(textChunk))
+                                streamingItem.ContentViews.Add(view);
+
+                            // Add updated partial view
+                            partialView = converter.CurrentPartialView;
+                            if (partialView is not null)
+                                streamingItem.ContentViews.Add(partialView);
+                        }
+
+                        // --- Reasoning: create/update thinking card ---
+                        if (!string.IsNullOrEmpty(reasoningChunk))
+                        {
+                            streamingItem.ReasoningText = capturedReasoning;
+                            if (thinkingCard is null)
+                            {
+                                thinkingCard = new ThinkingCardView(capturedReasoning);
+                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
+                            }
+                            else
+                            {
+                                thinkingCard.UpdateText(capturedReasoning);
+                            }
+                        }
+
+                        // --- Tool calls: create/update tool call card ---
+                        if (toolCallChanged)
+                        {
+                            streamingItem.ToolCallsText = capturedToolCalls;
+                            if (toolCallCard is null)
+                            {
+                                toolCallCard = new ToolCallCardView(capturedToolCalls);
+                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, toolCallCard.View);
+                            }
+                            else
+                            {
+                                toolCallCard.UpdateText(capturedToolCalls);
+                            }
+                        }
+                    });
                 }
 
+                // Flush remaining converter content on main thread
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                        streamingItem.ContentViews.Remove(partialView);
+                    partialView = null;
+
+                    foreach (View view in converter.Flush())
+                        streamingItem.ContentViews.Add(view);
+                });
+
                 assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
-                SetMessageText(streamingItem, assistantText);
+                streamingItem.Message = assistantText;
             }
         }
         catch (OperationCanceledException)
@@ -210,7 +287,16 @@ public partial class AssistanceChatView : ContentView
             assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Cancelled}";
             if (streamingItem is not null)
             {
-                SetMessageText(streamingItem, assistantText);
+                FlushStreamingState(streamingItem, converter, ref partialView);
+                streamingItem.Message = assistantText;
+                streamingItem.ContentViews.Add(new Label
+                {
+                    Text = Localized.AIAssistant_ChatView_ChatFail_Cancelled,
+                    FontSize = Markdown2XAML.BodyFontSize,
+                    TextColor = Color.FromArgb("#FF888888"),
+                    FontAttributes = FontAttributes.Italic,
+                    Margin = new Thickness(0, 4, 0, 0),
+                });
             }
         }
         catch (Exception ex)
@@ -219,18 +305,29 @@ public partial class AssistanceChatView : ContentView
             assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
             if (streamingItem is not null)
             {
-                SetMessageText(streamingItem, assistantText);
+                FlushStreamingState(streamingItem, converter, ref partialView);
+                streamingItem.Message = assistantText;
+                streamingItem.ContentViews.Add(new Label
+                {
+                    Text = Localized.AIAssistant_ChatView_ChatFail_Exception(ex),
+                    FontSize = Markdown2XAML.BodyFontSize,
+                    TextColor = Color.FromArgb("#FFFF6666"),
+                    FontAttributes = FontAttributes.Italic,
+                    Margin = new Thickness(0, 4, 0, 0),
+                });
             }
         }
 
         if (streamingItem is null)
         {
-            _messages.Add(new ChatMessageItem
+            var item = new ChatMessageItem
             {
                 Sender = "Assistant P",
                 Message = assistantText,
                 IsUser = false,
-            });
+            };
+            item.ContentViews.Add(Markdown2XAML.Convert(assistantText));
+            _messages.Add(item);
         }
         _chatHistory.Add(new AIChatMessage(ChatRole.Assistant, assistantText));
         PersistSession();
@@ -381,7 +478,7 @@ public partial class AssistanceChatView : ContentView
 
         foreach (AssistanceChatMessageSnapshot message in session.Messages)
         {
-            _messages.Add(new ChatMessageItem
+            var item = new ChatMessageItem
             {
                 Sender = message.Sender,
                 Message = message.Message,
@@ -389,7 +486,33 @@ public partial class AssistanceChatView : ContentView
                 ReasoningText = message.ReasoningText,
                 ToolCallsText = message.ToolCallsText,
                 HasFeedbackSubmitted = message.HasFeedbackSubmitted,
-            });
+            };
+
+            // Rebuild ContentViews for assistant messages from persisted strings
+            if (!item.IsUser)
+            {
+                if (!string.IsNullOrWhiteSpace(message.ReasoningText))
+                {
+                    var card = new ThinkingCardView(message.ReasoningText);
+                    card.ToggleExpanded(); // collapsed by default on load
+                    item.ContentViews.Add(card.View);
+                }
+
+                if (!string.IsNullOrWhiteSpace(message.ToolCallsText))
+                {
+                    var card = new ToolCallCardView(message.ToolCallsText);
+                    card.ToggleExpanded(); // collapsed by default on load
+                    item.ContentViews.Add(card.View);
+                }
+
+                if (!string.IsNullOrWhiteSpace(message.Message))
+                {
+                    View mdView = Markdown2XAML.Convert(message.Message);
+                    item.ContentViews.Add(mdView);
+                }
+            }
+
+            _messages.Add(item);
         }
 
         foreach (AssistanceChatHistorySnapshot history in session.History)
@@ -1417,6 +1540,127 @@ public partial class AssistanceChatView : ContentView
         MainThread.BeginInvokeOnMainThread(() => item.ToolCallsText = text);
     }
 
+    /// <summary>
+    /// 在 partial view 之前插入一个卡片 View。如果 partial view 不存在则追加到末尾。
+    /// 必须在主线程调用。
+    /// </summary>
+    private static void InsertViewBeforePartial(ObservableCollection<View> views, View? partialView, View card)
+    {
+        if (partialView is not null)
+        {
+            int idx = views.IndexOf(partialView);
+            if (idx >= 0)
+                views.Insert(idx, card);
+            else
+                views.Add(card);
+        }
+        else
+        {
+            views.Add(card);
+        }
+    }
+
+    /// <summary>
+    /// 在流式异常/取消时，刷新 converter 中的剩余内容到 ContentViews。
+    /// 必须在主线程调用。
+    /// </summary>
+    private static void FlushStreamingState(ChatMessageItem item, Markdown2XAML.StreamConverter converter, ref View? partialView)
+    {
+        if (partialView is not null && item.ContentViews.Contains(partialView))
+            item.ContentViews.Remove(partialView);
+        partialView = null;
+
+        foreach (View view in converter.Flush())
+            item.ContentViews.Add(view);
+    }
+
+    private HashSet<Guid> _attachedChatMessageItemContentViewsChangedViews = new(), _addedChatMessageItemContents = new();
+
+    private void SubViewCollection_Loaded(object sender, EventArgs e)
+    {
+        if (sender is not VerticalStackLayout vsl || vsl.BindingContext is not ChatMessageItem c) return;
+        try
+        {
+            foreach (var item in c.ContentViews.Where(c => _addedChatMessageItemContents.Add(c.Id))) //avoid control conflict
+            {
+                ConfigureContentChild(item, vsl);
+                vsl.Children.Add(item);
+            }
+            if (_attachedChatMessageItemContentViewsChangedViews.Add(vsl.Id))
+            {
+                c.ContentViews.CollectionChanged += (_, e) =>
+                {
+                    switch (e.Action)
+                    {
+                        case NotifyCollectionChangedAction.Add:
+                            foreach (var item in e.NewItems?.OfType<View>().Where(c => _addedChatMessageItemContents.Add(c.Id)) ?? [])
+                            {
+                                ConfigureContentChild(item, vsl);
+                                vsl.Children.Add(item);
+                            }
+                            break;
+                        case NotifyCollectionChangedAction.Remove:
+                            foreach (var item in e.OldItems?.OfType<View>() ?? [])
+                            {
+                                vsl.Children.Remove(item);
+                            }
+                            break;
+                        case NotifyCollectionChangedAction.Reset:
+                            vsl.Children.Clear();
+                            break;
+                        default:
+                            break;
+                    }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            vsl.Children.Add(new Label
+            {
+                Text = Localized.AIAssistant_ChatView_ChatFail_Exception(ex),
+                FontSize = Markdown2XAML.BodyFontSize,
+                TextColor = Color.FromArgb("#FF888888"),
+                FontAttributes = FontAttributes.Italic,
+                Margin = new Thickness(0, 4, 0, 0),
+            });
+        }
+
+    }
+
+    /// <summary>
+    /// 确保内容子 View 能够正确地填充父容器宽度，从而实现文本自动换行。
+    /// 在 MAUI 的 VerticalStackLayout 中，默认的 HorizontalOptions="Fill" 理论上应
+    /// 让子 View 填满父级宽度，但 VerticalStackLayout 的测量阶段会给子元素无限宽度，
+    /// 导致 WordWrap Label 报告完整文本宽度而非受约束宽度。通过显式设置子 View 的
+    /// HorizontalOptions 和 MaximumWidthRequest，可以确保在父容器宽度被 Border 的
+    /// MaximumWidthRequest 约束后，子 View 也受到相应约束，从而实现正确的文本换行。
+    /// </summary>
+    private static void ConfigureContentChild(View child, VisualElement parent)
+    {
+        // 只对 VerticalStackLayout（Markdown 多 block 容器）和 Label（文本内容）做约束
+        if (child is VerticalStackLayout or Label or Border)
+        {
+            child.HorizontalOptions = LayoutOptions.Fill;
+        }
+
+        // 递归处理嵌套的子元素
+        if (child is VerticalStackLayout childStack)
+        {
+            foreach (var grandchild in childStack.Children)
+                ConfigureContentChild(grandchild as View ?? throw new InvalidOperationException("The grandchild IView is not a View object. This is unexpected."), childStack);
+        }
+        else if (child is Grid childGrid)
+        {
+            foreach (var grandchild in childGrid.Children)
+                ConfigureContentChild(grandchild as View ?? throw new InvalidOperationException("The grandchild IView is not a View object. This is unexpected."), childGrid);
+        }
+        else if (child is Border childBorder && childBorder.Content is View borderContent)
+        {
+            ConfigureContentChild(borderContent, childBorder);
+        }
+    }
+
     public static IChatClient? CreateChatClient()
     {
         string apiKey = AIHelper.CurrentOption.Key;
@@ -1512,7 +1756,6 @@ public partial class AssistanceChatView : ContentView
 
         public DateTimeOffset CreatedAt { get; init; }
     }
-
 }
 
 
@@ -1525,6 +1768,12 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     }
 
     public required string Sender { get; init; }
+
+    /// <summary>
+    /// 流式/加载后渲染的消息内容 View 集合。
+    /// 通过 BindableLayout 驱动 UI 渲染。
+    /// </summary>
+    public ObservableCollection<View> ContentViews { get; } = new();
 
     private string _message = string.Empty;
 

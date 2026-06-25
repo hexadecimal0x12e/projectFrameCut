@@ -9342,7 +9342,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void MyLoggerExtensions_OnExceptionLog(Exception obj)
     {
-        Log($"MyLoggerExtensions_OnExceptionLog Received an exception:{obj}", "error");
+        //Log($"MyLoggerExtensions_OnExceptionLog Received an exception:{obj}", "error");
         SetStateFail(Localized._ExceptionTemplate(obj));
     }
 

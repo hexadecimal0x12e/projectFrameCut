@@ -381,8 +381,6 @@ namespace projectFrameCut
                 builder.Services.AddSingleton<UIThreadWatchdogService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
-                // WinUINavigationView is created directly in MakeWindow() and never
-                // enters the MAUI visual tree, so no handler registration is needed.
 #elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
@@ -488,7 +486,14 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                    });
+                }
+                finally
+                {
+                    builder.ConfigureFonts(fonts =>
+                    {
                         fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                        fonts.AddFont("SourceCodePro-Regular.ttf", "MarkdownCodeBlock");
                     });
                 }
 

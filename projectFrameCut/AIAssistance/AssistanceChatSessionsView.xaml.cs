@@ -5,10 +5,12 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 public partial class AssistanceChatSessionsView : ContentView
 {
+    private readonly List<SessionListItem> _allSessions = [];
     private readonly ObservableCollection<SessionListItem> _sessions = [];
     private readonly string? _projectPath;
 
@@ -49,10 +51,10 @@ public partial class AssistanceChatSessionsView : ContentView
     private void RefreshSessions()
     {
         var all = AssistanceChatSessionStore.GetSessions(_projectPath);
-        _sessions.Clear();
+        _allSessions.Clear();
         foreach (AssistanceChatSession session in all)
         {
-            _sessions.Add(new SessionListItem
+            _allSessions.Add(new SessionListItem
             {
                 SessionId = session.SessionId,
                 Title = session.Title,
@@ -60,6 +62,8 @@ public partial class AssistanceChatSessionsView : ContentView
                 UpdatedAtText = $"{session.UpdatedAt:yyyy-MM-dd HH:mm}",
             });
         }
+
+        ApplyFilter();
     }
 
     private void SessionListView_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -77,6 +81,29 @@ public partial class AssistanceChatSessionsView : ContentView
     {
         AssistanceChatSession session = AssistanceChatSessionStore.CreateSession(_projectPath);
         NavigateToSession(session.SessionId);
+    }
+
+    private void SessionSearchBar_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var keyword = (SessionSearchBar.Text ?? string.Empty).Trim();
+        IEnumerable<SessionListItem> src = _allSessions;
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            src = src.Where(s =>
+                s.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+                || s.Preview.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _sessions.Clear();
+        foreach (var item in src)
+        {
+            _sessions.Add(item);
+        }
     }
 
     private void NavigateToSession(Guid sessionId)

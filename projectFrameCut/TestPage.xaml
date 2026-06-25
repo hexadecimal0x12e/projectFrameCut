@@ -123,6 +123,15 @@
                     <Entry x:Name="LocateInputer" Placeholder="Locate for ordering, blank for default"/>
                 </VerticalStackLayout>
             </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="dynamic xaml test"/>
+                    <Editor x:Name="XAMLInputEditor" HeightRequest="150" Placeholder="Input here"></Editor>
+                    <Button x:Name="RenderMarkdownButton" Text="Render Markdown" Clicked="RenderMarkdownButton_Clicked"/>
+                    <Button x:Name="RenderContentButton" Text="Render" Clicked="RenderContentButton_Clicked"/>
+                    <ContentView x:Name="ResultContentView" />
+                </VerticalStackLayout>
+            </Border>
 
             <Border StrokeThickness="4">
                 <VerticalStackLayout>

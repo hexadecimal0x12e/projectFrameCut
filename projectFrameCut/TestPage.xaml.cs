@@ -40,6 +40,8 @@ using Color = Microsoft.Maui.Graphics.Color;
 using DatePicker = Microsoft.Maui.Controls.DatePicker;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
+using projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper;
+
 
 
 
@@ -1330,9 +1332,35 @@ public partial class TestPage : ContentPage
         isNavPaneVisible = !isNavPaneVisible;
     }
 
+    private async void RenderContentButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var view = XAMLFixer.FixXamlAndGenerateView(XAMLInputEditor.Text);
+            ResultContentView.Content = view;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
+        }
+    }
+
+    private async void RenderMarkdownButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var view = Markdown2XAML.Convert(XAMLInputEditor.Text);
+            ResultContentView.Content = view;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
+        }
+    }
+
     private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button{Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
+        await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button { Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
     }
 
     private int windowCount = 0;

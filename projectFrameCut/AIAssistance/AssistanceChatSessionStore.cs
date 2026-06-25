@@ -16,7 +16,29 @@ internal sealed class AssistanceChatSession
 
     public List<AssistanceChatHistorySnapshot> History { get; } = [];
 
-    public string LastPreview => Messages.LastOrDefault()?.Message ?? "None";
+    public string LastPreview
+    {
+        get
+        {
+            string? message = Messages.LastOrDefault()?.Message;
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return string.Empty;
+            }
+
+            const int maxLines = 2;
+            const int maxCharsPerLine = 150;
+
+            string[] lines = message.Split('\n');
+            int lineCount = Math.Min(lines.Length, maxLines);
+            string preview = string.Join("\n",
+                lines.Take(lineCount).Select(l => l.TrimEnd('\r').Length > maxCharsPerLine
+                    ? l.TrimEnd('\r')[..maxCharsPerLine] + "…"
+                    : l.TrimEnd('\r')));
+
+            return preview;
+        }
+    }
 }
 
 internal sealed class AssistanceChatMessageSnapshot

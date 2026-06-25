@@ -1218,7 +1218,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         {
             if (string.IsNullOrWhiteSpace(control.AutomationId))
             {
-                LogDiagnostic($"Set AutomationID for {control.GetType().Name}: {automationId}");
+                //LogDiagnostic($"Set AutomationID for {control.GetType().Name}: {automationId}");
                 control.AutomationId = automationId;
             }
             else if (warnIfAlreadySet)

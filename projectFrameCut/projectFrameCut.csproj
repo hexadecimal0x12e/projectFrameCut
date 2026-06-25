@@ -44,6 +44,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<WindowsPackageType>MSIX</WindowsPackageType>
 
 		<AssemblyVersion>1.5.0.0</AssemblyVersion>

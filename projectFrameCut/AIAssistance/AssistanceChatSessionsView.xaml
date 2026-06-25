@@ -1,16 +1,21 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ai="clr-namespace:projectFrameCut.AIAssistance"
              xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatSessionsView">
-    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" Padding="8">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8" Padding="8">
         <Label Grid.Row="0"
                Text="Assistant P"
                FontAttributes="Bold"
                FontSize="20"/>
 
-        <CollectionView Grid.Row="1"
+        <SearchBar Grid.Row="1"
+                   x:Name="SessionSearchBar"
+                   Placeholder="{l:Localized Key=AIAssistant_ChatView_SearchSessions}"
+                   TextChanged="SessionSearchBar_TextChanged"/>
+
+        <CollectionView Grid.Row="2"
                         x:Name="SessionListView"
                         SelectionMode="Single"
                         SelectionChanged="SessionListView_SelectionChanged"
@@ -26,10 +31,12 @@
                             <Label Grid.Row="0"
                                    Text="{Binding Title}"
                                    FontSize="16"
+                                   MaxLines="1"
                                    LineBreakMode="TailTruncation"/>
                             <Label Grid.Row="1"
                                    Text="{Binding Preview}"
                                    FontSize="13"
+                                   MaxLines="2"
                                    LineBreakMode="TailTruncation"/>
                             <Label Grid.Row="2"
                                    Text="{Binding UpdatedAtText}"
@@ -41,7 +48,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Button Grid.Row="2"
+        <Button Grid.Row="3"
                 x:Name="NewSessionButton"
                 Text="{l:Localized Key=AIAssistant_ChatView_NewSession}"
                 Clicked="NewSessionButton_Clicked"/>
