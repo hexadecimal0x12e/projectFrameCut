@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.MainSettingsPage"
@@ -17,7 +17,6 @@
                     <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" FontSize="24" Clicked="OnGeneralSettingClicked" />
                     <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" FontSize="24" Clicked="OnEditSettingClicked" />
                     <Button x:Name="AISettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_AI}" FontSize="24" Clicked="OnAISettingClicked" />
-               <!-- <Button x:Name="RemoteFeedSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_RemoteFeed}" FontSize="24" Clicked="OnRemoteFeedSettingClicked" /> -->
                     <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" FontSize="24" Clicked="OnRenderSettingClicked" />
                     <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
                     <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />

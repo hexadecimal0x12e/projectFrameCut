@@ -1,7 +1,6 @@
-using CommunityToolkit.Maui.Core;
+﻿using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
-using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -611,7 +610,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
-        AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
         AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
@@ -2365,92 +2363,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
     }
 
-
-    public async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
-    {
-        if (assetViewModel?.OriginalAsset == null) return;
-
-        try
-        {
-            // ??????????????? token ???
-            if (assetViewModel.IsRemote)
-            {
-                // ??????
-                // TODO: ???????
-
-                // ??????????? token
-                var multiServerService = MultiServerRemoteAssetService.Instance;
-                var tokenResponse = await multiServerService.GetFileTokenAsync(assetViewModel.ServerId ?? "", assetViewModel.Id);
-
-                if (tokenResponse == null)
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Error, "Cannot get file access token.", Localized._OK);
-                    return;
-                }
-
-                // ?????? URL?????????? URL?
-                var serverBaseUrl = assetViewModel.ServerUrl?.TrimEnd('/') ?? "";
-                var fileServerUri = new Uri($"{serverBaseUrl}/api/file/download?token={tokenResponse.token}");
-
-                Log($"Downloading asset from {fileServerUri}...");
-
-                // ?????????
-                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets", assetViewModel.ServerId ?? "default");
-                if (!Directory.Exists(cacheDir))
-                {
-                    Directory.CreateDirectory(cacheDir);
-                }
-
-                var fileName = Path.GetFileName(assetViewModel.OriginalAsset.Path) ?? $"{assetViewModel.Id}{Path.GetExtension(assetViewModel.OriginalAsset.Path)}";
-                var localPath = Path.Combine(cacheDir, fileName);
-
-                // ????????????
-                if (!File.Exists(localPath))
-                {
-#if DEBUG
-                    // ??????? SSL ????
-                    var handler = new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-                    };
-                    using var client = new HttpClient(handler);
-#else
-                    using var client = new HttpClient();
-#endif
-                    var response = await client.GetAsync(fileServerUri);
-                    response.EnsureSuccessStatusCode();
-
-                    using var fileStream = File.Create(localPath);
-                    await response.Content.CopyToAsync(fileStream);
-                }
-
-                // ?????????????
-                assetViewModel.OriginalAsset.Path = localPath;
-            }
-
-            BeginTimelineClipPlacement((trackIndex, startX) =>
-            {
-                var clip = _draftPage.CreateFromAsset(
-                    assetViewModel.OriginalAsset,
-                    trackIndex,
-                    startX,
-                    InternalPluginBase.InternalPluginBaseID,
-                    assetViewModel.SourcePath
-                );
-
-                _draftPage.RegisterClip(clip, true);
-                _draftPage.AddAClip(clip);
-                return clip;
-            }, name: assetViewModel.Name);
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "load reuseabel asset", this);
-            await _draftPage.DisplayAlertAsync(Localized._Error, $"Failed to add asset: {ex.Message}", Localized._OK);
-        }
-    }
     #endregion
 
     #region AI Content Generation

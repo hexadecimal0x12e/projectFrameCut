@@ -1,11 +1,10 @@
-using CommunityToolkit.Maui;
+﻿using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
-using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -1334,23 +1333,6 @@ public partial class TestPage : ContentPage
     private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button{Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
-    }
-
-    private async void LoginTestButton_Clicked(object sender, EventArgs e)
-    {
-        AuthService.Logout();
-
-        if (AuthService.IsLoggedIn)
-        {
-            // �ѵ�¼����ʾ�û���Ϣ��ǳ�
-            var user = await AuthService.GetCurrentUserAsync();
-            await DisplayAlertAsync("�ѵ�¼", $"��ǰ�û�: {user.UserName}", "ȷ��");
-        }
-        else
-        {
-            // δ��¼���򿪵�¼ҳ��
-            await Navigation.PushAsync(new LoginPage());
-        }
     }
 
     private int windowCount = 0;

@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -54,10 +54,6 @@ namespace projectFrameCut
         private async void OnEditSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new EditSettingPage());
-        }
-        private async void OnRemoteFeedSettingClicked(object sender, EventArgs e)
-        {
-            await NavigateAsync(new RemoteFeedSettingPage());
         }
         private async void OnAISettingClicked(object sender, EventArgs e)
         {

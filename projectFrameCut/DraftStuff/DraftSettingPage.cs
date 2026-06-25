@@ -1,4 +1,4 @@
-using LocalizedResources;
+﻿using LocalizedResources;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -949,7 +949,7 @@ public class DraftSettingPage
 
         if (node.SavedAt != DateTime.MinValue)
         {
-            ToolTipProperties.SetText(timeLabel, $"{node.SavedAt:yyyy-MM-dd HH:mm:ss} — {node.ChangedByUserDisplayName} ({node.ChangedByUser})");
+            ToolTipProperties.SetText(timeLabel, $"{node.SavedAt:yyyy-MM-dd HH:mm:ss}");
         }
 
         var textStack = new VerticalStackLayout
