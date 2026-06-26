@@ -4,8 +4,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-using projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -16,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
+using System.Diagnostics;
 
 public partial class AssistanceChatView : ContentView
 {
@@ -27,6 +29,12 @@ public partial class AssistanceChatView : ContentView
     private readonly string? _projectPath;
     private bool _isReplying;
     private CancellationTokenSource? _cts;
+
+    /// <summary>
+    /// 平台级别的 IME 追踪：当 IME 输入法刚刚结束文字组合（例如中文按回车取消/确认，日文按回车确定转换）时，
+    /// 这个标志为 true，用来抑制随后的 Completed 事件，避免误将确认候选的回车当作发送指令。
+    /// </summary>
+    private bool _imeCompositionJustEnded;
     private static readonly ILoggerFactory AILoggerFactory = LoggerFactory.Create(_ => { });
 
     public Func<IEnumerable<AIFunction>>? ToolCallFactories;
@@ -44,10 +52,13 @@ public partial class AssistanceChatView : ContentView
         _messages.CollectionChanged += Messages_CollectionChanged;
         _chatClient = CreateChatClient();
 
+        // 在原生控件创建后挂接 IME 输入法组合状态追踪，防止
+        // 中文/日文输入法按回车确认候选时误触发送
+        AIInputButton.HandlerChanged += OnAIInputButtonHandlerChanged;
+
         AssistanceChatSession session = AssistanceChatSessionStore.GetOrCreate(_projectPath, sessionId);
         _sessionId = session.SessionId;
         LoadSession(session);
-        PersistSession();
     }
 
     private async void AISendButton_Clicked(object? sender, EventArgs e)
@@ -61,8 +72,50 @@ public partial class AssistanceChatView : ContentView
         await SendMessageAsync();
     }
 
+    /// <summary>
+    /// Entry 原生控件创建后的回调，在此挂接平台级别的 IME 输入法组合状态追踪。
+    /// 在 WinUI 上，监听 TextCompositionStarted/Ended 来识别输入法组合状态，
+    /// 当组合刚刚结束（用户按回车确认/取消候选）时标记标志位，
+    /// 后续 Completed 事件检查此标志以决定是否忽略这次回车。
+    /// </summary>
+    private void OnAIInputButtonHandlerChanged(object? sender, EventArgs e)
+    {
+#if WINDOWS
+        if (AIInputButton.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.TextBox textBox)
+        {
+            // 输入法开始组合（例如中文输入拼音、日文输入假名时）
+            textBox.TextCompositionStarted += (_, _) =>
+            {
+                _imeCompositionJustEnded = false;
+            };
+
+            // 输入法结束组合（用户按回车确认候选、取消、或用鼠标点击候选词等）
+            textBox.TextCompositionEnded += (_, _) =>
+            {
+                _imeCompositionJustEnded = true;
+
+                // 在下一个 UI 空闲周期（Low 优先级）清除标志位。
+                // 这样 Completed 事件在当前消息循环中仍然能看到标志为 true，
+                // 当输入法组合因非 Enter 原因结束时，标志也很快会被清除，
+                // 不会影响后续真实的发送操作。
+                textBox.DispatcherQueue?.TryEnqueue(
+                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                    () => _imeCompositionJustEnded = false);
+            };
+        }
+#endif
+    }
+
     private async void AIInputButton_Completed(object? sender, EventArgs e)
     {
+        // 如果 Enter 来自 IME 输入法确认候选/取消组合（如中文、日文输入法），
+        // 则忽略这次 Completed 事件，不发送消息。
+        if (_imeCompositionJustEnded)
+        {
+            _imeCompositionJustEnded = false;
+            return;
+        }
+
         await SendMessageAsync();
     }
 
@@ -152,185 +205,7 @@ public partial class AssistanceChatView : ContentView
         //AIClearContextButton.IsEnabled = false;
         //AINewChatPageButton.IsEnabled = false;
 
-        string assistantText;
-        ChatMessageItem? streamingItem = null;
-        StringBuilder textBuilder = new();
-        StringBuilder reasoningBuilder = new();
-        var converter = new Markdown2XAML.StreamConverter();
-        ThinkingCardView? thinkingCard = null;
-        ToolCallCardView? toolCallCard = null;
-        View? partialView = null;
-        try
-        {
-            if (_chatClient is null)
-            {
-                assistantText = Localized.AIAssistant_ChatView_MissingConfig;
-            }
-            else
-            {
-                streamingItem = new ChatMessageItem
-                {
-                    Sender = "Assistant P",
-                    Message = "",
-                    IsUser = false,
-                };
-                _messages.Add(streamingItem);
-
-
-                Dictionary<string, ToolCallDisplayState> toolCallsById = new(StringComparer.Ordinal);
-                int anonymousToolCallCounter = 0;
-                await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, _cts.Token))
-                {
-                    LogDiagnostic($"Chunk: {JsonSerializer.Serialize(update)}");
-                    string textChunk = !string.IsNullOrEmpty(update.Text)
-                        ? update.Text
-                        : ExtractTextFromContents(update);
-                    if (string.IsNullOrEmpty(textChunk))
-                    {
-                        textChunk = ExtractContentChunk(update);
-                    }
-
-                    string reasoningChunk = ExtractReasoningChunk(update);
-
-                    bool toolCallChanged = TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText);
-
-                    // Skip if nothing to process
-                    if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged)
-                        continue;
-
-                    // Capture values for main-thread dispatch
-                    string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
-                    string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
-                    string capturedToolCalls = toolCallsText;
-
-                    if (!string.IsNullOrEmpty(textChunk))
-                    {
-                        textBuilder.Append(textChunk);
-                        capturedText = textBuilder.ToString();
-                    }
-                    if (!string.IsNullOrEmpty(reasoningChunk))
-                    {
-                        reasoningBuilder.Append(reasoningChunk);
-                        capturedReasoning = reasoningBuilder.ToString();
-                    }
-
-                    MainThread.BeginInvokeOnMainThread(() =>
-                    {
-                        // --- Text: feed through StreamConverter ---
-                        if (!string.IsNullOrEmpty(textChunk))
-                        {
-                            streamingItem.Message = capturedText;
-
-                            // Remove stale partial view
-                            if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                                streamingItem.ContentViews.Remove(partialView);
-
-                            // Add newly completed views
-                            foreach (View view in converter.Feed(textChunk))
-                                streamingItem.ContentViews.Add(view);
-
-                            // Add updated partial view
-                            partialView = converter.CurrentPartialView;
-                            if (partialView is not null)
-                                streamingItem.ContentViews.Add(partialView);
-                        }
-
-                        // --- Reasoning: create/update thinking card ---
-                        if (!string.IsNullOrEmpty(reasoningChunk))
-                        {
-                            streamingItem.ReasoningText = capturedReasoning;
-                            if (thinkingCard is null)
-                            {
-                                thinkingCard = new ThinkingCardView(capturedReasoning);
-                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
-                            }
-                            else
-                            {
-                                thinkingCard.UpdateText(capturedReasoning);
-                            }
-                        }
-
-                        // --- Tool calls: create/update tool call card ---
-                        if (toolCallChanged)
-                        {
-                            streamingItem.ToolCallsText = capturedToolCalls;
-                            if (toolCallCard is null)
-                            {
-                                toolCallCard = new ToolCallCardView(capturedToolCalls);
-                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, toolCallCard.View);
-                            }
-                            else
-                            {
-                                toolCallCard.UpdateText(capturedToolCalls);
-                            }
-                        }
-                    });
-                }
-
-                // Flush remaining converter content on main thread
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                {
-                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                        streamingItem.ContentViews.Remove(partialView);
-                    partialView = null;
-
-                    foreach (View view in converter.Flush())
-                        streamingItem.ContentViews.Add(view);
-                });
-
-                assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
-                streamingItem.Message = assistantText;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Cancelled}";
-            if (streamingItem is not null)
-            {
-                FlushStreamingState(streamingItem, converter, ref partialView);
-                streamingItem.Message = assistantText;
-                streamingItem.ContentViews.Add(new Label
-                {
-                    Text = Localized.AIAssistant_ChatView_ChatFail_Cancelled,
-                    FontSize = Markdown2XAML.BodyFontSize,
-                    TextColor = Color.FromArgb("#FF888888"),
-                    FontAttributes = FontAttributes.Italic,
-                    Margin = new Thickness(0, 4, 0, 0),
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"Finish request '{input}'", this);
-            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
-            if (streamingItem is not null)
-            {
-                FlushStreamingState(streamingItem, converter, ref partialView);
-                streamingItem.Message = assistantText;
-                streamingItem.ContentViews.Add(new Label
-                {
-                    Text = Localized.AIAssistant_ChatView_ChatFail_Exception(ex),
-                    FontSize = Markdown2XAML.BodyFontSize,
-                    TextColor = Color.FromArgb("#FFFF6666"),
-                    FontAttributes = FontAttributes.Italic,
-                    Margin = new Thickness(0, 4, 0, 0),
-                });
-            }
-        }
-
-        if (streamingItem is null)
-        {
-            var item = new ChatMessageItem
-            {
-                Sender = "Assistant P",
-                Message = assistantText,
-                IsUser = false,
-            };
-            item.ContentViews.Add(Markdown2XAML.Convert(assistantText));
-            _messages.Add(item);
-        }
-        _chatHistory.Add(new AIChatMessage(ChatRole.Assistant, assistantText));
-        PersistSession();
+        await StreamAndAppendAssistantResponseAsync(input);
 
         _isReplying = false;
         AISendButton.Text = Localized.AIAssistant_ChatView_Send;
@@ -430,6 +305,25 @@ public partial class AssistanceChatView : ContentView
         else if (Application.Current?.Windows?[0]?.Page is Page rootPage)
         {
             await rootPage.DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
+        }
+    }
+
+    private async void AIReplyCopyButton_Clicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button || button.BindingContext is not ChatMessageItem message)
+            return;
+
+        try
+        {
+            await Clipboard.Default.SetTextAsync(message.Message);
+
+            button.Text = "\ue5ca";
+            await Task.Delay(1500);
+            button.Text = "\ue14d";
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"Failed to copy to clipboard: {ex.Message}");
         }
     }
 
@@ -566,6 +460,46 @@ public partial class AssistanceChatView : ContentView
         }
 
         return firstUserMessage[..SessionTitleMaxLength] + "…";
+    }
+
+    /// <summary>
+    /// 将 _messages 索引映射到对应的 _chatHistory 索引。
+    /// 考虑 Welcome 消息偏移和 System prompt 偏移。
+    /// </summary>
+    private int MapMessageIndexToHistoryIndex(int messageIndex)
+    {
+        // _messages 中 Welcome 消息的偏移量（第一条非用户消息可能是 Welcome）
+        int msgOffset = (_messages.Count > 0 && !_messages[0].IsUser) ? 1 : 0;
+        // _chatHistory 中 System prompt 的偏移量
+        int histOffset = (_chatHistory.Count > 0 && _chatHistory[0].Role == ChatRole.System) ? 1 : 0;
+
+        int realMsgIndex = messageIndex - msgOffset;
+        if (realMsgIndex < 0)
+            return -1; // Welcome 消息没有对应的历史记录
+
+        int histIndex = histOffset + realMsgIndex;
+        return histIndex < _chatHistory.Count ? histIndex : -1;
+    }
+
+    /// <summary>
+    /// 截断 _messages 和 _chatHistory 在指定消息之后的所有内容。
+    /// </summary>
+    private void TruncateAfterMessage(int messageIndex)
+    {
+        int histCutoff = MapMessageIndexToHistoryIndex(messageIndex);
+        if (histCutoff < 0)
+            return;
+
+        // 移除指定消息之后的条目
+        int msgRemoveCount = _messages.Count - (messageIndex + 1);
+        for (int i = 0; i < msgRemoveCount; i++)
+            _messages.RemoveAt(_messages.Count - 1);
+
+        int histRemoveCount = _chatHistory.Count - (histCutoff + 1);
+        for (int i = 0; i < histRemoveCount; i++)
+            _chatHistory.RemoveAt(_chatHistory.Count - 1);
+
+        PersistSession();
     }
 
     private MultiWindowItem? GetHostWindow()
@@ -1574,45 +1508,83 @@ public partial class AssistanceChatView : ContentView
             item.ContentViews.Add(view);
     }
 
-    private HashSet<Guid> _attachedChatMessageItemContentViewsChangedViews = new(), _addedChatMessageItemContents = new();
+    /// <summary>
+    /// 按 VerticalStackLayout.Id 追踪已附加的 CollectionChanged handler，
+    /// 在 VSL 被回收复用时能正确解绑旧 handler 并绑定到新的 BindingContext。
+    /// </summary>
+    private readonly Dictionary<Guid, (ChatMessageItem item, NotifyCollectionChangedEventHandler handler)> _contentViewHandlers = new();
 
-    private void SubViewCollection_Loaded(object sender, EventArgs e)
+    /// <summary>
+    /// 当 Border 的 BindingContext 发生变化时（包括回收复用场景），
+    /// 根据 IsUser 正确设置 HorizontalOptions。
+    /// 替代 DataTrigger——DataTrigger 在 CollectionView 回收复用时可能不重新计算。
+    /// </summary>
+    private void OnMessageBorderContextChanged(object? sender, EventArgs e)
     {
-        if (sender is not VerticalStackLayout vsl || vsl.BindingContext is not ChatMessageItem c) return;
+        if (sender is not Border border) return;
+        if (border.BindingContext is ChatMessageItem item)
+        {
+            border.HorizontalOptions = item.IsUser ? LayoutOptions.End : LayoutOptions.Start;
+        }
+        else
+        {
+            // BindingContext 被清空时重置为默认值（Assistant 侧）
+            border.HorizontalOptions = LayoutOptions.Start;
+        }
+    }
+
+    private void SubViewCollection_BindingContextChanged(object? sender, EventArgs e)
+    {
+        if (sender is not VerticalStackLayout vsl) return;
+        BindSubViewContent(vsl);
+    }
+
+    private void SubViewCollection_Unloaded(object? sender, EventArgs e)
+    {
+        if (sender is not VerticalStackLayout vsl) return;
+        UnbindSubViewContent(vsl);
+    }
+
+    /// <summary>
+    /// 将 VSL 绑定到其当前 BindingContext 的 ContentViews。
+    /// 处理回收复用场景：解绑旧 handler、清空旧子视图、重新填充当前内容。
+    /// </summary>
+    private void BindSubViewContent(VerticalStackLayout vsl)
+    {
+        // 每次 Loaded 时确保 Unloaded 能清理
+        vsl.Unloaded -= SubViewCollection_Unloaded;
+        vsl.Unloaded += SubViewCollection_Unloaded;
+
+        // 解绑旧的 handler（来自被回收前绑定的旧 ChatMessageItem）
+        if (_contentViewHandlers.TryGetValue(vsl.Id, out var old))
+        {
+            old.item.ContentViews.CollectionChanged -= old.handler;
+            _contentViewHandlers.Remove(vsl.Id);
+        }
+
+        // 清空旧子视图（避免回收复用后残留）
+        vsl.Children.Clear();
+
+        if (vsl.BindingContext is not ChatMessageItem chatItem)
+            return;
+
         try
         {
-            foreach (var item in c.ContentViews.Where(c => _addedChatMessageItemContents.Add(c.Id))) //avoid control conflict
+            // 填充当前 ContentViews 中已有的视图
+            foreach (var view in chatItem.ContentViews)
             {
-                ConfigureContentChild(item, vsl);
-                vsl.Children.Add(item);
+                ConfigureContentChild(view, vsl);
+                vsl.Children.Add(view);
             }
-            if (_attachedChatMessageItemContentViewsChangedViews.Add(vsl.Id))
+
+            // 为当前 ChatMessageItem 注册新的 CollectionChanged handler
+            NotifyCollectionChangedEventHandler handler = (_, args) =>
             {
-                c.ContentViews.CollectionChanged += (_, e) =>
-                {
-                    switch (e.Action)
-                    {
-                        case NotifyCollectionChangedAction.Add:
-                            foreach (var item in e.NewItems?.OfType<View>().Where(c => _addedChatMessageItemContents.Add(c.Id)) ?? [])
-                            {
-                                ConfigureContentChild(item, vsl);
-                                vsl.Children.Add(item);
-                            }
-                            break;
-                        case NotifyCollectionChangedAction.Remove:
-                            foreach (var item in e.OldItems?.OfType<View>() ?? [])
-                            {
-                                vsl.Children.Remove(item);
-                            }
-                            break;
-                        case NotifyCollectionChangedAction.Reset:
-                            vsl.Children.Clear();
-                            break;
-                        default:
-                            break;
-                    }
-                };
-            }
+                UpdateSubViewChildren(vsl, args);
+            };
+
+            chatItem.ContentViews.CollectionChanged += handler;
+            _contentViewHandlers[vsl.Id] = (chatItem, handler);
         }
         catch (Exception ex)
         {
@@ -1625,7 +1597,62 @@ public partial class AssistanceChatView : ContentView
                 Margin = new Thickness(0, 4, 0, 0),
             });
         }
+    }
 
+    /// <summary>
+    /// 解绑 VSL 的 CollectionChanged handler 并清理追踪状态。
+    /// </summary>
+    private void UnbindSubViewContent(VerticalStackLayout vsl)
+    {
+        if (_contentViewHandlers.TryGetValue(vsl.Id, out var tracked))
+        {
+            tracked.item.ContentViews.CollectionChanged -= tracked.handler;
+            _contentViewHandlers.Remove(vsl.Id);
+        }
+    }
+
+    /// <summary>
+    /// 当 ChatMessageItem.ContentViews 变更时，同步更新 VSL 的子视图。
+    /// </summary>
+    private static void UpdateSubViewChildren(VerticalStackLayout vsl, NotifyCollectionChangedEventArgs args)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                switch (args.Action)
+                {
+                    case NotifyCollectionChangedAction.Add when args.NewItems is not null:
+                        foreach (var item in args.NewItems.OfType<View>())
+                        {
+                            ConfigureContentChild(item, vsl);
+                            vsl.Children.Add(item);
+                        }
+                        break;
+                    case NotifyCollectionChangedAction.Remove when args.OldItems is not null:
+                        foreach (var item in args.OldItems.OfType<View>())
+                        {
+                            vsl.Children.Remove(item);
+                        }
+                        break;
+                    case NotifyCollectionChangedAction.Reset:
+                        vsl.Children.Clear();
+                        if (vsl.BindingContext is ChatMessageItem currentItem)
+                        {
+                            foreach (var view in currentItem.ContentViews)
+                            {
+                                ConfigureContentChild(view, vsl);
+                                vsl.Children.Add(view);
+                            }
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AssistanceChatView] UpdateSubViewChildren error: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>
@@ -1755,6 +1782,466 @@ public partial class AssistanceChatView : ContentView
         public string ReasonText { get; init; } = string.Empty;
 
         public DateTimeOffset CreatedAt { get; init; }
+    }
+
+    /// <summary>
+    /// 流式获取 AI 回复并添加到 _messages 和 _chatHistory。
+    /// 可从 SendMessageAsync（正常发送）和 RegenerateLastResponse（重新生成）调用。
+    /// 调用方需确保 _chatHistory 已包含用户消息且 _isReplying = true。
+    /// </summary>
+    private async Task StreamAndAppendAssistantResponseAsync(string? userInputForLog = null)
+    {
+        string assistantText;
+        ChatMessageItem? streamingItem = null;
+        StringBuilder textBuilder = new();
+        StringBuilder reasoningBuilder = new();
+        var converter = new Markdown2XAML.StreamConverter();
+        ThinkingCardView? thinkingCard = null;
+        ToolCallCardView? toolCallCard = null;
+        View? partialView = null;
+        try
+        {
+            if (_chatClient is null)
+            {
+                assistantText = Localized.AIAssistant_ChatView_MissingConfig;
+            }
+            else
+            {
+                streamingItem = new ChatMessageItem
+                {
+                    Sender = "Assistant P",
+                    Message = "",
+                    IsUser = false,
+                };
+                _messages.Add(streamingItem);
+
+                Dictionary<string, ToolCallDisplayState> toolCallsById = new(StringComparer.Ordinal);
+                int anonymousToolCallCounter = 0;
+                await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, _cts.Token))
+                {
+                    LogDiagnostic($"Chunk: {JsonSerializer.Serialize(update)}");
+                    string textChunk = !string.IsNullOrEmpty(update.Text)
+                        ? update.Text
+                        : ExtractTextFromContents(update);
+                    if (string.IsNullOrEmpty(textChunk))
+                    {
+                        textChunk = ExtractContentChunk(update);
+                    }
+
+                    string reasoningChunk = ExtractReasoningChunk(update);
+
+                    bool toolCallChanged = TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText);
+
+                    // Skip if nothing to process
+                    if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged)
+                        continue;
+
+                    // Capture values for main-thread dispatch
+                    string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
+                    string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
+                    string capturedToolCalls = toolCallsText;
+
+                    if (!string.IsNullOrEmpty(textChunk))
+                    {
+                        textBuilder.Append(textChunk);
+                        capturedText = textBuilder.ToString();
+                    }
+                    if (!string.IsNullOrEmpty(reasoningChunk))
+                    {
+                        reasoningBuilder.Append(reasoningChunk);
+                        capturedReasoning = reasoningBuilder.ToString();
+                    }
+
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        streamingItem.Message = capturedText;
+
+                        foreach (View view in converter.Feed(textChunk))
+                            streamingItem.ContentViews.Add(view);
+
+                        var newPartialView = converter.CurrentPartialView;
+                        if (!ReferenceEquals(newPartialView, partialView))
+                        {
+                            if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                                streamingItem.ContentViews.Remove(partialView);
+                            partialView = newPartialView;
+                            if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
+                                streamingItem.ContentViews.Add(partialView);
+                        }
+                        // --- Reasoning: create/update thinking card ---
+                        if (!string.IsNullOrEmpty(reasoningChunk))
+                        {
+                            streamingItem.ReasoningText = capturedReasoning;
+                            if (thinkingCard is null)
+                            {
+                                thinkingCard = new ThinkingCardView(capturedReasoning);
+                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
+                            }
+                            else
+                            {
+                                thinkingCard.UpdateText(capturedReasoning);
+                            }
+                        }
+
+                        // --- Tool calls: create/update tool call card ---
+                        if (toolCallChanged)
+                        {
+                            streamingItem.ToolCallsText = capturedToolCalls;
+                            if (toolCallCard is null)
+                            {
+                                toolCallCard = new ToolCallCardView(capturedToolCalls);
+                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, toolCallCard.View);
+                            }
+                            else
+                            {
+                                toolCallCard.UpdateText(capturedToolCalls);
+                            }
+                        }
+                    });
+                }
+
+                // Flush remaining converter content on main thread
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                        streamingItem.ContentViews.Remove(partialView);
+                    partialView = null;
+
+                    foreach (View view in converter.Flush())
+                        streamingItem.ContentViews.Add(view);
+                });
+
+                assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
+                streamingItem.Message = assistantText;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Cancelled}";
+            if (streamingItem is not null)
+            {
+                FlushStreamingState(streamingItem, converter, ref partialView);
+                streamingItem.Message = assistantText;
+                streamingItem.ContentViews.Add(new Label
+                {
+                    Text = Localized.AIAssistant_ChatView_ChatFail_Cancelled,
+                    FontSize = Markdown2XAML.BodyFontSize,
+                    TextColor = Color.FromArgb("#FF888888"),
+                    FontAttributes = FontAttributes.Italic,
+                    Margin = new Thickness(0, 4, 0, 0),
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Finish request '{userInputForLog ?? "(regenerate)"}'", this);
+            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
+            if (streamingItem is not null)
+            {
+                FlushStreamingState(streamingItem, converter, ref partialView);
+                streamingItem.Message = assistantText;
+                streamingItem.ContentViews.Add(new Label
+                {
+                    Text = Localized.AIAssistant_ChatView_ChatFail_Exception(ex),
+                    FontSize = Markdown2XAML.BodyFontSize,
+                    TextColor = Color.FromArgb("#FFFF6666"),
+                    FontAttributes = FontAttributes.Italic,
+                    Margin = new Thickness(0, 4, 0, 0),
+                });
+            }
+        }
+
+        if (streamingItem is null)
+        {
+            var item = new ChatMessageItem
+            {
+                Sender = "Assistant P",
+                Message = assistantText,
+                IsUser = false,
+            };
+            item.ContentViews.Add(Markdown2XAML.Convert(assistantText));
+            _messages.Add(item);
+        }
+        _chatHistory.Add(new AIChatMessage(ChatRole.Assistant, assistantText));
+        PersistSession();
+    }
+
+    /// <summary>
+    /// 重新生成上一个 AI 回复。
+    /// 移除最后一个 Assistant 消息，保持用户消息，重新调用 AI。
+    /// </summary>
+    private async Task RegenerateLastResponse()
+    {
+        if (_isReplying)
+            return;
+
+        // 找到最后一个 assistant 消息
+        int lastAssistantMsgIdx = -1;
+        for (int i = _messages.Count - 1; i >= 0; i--)
+        {
+            if (!_messages[i].IsUser)
+            {
+                lastAssistantMsgIdx = i;
+                break;
+            }
+        }
+
+        int lastAssistantHistIdx = -1;
+        for (int i = _chatHistory.Count - 1; i >= 0; i--)
+        {
+            if (_chatHistory[i].Role == ChatRole.Assistant)
+            {
+                lastAssistantHistIdx = i;
+                break;
+            }
+        }
+
+        if (lastAssistantMsgIdx < 0 || lastAssistantHistIdx < 0)
+            return;
+
+        // 必须有用户消息在历史中
+        bool hasUserMsg = _chatHistory.Any(m => m.Role == ChatRole.User);
+        if (!hasUserMsg)
+            return;
+
+        // 移除旧的 assistant 回复
+        _messages.RemoveAt(lastAssistantMsgIdx);
+        _chatHistory.RemoveAt(lastAssistantHistIdx);
+
+        PersistSession();
+
+        // 重新发送
+        _isReplying = true;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        _cts = new CancellationTokenSource();
+
+        await StreamAndAppendAssistantResponseAsync();
+
+        _isReplying = false;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Send;
+        AISendButton.IsEnabled = true;
+        _cts?.Dispose();
+        _cts = null;
+        AIInputButton.Focus();
+    }
+
+    /// <summary>
+    /// 重新生成此 AI 消息（截断并从中断处重新调用 AI）。
+    /// </summary>
+    private async void AIRegenerateFromMessage_Clicked(object? sender, EventArgs e)
+    {
+        if (_isReplying || sender is not BindableObject b || b.BindingContext is not ChatMessageItem item)
+            return;
+
+        int msgIndex = _messages.IndexOf(item);
+        if (msgIndex < 0 || msgIndex == 0 || item.IsUser)
+            return;
+
+        // 截断到该消息的前一条（用户消息）
+        TruncateAfterMessage(msgIndex - 1);
+
+        // 从截断处的用户消息重新发送
+        _isReplying = true;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        _cts = new CancellationTokenSource();
+
+        await StreamAndAppendAssistantResponseAsync();
+
+        _isReplying = false;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Send;
+        AISendButton.IsEnabled = true;
+        _cts?.Dispose();
+        _cts = null;
+        AIInputButton.Focus();
+    }
+
+    /// <summary>
+    /// 编辑此用户消息。
+    /// </summary>
+    private async void AIEditMessage_Clicked(object? sender, EventArgs e)
+    {
+        if (_isReplying || sender is not BindableObject b || b.BindingContext is not ChatMessageItem item)
+            return;
+
+        int msgIndex = _messages.IndexOf(item);
+        if (msgIndex >= 0)
+            await EditAndResend(msgIndex);
+    }
+
+    /// <summary>
+    /// 撤回到此消息。
+    /// </summary>
+    private async void AIRollbackToHere_Clicked(object? sender, EventArgs e)
+    {
+        if (_isReplying || sender is not BindableObject b || b.BindingContext is not ChatMessageItem item)
+            return;
+
+        int msgIndex = _messages.IndexOf(item);
+        // Welcome 消息不可操作
+        if (msgIndex <= 0 && !item.IsUser)
+            return;
+        if (msgIndex >= 0)
+            await RollbackToMessage(msgIndex);
+    }
+
+    /// <summary>
+    /// 从此处分支。
+    /// </summary>
+    private async void AIBranchFromHere_Clicked(object? sender, EventArgs e)
+    {
+        if (_isReplying || sender is not BindableObject b || b.BindingContext is not ChatMessageItem item)
+            return;
+
+        int msgIndex = _messages.IndexOf(item);
+        // Welcome 消息不可操作
+        if (msgIndex <= 0 && !item.IsUser)
+            return;
+        if (msgIndex >= 0)
+            await BranchFromMessage(msgIndex);
+    }
+
+    /// <summary>
+    /// 编辑用户消息并重新发送。
+    /// </summary>
+    private async Task EditAndResend(int messageIndex)
+    {
+        if (_isReplying)
+            return;
+
+        if (messageIndex >= _messages.Count || !_messages[messageIndex].IsUser)
+            return;
+
+        string originalText = _messages[messageIndex].Message;
+        string? newText = await GetHostWindow()?.DisplayPromptAsync(
+            Localized.AIAssistant_ChatView_EditMessage, "",
+            Localized._Confirm, Localized._Cancel,
+            initialValue: originalText);
+
+        if (string.IsNullOrWhiteSpace(newText) || newText == originalText)
+            return;
+
+        // 截断到编辑消息的前一条
+        if (messageIndex > 0)
+        {
+            TruncateAfterMessage(messageIndex - 1);
+        }
+        else
+        {
+            // 如果是第一条消息，清空所有后续内容
+            int histCutoff = MapMessageIndexToHistoryIndex(messageIndex);
+            if (histCutoff >= 0)
+            {
+                while (_messages.Count > 1)
+                    _messages.RemoveAt(_messages.Count - 1);
+                while (_chatHistory.Count > histCutoff + 1)
+                    _chatHistory.RemoveAt(_chatHistory.Count - 1);
+                PersistSession();
+            }
+        }
+
+        // 更新消息文本
+        _messages[messageIndex].Message = newText;
+
+        // 更新对应的 _chatHistory 条目
+        int histIndex = MapMessageIndexToHistoryIndex(messageIndex);
+        if (histIndex >= 0 && histIndex < _chatHistory.Count)
+        {
+            _chatHistory[histIndex] = new AIChatMessage(ChatRole.User, newText);
+        }
+
+        PersistSession();
+
+        // 重新发送
+        _isReplying = true;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        _cts = new CancellationTokenSource();
+
+        await StreamAndAppendAssistantResponseAsync(newText);
+
+        _isReplying = false;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Send;
+        AISendButton.IsEnabled = true;
+        _cts?.Dispose();
+        _cts = null;
+        AIInputButton.Focus();
+    }
+
+    /// <summary>
+    /// 撤回到此消息（删除此消息之后的所有内容）。
+    /// </summary>
+    private async Task RollbackToMessage(int messageIndex)
+    {
+        if (_isReplying)
+            return;
+
+        bool confirmed = await (GetHostWindow()?.DisplayAlertAsync(
+            Localized.AIAssistant_ChatView_RollbackToHere,
+            Localized.AIAssistant_ChatView_RollbackToHere_Confirm,
+            Localized._Confirm, Localized._Cancel)
+            ?? Task.FromResult(false));
+
+        if (!confirmed)
+            return;
+
+        TruncateAfterMessage(messageIndex);
+
+        // 滚动到新结尾
+        if (_messages.Count > 0)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(30);
+                AIChatHistoryView.ScrollTo(_messages[^1], position: ScrollToPosition.End, animate: true);
+            });
+        }
+    }
+
+    /// <summary>
+    /// 从此消息分支，创建一个新的聊天会话。
+    /// </summary>
+    private async Task BranchFromMessage(int messageIndex)
+    {
+        if (_isReplying)
+            return;
+
+        // 构建截断的 messages/history 快照
+        int histCutoff = MapMessageIndexToHistoryIndex(messageIndex);
+        if (histCutoff < 0)
+            return;
+
+        var messages = new List<AssistanceChatMessageSnapshot>();
+        for (int i = 0; i <= messageIndex && i < _messages.Count; i++)
+        {
+            var m = _messages[i];
+            messages.Add(new AssistanceChatMessageSnapshot
+            {
+                Sender = m.Sender,
+                Message = m.Message,
+                IsUser = m.IsUser,
+                ReasoningText = m.ReasoningText,
+                ToolCallsText = m.ToolCallsText,
+                HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+            });
+        }
+
+        var history = new List<AssistanceChatHistorySnapshot>();
+        for (int i = 0; i <= histCutoff && i < _chatHistory.Count; i++)
+        {
+            history.Add(new AssistanceChatHistorySnapshot
+            {
+                Role = _chatHistory[i].Role,
+                Text = _chatHistory[i].Text ?? string.Empty,
+            });
+        }
+
+        AssistanceChatSession newSession = AssistanceChatSessionStore.ForkSession(
+            _projectPath, _sessionId, messages, history);
+
+        // 导航到新 session
+        if (GetHostWindow() is MultiWindowItem host)
+        {
+            host.NavigateTo(new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath));
+        }
     }
 }
 

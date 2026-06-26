@@ -164,8 +164,9 @@ public partial class AssistanceChatSessionsView : ContentView
 
         string rename = Localized.HomePage_ProjectContextMenu_Rename;
         string delete = Localized.HomePage_ProjectContextMenu_Delete;
+        string branch = Localized.AIAssistant_ChatView_BranchSession;
 
-        string action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, rename, delete);
+        string action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, rename, delete, branch);
 
         if (action == rename)
         {
@@ -181,6 +182,17 @@ public partial class AssistanceChatSessionsView : ContentView
             if (confirm)
             {
                 AssistanceChatSessionStore.DeleteSession(_projectPath, item.SessionId);
+            }
+        }
+        else if (action == branch)
+        {
+            AssistanceChatSession? source = AssistanceChatSessionStore.GetSession(_projectPath, item.SessionId);
+            if (source is not null)
+            {
+                var newSession = AssistanceChatSessionStore.ForkSession(
+                    _projectPath, item.SessionId,
+                    source.Messages, source.History);
+                NavigateToSession(newSession.SessionId);
             }
         }
     }

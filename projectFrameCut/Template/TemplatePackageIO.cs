@@ -1,4 +1,4 @@
-using projectFrameCut.Asset;
+﻿using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System.IO.Compression;
@@ -11,12 +11,14 @@ internal sealed record TemplateLoadResult(JSONBasedTemplateStructure Template, s
 internal static class TemplatePackageIO
 {
     private const string TemplateJsonFileName = "template.json";
+    private const string MetadataJsonFileName = "metadata.json";
     private const string AssetManifestFileName = "assets.json";
     private const string AssetsFolderName = "assets";
 
     public static async Task<string> BuildTemplatePackageAsync(
         JSONBasedTemplateStructure template,
         IReadOnlyCollection<AssetItem> assetsToPackage,
+        TemplateMetadataStructure? metadata,
         string projectRootPath,
         JsonSerializerOptions jsonOptions,
         CancellationToken ct = default)
@@ -110,6 +112,12 @@ internal static class TemplatePackageIO
             await File.WriteAllTextAsync(
                 templateJsonPath,
                 JsonSerializer.Serialize(templateClone, jsonOptions),
+                ct);
+
+            var metadataJsonPath = Path.Combine(packageDir, MetadataJsonFileName);
+            await File.WriteAllTextAsync(
+                metadataJsonPath,
+                JsonSerializer.Serialize(metadata, jsonOptions),
                 ct);
 
             if (manifestAssets.Count > 0)

@@ -52,24 +52,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AIResponseHelper_HyperlinkSpan_SureOpen",
-        "Value": "\u8BF7\u786E\u8BA4\u6B64\u94FE\u63A5\u662F\u5426\u6307\u5411\u4F60\u60F3\u8BBF\u95EE\u7684\u4F4D\u7F6E\uFF1A\r{link}\r\r\u94FE\u63A5\u53EF\u80FD\u5305\u542B\u9519\u8BEF\u3001\u8FC7\u65F6\u3001\u6216\u8005\u5BF9\u4F60\u9020\u6210\u5B89\u5168\u98CE\u9669\u7684\u5185\u5BB9\uFF0C\u8BF7\u8C28\u614E\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "link"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "link",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
         "Id": "DraftPage_Tasks_Status_Canceled",
         "Value": "\u4EFB\u52A1\u5DF2\u53D6\u6D88",
         "Mode": "ConstString",
@@ -238,6 +220,24 @@
         "DontTranslate": false
       },
       {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u8BF7\u786E\u8BA4\u6B64\u94FE\u63A5\u662F\u5426\u6307\u5411\u4F60\u60F3\u8BBF\u95EE\u7684\u4F4D\u7F6E\uFF1A\r{link}\r\r\u94FE\u63A5\u53EF\u80FD\u5305\u542B\u9519\u8BEF\u6216\u8005\u8FC7\u65F6\u7684\u5185\u5BB9\uFF0C\u6216\u8005\u5C06\u4F60\u5BFC\u5411\u4E0D\u5B89\u5168\u7684\u4F4D\u7F6E\uFF0C\u8BF7\u8C28\u614E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "MultiWindowView_Close",
         "Value": "\u5173\u95ED",
         "Mode": "ConstString",
@@ -357,6 +357,24 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u6E90\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
         "DontTranslate": false
       }
     ],
@@ -713,25 +731,25 @@
       },
       {
         "Id": "_Cancel",
-        "Value": "[MISSING:_Cancel]",
+        "Value": "Cancel",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-added placeholder",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "_Warn",
-        "Value": "[MISSING:_Warn]",
+        "Value": "Warning",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-added placeholder",
+        "Comment": "",
         "DontTranslate": false
       },
       {
-        "Id": "AIResponseHelper_HyperlinkSpan_SureOpen",
-        "Value": "[MISSING:AIResponseHelper_HyperlinkSpan_SureOpen]",
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Please confirm that this link leads to your intended destination:\r{link}\r\rThe link may contain errors or outdated content, or direct you to an unsafe location. Be careful.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -745,7 +763,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-added placeholder",
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -1099,6 +1117,43 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u8ACB\u78BA\u8A8D\u6B64\u9023\u7D50\u662F\u5426\u6307\u5411\u60A8\u8981\u9020\u8A2A\u7684\u4F4D\u7F6E\uFF1A\r{link}\r\r\u9023\u7D50\u53EF\u80FD\u5305\u542B\u932F\u8AA4\u6216\u904E\u6642\u7684\u5167\u5BB9\uFF0C\u6216\u5C07\u60A8\u5C0E\u5411\u4E0D\u5B89\u5168\u7684\u4F4D\u7F6E\uFF0C\u8ACB\u8B39\u614E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -1448,6 +1503,43 @@
         "ArgsComment": [
           {
             "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u30AD\u30E3\u30F3\u30BB\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u3053\u306E\u30EA\u30F3\u30AF\u304C\u30A2\u30AF\u30BB\u30B9\u5148\u3092\u6307\u3057\u3066\u3044\u308B\u304B\u3054\u78BA\u8A8D\u304F\u3060\u3055\u3044\uFF1A\r{link}\r\r\u30EA\u30F3\u30AF\u306B\u8AA4\u308A\u3084\u53E4\u3044\u60C5\u5831\u304C\u542B\u307E\u308C\u3066\u3044\u308B\u5834\u5408\u3084\u3001\u5B89\u5168\u3067\u306A\u3044\u5834\u6240\u306B\u8A98\u5C0E\u3055\u308C\u308B\u5834\u5408\u304C\u3042\u308A\u307E\u3059\u3002\u5341\u5206\u3054\u6CE8\u610F\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
             "Value": ""
           }
         ],
@@ -1805,6 +1897,43 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\uCDE8\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\uB2E4\uC74C \uB9C1\uD06C\uAC00 \uBC29\uBB38\uD558\uB824\uB294 \uC704\uCE58\uB97C \uAC00\uB9AC\uD0A4\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694:\r{link}\r\r\uB9C1\uD06C\uC5D0 \uC624\uB958\uB098 \uC624\uB798\uB41C \uB0B4\uC6A9\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uAC70\uB098 \uC548\uC804\uD558\uC9C0 \uC54A\uC740 \uACF3\uC73C\uB85C \uC5F0\uACB0\uB420 \uC218 \uC788\uC73C\uB2C8 \uC8FC\uC758\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\uACBD\uACE0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -2159,6 +2288,43 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Avertissement",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Veuillez confirmer que ce lien pointe bien vers la destination souhait\u00E9e :\r{link}\r\rCe lien peut contenir des erreurs ou du contenu obsol\u00E8te, ou vous rediriger vers un emplacement non s\u00E9curis\u00E9. Soyez prudent.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Annuler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -2508,6 +2674,43 @@
         "ArgsComment": [
           {
             "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u7F77",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u5106",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u8BF7\u5BDF\u6B64\u94FE\uFF0C\u679C\u4E3A\u541B\u6B32\u8BBF\u4E4B\u6240\u4E4E\uFF1A\r{link}\r\r\u6B64\u94FE\u6216\u542B\u8BB9\u8BEF\u3001\u65E7\u95FB\uFF0C\u6216\u5F15\u541B\u81F3\u9669\u5730\uFF0C\u541B\u5176\u614E\u4E4B\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
             "Value": ""
           }
         ],
@@ -2867,6 +3070,43 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0645\u0627 \u0625\u0630\u0627 \u0643\u0627\u0646 \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u064A\u0634\u064A\u0631 \u0625\u0644\u0649 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0630\u064A \u062A\u0631\u064A\u062F \u0632\u064A\u0627\u0631\u062A\u0647:\r{link}\r\r\u0642\u062F \u064A\u062D\u062A\u0648\u064A \u0627\u0644\u0631\u0627\u0628\u0637 \u0639\u0644\u0649 \u0645\u062D\u062A\u0648\u0649 \u062E\u0627\u0637\u0626 \u0623\u0648 \u0642\u062F\u064A\u0645\u060C \u0623\u0648 \u0642\u062F \u064A\u0639\u064A\u062F \u062A\u0648\u062C\u064A\u0647\u0643 \u0625\u0644\u0649 \u0645\u0648\u0642\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646\u060C \u0644\u0630\u0627 \u064A\u064F\u0631\u062C\u0649 \u062A\u0648\u062E\u064A \u0627\u0644\u062D\u0630\u0631.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u062A\u062D\u0630\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0625\u0644\u063A\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -3216,6 +3456,43 @@
         "ArgsComment": [
           {
             "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Warnung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Bitte best\u00E4tigen Sie, ob dieser Link auf die gew\u00FCnschte Zieladresse verweist:\r{link}\r\rDer Link k\u00F6nnte fehlerhafte oder veraltete Inhalte enthalten oder Sie auf eine unsichere Seite weiterleiten. Bitte seien Sie vorsichtig.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
             "Value": ""
           }
         ],
@@ -3574,6 +3851,43 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Advertencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Confirme que este enlace apunta al destino que desea visitar:\r{link}\r\rEl enlace puede contener errores o contenido obsoleto, o dirigirle a una ubicaci\u00F3n no segura. Tenga precauci\u00F3n.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -3928,6 +4242,43 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Annulla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Avviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Conferma che questo link conduca alla destinazione desiderata:\r{link}\r\rIl link potrebbe contenere errori o contenuti obsoleti, oppure reindirizzarti a una destinazione non sicura. Procedi con cautela.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -4276,6 +4627,43 @@
       {
         "Id": "MultiWindowView_PopOut_NotSupport",
         "Value": "Twoje urz\u0105dzenie nie obs\u0142uguje funkcji wielu okien.\rTa funkcja jest dost\u0119pna na iPadach obs\u0142uguj\u0105cych Stage Manager, na wi\u0119kszo\u015Bci tablet\u00F3w z Androidem oraz na komputerach.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Anuluj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Upewnij si\u0119, \u017Ce ten link prowadzi do miejsca, kt\u00F3re chcesz odwiedzi\u0107:\r{link}\r\rLink mo\u017Ce zawiera\u0107 b\u0142\u0119dy lub nieaktualne tre\u015Bci, a tak\u017Ce przekierowa\u0107 do niebezpiecznej lokalizacji. Zachowaj ostro\u017Cno\u015B\u0107.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Ostrze\u017Cenie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4635,6 +5023,43 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Aviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Confirme se este link aponta para o local que voc\u00EA deseja acessar:\r{link}\r\rO link pode conter erros ou conte\u00FAdo desatualizado, ou redirecion\u00E1-lo para um local inseguro, portanto, tenha cautela.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -4989,6 +5414,43 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435, \u0447\u0442\u043E \u044D\u0442\u0430 \u0441\u0441\u044B\u043B\u043A\u0430 \u0432\u0435\u0434\u0435\u0442 \u043D\u0430 \u043D\u0443\u0436\u043D\u044B\u0439 \u0432\u0430\u043C \u0440\u0435\u0441\u0443\u0440\u0441:\r{link}\r\r\u0421\u0441\u044B\u043B\u043A\u0430 \u043C\u043E\u0436\u0435\u0442 \u0441\u043E\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u043E\u0448\u0438\u0431\u043A\u0438 \u0438\u043B\u0438 \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0443\u044E \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E, \u043B\u0438\u0431\u043E \u043F\u0435\u0440\u0435\u043D\u0430\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432\u0430\u0441 \u043D\u0430 \u043D\u0435\u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0440\u0435\u0441\u0443\u0440\u0441. \u0411\u0443\u0434\u044C\u0442\u0435 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -5337,6 +5799,43 @@
         "ArgsComment": [
           {
             "Key": "tab",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0130ptal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Uyar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "L\u00FCtfen bu ba\u011Flant\u0131n\u0131n eri\u015Fmek istedi\u011Finiz konuma y\u00F6nlendirip y\u00F6nlendirmedi\u011Fini onaylay\u0131n:\r{link}\r\rBa\u011Flant\u0131 hatal\u0131 veya g\u00FCncel olmayan i\u00E7erik bar\u0131nd\u0131rabilir ya da sizi g\u00FCvenli olmayan bir konuma y\u00F6nlendirebilir, l\u00FCtfen dikkatli olun.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
             "Value": ""
           }
         ],

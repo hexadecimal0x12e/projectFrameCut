@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.Template.TemplateExtractPage"
@@ -238,6 +238,91 @@
                                         </DataTemplate>
                                     </CollectionView.ItemTemplate>
                                 </CollectionView>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+
+            <Grid x:Name="StepFourPanel" IsVisible="False" RowSpacing="10">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="12" Padding="0,0,0,12">
+                        <Border StrokeThickness="1" Padding="12">
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="模板标题"
+                                       FontAttributes="Bold"
+                                       FontSize="14" />
+                                <Entry x:Name="TemplateTitleEntry"
+                                       Placeholder="输入模板标题（如：我的精彩模板）"
+                                       ClearButtonVisibility="WhileEditing" />
+                                <Entry x:Name="TemplateSubtitleEntry"
+                                       Placeholder="输入模板副标题（如：我的精彩副标题）"
+                                       ClearButtonVisibility="WhileEditing" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border StrokeThickness="1" Padding="12">
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="标签"
+                                       FontAttributes="Bold"
+                                       FontSize="14" />
+                                <Label Text="添加标签便于搜索和分类管理"
+                                       FontSize="12"
+                                       Opacity="0.7" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Entry x:Name="TagInputEntry"
+                                           Placeholder="输入标签后点击添加"
+                                           ClearButtonVisibility="WhileEditing"
+                                           Completed="TagInputEntry_Completed" />
+                                    <Button Grid.Column="1"
+                                            x:Name="AddTagButton"
+                                            Text="添加"
+                                            Clicked="AddTag_Clicked" />
+                                </Grid>
+                                <FlexLayout x:Name="TagsContainer"
+                                            Wrap="Wrap"
+                                            JustifyContent="Start"
+                                            AlignItems="Start"
+                                            BindableLayout.ItemsSource="{Binding}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border StrokeThickness="1"
+                                                    Padding="8,4"
+                                                    Margin="0,0,6,6"
+                                                    StrokeShape="RoundRectangle 12">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                    <Label Text="{Binding .}"
+                                                           VerticalOptions="Center"
+                                                           FontSize="12" />
+                                                    <Button Grid.Column="1"
+                                                            Text="✕"
+                                                            FontSize="10"
+                                                            Padding="2,0"
+                                                            BackgroundColor="Transparent"
+                                                            WidthRequest="20"
+                                                            HeightRequest="20"
+                                                            VerticalOptions="Center"
+                                                            Clicked="RemoveTag_Clicked" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border StrokeThickness="1" Padding="12">
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="模板简介（Readme）"
+                                       FontAttributes="Bold"
+                                       FontSize="14" />
+                                <Label Text="支持 Markdown 格式，描述模板的功能和用法"
+                                       FontSize="12"
+                                       Opacity="0.7" />
+                                <Editor x:Name="ReadmeEditor"
+                                        Placeholder="在此输入 Markdown 格式的模板说明..."
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="200" />
                             </VerticalStackLayout>
                         </Border>
                     </VerticalStackLayout>

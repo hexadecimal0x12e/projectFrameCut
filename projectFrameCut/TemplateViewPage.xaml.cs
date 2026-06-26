@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -688,14 +688,14 @@ public partial class TemplateViewPage : ContentPage
                 ? structure.Variables["category"] ?? "Other"
                 : "Other";
             Description = structure.Variables?.ContainsKey("description") == true
-                ? structure.Variables["description"] ?? Name
-                : Name;
+                    ? structure.Variables["description"] ?? Name
+                    : Name;
             DurationText = structure.Variables?.ContainsKey("duration") == true
                 ? structure.Variables["duration"] ?? "00:00"
                 : "00:00";
             var tagsStr = structure.Variables?.ContainsKey("tags") == true
-                ? structure.Variables["tags"] ?? ""
-                : "";
+                                ? structure.Variables["tags"] ?? ""
+                                : "";
             Tags = string.IsNullOrWhiteSpace(tagsStr)
                 ? Array.Empty<string>()
                 : tagsStr.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();

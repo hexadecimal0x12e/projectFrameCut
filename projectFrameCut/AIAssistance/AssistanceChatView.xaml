@@ -19,15 +19,9 @@
                                 StrokeShape="RoundRectangle 10"
                                 Padding="10,8"
                                 Margin="2"
-                                MaximumWidthRequest="560"
-                                HorizontalOptions="Start"
                                 BackgroundColor="Transparent"
-                                Stroke="{AppThemeBinding Light=#FFE0E0E0, Dark=#FF444444}">
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsUser}" Value="True">
-                                    <Setter Property="HorizontalOptions" Value="End"/>
-                                </DataTrigger>
-                            </Border.Triggers>
+                                Stroke="{AppThemeBinding Light=#FFE0E0E0, Dark=#FF444444}"
+                                BindingContextChanged="OnMessageBorderContextChanged">
                             <VerticalStackLayout Spacing="6">
                                 <!-- Sender -->
                                 <Label Text="{Binding Sender}"
@@ -35,53 +29,107 @@
                                        FontSize="12"
                                        TextColor="{AppThemeBinding Light=#FF333333, Dark=#FFDDDDDD}"/>
 
-
-
                                 <!-- ===== Assistant message: Markdown rendering ===== -->
                                 <VerticalStackLayout Spacing="0"
                                                      HorizontalOptions="Fill"
-                                                     Loaded="SubViewCollection_Loaded" />
+                                                     BindingContextChanged="SubViewCollection_BindingContextChanged" />
                                 <!-- ===== User message: plain text ===== -->
                                 <Label Text="{Binding Message}"
                                        IsVisible="{Binding IsUser}"
                                        LineBreakMode="WordWrap"
                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFEEEEEE}"/>
 
+
+                                <Grid>
+                                    <HorizontalStackLayout HorizontalOptions="Start"
+                                                           Spacing="8"
+                                                           Margin="0,4,0,0"
+                                                           IsVisible="{Binding CanSubmitFeedback}">
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe8dc;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
+                                                Padding="8,2"
+                                                FontSize="12"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
+                                                IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                                Clicked="AIReplyFeedbackGoodButton_Clicked"/>
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe8db;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
+                                                Padding="8,2"
+                                                FontSize="12"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
+                                                IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                                Clicked="AIReplyFeedbackBadButton_Clicked"/>
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe87f;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
+                                                Padding="8,2"
+                                                FontSize="12"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
+                                                IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
+                                                Clicked="AIReplyFeedbackReportButton_Clicked"/>
+                                    </HorizontalStackLayout>
+
+                                    <HorizontalStackLayout HorizontalOptions="End" Spacing="4">
+                                        <!-- ===== 重新生成（仅 AI 消息） ===== -->
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe042;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Regenerate}"
+                                                Padding="6,2"
+                                                FontSize="16"
+                                                MinimumHeightRequest="30"                                             
+                                                TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                IsVisible="{Binding IsAssistant}"
+                                                Clicked="AIRegenerateFromMessage_Clicked"/>
+                                        <!-- ===== 编辑消息（仅用户消息） ===== -->
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe150;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_EditMessage}"
+                                                Padding="6,2"
+                                                FontSize="16"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                IsVisible="{Binding IsUser}"
+                                                Clicked="AIEditMessage_Clicked"/>
+                                        <!-- ===== 撤回至此 ===== -->
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe166;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_RollbackToHere}"
+                                                Padding="6,2"
+                                                FontSize="16"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                Clicked="AIRollbackToHere_Clicked"/>
+                                        <!-- ===== 从此处分支 ===== -->
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe0b6;"
+                                                ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_BranchFromHere}"
+                                                Padding="6,2"
+                                                FontSize="16"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                Clicked="AIBranchFromHere_Clicked"/>
+                                        <!-- ===== 复制 ===== -->
+                                        <Button FontFamily="Icons"
+                                                Text="&#xe14d;"
+                                                ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}"
+                                                Padding="6,2"
+                                                FontSize="16"
+                                                MinimumHeightRequest="30"
+                                                TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                IsVisible="{Binding IsAssistant}"
+                                                Clicked="AIReplyCopyButton_Clicked"/>
+                                    </HorizontalStackLayout>
+
+
+                                </Grid>
+
                                 <!-- Feedback buttons -->
-                                <HorizontalStackLayout Spacing="8"
-                                                       Margin="0,4,0,0"
-                                                       IsVisible="{Binding CanSubmitFeedback}">
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe8dc;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
-                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackGoodButton_Clicked"/>
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe8db;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
-                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackBadButton_Clicked"/>
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe87f;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            BackgroundColor="{AppThemeBinding Light=#FFE8E8E8, Dark=#FF3A3A3A}"
-                                            TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackReportButton_Clicked"/>
-                                </HorizontalStackLayout>
+                                
                             </VerticalStackLayout>
                         </Border>
                     </Grid>

@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
 
 
 namespace projectFrameCut.ApplicationPluginBase
@@ -87,6 +89,11 @@ namespace projectFrameCut.ApplicationPluginBase
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
             ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+
+            Markdown2XAML.RegisterCodeBlockRenderer(new XAMLCodeblockRenderer());
+            Markdown2XAML.RegisterCodeBlockRenderer(new HtmlCodeBlockRenderer());
+            Markdown2XAML.RegisterCodeBlockRenderer(new MermaidCodeBlockRenderer());
+            Markdown2XAML.RegisterCodeBlockRenderer(new SvgCodeBlockRenderer());
         }
 
 

@@ -48,6 +48,11 @@
         /// This allows for tracking and managing assets associated with the template, ensuring that the correct assets are used when materializing the template.
         /// </summary>
         public Dictionary<string, string>? AssetHashTable { get; set; }
+
+        /// <summary>
+        /// Indicates the API version in which this template was created. This is used for compatibility checks when loading templates.
+        /// </summary>
+        public int CreatedInAPIVersion { get; set; } 
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper.Blocks
+namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
 {
     public partial class MarkSpan : Span
     {

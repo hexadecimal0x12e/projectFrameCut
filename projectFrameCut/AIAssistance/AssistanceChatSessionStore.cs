@@ -130,6 +130,47 @@ internal static class AssistanceChatSessionStore
         }
     }
 
+    public static AssistanceChatSession? GetSession(string? projectPath, Guid sessionId)
+    {
+        lock (Gate)
+        {
+            (_, ProjectSessionStore store) = GetProjectStoreLocked(projectPath);
+            return store.Sessions.FirstOrDefault(x => x.SessionId == sessionId);
+        }
+    }
+
+    public static AssistanceChatSession ForkSession(
+        string? projectPath,
+        Guid sourceSessionId,
+        IEnumerable<AssistanceChatMessageSnapshot> messages,
+        IEnumerable<AssistanceChatHistorySnapshot> history,
+        string? newTitle = null)
+    {
+        lock (Gate)
+        {
+            (string normalizedProjectPath, ProjectSessionStore store) = GetProjectStoreLocked(projectPath);
+            AssistanceChatSession? source = store.Sessions.FirstOrDefault(x => x.SessionId == sourceSessionId);
+            string title = !string.IsNullOrWhiteSpace(newTitle)
+                ? newTitle.Trim()
+                : source is not null
+                    ? Localized.AIAssistant_ChatView_BranchTitle(source.Title)
+                    : Localized.AIAssistant_NewChatDefaultTitle;
+
+            AssistanceChatSession session = new()
+            {
+                SessionId = Guid.NewGuid(),
+                Title = title,
+                UpdatedAt = DateTime.Now,
+            };
+            session.Messages.AddRange(messages);
+            session.History.AddRange(history);
+            store.Sessions.Add(session);
+            SaveSessionLocked(normalizedProjectPath, session);
+            RaiseChanged();
+            return session;
+        }
+    }
+
     public static void UpdateSession(string? projectPath, Guid sessionId, string title, IEnumerable<AssistanceChatMessageSnapshot> messages, IEnumerable<AssistanceChatHistorySnapshot> history)
     {
         lock (Gate)

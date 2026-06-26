@@ -34,6 +34,12 @@
         private void AppShell_Navigated(object? sender, Microsoft.Maui.Controls.ShellNavigatedEventArgs e)
         {
             var currentPage = Microsoft.Maui.Controls.Shell.Current?.CurrentPage;
+
+            if(!Shell.GetNavBarIsVisible(currentPage))
+            {
+                App.HideNavBar();
+            }
+            // not do ShowNavBar() because the nav bar may be hidden by the page itself, so we don't want to override that.
             switch (currentPage?.GetType())
             {
                 case Type t when t == typeof(HomePage):

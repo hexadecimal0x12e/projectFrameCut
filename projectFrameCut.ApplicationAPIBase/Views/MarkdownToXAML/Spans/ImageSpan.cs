@@ -1,4 +1,4 @@
-namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper.Blocks
+﻿namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
 {
     /// <summary>
     /// 行内图片 Span。由于 MAUI Label 不支持内嵌 Image 控件，

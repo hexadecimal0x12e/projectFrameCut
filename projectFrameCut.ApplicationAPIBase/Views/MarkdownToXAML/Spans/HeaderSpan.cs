@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper.Blocks
+namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
 {
     public partial class HeaderSpan : Span
     {

@@ -5,9 +5,10 @@ using System.Text.RegularExpressions;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
-using projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper.Blocks;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
 
-namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
+namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 {
     /// <summary>
     /// 将 Markdown 文本转换为 MAUI View 的转换器。
@@ -24,14 +25,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
         /// <summary>段落之间的间距</summary>
         public static double ParagraphSpacing { get; set; } = 8;
 
-        /// <summary>代码块背景色</summary>
-        public static Color CodeBlockBackgroundColor { get; set; } = Color.FromArgb("#F5F5F5");
+        /// <summary>代码块背景色（自动根据深浅色模式切换）</summary>
+        public static Color CodeBlockBackgroundColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#1E1E1E")
+            : Color.FromArgb("#F5F5F5");
 
-        /// <summary>代码块文字颜色</summary>
-        public static Color CodeBlockTextColor { get; set; } = Color.FromArgb("#000000");
+        /// <summary>代码块文字颜色（自动根据深浅色模式切换）</summary>
+        public static Color CodeBlockTextColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#D4D4D4")
+            : Color.FromArgb("#000000");
 
-        /// <summary>代码块边框颜色</summary>
-        public static Color CodeBlockBorderColor { get; set; } = Color.FromArgb("#E0E0E0");
+        /// <summary>代码块边框颜色（自动根据深浅色模式切换）</summary>
+        public static Color CodeBlockBorderColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#333333")
+            : Color.FromArgb("#E0E0E0");
 
         /// <summary>代码块圆角半径</summary>
         public static double CodeBlockCornerRadius { get; set; } = 8;
@@ -45,17 +52,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
         /// <summary>引用块左边竖线宽度</summary>
         public static double BlockquoteBarWidth { get; set; } = 4;
 
-        /// <summary>引用块背景色</summary>
-        public static Color BlockquoteBackgroundColor { get; set; } = Color.FromArgb("#0C000000");
+        /// <summary>引用块背景色（自动根据深浅色模式切换）</summary>
+        public static Color BlockquoteBackgroundColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#0CFFFFFF")
+            : Color.FromArgb("#0C000000");
 
-        /// <summary>引用块文字颜色</summary>
-        public static Color BlockquoteTextColor { get; set; } = Color.FromArgb("#444444");
+        /// <summary>引用块文字颜色（自动根据深浅色模式切换）</summary>
+        public static Color BlockquoteTextColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#BBBBBB")
+            : Color.FromArgb("#444444");
 
-        /// <summary>水平分割线颜色</summary>
-        public static Color HorizontalRuleColor { get; set; } = Color.FromArgb("#CCCCCC");
+        /// <summary>水平分割线颜色（自动根据深浅色模式切换）</summary>
+        public static Color HorizontalRuleColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#444444")
+            : Color.FromArgb("#CCCCCC");
 
         /// <summary>高亮（Mark）默认背景色</summary>
-        public static Color HighlightColor { get; set; } = Color.FromArgb("#FFFF00");
+        public static Color HighlightColor { get; set; } = Color.FromArgb("#50FFFF00");
 
         /// <summary>图片最大宽度（超出则等比缩放）</summary>
         public static double ImageMaxWidth { get; set; } = 400;
@@ -72,9 +85,85 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
         /// <summary>图片标题文字颜色</summary>
         public static Color ImageCaptionTextColor { get; set; } = Color.FromArgb("#6B7280");
 
+        // ===== 表格样式 =====
+
+        /// <summary>表格边框颜色（自动根据深浅色模式切换）</summary>
+        public static Color TableBorderColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#444444")
+            : Color.FromArgb("#D0D0D0");
+
+        /// <summary>表格表头背景色（自动根据深浅色模式切换）</summary>
+        public static Color TableHeaderBackgroundColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#12FFFFFF")
+            : Color.FromArgb("#05F0F0F0");
+
+        /// <summary>表格偶数行背景色（自动根据深浅色模式切换）</summary>
+        public static Color TableRowEvenBackgroundColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#08FFFFFF")
+            : Color.FromArgb("#0C000000");
+
+        /// <summary>表格奇数行背景色（自动根据深浅色模式切换）</summary>
+        public static Color TableRowOddBackgroundColor => AppInfo.RequestedTheme == AppTheme.Dark
+            ? Color.FromArgb("#14FFFFFF")
+            : Color.FromArgb("#0CA0A0A0");
+
+        /// <summary>表格单元格内边距</summary>
+        public static double TableCellPadding { get; set; } = 8;
+
+        /// <summary>表格字体大小</summary>
+        public static double TableFontSize { get; set; } = 13;
+
+
         private static Color MarkdownTextColor => AppInfo.RequestedTheme == AppTheme.Dark
             ? Colors.White
             : Colors.Black;
+
+        // 当前转换的引用式链接定义表（key 不区分大小写）
+        // 仅在 Convert / StreamConverter 活动期间有效
+        private static Dictionary<string, (string Url, string? Title)>? _currentRefDefinitions;
+
+        // ===== 自定义代码块渲染器注册表 =====
+
+        private static readonly Dictionary<string, CodeBlockRenderer> _codeBlockRenderers
+            = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// 注册一个自定义代码块渲染器。同一语言只能注册一个渲染器，重复注册会覆盖。
+        /// </summary>
+        /// <param name="renderer">要注册的渲染器</param>
+        /// <exception cref="ArgumentNullException">renderer 为 null</exception>
+        public static void RegisterCodeBlockRenderer(CodeBlockRenderer renderer)
+        {
+            ArgumentNullException.ThrowIfNull(renderer);
+            _codeBlockRenderers[renderer.Language] = renderer;
+        }
+
+        /// <summary>
+        /// 注销指定语言的自定义代码块渲染器。
+        /// </summary>
+        /// <param name="language">语言标识符（大小写不敏感）</param>
+        /// <returns>如果成功移除则返回 true，否则返回 false</returns>
+        public static bool UnregisterCodeBlockRenderer(string language)
+        {
+            return _codeBlockRenderers.Remove(language);
+        }
+
+        /// <summary>
+        /// 获取指定语言的自定义代码块渲染器。
+        /// </summary>
+        /// <param name="language">语言标识符（大小写不敏感）</param>
+        /// <param name="renderer">输出参数：找到的渲染器</param>
+        /// <returns>如果找到则返回 true</returns>
+        public static bool TryGetCodeBlockRenderer(string language, out CodeBlockRenderer? renderer)
+        {
+            return _codeBlockRenderers.TryGetValue(language, out renderer);
+        }
+
+        /// <summary>
+        /// 已注册的所有自定义代码块渲染器（按语言标识符索引，大小写不敏感）。
+        /// </summary>
+        public static IReadOnlyDictionary<string, CodeBlockRenderer> CodeBlockRenderers => _codeBlockRenderers;
+
 
         // ===== 公开 API：一次性转换 =====
 
@@ -91,25 +180,52 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             // 规范化换行符
             input = input.Replace("\r\n", "\n").Replace('\r', '\n');
 
-            var blocks = ParseBlocks(input);
-            var views = new List<View>(blocks.Count);
-
-            foreach (var block in blocks)
+            // 提取引用式链接定义并移除定义行（定义本身不应渲染为内容）
+            var refDefs = new Dictionary<string, (string Url, string? Title)>(StringComparer.OrdinalIgnoreCase);
+            var lines = input.Split('\n');
+            var filteredLines = new List<string>(lines.Length);
+            foreach (var line in lines)
             {
-                var view = BuildBlockView(block);
-                if (view != null)
-                    views.Add(view);
+                var refMatch = TryMatchRefDefinition(line);
+                if (refMatch != null)
+                {
+                    refDefs[refMatch.Value.Id] = (refMatch.Value.Url, refMatch.Value.Title);
+                }
+                else
+                {
+                    filteredLines.Add(line);
+                }
             }
+            input = string.Join("\n", filteredLines);
 
-            if (views.Count == 0)
-                return new VerticalStackLayout();
-            if (views.Count == 1)
-                return views[0];
+            // 设置当前引用定义上下文
+            _currentRefDefinitions = refDefs.Count > 0 ? refDefs : null;
+            try
+            {
+                var blocks = ParseBlocks(input);
+                var views = new List<View>(blocks.Count);
 
-            var stack = new VerticalStackLayout { Spacing = ParagraphSpacing };
-            foreach (var v in views)
-                stack.Children.Add(v);
-            return stack;
+                foreach (var block in blocks)
+                {
+                    var view = BuildBlockView(block);
+                    if (view != null)
+                        views.Add(view);
+                }
+
+                if (views.Count == 0)
+                    return new VerticalStackLayout();
+                if (views.Count == 1)
+                    return views[0];
+
+                var stack = new VerticalStackLayout { Spacing = ParagraphSpacing };
+                foreach (var v in views)
+                    stack.Children.Add(v);
+                return stack;
+            }
+            finally
+            {
+                _currentRefDefinitions = null;
+            }
         }
 
         // ===== 流式转换器 =====
@@ -151,14 +267,49 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             private bool _listOrdered;
 
             // 引用块状态
-            private readonly StringBuilder _quoteBuf = new();
+            private readonly List<QuoteLine> _quoteBuf = new();
             private bool _inBlockquote;
+
+            // 表格状态
+            private readonly List<string> _tableRowLines = new();
+            private bool _inTable;
+            private bool _tableHasHeader;
+            private TextAlignment[]? _tableAlignments;
+
+            // 引用式链接定义表（key 不区分大小写）
+            private readonly Dictionary<string, (string Url, string? Title)> _refDefinitions = new(StringComparer.OrdinalIgnoreCase);
+
+            // ===== 局部视图节流控制 =====
+
+            /// <summary>
+            /// 局部视图（Partial View）更新最小间隔（毫秒）。
+            /// 避免在流式过程中频繁调用昂贵的自定义渲染器（如 XAML 解析）导致 UI 卡死。
+            /// </summary>
+            private static readonly TimeSpan PartialViewMinInterval = TimeSpan.FromMilliseconds(250);
+
+            /// <summary>
+            /// 调用自定义渲染器的最小代码长度阈值。
+            /// 代码太短时几乎不可能渲染出有效视图，跳过以节省开销。
+            /// </summary>
+            private const int PartialViewMinCodeLength = 30;
+
+            /// <summary>上次更新局部视图的时间戳，用于节流控制</summary>
+            private DateTime _lastPartialViewUpdate = DateTime.MinValue;
+
+            /// <summary>
+            /// 最近一次成功的自定义渲染视图缓存。
+            /// 在节流间隔内复用此缓存，避免在自定义视图与文本视图之间交替导致闪烁。
+            /// </summary>
+            private View? _cachedCustomPartialView;
 
             /// <summary>
             /// 当前正在构建中的局部 View（用于显示"正在输入..."效果）。
             /// 在段落模式中返回当前段落文本的 Label；
             /// 在代码块模式中返回当前代码的 Border+Label；
             /// 其他状态返回 null。
+            ///
+            /// <para>注：此属性在流式过程中被高频调用。对代码块模式，
+            /// 我们实施节流控制以避免频繁触发昂贵的自定义渲染器。</para>
             /// </summary>
             public View? CurrentPartialView
             {
@@ -166,8 +317,33 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 {
                     if (_inCodeBlock && _codeBuf.Length > 0)
                     {
-                        return BuildPartialCodeBlockView(_codeLanguage, _codeBuf.ToString());
+                        var code = _codeBuf.ToString();
+                        bool shouldAttemptCustomRender = code.Length >= PartialViewMinCodeLength
+                            && (DateTime.UtcNow - _lastPartialViewUpdate) >= PartialViewMinInterval;
+
+                        if (shouldAttemptCustomRender)
+                        {
+                            _lastPartialViewUpdate = DateTime.UtcNow;
+                            var customView = BuildPartialCodeBlockView(_codeLanguage, code);
+                            if (customView != null)
+                            {
+                                // 自定义渲染成功：更新缓存并返回新视图
+                                _cachedCustomPartialView = customView;
+                                return customView;
+                            }
+                            // 自定义渲染失败（如 XAML 不完整）：不清除缓存，保留上次成功的视图
+                            // 避免在流式过程中因一次失败就闪回到文本视图
+                        }
+
+                        // 节流命中期间：如果已有缓存的自定义视图，复用缓存避免闪烁
+                        if (_cachedCustomPartialView != null)
+                            return _cachedCustomPartialView;
+
+                        // 无缓存可用，回退到轻量的纯文本代码块视图
+                        return BuildFallbackCodeBlockPartialView(_codeLanguage, code);
                     }
+                    // 退出代码块模式后清除缓存
+                    _cachedCustomPartialView = null;
                     if (_paragraphBuf.Length > 0)
                     {
                         return new Label
@@ -184,12 +360,43 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             }
 
             /// <summary>
+            /// 构建轻量级的纯文本代码块局部视图（备用方案）。
+            /// 仅包含代码文本的 Label，不做任何 XAML 解析，性能开销极低。
+            /// </summary>
+            private static View BuildFallbackCodeBlockPartialView(string? language, string code)
+            {
+                var label = new Label
+                {
+                    Text = code,
+                    FontFamily = "MarkdownCodeBlock",
+                    FontSize = 13,
+                    TextColor = CodeBlockTextColor,
+                    Opacity = 0.7,
+                };
+
+                return new Border
+                {
+                    StrokeShape = new RoundRectangle { CornerRadius = CodeBlockCornerRadius },
+                    BackgroundColor = CodeBlockBackgroundColor,
+                    Stroke = CodeBlockBorderColor,
+                    StrokeThickness = 1,
+                    Padding = CodeBlockPadding,
+                    Margin = new Thickness(0, 4),
+                    Opacity = 0.85,
+                    Content = label,
+                };
+            }
+
+            /// <summary>
             /// 喂入一个新的文本块。返回自上次调用以来新完成的 View 列表。
             /// </summary>
             public IReadOnlyList<View> Feed(string chunk)
             {
                 if (string.IsNullOrEmpty(chunk))
                     return Array.Empty<View>();
+
+                // 设置引用定义上下文（_refDefinitions 在 ProcessLine 中被增量填充）
+                _currentRefDefinitions = _refDefinitions;
 
                 _buffer += chunk;
                 var views = new List<View>();
@@ -215,6 +422,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             {
                 var views = new List<View>();
 
+                // 设置引用定义上下文
+                _currentRefDefinitions = _refDefinitions;
+
                 // 处理 buffer 中剩余的不完整行
                 if (_processedPos < _buffer.Length)
                 {
@@ -232,13 +442,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                         {
                             if (remaining.StartsWith(">"))
                             {
-                                var content = remaining.StartsWith("> ") ? remaining[2..] : remaining[1..];
-                                _quoteBuf.AppendLine(content);
+                                var parsed = ParseQuoteLine(remaining);
+                                _quoteBuf.Add(new QuoteLine(parsed.Level, parsed.Content));
                             }
                             else
                             {
-                                _quoteBuf.AppendLine(remaining);
+                                // 没有 > 前缀的行视为当前引用层级的继续
+                                var lastLevel = _quoteBuf.Count > 0 ? _quoteBuf[^1].Level : 1;
+                                _quoteBuf.Add(new QuoteLine(lastLevel, remaining));
                             }
+                        }
+                        else if (TryMatchRefDefinition(remaining) is { } refDefMatch)
+                        {
+                            _refDefinitions[refDefMatch.Id] = (refDefMatch.Url, refDefMatch.Title);
                         }
                         else if (TryMatchImageLine(remaining) is { } imgMatch)
                         {
@@ -268,6 +484,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                             _listOrdered = true;
                             _listItems.Add(olItem);
                         }
+                        else if (_inTable && IsTableRow(remaining))
+                        {
+                            _tableRowLines.Add(remaining);
+                        }
+                        else if (_inTable && IsTableSeparatorRow(remaining))
+                        {
+                            _tableHasHeader = true;
+                            _tableAlignments = ParseTableAlignments(remaining);
+                        }
+                        else if (!_inTable && IsTableRow(remaining))
+                        {
+                            FlushOtherStates(views);
+                            _inTable = true;
+                            _tableHasHeader = false;
+                            _tableAlignments = null;
+                            _tableRowLines.Clear();
+                            _tableRowLines.Add(remaining);
+                        }
                         else
                         {
                             if (_paragraphBuf.Length > 0)
@@ -281,6 +515,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 FlushCodeBlock(views);
                 FlushList(views);
                 FlushBlockquote(views);
+                FlushTable(views);
                 FlushParagraph(views);
 
                 // 重置状态
@@ -291,6 +526,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 _codeLanguage = null;
                 _inBlockquote = false;
                 _listOrdered = false;
+                _inTable = false;
+                _tableHasHeader = false;
+                _tableAlignments = null;
 
                 return views;
             }
@@ -309,6 +547,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 _listOrdered = false;
                 _quoteBuf.Clear();
                 _inBlockquote = false;
+                _tableRowLines.Clear();
+                _inTable = false;
+                _tableHasHeader = false;
+                _tableAlignments = null;
+                _refDefinitions.Clear();
+                _cachedCustomPartialView = null;
+                _lastPartialViewUpdate = DateTime.MinValue;
             }
 
             // ---- 内部行处理器 ----
@@ -337,6 +582,36 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     _inCodeBlock = true;
                     _codeFenceMarker = fenceMatch.Value.Fence;
                     _codeLanguage = fenceMatch.Value.Language;
+                    return;
+                }
+
+                // 引用式链接定义（不产生任何输出 View，只记录定义）
+                var refMatch = TryMatchRefDefinition(line);
+                if (refMatch != null)
+                {
+                    _refDefinitions[refMatch.Value.Id] = (refMatch.Value.Url, refMatch.Value.Title);
+                    return;
+                }
+
+                // 表格状态中时处理表格行或结束表格
+                if (_inTable)
+                {
+                    if (IsTableSeparatorRow(line))
+                    {
+                        // 分隔行：标记表头并解析对齐方式
+                        _tableHasHeader = true;
+                        _tableAlignments = ParseTableAlignments(line);
+                        return;
+                    }
+                    if (IsTableRow(line))
+                    {
+                        // 数据行
+                        _tableRowLines.Add(line);
+                        return;
+                    }
+                    // 非表格行：结束表格并重新处理当前行
+                    FlushTable(views);
+                    ProcessLine(line, views);
                     return;
                 }
 
@@ -379,10 +654,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     return;
                 }
 
-                // 空行：结束段落
+                // 空行：结束段落和表格
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     FlushParagraph(views);
+                    FlushTable(views);
                     return;
                 }
 
@@ -392,8 +668,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     FlushParagraph(views);
                     FlushList(views);
                     _inBlockquote = true;
-                    var content = line.StartsWith("> ") ? line[2..] : line[1..];
-                    _quoteBuf.AppendLine(content);
+                    var parsed = ParseQuoteLine(line);
+                    _quoteBuf.Add(new QuoteLine(parsed.Level, parsed.Content));
                     return;
                 }
 
@@ -421,6 +697,18 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     return;
                 }
 
+                // 检查表格行开始
+                if (IsTableRow(line))
+                {
+                    FlushOtherStates(views);
+                    _inTable = true;
+                    _tableHasHeader = false;
+                    _tableAlignments = null;
+                    _tableRowLines.Clear();
+                    _tableRowLines.Add(line);
+                    return;
+                }
+
                 // 否则，段落内容
                 FlushList(views);
                 FlushBlockquote(views);
@@ -434,6 +722,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 FlushParagraph(views);
                 FlushList(views);
                 FlushBlockquote(views);
+                FlushTable(views);
             }
 
             private void FlushParagraph(List<View> views)
@@ -476,41 +765,72 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
 
             private void FlushBlockquote(List<View> views)
             {
-                if (_inBlockquote && _quoteBuf.Length > 0)
+                if (_inBlockquote && _quoteBuf.Count > 0)
                 {
-                    var text = _quoteBuf.ToString().TrimEnd('\n', '\r');
-                    if (text.Length > 0)
-                    {
-                        var lines = text.Split('\n');
-                        views.Add(BuildBlockquoteView(lines));
-                    }
+                    views.Add(BuildBlockquoteView(_quoteBuf.ToArray()));
                     _quoteBuf.Clear();
                 }
                 _inBlockquote = false;
             }
 
+            private void FlushTable(List<View> views)
+            {
+                if (_inTable && _tableRowLines.Count > 0)
+                {
+                    // 构建表格：第一行是表头（如果看到分隔行则为 true），其余是数据行
+                    int startIdx = _tableHasHeader ? 1 : 0;
+                    var rows = new List<string[]>();
+
+                    if (_tableHasHeader)
+                    {
+                        rows.Add(SplitTableRow(_tableRowLines[0]));
+                    }
+                    for (int i = startIdx; i < _tableRowLines.Count; i++)
+                    {
+                        rows.Add(SplitTableRow(_tableRowLines[i]));
+                    }
+
+                    // 对齐所有行列数
+                    int maxCols = 0;
+                    foreach (var row in rows)
+                        if (row.Length > maxCols) maxCols = row.Length;
+                    for (int r = 0; r < rows.Count; r++)
+                    {
+                        if (rows[r].Length < maxCols)
+                        {
+                            var padded = new string[maxCols];
+                            Array.Copy(rows[r], padded, rows[r].Length);
+                            rows[r] = padded;
+                        }
+                    }
+
+                    if (rows.Count > 0 && maxCols > 0)
+                    {
+                        var alignments = _tableAlignments ?? Array.Empty<TextAlignment>();
+                        views.Add(BuildTableView(rows, alignments, _tableHasHeader));
+                    }
+
+                    _tableRowLines.Clear();
+                    _inTable = false;
+                    _tableHasHeader = false;
+                    _tableAlignments = null;
+                }
+            }
+
             private static View BuildPartialCodeBlockView(string? language, string code)
             {
-                var label = new Label
+                // 检查是否有支持流式的自定义渲染器
+                if (language != null
+                    && _codeBlockRenderers.TryGetValue(language, out var customRenderer)
+                    && customRenderer.SupportsStreaming)
                 {
-                    Text = code,
-                    FontFamily = "MarkdownCodeBlock",
-                    FontSize = 13,
-                    TextColor = CodeBlockTextColor,
-                    Opacity = 0.7,
-                };
+                    var partialView = customRenderer.RenderPartial(code);
+                    if (partialView != null)
+                        return partialView;
+                    // RenderPartial 返回 null 表示暂无内容可渲染，回退到默认行为
+                }
 
-                return new Border
-                {
-                    StrokeShape = new RoundRectangle { CornerRadius = CodeBlockCornerRadius },
-                    BackgroundColor = CodeBlockBackgroundColor,
-                    Stroke = CodeBlockBorderColor,
-                    StrokeThickness = 1,
-                    Padding = CodeBlockPadding,
-                    Margin = new Thickness(0, 4),
-                    Opacity = 0.85,
-                    Content = label,
-                };
+                return BuildFallbackCodeBlockPartialView(language, code);
             }
         }
 
@@ -540,6 +860,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             Blockquote,
             HorizontalRule,
             Image,
+            Table,
         }
 
         private readonly record struct Block
@@ -552,11 +873,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             public string? CodeContent { get; init; }
             public IReadOnlyList<string>? ListItems { get; init; }
             public bool IsOrderedList { get; init; }
-            public IReadOnlyList<string>? QuoteLines { get; init; }
+            public IReadOnlyList<QuoteLine>? QuoteLines { get; init; }
             public string? ImageUrl { get; init; }
             public string? ImageAlt { get; init; }
             public double? ImageWidth { get; init; }
             public double? ImageHeight { get; init; }
+            public IReadOnlyList<IReadOnlyList<string>>? TableRows { get; init; }
+            public IReadOnlyList<TextAlignment>? TableAlignments { get; init; }
+            public bool TableHasHeader { get; init; }
         }
 
         /// <summary>HTML &lt;img&gt; 标签解析结果</summary>
@@ -566,6 +890,25 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             public string? Alt { get; init; }
             public double? Width { get; init; }
             public double? Height { get; init; }
+        }
+
+        /// <summary>引用块的一行，包含嵌套层级和纯文本内容</summary>
+        internal readonly struct QuoteLine
+        {
+            public readonly int Level;
+            public readonly string Content;
+
+            public QuoteLine(int level, string content)
+            {
+                Level = level;
+                Content = content;
+            }
+
+            public void Deconstruct(out int level, out string content)
+            {
+                level = Level;
+                content = Content;
+            }
         }
 
         /// <summary>预提取的原子 Span（不可嵌套的行内元素）</summary>
@@ -589,10 +932,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             string? codeFence = null;
             var listItems = new List<string>();
             var listOrdered = false;
-            var quoteLines = new List<string>();
+            var quoteLines = new List<QuoteLine>();
 
-            foreach (var line in lines)
+            for (int i = 0; i < lines.Length; i++)
             {
+                var line = lines[i];
                 if (codeFence != null)
                 {
                     if (line.TrimEnd() == codeFence)
@@ -699,8 +1043,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                         paraLines.Clear();
                     }
                     FlushList();
-                    var content = line.StartsWith("> ") ? line[2..] : line[1..];
-                    quoteLines.Add(content);
+                    var parsed = ParseQuoteLine(line);
+                    quoteLines.Add(new QuoteLine(parsed.Level, parsed.Content));
                     continue;
                 }
 
@@ -736,7 +1080,76 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     continue;
                 }
 
+                // 检查表格
+                if (IsTableRow(line))
+                {
+                    // 看下一行是否为表格分隔行，以确认这是表头行
+                    bool hasHeader = false;
+                    int tableEnd = i + 1;
+                    if (tableEnd < lines.Length && IsTableSeparatorRow(lines[tableEnd]))
+                    {
+                        hasHeader = true;
+                        tableEnd++;
+                    }
+                    else if (tableEnd < lines.Length && IsTableRow(lines[tableEnd]))
+                    {
+                        // 没有分隔行，但有多行以 | 开头 → 无表头的表格
+                        hasHeader = false;
+                    }
+                    else
+                    {
+                        // 只有一行 | 且下一行不是表格 → 当做普通段落处理
+                        goto paragraphContent;
+                    }
+
+                    // 收集所有连续表格行（跳过已处理的分隔行）
+                    var tableRows = new List<string[]> { SplitTableRow(line) };
+                    IReadOnlyList<TextAlignment>? alignments = null;
+
+                    while (tableEnd < lines.Length && IsTableRow(lines[tableEnd]))
+                    {
+                        if (hasHeader && alignments == null && IsTableSeparatorRow(lines[tableEnd]))
+                        {
+                            // 解析对齐方式
+                            alignments = ParseTableAlignments(lines[tableEnd]);
+                            tableEnd++;
+                            continue;
+                        }
+                        tableRows.Add(SplitTableRow(lines[tableEnd]));
+                        tableEnd++;
+                    }
+
+                    // 确保各行列数一致（用最大列数补全）
+                    int maxCols = 0;
+                    foreach (var row in tableRows)
+                        if (row.Length > maxCols) maxCols = row.Length;
+                    for (int r = 0; r < tableRows.Count; r++)
+                    {
+                        if (tableRows[r].Length < maxCols)
+                        {
+                            var padded = new string[maxCols];
+                            Array.Copy(tableRows[r], padded, tableRows[r].Length);
+                            for (int c = tableRows[r].Length; c < maxCols; c++)
+                                padded[c] = "";
+                            tableRows[r] = padded;
+                        }
+                    }
+
+                    FlushPending();
+                    blocks.Add(new Block
+                    {
+                        Type = BlockType.Table,
+                        TableRows = tableRows,
+                        TableAlignments = alignments ?? Array.Empty<TextAlignment>(),
+                        TableHasHeader = hasHeader,
+                    });
+
+                    i = tableEnd - 1;
+                    continue;
+                }
+
                 // 段落内容
+                paragraphContent:
                 FlushList();
                 FlushQuote();
                 paraLines.Add(line);
@@ -872,6 +1285,116 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
         }
 
         /// <summary>
+        /// 解析任务列表项。检查内容是否以 <c>[ ]</c>（未完成）或 <c>[x]</c>/<c>[X]</c>（已完成）开头。
+        /// 例如 "- [ ] 买牛奶" 中的 "[ ] 买牛奶"。
+        /// </summary>
+        /// <param name="item">列表项内容（已去除 "- " 等列表标记）</param>
+        /// <param name="cleanContent">去除复选框标记后的纯内容</param>
+        /// <param name="isChecked">是否为已完成状态</param>
+        /// <returns>如果是任务列表项则返回 true</returns>
+        private static bool TryParseTaskItem(string item, out string cleanContent, out bool isChecked)
+        {
+            if (item.Length >= 3 && item[0] == '[')
+            {
+                bool isUnchecked = item[1] == ' ' && item[2] == ']';
+                bool isCheckedItem = (item[1] == 'x' || item[1] == 'X') && item[2] == ']';
+
+                if (isUnchecked || isCheckedItem)
+                {
+                    isChecked = isCheckedItem;
+                    // 复选框标记后面应该有空格分隔（或字符串结束）
+                    if (item.Length == 3)
+                    {
+                        cleanContent = "";
+                        return true;
+                    }
+                    if (item[3] == ' ')
+                    {
+                        cleanContent = item.Length > 4 ? item[4..] : "";
+                        return true;
+                    }
+                }
+            }
+            cleanContent = item;
+            isChecked = false;
+            return false;
+        }
+
+        // ===== 表格辅助方法 =====
+
+        /// <summary>
+        /// 判断一行是否为表格行（以 | 开头和结尾，至少包含 2 个 |）。
+        /// </summary>
+        private static bool IsTableRow(string line)
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith('|') || !trimmed.EndsWith('|'))
+                return false;
+            // 至少需要 2 个 |（即至少 3 个 |，因为首尾各一）
+            int pipeCount = 0;
+            foreach (var c in trimmed)
+                if (c == '|') pipeCount++;
+            return pipeCount >= 3;
+        }
+
+        /// <summary>
+        /// 判断是否为表格分隔行（|---| 格式，包含至少 3 个连续连字符）。
+        /// </summary>
+        private static bool IsTableSeparatorRow(string line)
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith('|') || !trimmed.EndsWith('|'))
+                return false;
+
+            var inner = trimmed.Trim('|');
+            if (string.IsNullOrWhiteSpace(inner))
+                return false;
+
+            foreach (var segment in inner.Split('|'))
+            {
+                var s = segment.Trim();
+                if (s.Length == 0) return false;
+                // 必须全部由 - : 和空格组成
+                if (!s.All(c => c == '-' || c == ':' || char.IsWhiteSpace(c)))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 将表格行拆分为单元格数组。
+        /// </summary>
+        private static string[] SplitTableRow(string line)
+        {
+            var trimmed = line.Trim();
+            // 去掉首尾 |
+            var inner = trimmed.Trim('|');
+            var cells = inner.Split('|');
+            for (int i = 0; i < cells.Length; i++)
+                cells[i] = cells[i].Trim();
+            return cells;
+        }
+
+        /// <summary>
+        /// 从分隔行解析各列对齐方式。
+        /// </summary>
+        private static TextAlignment[] ParseTableAlignments(string separatorLine)
+        {
+            var cells = SplitTableRow(separatorLine);
+            var alignments = new TextAlignment[cells.Length];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                var s = cells[i];
+                bool left = s.StartsWith(':');
+                bool right = s.EndsWith(':');
+                alignments[i] = (left && right) ? TextAlignment.Center
+                    : right ? TextAlignment.End
+                    : TextAlignment.Start;
+            }
+            return alignments;
+        }
+
+        /// <summary>
         /// 尝试匹配块级图片行：整行仅包含 <c>![alt](url)</c> 或 <c>![alt](url "title")</c>。
         /// 返回 (alt, url)，不匹配时返回 null。
         /// </summary>
@@ -908,6 +1431,52 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             @"width\s*=\s*""(\d+)""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex HtmlAttrHeightRegex = new(
             @"height\s*=\s*""(\d+)""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        // ===== 引用式链接支持 =====
+
+        /// <summary>
+        /// 匹配引用式链接定义行的正则：<c>[id]: url "title"</c>。
+        /// 支持 <c>&lt;url&gt;</c> 尖括号包裹形式，以及 <c>"title"</c> 标题。
+        /// </summary>
+        private static readonly Regex RefDefinitionLineRegex = new(
+            @"^\[([^\]]+)\]:\s*(?:<(\S+)>|(\S+))(?:\s+""([^""]*)"")?\s*$",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// 尝试匹配引用式链接定义行：<c>[id]: url "title"</c>。
+        /// 匹配成功返回 (Id, Url, Title)，否则返回 null。
+        /// 引用 ID 不区分大小写。
+        /// </summary>
+        private static (string Id, string Url, string? Title)? TryMatchRefDefinition(string line)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length < 5 || trimmed[0] != '[')
+                return null;
+
+            var match = RefDefinitionLineRegex.Match(trimmed);
+            if (!match.Success) return null;
+
+            var id = match.Groups[1].Value;
+            var url = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
+            var title = match.Groups[4].Success ? match.Groups[4].Value : null;
+
+            return (id, url, title);
+        }
+
+        /// <summary>
+        /// 解析引用行，提取嵌套层级（连续 &gt; 数量）和纯文本内容。
+        /// 例如 "&gt;&gt; text" → (Level=2, Content="text")。
+        /// </summary>
+        private static (int Level, string Content) ParseQuoteLine(string line)
+        {
+            int level = 0;
+            while (level < line.Length && line[level] == '>')
+                level++;
+            var content = level < line.Length ? line[level..] : "";
+            if (content.StartsWith(" "))
+                content = content[1..];
+            return (level, content);
+        }
 
         /// <summary>
         /// 解析 HTML &lt;img&gt; 标签，提取 src/alt/width/height 属性。
@@ -1175,7 +1744,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 }
             }
 
-            // 链接: [text](url)
+            // 链接: [text](url) 以及引用式链接 [text][ref] / [text][] / [text]（折叠式）
             // 使用手动扫描更可靠
             for (int i = 0; i < text.Length; i++)
             {
@@ -1187,15 +1756,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 if (text[i] == '[')
                 {
                     int closeBracket = text.IndexOf(']', i + 1);
-                    if (closeBracket > i
-                        && closeBracket + 1 < text.Length
-                        && text[closeBracket + 1] == '(')
+                    if (closeBracket <= i) continue;
+                    int afterBracket = closeBracket + 1;
+
+                    // 内联链接: [text](url)
+                    if (afterBracket < text.Length && text[afterBracket] == '(')
                     {
-                        int closeParen = text.IndexOf(')', closeBracket + 2);
+                        int closeParen = text.IndexOf(')', afterBracket + 1);
                         if (closeParen > closeBracket)
                         {
                             var linkText = text.Substring(i + 1, closeBracket - i - 1);
-                            var url = text.Substring(closeBracket + 2, closeParen - closeBracket - 2);
+                            var url = text.Substring(afterBracket + 1, closeParen - afterBracket - 1);
 
                             if (!OverlapsAny(atomics, i, closeParen - i + 1))
                             {
@@ -1207,6 +1778,59 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                                 });
                             }
                             i = closeParen;
+                            continue;
+                        }
+                    }
+
+                    // 引用式链接: [text][ref] 或 [text][] 或 [text]（折叠式，需有匹配定义）
+                    if (_currentRefDefinitions != null)
+                    {
+                        var linkText = text.Substring(i + 1, closeBracket - i - 1);
+                        string? refId = null;
+                        int endPos = closeBracket;
+
+                        // [text][ref] 形式
+                        if (afterBracket < text.Length && text[afterBracket] == '[')
+                        {
+                            int closeRefBracket = text.IndexOf(']', afterBracket + 1);
+                            if (closeRefBracket > afterBracket)
+                            {
+                                refId = text.Substring(afterBracket + 1, closeRefBracket - afterBracket - 1);
+                                endPos = closeRefBracket;
+                            }
+                        }
+                        // [text][] 形式（隐式引用：引用 ID = 链接文本）
+                        else if (afterBracket < text.Length - 1 && text[afterBracket] == '[' && text[afterBracket + 1] == ']')
+                        {
+                            refId = linkText;
+                            endPos = afterBracket + 1;
+                        }
+                        else
+                        {
+                            // [text] 折叠式：只有当文本匹配某个引用定义时才视为链接
+                            if (!string.IsNullOrEmpty(linkText) && _currentRefDefinitions.ContainsKey(linkText))
+                            {
+                                refId = linkText;
+                            }
+                        }
+
+                        // 空引用 ID 时退化为使用链接文本
+                        if (refId != null && refId.Length == 0)
+                            refId = linkText;
+
+                        if (refId != null && _currentRefDefinitions.TryGetValue(refId, out var refDef))
+                        {
+                            if (!OverlapsAny(atomics, i, endPos - i + 1))
+                            {
+                                atomics.Add(new AtomicSpanInfo
+                                {
+                                    Start = i,
+                                    Length = endPos - i + 1,
+                                    Span = new HyperlinkSpan { Text = linkText, Url = refDef.Url }
+                                });
+                            }
+                            i = endPos;
+                            continue;
                         }
                     }
                 }
@@ -1369,10 +1993,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 BlockType.FencedCodeBlock => BuildCodeBlockView(block.CodeLanguage, block.CodeContent ?? ""),
                 BlockType.UnorderedList => BuildListView(false, block.ListItems ?? Array.Empty<string>()),
                 BlockType.OrderedList => BuildListView(true, block.ListItems ?? Array.Empty<string>()),
-                BlockType.Blockquote => BuildBlockquoteView(block.QuoteLines ?? Array.Empty<string>()),
+                BlockType.Blockquote => BuildBlockquoteView(block.QuoteLines ?? Array.Empty<QuoteLine>()),
                 BlockType.HorizontalRule => BuildHorizontalRuleView(),
                 BlockType.Image => BuildImageView(block.ImageAlt ?? "", block.ImageUrl ?? "",
                     block.ImageWidth, block.ImageHeight),
+                BlockType.Table => BuildTableView(block.TableRows!, block.TableAlignments!, block.TableHasHeader),
                 _ => null,
             };
         }
@@ -1411,6 +2036,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
 
         internal static View BuildCodeBlockView(string? language, string code)
         {
+            // 检查自定义渲染器
+            if (language != null && _codeBlockRenderers.TryGetValue(language, out var customRenderer))
+            {
+                if (customRenderer.SupportsStreaming)
+                    return customRenderer.RenderComplete(code);
+                else
+                    return customRenderer.Render(code);
+            }
+
             var children = new VerticalStackLayout();
 
             // 语言标识
@@ -1449,6 +2083,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
 
         internal static View BuildListView(bool ordered, IReadOnlyList<string> items)
         {
+            // 检测是否为任务列表（包含 [ ] 或 [x] 标记的项）
+            bool isTaskList = false;
+            if (items.Count > 0)
+            {
+                foreach (var item in items)
+                {
+                    if (TryParseTaskItem(item, out _, out _))
+                    {
+                        isTaskList = true;
+                        break;
+                    }
+                }
+            }
+            if (isTaskList)
+            {
+                return BuildTaskListView(items);
+            }
+
             var stack = new VerticalStackLayout { Spacing = 2 };
 
             for (int i = 0; i < items.Count; i++)
@@ -1489,24 +2141,133 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             return stack;
         }
 
-        internal static View BuildBlockquoteView(IReadOnlyList<string> lines)
+        /// <summary>
+        /// 构建任务列表视图（使用 CheckBox + Label 的横向布局）。
+        /// 支持 <c>- [ ]</c>（未完成）和 <c>- [x]</c>（已完成）两种标记。
+        /// </summary>
+        internal static View BuildTaskListView(IReadOnlyList<string> items)
         {
-            var text = string.Join("\n", lines);
-            var spans = ParseInline(text);
+            var stack = new VerticalStackLayout { Spacing = 2 };
 
-            var label = new Label
+            for (int i = 0; i < items.Count; i++)
             {
-                FormattedText = new FormattedString(),
-                FontSize = BodyFontSize,
-                LineBreakMode = LineBreakMode.WordWrap,
-                TextColor = MarkdownTextColor,
+                TryParseTaskItem(items[i], out var cleanContent, out var isChecked);
+                var spans = ParseInline(cleanContent);
+
+                var checkBox = new CheckBox
+                {
+                    IsChecked = isChecked,
+                    VerticalOptions = LayoutOptions.Center,
+                    IsEnabled = false
+                };
+
+                var contentLabel = new Label
+                {
+                    FormattedText = new FormattedString(),
+                    FontSize = BodyFontSize,
+                    LineBreakMode = LineBreakMode.WordWrap,
+                    TextColor = MarkdownTextColor,
+                    VerticalOptions = LayoutOptions.Center,
+                };
+
+                foreach (var span in spans)
+                    contentLabel.FormattedText.Spans.Add(span);
+
+                if (contentLabel.FormattedText.Spans.Count == 0)
+                    contentLabel.Text = cleanContent;
+
+                stack.Children.Add(new HorizontalStackLayout
+                {
+                    Spacing = 4,
+                    Children = { checkBox, contentLabel },
+                });
+            }
+
+            return stack;
+        }
+
+        internal static View BuildBlockquoteView(IReadOnlyList<QuoteLine> lines)
+        {
+            if (lines.Count == 0)
+                return new VerticalStackLayout();
+            return BuildNestedBlockquote(lines, 0);
+        }
+
+        /// <summary>
+        /// 递归构建嵌套引用块。
+        /// baseLevel 为当前引用所处的层级（最外层为 0）；
+        /// Level == baseLevel + 1 的行属于当前层级的文本内容；
+        /// Level &gt; baseLevel + 1 的行触发递归创建子引用块。
+        /// </summary>
+        private static View BuildNestedBlockquote(IReadOnlyList<QuoteLine> lines, int baseLevel)
+        {
+            var contentStack = new VerticalStackLayout
+            {
+                BackgroundColor = baseLevel == 0 ? BlockquoteBackgroundColor : Colors.Transparent,
+                Padding = new Thickness(8, 4),
+                Spacing = 4,
             };
 
-            foreach (var span in spans)
-                label.FormattedText.Spans.Add(span);
+            var textLines = new List<string>();
+            int i = 0;
 
-            if (label.FormattedText.Spans.Count == 0)
-                label.Text = text;
+            void FlushTextLines()
+            {
+                if (textLines.Count > 0)
+                {
+                    var text = string.Join("\n", textLines);
+                    var spans = ParseInline(text);
+                    var label = new Label
+                    {
+                        FormattedText = new FormattedString(),
+                        FontSize = BodyFontSize,
+                        LineBreakMode = LineBreakMode.WordWrap,
+                        TextColor = MarkdownTextColor,
+                    };
+                    foreach (var span in spans)
+                        label.FormattedText.Spans.Add(span);
+                    if (label.FormattedText.Spans.Count == 0)
+                        label.Text = text;
+                    contentStack.Children.Add(label);
+                    textLines.Clear();
+                }
+            }
+
+            while (i < lines.Count)
+            {
+                if (lines[i].Level == baseLevel + 1)
+                {
+                    // 当前层级的文本行
+                    textLines.Add(lines[i].Content);
+                    i++;
+                }
+                else if (lines[i].Level > baseLevel + 1)
+                {
+                    // 遇到更深层级 → 先 flush 文本，再递归构建子引用块
+                    FlushTextLines();
+                    var nestedLines = new List<QuoteLine>();
+                    while (i < lines.Count && lines[i].Level > baseLevel + 1)
+                    {
+                        nestedLines.Add(lines[i]);
+                        i++;
+                    }
+                    if (nestedLines.Count > 0)
+                    {
+                        var nestedView = BuildNestedBlockquote(nestedLines, baseLevel + 1);
+                        contentStack.Children.Add(nestedView);
+                    }
+                }
+                else
+                {
+                    // Level &lt;= baseLevel（通常不应出现在规整输入中），跳过
+                    i++;
+                }
+            }
+
+            FlushTextLines();
+
+            if (contentStack.Children.Count == 0)
+                return new VerticalStackLayout();
 
             // 使用 Grid：左边竖线 + 右边内容
             var grid = new Grid
@@ -1516,7 +2277,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                     new ColumnDefinition { Width = BlockquoteBarWidth },
                     new ColumnDefinition { Width = GridLength.Star },
                 },
-                Margin = new Thickness(0, 4),
+                Margin = new Thickness(0, baseLevel == 0 ? 4 : 2),
             };
 
             var bar = new BoxView
@@ -1526,17 +2287,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
                 VerticalOptions = LayoutOptions.Fill,
             };
 
-            var contentContainer = new VerticalStackLayout
-            {
-                BackgroundColor = BlockquoteBackgroundColor,
-                Padding = new Thickness(8, 4),
-                Children = { label },
-            };
-
             grid.Children.Add(bar);
-            grid.Children.Add(contentContainer);
+            grid.Children.Add(contentStack);
             Grid.SetColumn(bar, 0);
-            Grid.SetColumn(contentContainer, 1);
+            Grid.SetColumn(contentStack, 1);
 
             return grid;
         }
@@ -1603,6 +2357,130 @@ namespace projectFrameCut.ApplicationAPIBase.Views.AIResponseHelper
             }
 
             return container;
+        }
+
+        // ===== 表格视图 =====
+
+        /// <summary>
+        /// 构建表格 View。
+        /// 使用 Grid 布局，支持表头、列对齐、交替行颜色和网格线。
+        /// </summary>
+        internal static View BuildTableView(
+            IReadOnlyList<IReadOnlyList<string>> rows,
+            IReadOnlyList<TextAlignment> alignments,
+            bool hasHeader)
+        {
+            if (rows.Count == 0)
+                return new VerticalStackLayout();
+
+            int colCount = alignments.Count > 0 ? alignments.Count : (rows[0]?.Count ?? 1);
+            if (colCount == 0) return new VerticalStackLayout();
+
+            var tableGrid = new Grid
+            {
+                ColumnSpacing = 0,
+                RowSpacing = 0,
+            };
+
+            // 定义列（等宽）
+            for (int c = 0; c < colCount; c++)
+                tableGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+            // 填充单元格
+            for (int r = 0; r < rows.Count; r++)
+            {
+                tableGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                var row = rows[r];
+                bool isHeader = hasHeader && r == 0;
+
+                // 交替行背景色
+                var bgColor = isHeader
+                    ? TableHeaderBackgroundColor
+                    : (r % 2 == (hasHeader ? 1 : 0) ? TableRowEvenBackgroundColor : TableRowOddBackgroundColor);
+
+                for (int c = 0; c < colCount; c++)
+                {
+                    var cellText = c < row.Count ? row[c] : "";
+
+                    // 解析单元格内联格式
+                    var spans = ParseInline(cellText);
+                    var label = new Label
+                    {
+                        FormattedText = new FormattedString(),
+                        FontSize = TableFontSize,
+                        LineBreakMode = LineBreakMode.WordWrap,
+                        VerticalTextAlignment = TextAlignment.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        Padding = new Thickness(TableCellPadding),
+                        BackgroundColor = bgColor,
+                        HorizontalTextAlignment = c < alignments.Count ? alignments[c] : TextAlignment.Start,
+                    };
+
+                    if (isHeader)
+                    {
+                        label.FontAttributes = FontAttributes.Bold;
+                    }
+
+                    if (spans.Count > 0)
+                    {
+                        foreach (var span in spans)
+                            label.FormattedText.Spans.Add(span);
+                    }
+                    else
+                    {
+                        label.Text = cellText;
+                    }
+
+                    Grid.SetRow(label, r);
+                    Grid.SetColumn(label, c);
+                    tableGrid.Children.Add(label);
+                }
+            }
+
+            // 添加垂直网格线（列之间的竖线，跨所有行）
+            for (int c = 0; c < colCount - 1; c++)
+            {
+                var vLine = new BoxView
+                {
+                    Color = TableBorderColor,
+                    WidthRequest = 1,
+                    VerticalOptions = LayoutOptions.Fill,
+                    HorizontalOptions = LayoutOptions.End,
+                    InputTransparent = true,
+                };
+                Grid.SetRow(vLine, 0);
+                Grid.SetColumn(vLine, c);
+                Grid.SetRowSpan(vLine, rows.Count);
+                tableGrid.Children.Add(vLine);
+            }
+
+            // 添加水平网格线（行之间的横线）
+            for (int r = 0; r < rows.Count - 1; r++)
+            {
+                var hLine = new BoxView
+                {
+                    Color = TableBorderColor,
+                    HeightRequest = 1,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.End,
+                    InputTransparent = true,
+                };
+                Grid.SetRow(hLine, r);
+                Grid.SetColumn(hLine, 0);
+                Grid.SetColumnSpan(hLine, colCount);
+                tableGrid.Children.Add(hLine);
+            }
+
+            // 外层边框
+            return new Border
+            {
+                StrokeShape = new RoundRectangle { CornerRadius = 4 },
+                Stroke = TableBorderColor,
+                StrokeThickness = 1,
+                Padding = 0,
+                Margin = new Thickness(0, 8),
+                Content = tableGrid,
+            };
         }
     }
 }
