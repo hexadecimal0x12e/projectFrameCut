@@ -231,6 +231,88 @@
         "DontTranslate": false
       },
       {
+        "Id": "AIAssistant_ChatView_Advanced",
+        "Value": "\u64A4\u9500/\u5206\u652F\u804A\u5929",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Attach_Clipboard",
+        "Value": "\u4ECE\u526A\u8D34\u677F\u7C98\u8D34",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Attach_ClipboardUnavailable",
+        "Value": "\u65E0\u6CD5\u8BFB\u53D6\u526A\u8D34\u677F\uFF0C\u53EF\u80FD\u56E0\u4E3A\uFF1A\r- \u526A\u8D34\u677F\u662F\u7A7A\u7684\uFF0C\u6216\u8005\u53EA\u6709\u6587\u672C\u3002\r- \u526A\u8D34\u677F\u4E2D\u7684\u56FE\u7247\u6216\u6587\u4EF6\u4E0D\u53D7\u652F\u6301\u3002\r- \u5E94\u7528\u6CA1\u6709\u8BFB\u53D6\u526A\u8D34\u677F\u7684\u6743\u9650\u3002\u8BF7\u5728\u8BE2\u95EE\u526A\u8D34\u677F\u8BBF\u95EE\u65F6\u70B9\u51FB\u201C\u5141\u8BB8\u201D\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Attach_File",
+        "Value": "\u4E0A\u4F20\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Attach_Image",
+        "Value": "\u4E0A\u4F20\u56FE\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachSheetTitle",
+        "Value": "\u6DFB\u52A0\u9644\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "\u9009\u62E9\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "{filename} \u8D85\u8FC7\u4E86 {size} \u7684\u5927\u5C0F\u9650\u5236",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "AIAssistant_ChatView_BranchFromHere",
         "Value": "\u4ECE\u6B64\u5904\u5206\u652F",
         "Mode": "ConstString",
@@ -535,6 +617,14 @@
       {
         "Id": "AppShell_AssetsTab",
         "Value": "\u7D20\u6750\u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AppShell_ChatWithAssistant",
+        "Value": "",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6714,14 +6804,6 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AIAssistant_ChatView_Advanced",
-        "Value": "\u64A4\u9500/\u5206\u652F\u804A\u5929",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14496,6 +14578,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -22241,6 +22357,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -29994,6 +30144,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -37730,6 +37914,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -45465,6 +45683,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -53216,6 +53468,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -60957,6 +61243,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -68701,6 +69021,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -76438,6 +76792,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -84182,6 +84570,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -91923,6 +92345,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -99659,6 +100115,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ],
@@ -107404,6 +107894,40 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -115141,6 +115665,40 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTitle",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_AttachTooLarge",
+        "Value": "Unset localization item:AIAssistant_ChatView_AttachTooLarge(string filename: {filename}, string size: {size})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "filename"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "filename",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       }
     ]

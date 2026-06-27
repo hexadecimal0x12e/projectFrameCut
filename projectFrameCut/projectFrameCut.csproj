@@ -138,6 +138,8 @@
 		<MauiCss Remove="AIAssistance\AgentSystem\**" />
 		<MauiXaml Remove="AIAssistance\AgentSystem\**" />
 		<None Remove="AIAssistance\AgentSystem\**" />
+
+		<Compile Update="Localize\**\*" Visible="false" />
 	</ItemGroup>
 
 

@@ -20,7 +20,19 @@ internal sealed class AssistanceChatSession
     {
         get
         {
-            string? message = Messages.LastOrDefault()?.Message;
+            AssistanceChatMessageSnapshot? last = Messages.LastOrDefault();
+            if (last is null)
+            {
+                return string.Empty;
+            }
+
+            // 如果消息有附件但没有文字，用附件文件名作为预览
+            if (string.IsNullOrWhiteSpace(last.Message) && last.Attachments?.Count > 0)
+            {
+                return string.Join(", ", last.Attachments.Select(a => a.FileName));
+            }
+
+            string? message = last.Message;
             if (string.IsNullOrWhiteSpace(message))
             {
                 return string.Empty;
@@ -54,6 +66,26 @@ internal sealed class AssistanceChatMessageSnapshot
     public string ToolCallsText { get; init; } = string.Empty;
 
     public bool HasFeedbackSubmitted { get; init; }
+
+    /// <summary>
+    /// 附件列表（图片/文件），仅在用户消息中有效。
+    /// 文件存储在 chats/{sessionId:N}/media/ 目录下。
+    /// </summary>
+    public List<ChatAttachmentSnapshot>? Attachments { get; init; }
+}
+
+public sealed class ChatAttachmentSnapshot
+{
+    public required string FileName { get; init; }
+
+    public required string MimeType { get; init; }
+
+    public long FileSize { get; init; }
+
+    /// <summary>
+    /// 相对路径，相对于 chats/{sessionId:N}/ 目录。例如 "media/{guid}.jpg"。
+    /// </summary>
+    public required string StoredRelativePath { get; init; }
 }
 
 internal sealed class AssistanceChatHistorySnapshot
@@ -336,6 +368,13 @@ internal static class AssistanceChatSessionStore
                     ReasoningText = message.ReasoningText,
                     ToolCallsText = message.ToolCallsText,
                     HasFeedbackSubmitted = message.HasFeedbackSubmitted,
+                    Attachments = message.Attachments?.Select(a => new ChatAttachmentSnapshot
+                    {
+                        FileName = a.FileName,
+                        MimeType = a.MimeType,
+                        FileSize = a.FileSize,
+                        StoredRelativePath = a.StoredRelativePath,
+                    }).ToList(),
                 });
             }
         }
@@ -370,6 +409,13 @@ internal static class AssistanceChatSessionStore
                 ReasoningText = x.ReasoningText,
                 ToolCallsText = x.ToolCallsText,
                 HasFeedbackSubmitted = x.HasFeedbackSubmitted,
+                Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
+                {
+                    FileName = a.FileName,
+                    MimeType = a.MimeType,
+                    FileSize = a.FileSize,
+                    StoredRelativePath = a.StoredRelativePath,
+                }).ToList(),
             }).ToList(),
             History = session.History.Select(x => new AssistanceChatHistoryDiskSnapshot
             {

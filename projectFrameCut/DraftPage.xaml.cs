@@ -434,7 +434,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
-        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir);
+        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir, ProjectName);
         ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;

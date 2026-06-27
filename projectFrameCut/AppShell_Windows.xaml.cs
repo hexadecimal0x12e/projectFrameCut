@@ -33,7 +33,7 @@
 
         private void AppShell_Navigated(object? sender, Microsoft.Maui.Controls.ShellNavigatedEventArgs e)
         {
-            var currentPage = Microsoft.Maui.Controls.Shell.Current?.CurrentPage;
+            var currentPage = AppShell.instance.CurrentPage;
 
             if(!Shell.GetNavBarIsVisible(currentPage))
             {

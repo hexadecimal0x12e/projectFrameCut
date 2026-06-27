@@ -278,6 +278,7 @@ namespace projectFrameCut
                         var assetItemN = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Icon = new SymbolIcon { Symbol = Symbol.SlideShow } };
                         var createItemN = new NavigationViewItem { Content = Localized.AppShell_CreateTab, Tag = "Create", Height = 36, Icon = new SymbolIcon { Symbol = Symbol.Add } };
                         var settingItemN = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Icon = new SymbolIcon { Symbol = Symbol.Setting } };
+                        var assistantItemN = new NavigationViewItem { Content = Localized.AppShell_ChatWithAssistant, Tag = "Assistant", Height = 36, Icon = new SymbolIcon { Symbol = Symbol.Message } };
 
                         var nativeNav = new NavigationView
                         {
@@ -294,6 +295,7 @@ namespace projectFrameCut
                         nativeNav.MenuItems.Add(homeItemN);
                         nativeNav.MenuItems.Add(assetItemN);
                         nativeNav.MenuItems.Add(templateItemN);
+                        nativeNav.FooterMenuItems.Add(assistantItemN);
                         nativeNav.FooterMenuItems.Add(createItemN);
                         nativeNav.FooterMenuItems.Add(settingItemN);
 
@@ -305,8 +307,15 @@ namespace projectFrameCut
                             {
                                 try
                                 {
+                                    if (tag == "Assistant")
+                                    {
+                                        nativeNav.SelectedItem = homeItemN;
+                                        await DisplayAssistantWindow();
+                                        return;
+                                    }
                                     Microsoft.Maui.Controls.Page? page = tag switch
                                     {
+                                        var _ when args.IsSettingsInvoked => new MainSettingsPage(),
                                         "HomePage" => new HomePage(),
                                         "TemplateViewPage" => new TemplateViewPage(),
                                         "Assets" => new AssetsLibraryPage(),
@@ -554,6 +563,40 @@ namespace projectFrameCut
         }
 
 #endif
+
+        public static async Task DisplayAssistantWindow()
+        {
+#if WINDOWS
+            Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "Chats"));
+#else
+            Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "chats"));
+#endif
+            var view = new AIAssistance.AssistanceChatSessionsView(MauiProgram.DataPath, null)
+            {
+                GlobalToolCallFactories = null!
+            };
+            var content = new ContentPage { Content = view, Title = "" };
+            var page = new NavigationPage(content) { Title = "" };
+            NavigationPage.SetHasNavigationBar(page, false);
+            NavigationPage.SetHasNavigationBar(content, false);
+            var newWindow = new Microsoft.Maui.Controls.Window(page)
+            {
+                Title = "Assistant P",
+            };
+#if WINDOWS
+
+            newWindow.HandlerChanged += (s, e) =>
+            {
+                var platformView = newWindow.Handler?.PlatformView;
+                if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+                }
+            };
+#endif
+
+            Application.Current?.OpenWindow(newWindow);
+        }
 
     }
 }

@@ -35,7 +35,7 @@
                                                      BindingContextChanged="SubViewCollection_BindingContextChanged" />
                                 <!-- ===== User message: plain text ===== -->
                                 <Label Text="{Binding Message}"
-                                       IsVisible="{Binding IsUser}"
+                                       IsVisible="{Binding IsUserMessageWithText}"
                                        LineBreakMode="WordWrap"
                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFEEEEEE}"/>
 
@@ -74,7 +74,7 @@
                                                 Clicked="AIReplyFeedbackReportButton_Clicked"/>
                                     </HorizontalStackLayout>
 
-                                    <HorizontalStackLayout HorizontalOptions="End" Spacing="4">
+                                    <HorizontalStackLayout HorizontalOptions="End" Spacing="4" IsVisible="{Binding IsFirstTurn, Converter={toolkit:InvertedBoolConverter}}">
                                         <!-- ===== 重新生成（仅 AI 消息） ===== -->
                                         <Button FontFamily="Icons"
                                                 Text="&#xe042;"
@@ -145,19 +145,36 @@
                    Text="{l:Localized Key=AIAssistant_InfoGrayText}"/>
         </Grid>
 
+        <!-- Selected files preview -->
+        <VerticalStackLayout Grid.Row="2" x:Name="SelectedFilesPreview"
+                             IsVisible="False" Spacing="4" Margin="0,0,0,4">
+        </VerticalStackLayout>
+
         <!-- Input area -->
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button Grid.Column="0"
+                    x:Name="AIAttachButton"
+                    FontFamily="Icons"
+                    Text="&#xe226;"
+                    ToolTipProperties.Text="Attach files"
+                    Padding="8,2"
+                    FontSize="18"
+                    MinimumHeightRequest="32"
+                    Clicked="AIAttachButton_Clicked"/>
             <Entry x:Name="AIInputButton"
-                   Grid.Column="0"
+                   Grid.Column="1"
                    HorizontalOptions="Fill"
                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
                    ReturnType="Send"
                    Completed="AIInputButton_Completed"/>
-            <Button Grid.Column="1"
+            <Button Grid.Column="2"
                     x:Name="AISendButton"
                     HorizontalOptions="Center"
                     Text="{l:Localized Key=AIAssistant_ChatView_Send}"
                     Clicked="AISendButton_Clicked"/>
         </Grid>
     </Grid>
+    <ContentView.GestureRecognizers>
+        <DropGestureRecognizer AllowDrop="True" Drop="FileDropGestureRecognizer_Drop"/>
+    </ContentView.GestureRecognizers>
 </ContentView>

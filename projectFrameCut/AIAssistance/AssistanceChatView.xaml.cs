@@ -1,15 +1,20 @@
 ﻿namespace projectFrameCut.AIAssistance;
 
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Shapes;
 using OpenAI;
-using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
-using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingManager;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -17,7 +22,7 @@ using System.Text;
 using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
-using System.Diagnostics;
+using Path = System.IO.Path;
 
 public partial class AssistanceChatView : ContentView
 {
@@ -27,6 +32,7 @@ public partial class AssistanceChatView : ContentView
     private readonly IChatClient? _chatClient;
     private readonly Guid _sessionId;
     private readonly string? _projectPath;
+    private readonly string? _projectName;
     private bool _isReplying;
     private CancellationTokenSource? _cts;
 
@@ -36,6 +42,26 @@ public partial class AssistanceChatView : ContentView
     /// </summary>
     private bool _imeCompositionJustEnded;
     private static readonly ILoggerFactory AILoggerFactory = LoggerFactory.Create(_ => { });
+    private readonly List<ChatFileAttachment> _pendingAttachments = [];
+
+    /// <summary>
+    /// 会话媒体目录根路径：chats/{sessionId:N}/
+    /// </summary>
+    private string GetSessionMediaDirectory()
+    {
+        string chatsDir = Path.Combine(_projectPath ?? throw new InvalidOperationException("_projectPath was not set, this is not excepted."), "chats");
+        return Path.Combine(chatsDir, _sessionId.ToString("N"));
+    }
+
+    /// <summary>
+    /// 将会话内保存的附件相对路径解析为实际文件路径。
+    /// 兼容旧数据里误存的 "media/xxx" 形式，也兼容只存文件名的形式。
+    /// </summary>
+    private static string ResolveAttachmentFullPath(string mediaDir, string storedRelativePath)
+    {
+        string fileName = Path.GetFileName(storedRelativePath);
+        return Path.Combine(mediaDir, fileName);
+    }
 
     public Func<IEnumerable<AIFunction>>? ToolCallFactories;
 
@@ -43,10 +69,11 @@ public partial class AssistanceChatView : ContentView
     {
     }
 
-    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null)
+    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null)
     {
         InitializeComponent();
         _projectPath = projectPath;
+        _projectName = projectName;
         ToolCallFactories = aIFunctionsFactory;
         AIChatHistoryView.ItemsSource = _messages;
         _messages.CollectionChanged += Messages_CollectionChanged;
@@ -70,6 +97,578 @@ public partial class AssistanceChatView : ContentView
         }
 
         await SendMessageAsync();
+    }
+
+    /// <summary>
+    /// 附件按钮点击：弹出 ActionSheet 让用户选择上传图片、上传文件或从剪贴板粘贴。
+    /// </summary>
+    private async void AIAttachButton_Clicked(object? sender, EventArgs e)
+    {
+        if (_isReplying)
+            return;
+
+        try
+        {
+            string[] actions = [
+                Localized.AIAssistant_ChatView_Attach_Image,
+                Localized.AIAssistant_ChatView_Attach_File,
+                Localized.AIAssistant_ChatView_Attach_Clipboard,
+            ];
+
+            string? selected = await DisplayActionSheetAsync(
+                Localized.AIAssistant_ChatView_AttachSheetTitle,
+                Localized._Cancel,
+                null,
+                actions);
+
+            if (string.IsNullOrWhiteSpace(selected) || selected == Localized._Cancel)
+                return;
+
+            if (selected == Localized.AIAssistant_ChatView_Attach_Image)
+            {
+                await PickImagesAsync();
+            }
+            else if (selected == Localized.AIAssistant_ChatView_Attach_File)
+            {
+                await PickFilesAsync();
+            }
+            else if (selected == Localized.AIAssistant_ChatView_Attach_Clipboard)
+            {
+                await PasteFromClipboardAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "File attach error", this);
+        }
+    }
+
+    /// <summary>
+    /// 打开文件选择器，仅选择图片类型文件。
+    /// </summary>
+    private async Task PickImagesAsync()
+    {
+        PickOptions options = new()
+        {
+            PickerTitle = Localized.AIAssistant_ChatView_AttachTitle,
+            FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"] },
+                { DevicePlatform.Android, ["image/*"] },
+                { DevicePlatform.iOS, ["public.image"] },
+                { DevicePlatform.MacCatalyst, ["public.image"] },
+            }),
+        };
+
+        IEnumerable<FileResult>? results = await FilePicker.Default.PickMultipleAsync(options);
+        if (results is not null)
+        {
+            await ProcessFilePickerResultsAsync(results);
+        }
+    }
+
+    /// <summary>
+    /// 打开文件选择器，选择所有支持的附件类型（图片和文档）。
+    /// </summary>
+    private async Task PickFilesAsync()
+    {
+        PickOptions options = new()
+        {
+            PickerTitle = Localized.AIAssistant_ChatView_AttachTitle,
+            FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf", ".txt", ".csv", ".json", ".xml", ".md"] },
+                { DevicePlatform.Android, ["image/*", "application/pdf", "text/plain"] },
+                { DevicePlatform.iOS, ["public.image", "com.adobe.pdf", "public.plain-text"] },
+                { DevicePlatform.MacCatalyst, ["public.image", "com.adobe.pdf", "public.plain-text"] },
+            }),
+        };
+
+        IEnumerable<FileResult>? results = await FilePicker.Default.PickMultipleAsync(options);
+        if (results is not null)
+        {
+            await ProcessFilePickerResultsAsync(results);
+        }
+    }
+
+    /// <summary>
+    /// 处理文件选择器返回的结果，创建附件条目。
+    /// </summary>
+    private async Task ProcessFilePickerResultsAsync(IEnumerable<FileResult> results)
+    {
+        const long maxFileSize = 20L * 1024 * 1024; // 20 MB
+        foreach (FileResult? result in results)
+        {
+            if (result is null)
+                continue;
+
+            // 检查是否已添加同名文件
+            if (_pendingAttachments.Any(a => string.Equals(a.FileName, result.FileName, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            // 读取文件信息
+            string? fullPath = result.FullPath;
+            long fileSize = 0;
+            if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+            {
+                fileSize = new FileInfo(fullPath).Length;
+            }
+            else
+            {
+                // 通过流读取估算大小
+                using Stream? readStream = await result.OpenReadAsync();
+                if (readStream is not null)
+                    fileSize = readStream.Length;
+            }
+
+            if (fileSize > maxFileSize)
+            {
+                await DisplayAlertAsync("Warning",
+                    $"{result.FileName} exceeds the 20 MB size limit.",
+                    Localized._OK);
+                continue;
+            }
+
+            // 创建临时附件条目
+            var attachment = new ChatFileAttachment
+            {
+                FileName = result.FileName,
+                MimeType = GetMimeType(Path.GetExtension(result.FileName)),
+                FileSize = fileSize,
+                SourceFileResult = result,
+                TempFilePath = fullPath,
+            };
+
+            _pendingAttachments.Add(attachment);
+        }
+
+        UpdateAttachmentsPreview();
+    }
+
+    /// <summary>
+    /// 从剪贴板粘贴图片或文件。支持 WinUI / Android / iOS / MacCatalyst 平台。
+    /// WinUI：位图 → 存储文件引用
+    /// Android：image/* MIME → content:// URI → 文件
+    /// iOS / MacCatalyst：UIImage → 临时 PNG 文件
+    /// </summary>
+    private async Task PasteFromClipboardAsync()
+    {
+        try
+        {
+#if WINDOWS
+            Windows.ApplicationModel.DataTransfer.DataPackageView dataPackageView =
+                Windows.ApplicationModel.DataTransfer.Clipboard.GetContent();
+
+            // 1) 尝试读取剪贴板中的位图（截图、复制图片等）
+            if (dataPackageView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Bitmap))
+            {
+                Windows.Storage.Streams.IRandomAccessStreamReference streamRef =
+                    await dataPackageView.GetBitmapAsync();
+                using Windows.Storage.Streams.IRandomAccessStream stream =
+                    await streamRef.OpenReadAsync();
+
+                string tempDir = Path.Combine(Path.GetTempPath(), "ClipboardContent");
+                Directory.CreateDirectory(tempDir);
+                string fileName = $"clipboard_image_{Guid.NewGuid():N}.png";
+                string filePath = Path.Combine(tempDir, fileName);
+
+                await using (System.IO.Stream managedStream = stream.AsStream())
+                await using (System.IO.FileStream fileStream = File.Create(filePath))
+                {
+                    await managedStream.CopyToAsync(fileStream);
+                }
+
+                AddAttachmentFromFile(filePath, fileName, "image/png");
+                UpdateAttachmentsPreview();
+                return;
+            }
+
+            // 2) 尝试读取剪贴板中的文件引用
+            if (dataPackageView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            {
+                var items = await dataPackageView.GetStorageItemsAsync();
+                foreach (var item in items)
+                {
+                    if (item is Windows.Storage.StorageFile file)
+                        AddAttachmentFromFile(file.Path, file.Name);
+                }
+
+                UpdateAttachmentsPreview();
+                return;
+            }
+#elif ANDROID
+            var clipboardManager = (Android.Content.ClipboardManager?)
+                Android.App.Application.Context.GetSystemService(Android.Content.Context.ClipboardService);
+
+            if (clipboardManager is null || !clipboardManager.HasPrimaryClip)
+            {
+                await ShowClipboardUnavailableAsync();
+                return;
+            }
+
+            Android.Content.ClipData? clipData = clipboardManager.PrimaryClip;
+            if (clipData is null || clipData.ItemCount == 0)
+            {
+                await ShowClipboardUnavailableAsync();
+                return;
+            }
+
+            bool foundAny = false;
+            string tempDir = Path.Combine(FileSystem.CacheDirectory, "ClipboardContent");
+            Directory.CreateDirectory(tempDir);
+
+            for (int i = 0; i < clipData.ItemCount; i++)
+            {
+                Android.Content.ClipData.Item? item = clipData.GetItemAt(i);
+                if (item is null)
+                    continue;
+
+                // 优先处理图片 URI（content:// 或 file://）
+                Android.Net.Uri? uri = item.Uri;
+                if (uri is not null)
+                {
+                    const string imageWildcard = "image/*";
+                    string? mimeType = clipData.Description?.GetMimeType(i);
+                    bool isImage = mimeType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true
+                        || clipData.Description?.HasMimeType(imageWildcard) == true;
+
+                    if (isImage)
+                    {
+                        try
+                        {
+                            string? resolvedPath = await CopyContentUriToTempFileAsync(uri, tempDir);
+                            if (resolvedPath is not null)
+                            {
+                                AddAttachmentFromFile(resolvedPath, Path.GetFileName(resolvedPath), mimeType ?? "image/png");
+                                foundAny = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogDiagnostic($"Android clipboard image read error: {ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        // 非图片的 content URI，尝试复制为通用附件
+                        try
+                        {
+                            string? resolvedPath = await CopyContentUriToTempFileAsync(uri, tempDir);
+                            if (resolvedPath is not null)
+                            {
+                                AddAttachmentFromFile(resolvedPath, Path.GetFileName(resolvedPath));
+                                foundAny = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogDiagnostic($"Android clipboard file read error: {ex.Message}");
+                        }
+                    }
+                }
+
+                // 如果没有 URI，尝试 HTML 文本中的图片链接
+                if (!foundAny && item.HtmlText is not null)
+                {
+                    string html = item.HtmlText;
+                    int imgStart = html.IndexOf("<img ", StringComparison.OrdinalIgnoreCase);
+                    if (imgStart >= 0)
+                    {
+                        int srcStart = html.IndexOf("src=\"", imgStart, StringComparison.OrdinalIgnoreCase);
+                        if (srcStart >= 0)
+                        {
+                            srcStart += 5;
+                            int srcEnd = html.IndexOf('"', srcStart);
+                            if (srcEnd > srcStart)
+                            {
+                                string imgUrl = html[srcStart..srcEnd];
+                                if (Uri.TryCreate(imgUrl, UriKind.Absolute, out Uri? imgUri)
+                                    && (imgUri.Scheme == "file" || imgUri.Scheme == "content"))
+                                {
+                                    try
+                                    {
+                                        string? resolvedPath = await CopyContentUriToTempFileAsync(
+                                            Android.Net.Uri.Parse(imgUri.ToString())!, tempDir);
+                                        if (resolvedPath is not null)
+                                        {
+                                            AddAttachmentFromFile(resolvedPath, Path.GetFileName(resolvedPath));
+                                            foundAny = true;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogDiagnostic($"Android clipboard HTML image error: {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (foundAny)
+            {
+                UpdateAttachmentsPreview();
+                return;
+            }
+#elif iDevices
+            var pasteboard = UIKit.UIPasteboard.General;
+            bool foundAny = false;
+
+            string tempDir = Path.Combine(FileSystem.CacheDirectory, "ClipboardContent");
+            Directory.CreateDirectory(tempDir);
+
+            // 1) 尝试获取图片
+            if (pasteboard.HasImages)
+            {
+                UIKit.UIImage? image = pasteboard.Image;
+                if (image is not null)
+                {
+                    string fileName = $"clipboard_image_{Guid.NewGuid():N}.png";
+                    string filePath = Path.Combine(tempDir, fileName);
+
+                    // 如果原始图片有 Alpha 通道，用 PNG 保存；否则可用 JPEG 压缩
+                    Foundation.NSData? imageData = image.AsPNG();
+                    if (imageData is null)
+                    {
+                        imageData = image.AsJPEG();
+                        if (imageData is not null)
+                        {
+                            fileName = Path.ChangeExtension(fileName, ".jpg");
+                            filePath = Path.Combine(tempDir, fileName);
+                        }
+                    }
+
+                    if (imageData is not null)
+                    {
+                        System.IO.File.WriteAllBytes(filePath, imageData.ToArray());
+                        string mimeType = Path.GetExtension(fileName).Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+                            ? "image/jpeg" : "image/png";
+                        AddAttachmentFromFile(filePath, fileName, mimeType);
+                        foundAny = true;
+                    }
+                }
+            }
+
+            // 2) 尝试获取文件 URL（iOS 上复制文件的场景）
+            if (!foundAny && pasteboard.HasUrls)
+            {
+                foreach (var url in pasteboard.Urls ?? [])
+                {
+                    if (url.IsFileUrl)
+                    {
+                        string? path = url.Path;
+                        if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                        {
+                            AddAttachmentFromFile(path, Path.GetFileName(path));
+                            foundAny = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundAny)
+            {
+                UpdateAttachmentsPreview();
+                return;
+            }
+#endif
+
+            // 所有平台：剪贴板中无可用内容
+            await ShowClipboardUnavailableAsync();
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"Clipboard paste error: {ex.Message}");
+            await DisplayAlertAsync(
+                Localized._Error,
+                $"Failed to paste from clipboard: {ex.Message}",
+                Localized._OK);
+        }
+    }
+
+#if ANDROID
+    /// <summary>
+    /// 将 Android content:// URI 指向的数据复制到临时文件，返回文件路径。
+    /// </summary>
+    private static async Task<string?> CopyContentUriToTempFileAsync(Android.Net.Uri uri, string tempDir)
+    {
+        var context = Android.App.Application.Context;
+        using Android.Content.Res.AssetFileDescriptor? afd = context.ContentResolver?.OpenAssetFileDescriptor(uri, "r");
+        if (afd is null)
+        {
+            // 如果无法以 fd 方式打开，尝试以 stream 方式读取
+            using System.IO.Stream? input = context.ContentResolver?.OpenInputStream(uri);
+            if (input is null)
+                return null;
+
+            // 尝试从游标获取 display name
+            string displayName = "clipboard_file";
+            using var cursor = context.ContentResolver?.Query(uri, null, null, null, null);
+            if (cursor?.MoveToFirst() == true)
+            {
+                int nameIndex = cursor.GetColumnIndex(Android.Provider.OpenableColumns.DisplayName);
+                if (nameIndex >= 0)
+                    displayName = cursor.GetString(nameIndex) ?? displayName;
+            }
+
+            string ext = Path.GetExtension(displayName);
+            if (string.IsNullOrEmpty(ext))
+                ext = ".bin";
+
+            string fileName = $"clipboard_{Guid.NewGuid():N}{ext}";
+            string filePath = Path.Combine(tempDir, fileName);
+
+            await using System.IO.FileStream output = System.IO.File.Create(filePath);
+            await input.CopyToAsync(output);
+            return filePath;
+        }
+
+        // 通过文件描述符高效复制
+        await using System.IO.Stream fdStream = afd.CreateInputStream()!;
+        string fdDisplayName = "clipboard_file";
+        using var fdCursor = context.ContentResolver?.Query(uri, null, null, null, null);
+        if (fdCursor?.MoveToFirst() == true)
+        {
+            int nameIdx = fdCursor.GetColumnIndex(Android.Provider.OpenableColumns.DisplayName);
+            if (nameIdx >= 0)
+                fdDisplayName = fdCursor.GetString(nameIdx) ?? fdDisplayName;
+        }
+
+        string fdExt = Path.GetExtension(fdDisplayName);
+        if (string.IsNullOrEmpty(fdExt))
+            fdExt = ".bin";
+
+        string fdFileName = $"clipboard_{Guid.NewGuid():N}{fdExt}";
+        string fdFilePath = Path.Combine(tempDir, fdFileName);
+
+        await using System.IO.FileStream fdOutput = System.IO.File.Create(fdFilePath);
+        await fdStream.CopyToAsync(fdOutput);
+        return fdFilePath;
+    }
+#endif
+
+    /// <summary>
+    /// 从文件路径创建 ChatFileAttachment 并加入待发送列表（带去重 / 大小检查）。
+    /// </summary>
+    private void AddAttachmentFromFile(string filePath, string? displayFileName = null, string? overrideMimeType = null)
+    {
+        const long maxFileSize = 20L * 1024 * 1024;
+
+        string fileName = displayFileName ?? Path.GetFileName(filePath);
+
+        if (_pendingAttachments.Any(a => string.Equals(a.FileName, fileName, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        if (!System.IO.File.Exists(filePath))
+            return;
+
+        long fileSize = new FileInfo(filePath).Length;
+        if (fileSize > maxFileSize)
+        {
+            // 超过大小限制，跳过（不在 UI 线程弹框，由调用方决定是否提示）
+            return;
+        }
+
+        var attachment = new ChatFileAttachment
+        {
+            FileName = fileName,
+            MimeType = overrideMimeType ?? GetMimeType(Path.GetExtension(fileName)),
+            FileSize = fileSize,
+            SourceFileResult = null,
+            TempFilePath = filePath,
+        };
+
+        _pendingAttachments.Add(attachment);
+    }
+
+    /// <summary>
+    /// 显示"剪贴板中无可用内容"提示。
+    /// </summary>
+    private async Task ShowClipboardUnavailableAsync()
+    {
+        await DisplayAlertAsync(
+            Localized._Info,
+            Localized.AIAssistant_ChatView_Attach_ClipboardUnavailable,
+            Localized._OK);
+    }
+
+
+
+    /// <summary>
+    /// 移除待发送的附件。
+    /// </summary>
+    private void RemovePendingAttachment(ChatFileAttachment attachment)
+    {
+        _pendingAttachments.Remove(attachment);
+        UpdateAttachmentsPreview();
+    }
+
+    /// <summary>
+    /// 更新附件预览区域。
+    /// </summary>
+    private void UpdateAttachmentsPreview()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SelectedFilesPreview.Children.Clear();
+
+            if (_pendingAttachments.Count == 0)
+            {
+                SelectedFilesPreview.IsVisible = false;
+                return;
+            }
+
+            SelectedFilesPreview.IsVisible = true;
+
+            foreach (ChatFileAttachment attachment in _pendingAttachments)
+            {
+                // 每个附件显示为一个 chip: 文件名 + 删除按钮
+                var chip = new Border
+                {
+                    StrokeThickness = 1,
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+                    Padding = new Thickness(6, 2),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    BackgroundColor = Color.FromArgb("#20CCCCCC"),
+                    Stroke = Color.FromArgb("#60CCCCCC"),
+                    Content = new HorizontalStackLayout
+                    {
+                        Spacing = 4,
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = GetFileTypeIcon(attachment.FileName),
+                                FontFamily = "Icons",
+                                FontSize = 14,
+                                VerticalOptions = LayoutOptions.Center,
+                            },
+                            new Label
+                            {
+                                Text = attachment.FileName,
+                                FontSize = 12,
+                                VerticalOptions = LayoutOptions.Center,
+                                LineBreakMode = LineBreakMode.TailTruncation,
+                                MaximumWidthRequest = 150,
+                            },
+                            new Button
+                            {
+                                Text = "\ue5cd",
+                                FontFamily = "Icons",
+                                FontSize = 10,
+                                Padding = new Thickness(2),
+                                MinimumWidthRequest = 20,
+                                MinimumHeightRequest = 20,
+                                BackgroundColor = Colors.Transparent,
+                                Command = new Command(() => RemovePendingAttachment(attachment)),
+                            },
+                        },
+                    },
+                };
+                SelectedFilesPreview.Children.Add(chip);
+            }
+        });
     }
 
     /// <summary>
@@ -141,7 +740,7 @@ public partial class AssistanceChatView : ContentView
 
         if (GetHostWindow() is MultiWindowItem host)
         {
-            host.NavigateTo(new AssistanceChatSessionsView(_projectPath));
+            host.NavigateTo(new AssistanceChatSessionsView(_projectPath, _projectName));
         }
     }
 
@@ -155,6 +754,7 @@ public partial class AssistanceChatView : ContentView
             Sender = "Assistant P",
             Message = text,
             IsUser = false,
+            IsFirstTurn = true,
         };
         item.ContentViews.Add(Markdown2XAML.Convert(text));
         _messages.Add(item);
@@ -168,14 +768,18 @@ public partial class AssistanceChatView : ContentView
         }
 
         string input = AIInputButton.Text?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(input))
+        bool hasText = !string.IsNullOrEmpty(input);
+        bool hasAttachments = _pendingAttachments.Count > 0;
+
+        // 没有文字也没有附件就不发送
+        if (!hasText && !hasAttachments)
         {
             return;
         }
 
         if (!_chatHistory.Any())
         {
-            using var fs = await FileSystem.OpenAppPackageFileAsync("AIAgent\\system.md");
+            using var fs = string.IsNullOrWhiteSpace(_projectName) ? await FileSystem.OpenAppPackageFileAsync("AIAgent\\system_outsideProject.md") : await FileSystem.OpenAppPackageFileAsync("AIAgent\\system.md");
             using var sr = new StreamReader(fs);
             var str = await sr.ReadToEndAsync();
             str = str.Replace("!AppBrand!", Localized.AppBrand);
@@ -185,25 +789,95 @@ public partial class AssistanceChatView : ContentView
             str = str.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
             str = str.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
             str = str.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
+            str = str.Replace("!ProjectName!", _projectName ?? "None");
 
 
             _chatHistory.Add(new AIChatMessage(ChatRole.System, str));
         }
 
-        _messages.Add(new ChatMessageItem
+        // ----- 保存附件文件 -----
+        List<ChatAttachmentSnapshot>? savedAttachments = null;
+        if (hasAttachments)
+        {
+            savedAttachments = await SaveAttachmentFilesAsync(_pendingAttachments);
+        }
+
+        // ----- 构建消息项 -----
+        var messageItem = new ChatMessageItem
         {
             Sender = Localized.AIAssistant_ChatView_Me,
             Message = input,
             IsUser = true,
-        });
-        _chatHistory.Add(new AIChatMessage(ChatRole.User, input));
+        };
 
+        // 保存附件引用以便 PersistSession 序列化
+        if (savedAttachments is not null && savedAttachments.Count > 0)
+        {
+            messageItem.Attachments = savedAttachments;
+        }
+
+        // 添加附件 Views 到 ContentViews
+        if (savedAttachments is not null && savedAttachments.Count > 0)
+        {
+            string mediaDir = GetSessionMediaDirectory();
+            foreach (ChatAttachmentSnapshot attachment in savedAttachments)
+            {
+                string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+                View? attachmentView = CreateAttachmentView(attachment, fullPath);
+                if (attachmentView is not null)
+                {
+                    messageItem.ContentViews.Add(attachmentView);
+                }
+            }
+        }
+
+        _messages.Add(messageItem);
+
+        // ----- 构建 AI 历史（多模态）-----
+        var contents = new List<AIContent>();
+        if (hasText)
+        {
+            contents.Add(new TextContent(input));
+        }
+
+        if (savedAttachments is not null && savedAttachments.Count > 0)
+        {
+            string mediaDir = GetSessionMediaDirectory();
+            foreach (ChatAttachmentSnapshot attachment in savedAttachments)
+            {
+                string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+                try
+                {
+                    byte[] fileBytes = await File.ReadAllBytesAsync(fullPath);
+                    string base64 = Convert.ToBase64String(fileBytes);
+                    string dataUri = $"data:{attachment.MimeType};base64,{base64}";
+                    contents.Add(new DataContent(dataUri, attachment.MimeType));
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"Failed to read attachment '{attachment.FileName}' for AI: {ex.Message}");
+                }
+            }
+        }
+
+        if (contents.Count > 0)
+        {
+            _chatHistory.Add(new AIChatMessage(ChatRole.User, contents));
+        }
+        else
+        {
+            // Fallback: should not happen
+            _chatHistory.Add(new AIChatMessage(ChatRole.User, input));
+        }
+
+        // ----- 清空输入 -----
         AIInputButton.Text = string.Empty;
+        _pendingAttachments.Clear();
+        UpdateAttachmentsPreview();
+
         _isReplying = true;
         AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
         _cts = new CancellationTokenSource();
-        //AIClearContextButton.IsEnabled = false;
-        //AINewChatPageButton.IsEnabled = false;
 
         await StreamAndAppendAssistantResponseAsync(input);
 
@@ -212,9 +886,330 @@ public partial class AssistanceChatView : ContentView
         AISendButton.IsEnabled = true;
         _cts?.Dispose();
         _cts = null;
-        //AIClearContextButton.IsEnabled = true;
-        //AINewChatPageButton.IsEnabled = true;
         AIInputButton.Focus();
+    }
+
+    /// <summary>
+    /// 保存附件文件到会话媒体目录。
+    /// </summary>
+    private async Task<List<ChatAttachmentSnapshot>?> SaveAttachmentFilesAsync(List<ChatFileAttachment> pending)
+    {
+        if (pending.Count == 0)
+            return null;
+
+        string mediaDir = GetSessionMediaDirectory();
+        Directory.CreateDirectory(mediaDir);
+
+        var result = new List<ChatAttachmentSnapshot>();
+        foreach (ChatFileAttachment attachment in pending)
+        {
+            try
+            {
+                string ext = Path.GetExtension(attachment.FileName);
+                if (string.IsNullOrEmpty(ext))
+                    ext = ".bin";
+
+                string fileName = $"{Guid.NewGuid():N}{ext}";
+                string destPath = Path.Combine(mediaDir, fileName);
+
+                // 优先使用 FullPath 复制，否则通过流读取
+                if (!string.IsNullOrEmpty(attachment.TempFilePath) && File.Exists(attachment.TempFilePath))
+                {
+                    File.Copy(attachment.TempFilePath, destPath, overwrite: true);
+                }
+                else if (attachment.SourceFileResult is not null)
+                {
+                    await using Stream? sourceStream = await attachment.SourceFileResult.OpenReadAsync();
+                    if (sourceStream is not null)
+                    {
+                        await using FileStream destStream = File.Create(destPath);
+                        await sourceStream.CopyToAsync(destStream);
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+
+                result.Add(new ChatAttachmentSnapshot
+                {
+                    FileName = attachment.FileName,
+                    MimeType = attachment.MimeType,
+                    FileSize = attachment.FileSize,
+                    StoredRelativePath = fileName,
+                });
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Failed to save attachment '{attachment.FileName}': {ex.Message}");
+            }
+        }
+
+        return result.Count > 0 ? result : null;
+    }
+
+    /// <summary>
+    /// 根据附件元数据创建显示 View。
+    /// 图片返回可点击预览的 Image 控件，其他文件返回带类型图标的卡片。
+    /// </summary>
+    private View? CreateAttachmentView(ChatAttachmentSnapshot attachment, string fullPath)
+    {
+        try
+        {
+            if ((attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || Path.GetExtension(fullPath)?.ToLowerInvariant() is ".png" or ".jpg" or ".gif")
+                && File.Exists(fullPath))
+            {
+                var image = new Image
+                {
+                    Source = ImageSource.FromFile(fullPath),
+                    WidthRequest = 250,
+                    HeightRequest = 320,
+                    MaximumWidthRequest = 250,
+                    MaximumHeightRequest = 320,
+                    Aspect = Aspect.AspectFit,
+                    Margin = new Thickness(0, 0, 0, 4),
+                    HorizontalOptions = LayoutOptions.Start,
+                };
+
+                var border = new Border
+                {
+                    StrokeThickness = 1,
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+                    BackgroundColor = Color.FromArgb("#08CCCCCC"),
+                    Stroke = Color.FromArgb("#30CCCCCC"),
+                    HorizontalOptions = LayoutOptions.Start,
+                    MaximumWidthRequest = 250,
+                    MaximumHeightRequest = 320,
+                    Content = image,
+                };
+
+
+                // 点击用系统应用打开原图
+                var tapGesture = new TapGestureRecognizer()
+                {
+                    NumberOfTapsRequired = 2
+                };
+                tapGesture.Tapped += async (_, _) =>
+                {
+                    try
+                    {
+                        await Window.Navigation.ShowPopupAsync(new Image
+                        {
+                            Source = ImageSource.FromFile(fullPath),
+                            Background = Color.FromArgb("#262D3D"),
+                        },
+                        new PopupOptions
+                        {
+                            Shape = new RoundRectangle
+                            {
+                                CornerRadius = new CornerRadius(UIServices.GetSafeZone()),
+                                Stroke = Colors.Transparent,
+                                BackgroundColor = Color.FromArgb("#262D3D"),
+                                StrokeThickness = 0,
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Open image {fullPath}", this);
+                    }
+                };
+                border.GestureRecognizers.Add(tapGesture);
+
+                // 鼠标悬停提示
+                Microsoft.Maui.Controls.ToolTipProperties.SetText(border, Localized.AssetPage_DoubleClickToPreview);
+
+                return border;
+            }
+
+            // 非图片文件显示为带类型图标的卡片
+            string icon = GetFileTypeIcon(attachment.FileName);
+            Color badgeColor = GetFileTypeColor(attachment.FileName);
+            string extension = Path.GetExtension(attachment.FileName)?.TrimStart('.').ToUpperInvariant() ?? "?";
+
+            var card = new Border
+            {
+                StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, 0, 0, 6),
+                BackgroundColor = Color.FromArgb("#08CCCCCC"),
+                Stroke = Color.FromArgb("#30CCCCCC"),
+                HorizontalOptions = LayoutOptions.Start,
+                MaximumWidthRequest = 280,
+            };
+
+            // 卡片内容：左侧颜色条 + 图标 + 文件信息 + 打开按钮
+            var grid = new Grid
+            {
+                ColumnDefinitions =
+                [
+                    new ColumnDefinition(new GridLength(4)),   // 左侧颜色条
+                    new ColumnDefinition(GridLength.Auto),      // 图标
+                    new ColumnDefinition(GridLength.Star),      // 文件信息
+                    new ColumnDefinition(GridLength.Auto),      // 打开按钮
+                ],
+                ColumnSpacing = 8,
+                Padding = new Thickness(0, 6, 6, 6),
+            };
+
+            // 颜色条
+            grid.Add(new BoxView
+            {
+                Color = badgeColor,
+                WidthRequest = 4,
+                VerticalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Start,
+            }, 0, 0);
+
+            // 类型图标
+            grid.Add(new Label
+            {
+                Text = icon,
+                FontFamily = "Icons",
+                FontSize = 28,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Center,
+                TextColor = badgeColor,
+                WidthRequest = 36,
+                HeightRequest = 36,
+            }, 1, 0);
+
+            // 文件信息
+            var infoStack = new VerticalStackLayout
+            {
+                Spacing = 1,
+                VerticalOptions = LayoutOptions.Center,
+            };
+            infoStack.Children.Add(new Label
+            {
+                Text = attachment.FileName,
+                FontSize = 12,
+                FontAttributes = FontAttributes.Bold,
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1,
+            });
+            infoStack.Children.Add(new Label
+            {
+                Text = $"{extension} · {FormatFileSize(attachment.FileSize)}",
+                FontSize = 10,
+                TextColor = Color.FromArgb("#808080"),
+            });
+            grid.Add(infoStack, 2, 0);
+
+            // 打开按钮
+            var openButton = new Button
+            {
+                Text = "\ue89e",  // 打开图标
+                FontFamily = "Icons",
+                FontSize = 14,
+                Padding = new Thickness(4),
+                MinimumWidthRequest = 28,
+                MinimumHeightRequest = 28,
+                BackgroundColor = Colors.Transparent,
+                VerticalOptions = LayoutOptions.Center,
+            };
+            openButton.Clicked += async (_, _) =>
+            {
+                try
+                {
+                    if (File.Exists(fullPath))
+                    {
+                        await Launcher.Default.OpenAsync(new OpenFileRequest
+                        {
+                            File = new ReadOnlyFile(fullPath),
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"Failed to open file: {ex.Message}");
+                }
+            };
+
+            // 点击整个卡片也能打开
+            var cardTap = new TapGestureRecognizer();
+            cardTap.Tapped += async (_, _) =>
+            {
+                try
+                {
+                    if (File.Exists(fullPath))
+                    {
+                        await Launcher.Default.OpenAsync(new OpenFileRequest
+                        {
+                            File = new ReadOnlyFile(fullPath),
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"Failed to open file: {ex.Message}");
+                }
+            };
+            card.GestureRecognizers.Add(cardTap);
+
+            grid.Add(openButton, 3, 0);
+            card.Content = grid;
+
+            return card;
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"CreateAttachmentView error: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 根据文件扩展名返回对应的 Segoe MDL2 / 图标字体字符。
+    /// </summary>
+    private static string GetFileTypeIcon(string fileName)
+    {
+        string ext = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
+        return ext switch
+        {
+            ".pdf" or ".doc" or ".docx" or ".md" or ".txt" or ".pages" => "\uea7d",
+            ".xls" or ".xlsx" or ".csv" or ".numbers" => "\uf8ee",
+            ".ppt" or ".pptx" or ".keynote" => "\ueaf0",
+            ".json" or ".xml" or ".js" or ".html" or ".css" or ".c" or ".cpp" or ".h" or ".hpp" or ".cs" or ".xaml" => "\uf84d",
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => "\ueb2c",
+            ".exe" or ".msi" or ".dmg" or ".elf" => "\ueb8e",
+            ".mp3" or ".wav" or ".flac" or ".ogg" => "\ue405",
+            ".mp4" or ".avi" or ".mkv" or ".mov" => "\ueb87",
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".svg" => "\ue3f4",
+            _ => "\uf804"
+        };
+    }
+
+    /// <summary>
+    /// 根据文件扩展名返回对应的主题色。
+    /// </summary>
+    private static Color GetFileTypeColor(string fileName)
+    {
+        string ext = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
+        return ext switch
+        {
+            ".pdf" or ".doc" or ".docx" or ".md" or ".txt" or ".pages" => Color.FromArgb("#E74C3C"),       // 红色
+            ".xls" or ".xlsx" or ".csv" or ".numbers" => Color.FromArgb("#2B579A"), // 深蓝
+            ".ppt" or ".pptx" or ".keynote" => Color.FromArgb("#217346"), // 绿色
+            ".json" or ".xml" or ".js" or ".html" or ".css" or ".c" or ".cpp" or ".h" or ".hpp" or ".cs" or ".xaml" => Color.FromArgb("#D74630"), // 橙色
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => Color.FromArgb("#808080"),   // 灰色
+            ".exe" or ".msi" or ".dmg" or ".elf" => Color.FromArgb("#4A90D9"), // 代码蓝
+            ".mp3" or ".wav" or ".flac" or ".ogg" => Color.FromArgb("#E67E22"), // 橙色
+            ".mp4" or ".avi" or ".mkv" or ".mov" => Color.FromArgb("#34495E"),   // 深灰
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".svg" => Color.FromArgb("#9B59B6"), // 紫色
+            _ => Color.FromArgb("#6090C0"),               // 默认蓝色
+        };
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        return bytes switch
+        {
+            < 1024 => $"{bytes} B",
+            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+            _ => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        };
     }
 
     private async void AIReplyFeedbackGoodButton_Clicked(object? sender, EventArgs e)
@@ -252,36 +1247,15 @@ public partial class AssistanceChatView : ContentView
         string incorrect = Localized.AIAssistant_ChatView_Feedback_ReportReason_Incorrect;
         string irrelevant = Localized.AIAssistant_ChatView_Feedback_ReportReason_Irrelevant;
         string other = Localized.AIAssistant_ChatView_Feedback_ReportReason_Other;
-        string selectedReason;
-        if (GetHostWindow() is MultiWindowItem host)
-        {
-            selectedReason = await host.DisplayActionSheetAsync(
-                Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
-                Localized._Cancel,
-                null,
-                harmful,
-                hate,
-                incorrect,
-                irrelevant,
-                other);
-        }
-        else if (Application.Current?.Windows?[0]?.Page is Page page)
-        {
-            selectedReason = await page.DisplayActionSheetAsync(
-                Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
-                Localized._Cancel,
-                null,
-                harmful,
-                hate,
-                incorrect,
-                irrelevant,
-                other);
-        }
-        else
-        {
-            LogDiagnostic("Skip feedback report: no valid dialog host page.");
-            return;
-        }
+        string? selectedReason = await DisplayActionSheetAsync(
+            Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
+            Localized._Cancel,
+            null,
+            harmful,
+            hate,
+            incorrect,
+            irrelevant,
+            other);
 
         if (string.IsNullOrWhiteSpace(selectedReason) || selectedReason == Localized._Cancel)
         {
@@ -298,14 +1272,7 @@ public partial class AssistanceChatView : ContentView
         };
 
         await SubmitFeedbackMockAsync(message, ChatReplyFeedbackType.Report, reasonCode, selectedReason);
-        if (GetHostWindow() is MultiWindowItem hostWindow)
-        {
-            await hostWindow.DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
-        }
-        else if (Application.Current?.Windows?[0]?.Page is Page rootPage)
-        {
-            await rootPage.DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
-        }
+        await DisplayAlertAsync(Localized._Done, Localized.AIAssistant_ChatView_Feedback_SubmitDone, Localized._OK);
     }
 
     private async void AIReplyCopyButton_Clicked(object? sender, EventArgs e)
@@ -370,6 +1337,8 @@ public partial class AssistanceChatView : ContentView
         _messages.Clear();
         _chatHistory.Clear();
 
+        string mediaDir = GetSessionMediaDirectory();
+        bool isFirstRun = true;
         foreach (AssistanceChatMessageSnapshot message in session.Messages)
         {
             var item = new ChatMessageItem
@@ -380,9 +1349,16 @@ public partial class AssistanceChatView : ContentView
                 ReasoningText = message.ReasoningText,
                 ToolCallsText = message.ToolCallsText,
                 HasFeedbackSubmitted = message.HasFeedbackSubmitted,
+                IsFirstTurn = isFirstRun
             };
 
-            // Rebuild ContentViews for assistant messages from persisted strings
+            // 恢复附件元数据以便 PersistSession 和 BuildSessionTitle 使用
+            if (message.Attachments?.Count > 0)
+            {
+                item.Attachments = message.Attachments;
+            }
+
+            // Rebuild ContentViews
             if (!item.IsUser)
             {
                 if (!string.IsNullOrWhiteSpace(message.ReasoningText))
@@ -406,7 +1382,22 @@ public partial class AssistanceChatView : ContentView
                 }
             }
 
+            // 用户消息的附件恢复显示
+            if (item.IsUser && message.Attachments?.Count > 0)
+            {
+                foreach (ChatAttachmentSnapshot attachment in message.Attachments)
+                {
+                    string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+                    View? attachmentView = CreateAttachmentView(attachment, fullPath);
+                    if (attachmentView is not null)
+                    {
+                        item.ContentViews.Add(attachmentView);
+                    }
+                }
+            }
+
             _messages.Add(item);
+            isFirstRun = false;
         }
 
         foreach (AssistanceChatHistorySnapshot history in session.History)
@@ -414,9 +1405,76 @@ public partial class AssistanceChatView : ContentView
             _chatHistory.Add(new AIChatMessage(history.Role, history.Text));
         }
 
+        // 重建 _chatHistory 中带附件的用户消息为多模态消息
+        RebuildHistoryWithAttachments(session, mediaDir);
+
         if (_messages.Count == 0)
         {
             AddAssistantWelcomeMessage();
+        }
+    }
+
+    /// <summary>
+    /// 构建用户消息的 AI 历史条目。
+    /// 如果有附件，返回包含 TextContent + DataUriContent 的多模态消息。
+    /// </summary>
+    private AIChatMessage BuildUserHistoryEntry(string text, List<ChatAttachmentSnapshot>? attachments)
+    {
+        if (attachments is null || attachments.Count == 0)
+        {
+            return new AIChatMessage(ChatRole.User, text);
+        }
+
+        string mediaDir = GetSessionMediaDirectory();
+        var contents = new List<AIContent>();
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            contents.Add(new TextContent(text));
+        }
+
+        foreach (ChatAttachmentSnapshot attachment in attachments)
+        {
+            string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+            try
+            {
+                if (File.Exists(fullPath))
+                {
+                    byte[] fileBytes = File.ReadAllBytes(fullPath);
+                    string base64 = Convert.ToBase64String(fileBytes);
+                    string dataUri = $"data:{attachment.MimeType};base64,{base64}";
+                    contents.Add(new DataContent(dataUri, attachment.MimeType));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Failed to load attachment '{attachment.FileName}' for history: {ex.Message}");
+            }
+        }
+
+        return contents.Count > 0
+            ? new AIChatMessage(ChatRole.User, contents)
+            : new AIChatMessage(ChatRole.User, text);
+    }
+
+    /// <summary>
+    /// 遍历 session 消息中的附件信息，重建 _chatHistory 中对应的用户消息条目为多模态消息（含 DataUriContent）。
+    /// 必须在使用 session.History 填充 _chatHistory 后调用。
+    /// </summary>
+    private void RebuildHistoryWithAttachments(AssistanceChatSession session, string mediaDir)
+    {
+        // 遍历 _messages 并利用 MapMessageIndexToHistoryIndex 找到对应的 _chatHistory 索引
+        for (int msgIdx = 0; msgIdx < _messages.Count; msgIdx++)
+        {
+            ChatMessageItem msg = _messages[msgIdx];
+            if (!msg.IsUser || msg.Attachments is null || msg.Attachments.Count == 0)
+                continue;
+
+            int histIdx = MapMessageIndexToHistoryIndex(msgIdx);
+            if (histIdx < 0 || histIdx >= _chatHistory.Count)
+                continue;
+
+            _chatHistory[histIdx] = BuildUserHistoryEntry(msg.Message, msg.Attachments);
         }
     }
 
@@ -431,6 +1489,13 @@ public partial class AssistanceChatView : ContentView
             ReasoningText = x.ReasoningText,
             ToolCallsText = x.ToolCallsText,
             HasFeedbackSubmitted = x.HasFeedbackSubmitted,
+            Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
+            {
+                FileName = a.FileName,
+                MimeType = a.MimeType,
+                FileSize = a.FileSize,
+                StoredRelativePath = a.StoredRelativePath,
+            }).ToList(),
         }).ToList();
 
         var history = _chatHistory.Select(x => new AssistanceChatHistorySnapshot
@@ -444,22 +1509,32 @@ public partial class AssistanceChatView : ContentView
 
     private string BuildSessionTitle()
     {
-        string? firstUserMessage = _messages
-            .FirstOrDefault(x => x.IsUser && !string.IsNullOrWhiteSpace(x.Message))
-            ?.Message
-            .Trim();
-
-        if (string.IsNullOrWhiteSpace(firstUserMessage))
+        // 查找第一条用户消息（有文字或附件的）
+        ChatMessageItem? firstUserMsg = _messages.FirstOrDefault(x => x.IsUser);
+        if (firstUserMsg is null)
         {
             return Localized.AIAssistant_ChatView_NewSession;
         }
 
-        if (firstUserMessage.Length <= SessionTitleMaxLength)
+        // 优先使用文字
+        if (!string.IsNullOrWhiteSpace(firstUserMsg.Message))
         {
-            return firstUserMessage;
+            string text = firstUserMsg.Message.Trim();
+            if (text.Length <= SessionTitleMaxLength)
+                return text;
+            return text[..SessionTitleMaxLength] + "…";
         }
 
-        return firstUserMessage[..SessionTitleMaxLength] + "…";
+        // 只有附件没有文字的情况
+        if (firstUserMsg.Attachments?.Count > 0)
+        {
+            string names = string.Join(", ", firstUserMsg.Attachments.Select(a => a.FileName));
+            if (names.Length <= SessionTitleMaxLength)
+                return names;
+            return names[..SessionTitleMaxLength] + "…";
+        }
+
+        return Localized.AIAssistant_ChatView_NewSession;
     }
 
     /// <summary>
@@ -500,6 +1575,94 @@ public partial class AssistanceChatView : ContentView
             _chatHistory.RemoveAt(_chatHistory.Count - 1);
 
         PersistSession();
+    }
+
+    // ---- 对话框辅助方法 ----
+
+    /// <summary>
+    /// 显示一个仅有确认按钮的简单消息框。
+    /// 优先查找父 MultiWindowItem（内嵌/独立窗口），回退到根窗口 Page。
+    /// </summary>
+    private async Task DisplayAlertAsync(string title, string message, string cancel)
+    {
+        if (GetHostWindow() is MultiWindowItem host)
+        {
+            await host.DisplayAlertAsync(title, message, cancel);
+        }
+        else if (Window.Page is Page page)
+        {
+            await page.DisplayAlertAsync(title, message, cancel);
+        }
+        else if (Application.Current?.Windows?[0]?.Page is Page page1)
+        {
+            await page1.DisplayAlertAsync(title, message, cancel);
+        }
+        else
+        {
+            LogDiagnostic($"Unable to display alert '{title}': no dialog host available.");
+        }
+    }
+
+    /// <summary>
+    /// 显示一个确认对话框（接受/取消），返回用户选择。
+    /// 优先查找父 MultiWindowItem，回退到根窗口 Page。
+    /// </summary>
+    private async Task<bool> DisplayAlertAsync(string title, string message, string accept, string cancel)
+    {
+        if (GetHostWindow() is MultiWindowItem host)
+            return await host.DisplayAlertAsync(title, message, accept, cancel);
+
+        if (Window.Page is Page page1)
+            return await page1.DisplayAlertAsync(title, message, accept, cancel);
+
+        if (Application.Current?.Windows?[0]?.Page is Page page)
+            return await page.DisplayAlertAsync(title, message, accept, cancel);
+
+        LogDiagnostic($"Unable to display confirm '{title}': no dialog host available.");
+        return false;
+    }
+
+    /// <summary>
+    /// 显示一个输入对话框，返回用户输入的文本。
+    /// 优先查找父 MultiWindowItem，回退到根窗口 Page。
+    /// </summary>
+    private async Task<string?> DisplayPromptAsync(
+        string title, string message,
+        string accept = "OK", string cancel = "Cancel",
+        string? placeholder = null, int maxLength = -1,
+        Keyboard? keyboard = null, string? initialValue = "")
+    {
+        if (GetHostWindow() is MultiWindowItem host)
+            return await host.DisplayPromptAsync(title, message, accept, cancel, placeholder!, maxLength, keyboard!, initialValue!);
+
+        if (Window.Page is Page page1)
+            return await page1.DisplayPromptAsync(title, message, accept, cancel, placeholder!, maxLength, keyboard!, initialValue!);
+
+
+        if (Application.Current?.Windows?[0]?.Page is Page page)
+            return await page.DisplayPromptAsync(title, message, accept, cancel, placeholder!, maxLength, keyboard!, initialValue!);
+
+        LogDiagnostic($"Unable to display prompt '{title}': no dialog host available.");
+        return null;
+    }
+
+    /// <summary>
+    /// 显示一个操作列表，返回用户选择的按钮文本。
+    /// 优先查找父 MultiWindowItem，回退到根窗口 Page。
+    /// </summary>
+    private async Task<string?> DisplayActionSheetAsync(string title, string cancel, string? destruction, params string[] buttons)
+    {
+        if (GetHostWindow() is MultiWindowItem host)
+            return await host.DisplayActionSheetAsync(title, cancel, destruction, buttons);
+
+        if (Window.Page is Page page1)
+            return await page1.DisplayActionSheetAsync(title, cancel, destruction, buttons);
+
+        if (Application.Current?.Windows?[0]?.Page is Page page2)
+            return await page2.DisplayActionSheetAsync(title, cancel, destruction, buttons);
+
+        LogDiagnostic($"Unable to display action sheet '{title}': no dialog host available.");
+        return null;
     }
 
     private MultiWindowItem? GetHostWindow()
@@ -1432,10 +2595,10 @@ public partial class AssistanceChatView : ContentView
         List<AITool> tools =
         [
             AIFunctionFactory.Create(() => DateTime.Now.ToString("G"), "get_datetime", "Get current date and time."),
-            AIFunctionFactory.Create((string title, string cancel, string[] verbs) => (Parent as MultiWindowItem)?.DisplayActionSheetAsync(title, cancel, null, verbs) , "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
-            AIFunctionFactory.Create((string title, string message, string True, string False) => (Parent as MultiWindowItem)?.DisplayAlertAsync(title, message, True, False) , "display_dialog", "Display a Dialog to ask user for True/False question (Yes/No). Null or blank result means user canceled this dialogue."),
-            AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => (Parent as MultiWindowItem)?.DisplayPromptAsync(title, message, Localized._OK, Localized._Cancel, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
-             .. ToolCallFactories?.Invoke() ?? [],
+            AIFunctionFactory.Create((string title, string cancel, string[] verbs) => DisplayActionSheetAsync(title, cancel, null, verbs) , "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
+            AIFunctionFactory.Create((string title, string message, string True, string False) => DisplayAlertAsync(title, message, True, False) , "display_dialog", "Display a Dialog to ask user for True/False question (Yes/No). Null or blank result means user canceled this dialogue."),
+            AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => DisplayPromptAsync(title, message, Localized._OK, Localized._Cancel, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
+            .. ToolCallFactories?.Invoke() ?? [],
         ];
         LogDiagnostic($"Tools:\r\n{string.Join("\r\n", tools.Select(t => JsonSerializer.Serialize(t, new JsonSerializerOptions { WriteIndented = true })))}");
         return tools;
@@ -1725,6 +2888,22 @@ public partial class AssistanceChatView : ContentView
             .Build();
     }
 
+    /// <summary>
+    /// 滚动聊天列表到底部。
+    /// 在流式输出内容更新时调用，确保用户始终看到最新的输出。
+    /// </summary>
+    private void ScrollToEnd()
+    {
+        if (_messages.Count == 0)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await Task.Delay(20);
+            AIChatHistoryView.ScrollTo(_messages[^1], position: ScrollToPosition.End, animate: true);
+        });
+    }
+
     private void Messages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (_messages.Count == 0)
@@ -1897,6 +3076,9 @@ public partial class AssistanceChatView : ContentView
                                 toolCallCard.UpdateText(capturedToolCalls);
                             }
                         }
+
+                        // 流式输出内容更新后自动滚动到底部
+                        ScrollToEnd();
                     });
                 }
 
@@ -1909,6 +3091,9 @@ public partial class AssistanceChatView : ContentView
 
                     foreach (View view in converter.Flush())
                         streamingItem.ContentViews.Add(view);
+
+                    // 刷新完成后滚动到底部
+                    ScrollToEnd();
                 });
 
                 assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
@@ -1930,6 +3115,7 @@ public partial class AssistanceChatView : ContentView
                     FontAttributes = FontAttributes.Italic,
                     Margin = new Thickness(0, 4, 0, 0),
                 });
+                ScrollToEnd();
             }
         }
         catch (Exception ex)
@@ -1948,6 +3134,7 @@ public partial class AssistanceChatView : ContentView
                     FontAttributes = FontAttributes.Italic,
                     Margin = new Thickness(0, 4, 0, 0),
                 });
+                ScrollToEnd();
             }
         }
 
@@ -2112,7 +3299,7 @@ public partial class AssistanceChatView : ContentView
             return;
 
         string originalText = _messages[messageIndex].Message;
-        string? newText = await GetHostWindow()?.DisplayPromptAsync(
+        string? newText = await DisplayPromptAsync(
             Localized.AIAssistant_ChatView_EditMessage, "",
             Localized._Confirm, Localized._Cancel,
             initialValue: originalText);
@@ -2142,11 +3329,11 @@ public partial class AssistanceChatView : ContentView
         // 更新消息文本
         _messages[messageIndex].Message = newText;
 
-        // 更新对应的 _chatHistory 条目
+        // 更新对应的 _chatHistory 条目，保留附件
         int histIndex = MapMessageIndexToHistoryIndex(messageIndex);
         if (histIndex >= 0 && histIndex < _chatHistory.Count)
         {
-            _chatHistory[histIndex] = new AIChatMessage(ChatRole.User, newText);
+            _chatHistory[histIndex] = BuildUserHistoryEntry(newText, _messages[messageIndex].Attachments);
         }
 
         PersistSession();
@@ -2174,11 +3361,10 @@ public partial class AssistanceChatView : ContentView
         if (_isReplying)
             return;
 
-        bool confirmed = await (GetHostWindow()?.DisplayAlertAsync(
+        bool confirmed = await DisplayAlertAsync(
             Localized.AIAssistant_ChatView_RollbackToHere,
             Localized.AIAssistant_ChatView_RollbackToHere_Confirm,
-            Localized._Confirm, Localized._Cancel)
-            ?? Task.FromResult(false));
+            Localized._Confirm, Localized._Cancel);
 
         if (!confirmed)
             return;
@@ -2221,6 +3407,13 @@ public partial class AssistanceChatView : ContentView
                 ReasoningText = m.ReasoningText,
                 ToolCallsText = m.ToolCallsText,
                 HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+                Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                {
+                    FileName = a.FileName,
+                    MimeType = a.MimeType,
+                    FileSize = a.FileSize,
+                    StoredRelativePath = a.StoredRelativePath,
+                }).ToList(),
             });
         }
 
@@ -2237,14 +3430,133 @@ public partial class AssistanceChatView : ContentView
         AssistanceChatSession newSession = AssistanceChatSessionStore.ForkSession(
             _projectPath, _sessionId, messages, history);
 
+        // 复制附件文件到新会话的媒体目录，确保加载时文件可访问
+        await CopyAttachmentsToSessionAsync(_sessionId, newSession.SessionId);
+
         // 导航到新 session
         if (GetHostWindow() is MultiWindowItem host)
         {
             host.NavigateTo(new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath));
         }
     }
+
+    /// <summary>
+    /// 将源会话的媒体文件复制到目标会话的媒体目录。
+    /// </summary>
+    private async Task CopyAttachmentsToSessionAsync(Guid sourceSessionId, Guid destSessionId)
+    {
+        try
+        {
+            string sourceMediaDir = Path.Combine(
+                _projectPath ?? Environment.CurrentDirectory, "chats",
+                sourceSessionId.ToString("N"), "media");
+            string destMediaDir = Path.Combine(
+                _projectPath ?? Environment.CurrentDirectory, "chats",
+                destSessionId.ToString("N"), "media");
+
+            if (!Directory.Exists(sourceMediaDir))
+                return;
+
+            Directory.CreateDirectory(destMediaDir);
+
+            foreach (string file in Directory.EnumerateFiles(sourceMediaDir))
+            {
+                try
+                {
+                    string destFile = Path.Combine(destMediaDir, Path.GetFileName(file));
+                    await Task.Run(() => File.Copy(file, destFile, overwrite: true));
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"Failed to copy media file '{file}': {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"Failed to copy media directory: {ex.Message}");
+        }
+    }
+
+    private async void FileDropGestureRecognizer_Drop(object sender, DropEventArgs e)
+    {
+        const long maxFileSize = 20L * 1024 * 1024; // 20 MB
+        
+        foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
+        {
+            var fileInfo = new FileInfo(item);
+            var name = fileInfo.Name;
+            if (fileInfo.Length > maxFileSize)
+            {
+                await DisplayAlertAsync("Warning",
+                    $"{name} exceeds the 20 MB size limit.",
+                    Localized._OK);
+                continue;
+            }
+
+            // 创建临时附件条目
+            var attachment = new ChatFileAttachment
+            {
+                FileName = name,
+                MimeType = GetMimeType(Path.GetExtension(item)),
+                FileSize = fileInfo.Length,
+                SourceFileResult = null,
+                TempFilePath = item,
+            };
+
+            _pendingAttachments.Add(attachment);
+            UpdateAttachmentsPreview();
+
+        }
+    }
+
+    private string GetMimeType(string extension)
+    {
+        return extension.ToLowerInvariant() ?? "" switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" or ".docx" => "application/msword",
+            ".xls" or ".xlsx" => "application/vnd.ms-excel",
+            ".ppt" or ".pptx" => "application/vnd.ms-powerpoint",
+            ".txt" or ".csv" or ".json" or ".xml" or ".cs" or ".js" or ".html" or ".css" => "text/plain",
+            ".md" => "text/markdown",
+            ".mp3" or ".wav" or ".flac" or ".ogg" => $"audio/{extension.ToLowerInvariant().TrimStart('.')}",
+            ".mp4" or ".avi" or ".mkv" or ".mov" => $"video/{extension.ToLowerInvariant().TrimStart('.')}",
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => $"image/{extension.ToLowerInvariant().TrimStart('.')}",
+            var s when s.StartsWith('.') => $"application/{s.TrimStart('.')}",
+            _ => "application/octet-stream"
+        };
+    }
+
 }
 
+
+/// <summary>
+/// 用户选择的待发送附件（临时模型，不持久化）。
+/// </summary>
+public sealed class ChatFileAttachment
+{
+    public required string FileName { get; init; }
+
+    public required string MimeType { get; init; }
+
+    public long FileSize { get; init; }
+
+    /// <summary>
+    /// FileResult 用于通过流读取数据（临时文件不可用时）。
+    /// </summary>
+    public FileResult? SourceFileResult { get; init; }
+
+    /// <summary>
+    /// 临时文件路径，可能为空。
+    /// </summary>
+    public string? TempFilePath { get; init; }
+
+    /// <summary>
+    /// 是否为图片类型。
+    /// </summary>
+    public bool IsImage => MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+}
 
 public sealed partial class ChatMessageItem : INotifyPropertyChanged
 {
@@ -2372,6 +3684,28 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     public bool IsUser { get; init; }
 
     public bool IsAssistant => !IsUser;
+
+    public bool IsFirstTurn 
+    { 
+        get; 
+        set
+        {
+            field = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsFirstTurn));
+        }
+    } = false;
+
+    /// <summary>
+    /// 用户消息是否有文本内容（用于控制文本 Label 的可见性）。
+    /// 当只有附件没有文字时返回 false。
+    /// </summary>
+    public bool IsUserMessageWithText => IsUser && !string.IsNullOrWhiteSpace(_message);
+
+    /// <summary>
+    /// 此消息的附件元数据（仅用于加载历史时传递数据，不参与 UI 渲染）。
+    /// </summary>
+    public List<ChatAttachmentSnapshot>? Attachments { get; set; }
 
     private bool _hasFeedbackSubmitted;
 
