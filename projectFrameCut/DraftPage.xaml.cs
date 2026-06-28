@@ -2699,7 +2699,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!Clips.TryGetValue(g, out clip)) throw new KeyNotFoundException($"Clip with ID {id} not found");
         }
 
-        if(clip is null)
+        if (clip is null)
         {
             throw new InvalidOperationException("The selected clip ID is invalid");
         }
@@ -9159,9 +9159,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region events
-    protected override async void OnAppearing()
+    protected override async void OnNavigatedTo(NavigatedToEventArgs e)
     {
-        base.OnAppearing();
+        if (e.WasPreviousPageACommunityToolkitPopupPage()) return;
+        base.OnNavigatedTo(e);
         if (AlreadyDisappeared)
         {
             Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}", "fatal");
@@ -9193,8 +9194,13 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    protected override async void OnDisappearing()
+    protected override async void OnNavigatingFrom(NavigatingFromEventArgs e)
     {
+        if (e.IsDestinationPageACommunityToolkitPopupPage())
+        {
+            base.OnNavigatingFrom(e);
+            return;
+        }
         AlreadyDisappeared = true;
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
@@ -9277,7 +9283,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!ExitNoSave) await Save(true);
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();
-            base.OnDisappearing();
+            base.OnNavigatingFrom(e);
 
         }
         catch (Exception ex)

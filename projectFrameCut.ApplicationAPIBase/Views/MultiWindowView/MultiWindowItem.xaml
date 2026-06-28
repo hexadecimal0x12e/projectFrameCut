@@ -222,6 +222,35 @@
                     <BoxView x:Name="ResizeBottomRight" Grid.Row="2" Grid.Column="2" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
 
                 </Grid>
+
+                <!-- Popup Overlay — highest Z-index, covers everything including DialogOverlay and resize handles -->
+                <Grid x:Name="PopupOverlay"
+                      IsVisible="False"
+                      InputTransparent="False"
+                      ZIndex="10000">
+
+                    <!-- Semi-transparent backdrop — catches outside taps for dismissal -->
+                    <BoxView x:Name="PopupBackdrop"
+                             Color="#AA000000"
+                             InputTransparent="False" />
+
+                    <!-- Popup content container with shadow and rounded corners -->
+                    <Border x:Name="PopupContainer"
+                            InputTransparent="False"
+                            CascadeInputTransparent="False"
+                            VerticalOptions="Center"
+                            HorizontalOptions="Center"
+                            StrokeShape="RoundRectangle 12"
+                            Stroke="#3e3e42"
+                            StrokeThickness="1"
+                            BackgroundColor="{AppThemeBinding Dark=#252526, Light=White}"
+                            Padding="0">
+                        <Border.Shadow>
+                            <Shadow Brush="Black" Offset="0,8" Radius="32" Opacity="0.6"/>
+                        </Border.Shadow>
+                    </Border>
+                </Grid>
+
             </Grid>
         </ControlTemplate>
     </ContentView.ControlTemplate>

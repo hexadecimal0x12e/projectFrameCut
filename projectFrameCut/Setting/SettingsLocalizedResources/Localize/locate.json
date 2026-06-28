@@ -2517,6 +2517,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u4F7F\u7528CommunityToolkit.Maui\u7684Popup\u4F5C\u4E3A\u5F39\u51FA\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

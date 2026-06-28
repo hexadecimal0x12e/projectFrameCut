@@ -201,6 +201,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private TaskCompletionSource<string> _promptTcs;
         private TaskCompletionSource<string> _actionSheetTcs;
 
+        // Popup Template Parts
+        private Grid _popupOverlay;
+        private BoxView _popupBackdrop;
+        private Border _popupContainer;
+
+        // Popup State
+        private MultiWindowItemPopup _currentPopup;
+        private bool _isPopupAnimating;
+
         private readonly System.Collections.Generic.Stack<View> _backStack = new();
         private readonly System.Collections.Generic.Stack<View> _forwardStack = new();
 
@@ -302,6 +311,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (_dialogOkBtn != null) _dialogOkBtn.Clicked += OnDialogOkClicked;
             if (_dialogCancelBtn != null) _dialogCancelBtn.Clicked += OnDialogCancelClicked;
             if (_actionSheetCancelBtn != null) _actionSheetCancelBtn.Clicked += OnActionSheetCancelClicked;
+
+            // Popup Parts
+            _popupOverlay = GetTemplateChild("PopupOverlay") as Grid;
+            _popupBackdrop = GetTemplateChild("PopupBackdrop") as BoxView;
+            _popupContainer = GetTemplateChild("PopupContainer") as Border;
 
             // Wire up Resize Handles
             SetupResizeHandle("ResizeTopLeft", OnResizeTopLeft);
@@ -649,6 +663,179 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         #endregion
 
+        #region Popup
+
+        /// <summary>
+        /// Displays a popup inside this MDI window using the PopupOverlay layer.
+        /// Only one popup can be shown at a time; if a popup is already visible,
+        /// it is closed before the new one opens.
+        /// <para>The PopupOverlay works in both MDI mode and pop-out window mode,
+        /// since it is part of the ControlTemplate root Grid which always fills
+        /// the available content area.</para>
+        /// </summary>
+        /// <param name="popup">The popup configuration to display.</param>
+        /// <returns>A task that completes when the popup is fully opened and animated in.</returns>
+        public async Task ShowPopupAsync(MultiWindowItemPopup popup)
+        {
+            if (popup == null)
+                throw new ArgumentNullException(nameof(popup));
+            if (_isPopupAnimating)
+                return;
+
+            // Close any existing popup first
+            if (_currentPopup != null)
+                await HidePopupAsync(animate: false);
+
+            if (_popupOverlay == null || _popupContainer == null || _popupBackdrop == null)
+                return;
+
+            _currentPopup = popup;
+            _isPopupAnimating = true;
+
+            try
+            {
+                // Configure the overlay backdrop
+                _popupBackdrop.Color = popup.BackgroundColor;
+
+                // Configure the popup container
+                _popupContainer.Content = popup.Content;
+                _popupContainer.VerticalOptions = popup.VerticalOptions;
+                _popupContainer.HorizontalOptions = popup.HorizontalOptions;
+                _popupContainer.BackgroundColor = popup.PopupBackgroundColor
+                    ?? (Application.Current?.RequestedTheme == AppTheme.Dark
+                        ? Color.FromArgb("#252526")
+                        : Colors.White);
+                _popupContainer.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = popup.CornerRadius };
+                _popupContainer.Padding = popup.Padding;
+                _popupContainer.WidthRequest = popup.WidthRequest ?? -1;
+                _popupContainer.HeightRequest = popup.HeightRequest ?? -1;
+
+                // Configure dismiss gesture on backdrop
+                _popupBackdrop.GestureRecognizers.Clear();
+                if (popup.CanBeDismissedByTappingOutsideOfPopup)
+                {
+                    var dismissTap = new TapGestureRecognizer();
+                    dismissTap.Tapped += async (s, e) =>
+                    {
+                        popup.RaiseDismissedByTappingOutside();
+                        await HidePopupAsync();
+                    };
+                    _popupBackdrop.GestureRecognizers.Add(dismissTap);
+                }
+
+                // Show and animate
+                _popupOverlay.IsVisible = true;
+                _popupOverlay.InputTransparent = false;
+                _popupBackdrop.InputTransparent = false;
+
+                await AnimatePopupInAsync();
+
+                popup.RaiseOpened();
+            }
+            finally
+            {
+                _isPopupAnimating = false;
+            }
+        }
+
+        /// <summary>
+        /// Hides the current popup. If <paramref name="popup"/> is specified,
+        /// only hides if it matches the current popup; otherwise hides regardless.
+        /// </summary>
+        /// <param name="popup">Optional specific popup to close. If null, closes any visible popup.</param>
+        /// <param name="animate">Whether to play the close animation. Default true.</param>
+        /// <returns>A task that completes when the popup is fully hidden.</returns>
+        public async Task HidePopupAsync(MultiWindowItemPopup? popup = null, bool animate = true)
+        {
+            if (_currentPopup == null)
+                return;
+            if (popup != null && _currentPopup != popup)
+                return;
+            if (_isPopupAnimating)
+                return;
+
+            _isPopupAnimating = true;
+            var closingPopup = _currentPopup;
+            _currentPopup = null;
+
+            try
+            {
+                if (animate && _popupOverlay != null && _popupOverlay.IsVisible)
+                {
+                    await AnimatePopupOutAsync();
+                }
+
+                // Clean up
+                if (_popupContainer != null)
+                {
+                    _popupContainer.Content = null;
+                    // Reset container to default size/position for next use
+                    _popupContainer.WidthRequest = -1;
+                    _popupContainer.HeightRequest = -1;
+                    _popupContainer.Padding = new Thickness(0);
+                }
+
+                if (_popupBackdrop != null)
+                    _popupBackdrop.GestureRecognizers.Clear();
+
+                if (_popupOverlay != null)
+                {
+                    _popupOverlay.IsVisible = false;
+                    _popupOverlay.InputTransparent = true;
+                }
+
+                closingPopup?.RaiseClosed();
+                closingPopup?.DismissedTcs?.TrySetResult(true);
+            }
+            finally
+            {
+                _isPopupAnimating = false;
+            }
+        }
+
+        #region Popup Animations
+
+        private async Task AnimatePopupInAsync()
+        {
+            if (_popupBackdrop == null || _popupContainer == null)
+                return;
+
+            // Initial state
+            _popupBackdrop.Opacity = 0;
+            _popupContainer.Opacity = 0;
+            _popupContainer.Scale = 0.85;
+            _popupContainer.TranslationY = 20;
+
+            // Animate in parallel
+            var backdropTask = _popupBackdrop.FadeTo(1, 200, Easing.CubicOut);
+            var popupTask = Task.WhenAll(
+                _popupContainer.FadeTo(1, 300, Easing.CubicOut),
+                _popupContainer.ScaleTo(1, 300, Easing.SpringOut),
+                _popupContainer.TranslateTo(0, 0, 300, Easing.CubicOut)
+            );
+
+            await Task.WhenAll(backdropTask, popupTask);
+        }
+
+        private async Task AnimatePopupOutAsync()
+        {
+            if (_popupBackdrop == null || _popupContainer == null)
+                return;
+
+            var backdropTask = _popupBackdrop.FadeTo(0, 150, Easing.CubicIn);
+            var popupTask = Task.WhenAll(
+                _popupContainer.FadeTo(0, 150, Easing.CubicIn),
+                _popupContainer.ScaleTo(0.9, 150, Easing.CubicIn),
+                _popupContainer.TranslateTo(0, 10, 150, Easing.CubicIn)
+            );
+
+            await Task.WhenAll(backdropTask, popupTask);
+        }
+
+        #endregion
+
+        #endregion
+
         #region Event Handlers
 
         private void OnCloseTapped(object sender, EventArgs e)
@@ -721,6 +908,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var win = _hostWindow;
             _hostWindow = null;
             _isInWindowMode = false;
+
+            // Force-close any visible popup when transitioning from OS window back to MDI
+            _currentPopup = null;
 
             // Restore Visual State
             if (_dockBtn != null) _dockBtn.IsVisible = false;

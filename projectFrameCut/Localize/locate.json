@@ -6808,6 +6808,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_AIReplyCopyPopup_XAMLBlockEscaped",
+        "Value": "\u6B64UI\u5185\u5BB9\u5DF2\u88AB\u66FF\u6362\uFF0C\u56E0\u4E3A\u5BCC\u6587\u672C\u683C\u5F0F\u4E0D\u652F\u6301\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_AIReplyCopyPopup_XAMLBlockEscapedWarn",
+        "Value": "\u8F93\u51FA\u4E2D\u5305\u542BXAML\u5185\u5BB9\uFF0C\u4ED6\u4EEC\u65E0\u6CD5\u88AB\u6E32\u67D3\u4E3A\u5BCC\u6587\u672C\uFF0C\u5E76\u4E14\u96BE\u4EE5\u76F4\u63A5\u9605\u8BFB\u3002\r\u4F60\u53EF\u4EE5\u8003\u8651\u901A\u8FC7\u622A\u56FE\u6765\u5206\u4EAB\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AIAssistant_AIReplyCopyPopup_Copy",
+        "Value": "\u590D\u5236\u6240\u6709\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
