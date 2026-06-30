@@ -740,7 +740,7 @@ public partial class AssistanceChatView : ContentView
         PersistSession();
     }
 
-    private void AINewChatPageButton_Clicked(object? sender, EventArgs e)
+    private async void AINewChatPageButton_Clicked(object? sender, EventArgs e)
     {
         if (_isReplying)
         {
@@ -750,6 +750,11 @@ public partial class AssistanceChatView : ContentView
         if (GetHostWindow() is MultiWindowItem host)
         {
             host.NavigateTo(new AssistanceChatSessionsView(_projectPath, _projectName));
+        }
+        else if (Window?.Page?.Navigation is INavigation nav && nav.NavigationStack.Count > 1)
+        {
+            // In NavigationPage pop-out mode: pop back to sessions list
+            await nav.PopAsync();
         }
     }
 
@@ -844,10 +849,7 @@ public partial class AssistanceChatView : ContentView
 
         // ----- 构建 AI 历史（多模态）-----
         var contents = new List<AIContent>();
-        if (hasText)
-        {
-            contents.Add(new TextContent(input));
-        }
+        StringBuilder fileTextBuilder = new();
 
         if (savedAttachments is not null && savedAttachments.Count > 0)
         {
@@ -857,16 +859,61 @@ public partial class AssistanceChatView : ContentView
                 string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
                 try
                 {
-                    byte[] fileBytes = await File.ReadAllBytesAsync(fullPath);
-                    string base64 = Convert.ToBase64String(fileBytes);
-                    string dataUri = $"data:{attachment.MimeType};base64,{base64}";
-                    contents.Add(new DataContent(dataUri, attachment.MimeType));
+                    bool isImage = attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+                    if (isImage)
+                    {
+                        // 图片：作为 DataContent（base64 image_url）发送，AI 可直接识别
+                        byte[] fileBytes = await File.ReadAllBytesAsync(fullPath);
+                        contents.Add(new DataContent(fileBytes.AsMemory(), attachment.MimeType));
+                    }
+                    else
+                    {
+                        // 非图片文件：读取文本内容嵌入消息文本中。
+                        // DataContent 对非图片类型在 OpenAI API 中不被支持，
+                        // 因此改为在用户消息中以内联文本形式提供文件内容。
+                        fileTextBuilder.AppendLine($"--- {attachment.FileName} ---");
+
+                        bool isTextual = attachment.MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+                            || attachment.MimeType is "application/json" or "application/xml";
+
+                        if (isTextual)
+                        {
+                            string text = await File.ReadAllTextAsync(fullPath);
+                            fileTextBuilder.AppendLine(text);
+                        }
+                        else
+                        {
+                            // 二进制文件（PDF、Office 文档等）：标注文件名，让 AI 知晓
+                            fileTextBuilder.AppendLine($"[Binary file, {FormatFileSize(attachment.FileSize)}]");
+                        }
+
+                        fileTextBuilder.AppendLine($"--- End of {attachment.FileName} ---");
+                    }
                 }
                 catch (Exception ex)
                 {
                     LogDiagnostic($"Failed to read attachment '{attachment.FileName}' for AI: {ex.Message}");
                 }
             }
+        }
+
+        // 将非图片附件的文件文本与用户输入合并为一个 TextContent
+        if (fileTextBuilder.Length > 0)
+        {
+            string fileContext = fileTextBuilder.ToString().TrimEnd();
+            if (hasText)
+            {
+                contents.Insert(0, new TextContent(fileContext + "\n\n" + input));
+            }
+            else
+            {
+                contents.Insert(0, new TextContent(fileContext));
+            }
+        }
+        else if (hasText)
+        {
+            contents.Add(new TextContent(input));
         }
 
         if (contents.Count > 0)
@@ -1011,7 +1058,7 @@ public partial class AssistanceChatView : ContentView
                         {
                             Shape = new RoundRectangle
                             {
-                                CornerRadius = new CornerRadius(UIServices.GetSafeZone()),
+                                CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()),
                                 Stroke = Colors.Transparent,
                                 BackgroundColor = Color.FromArgb("#262D3D"),
                                 StrokeThickness = 0,
@@ -1302,7 +1349,7 @@ public partial class AssistanceChatView : ContentView
                 {
                     Shape = new RoundRectangle
                     {
-                        CornerRadius = new CornerRadius(UIServices.GetSafeZone()),
+                        CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()),
                         Stroke = Colors.Transparent,
                         BackgroundColor = Color.FromArgb("#262D3D"),
                         StrokeThickness = 0,
@@ -1438,6 +1485,7 @@ public partial class AssistanceChatView : ContentView
     /// <summary>
     /// 构建用户消息的 AI 历史条目。
     /// 如果有附件，返回包含 TextContent + DataUriContent 的多模态消息。
+    /// 图片以 DataContent 发送，文本类文件以内联文本形式嵌入消息。
     /// </summary>
     private AIChatMessage BuildUserHistoryEntry(string text, List<ChatAttachmentSnapshot>? attachments)
     {
@@ -1448,29 +1496,65 @@ public partial class AssistanceChatView : ContentView
 
         string mediaDir = GetSessionMediaDirectory();
         var contents = new List<AIContent>();
-
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            contents.Add(new TextContent(text));
-        }
+        StringBuilder fileTextBuilder = new();
 
         foreach (ChatAttachmentSnapshot attachment in attachments)
         {
             string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
             try
             {
-                if (File.Exists(fullPath))
+                if (!File.Exists(fullPath))
+                    continue;
+
+                bool isImage = attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+                if (isImage)
                 {
                     byte[] fileBytes = File.ReadAllBytes(fullPath);
-                    string base64 = Convert.ToBase64String(fileBytes);
-                    string dataUri = $"data:{attachment.MimeType};base64,{base64}";
-                    contents.Add(new DataContent(dataUri, attachment.MimeType));
+                    contents.Add(new DataContent(fileBytes.AsMemory(), attachment.MimeType));
+                }
+                else
+                {
+                    fileTextBuilder.AppendLine($"--- {attachment.FileName} ---");
+
+                    bool isTextual = attachment.MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+                        || attachment.MimeType is "application/json" or "application/xml";
+
+                    if (isTextual)
+                    {
+                        string fileText = File.ReadAllText(fullPath);
+                        fileTextBuilder.AppendLine(fileText);
+                    }
+                    else
+                    {
+                        fileTextBuilder.AppendLine($"[Binary file, {FormatFileSize(attachment.FileSize)}]");
+                    }
+
+                    fileTextBuilder.AppendLine($"--- End of {attachment.FileName} ---");
                 }
             }
             catch (Exception ex)
             {
                 LogDiagnostic($"Failed to load attachment '{attachment.FileName}' for history: {ex.Message}");
             }
+        }
+
+        // 合并文件文本与用户输入
+        if (fileTextBuilder.Length > 0)
+        {
+            string fileContext = fileTextBuilder.ToString().TrimEnd();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                contents.Insert(0, new TextContent(fileContext + "\n\n" + text));
+            }
+            else
+            {
+                contents.Insert(0, new TextContent(fileContext));
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(text))
+        {
+            contents.Add(new TextContent(text));
         }
 
         return contents.Count > 0
@@ -3309,7 +3393,9 @@ public partial class AssistanceChatView : ContentView
     }
 
     /// <summary>
-    /// 编辑用户消息并重新发送。
+    /// 编辑用户消息。
+    /// 确认后删除旧消息及后续回复，将编辑后的文字和附件恢复到输入框，
+    /// 让用户手动决定是否重新发送。
     /// </summary>
     private async Task EditAndResend(int messageIndex)
     {
@@ -3319,7 +3405,10 @@ public partial class AssistanceChatView : ContentView
         if (messageIndex >= _messages.Count || !_messages[messageIndex].IsUser)
             return;
 
-        string originalText = _messages[messageIndex].Message;
+        ChatMessageItem targetMessage = _messages[messageIndex];
+        string originalText = targetMessage.Message;
+        List<ChatAttachmentSnapshot>? attachments = targetMessage.Attachments;
+
         string? newText = await DisplayPromptAsync(
             Localized.AIAssistant_ChatView_EditMessage, "",
             Localized._Confirm, Localized._Cancel,
@@ -3328,7 +3417,7 @@ public partial class AssistanceChatView : ContentView
         if (string.IsNullOrWhiteSpace(newText) || newText == originalText)
             return;
 
-        // 截断到编辑消息的前一条
+        // 截断到编辑消息的前一条（删除该消息及之后的所有回复）
         if (messageIndex > 0)
         {
             TruncateAfterMessage(messageIndex - 1);
@@ -3347,40 +3436,55 @@ public partial class AssistanceChatView : ContentView
             }
         }
 
-        // 更新消息文本
-        _messages[messageIndex].Message = newText;
+        // 将编辑后的文字恢复到输入框
+        AIInputButton.Text = newText;
 
-        // 更新对应的 _chatHistory 条目，保留附件
-        int histIndex = MapMessageIndexToHistoryIndex(messageIndex);
-        if (histIndex >= 0 && histIndex < _chatHistory.Count)
+        // 恢复附件到待发送列表
+        if (attachments is not null && attachments.Count > 0)
         {
-            _chatHistory[histIndex] = BuildUserHistoryEntry(newText, _messages[messageIndex].Attachments);
+            string mediaDir = GetSessionMediaDirectory();
+            foreach (ChatAttachmentSnapshot attachment in attachments)
+            {
+                string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+                if (File.Exists(fullPath))
+                {
+                    var fileAttachment = new ChatFileAttachment
+                    {
+                        FileName = attachment.FileName,
+                        MimeType = attachment.MimeType,
+                        FileSize = attachment.FileSize,
+                        SourceFileResult = null,
+                        TempFilePath = fullPath,
+                    };
+                    _pendingAttachments.Add(fileAttachment);
+                }
+            }
+
+            UpdateAttachmentsPreview();
         }
 
-        PersistSession();
-
-        // 重新发送
-        _isReplying = true;
-        AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
-        _cts = new CancellationTokenSource();
-
-        await StreamAndAppendAssistantResponseAsync(newText);
-
-        _isReplying = false;
-        AISendButton.Text = Localized.AIAssistant_ChatView_Send;
-        AISendButton.IsEnabled = true;
-        _cts?.Dispose();
-        _cts = null;
-        AIInputButton.Focus();
+        // 聚焦输入框，让用户手动点击发送
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            AIInputButton.Focus();
+        });
     }
 
     /// <summary>
-    /// 撤回到此消息（删除此消息之后的所有内容）。
+    /// 撤回到此消息。
+    /// 如果目标是助手消息：截断到此消息，保留该消息及之前内容。
+    /// 如果目标是用户消息：截断到前一条消息（移除该用户消息），
+    /// 并将该消息的文字和附件恢复到输入框供重新编辑发送。
     /// </summary>
     private async Task RollbackToMessage(int messageIndex)
     {
         if (_isReplying)
             return;
+
+        if (messageIndex >= _messages.Count)
+            return;
+
+        ChatMessageItem targetMessage = _messages[messageIndex];
 
         bool confirmed = await DisplayAlertAsync(
             Localized.AIAssistant_ChatView_RollbackToHere,
@@ -3390,7 +3494,61 @@ public partial class AssistanceChatView : ContentView
         if (!confirmed)
             return;
 
-        TruncateAfterMessage(messageIndex);
+        if (targetMessage.IsUser)
+        {
+            // 用户消息：将文字和附件恢复到输入框，然后从历史记录中移除该消息
+            string text = targetMessage.Message;
+            List<ChatAttachmentSnapshot>? attachments = targetMessage.Attachments;
+
+            // 截断到该用户消息的前一条（移除该用户消息及之后的所有内容）
+            if (messageIndex > 0)
+            {
+                TruncateAfterMessage(messageIndex - 1);
+            }
+            else
+            {
+                // 理论上不会有用户消息在 index 0（Welcome 消息占位），但防御性处理
+                _messages.Clear();
+                _chatHistory.Clear();
+                AddAssistantWelcomeMessage();
+                PersistSession();
+            }
+
+            // 恢复文字到输入框
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                AIInputButton.Text = text;
+            }
+
+            // 恢复附件到待发送列表
+            if (attachments is not null && attachments.Count > 0)
+            {
+                string mediaDir = GetSessionMediaDirectory();
+                foreach (ChatAttachmentSnapshot attachment in attachments)
+                {
+                    string fullPath = ResolveAttachmentFullPath(mediaDir, attachment.StoredRelativePath);
+                    if (File.Exists(fullPath))
+                    {
+                        var fileAttachment = new ChatFileAttachment
+                        {
+                            FileName = attachment.FileName,
+                            MimeType = attachment.MimeType,
+                            FileSize = attachment.FileSize,
+                            SourceFileResult = null,
+                            TempFilePath = fullPath,
+                        };
+                        _pendingAttachments.Add(fileAttachment);
+                    }
+                }
+
+                UpdateAttachmentsPreview();
+            }
+        }
+        else
+        {
+            // 助手消息：保留当前行为，截断到此消息（保留该消息及之前内容）
+            TruncateAfterMessage(messageIndex);
+        }
 
         // 滚动到新结尾
         if (_messages.Count > 0)
@@ -3458,6 +3616,17 @@ public partial class AssistanceChatView : ContentView
         if (GetHostWindow() is MultiWindowItem host)
         {
             host.NavigateTo(new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath));
+        }
+        else if (Window?.Page?.Navigation is INavigation nav)
+        {
+            // In NavigationPage pop-out mode: push the forked chat onto the navigation stack
+            var cp = new ContentPage
+            {
+                Content = new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath),
+                Title = ""
+            };
+            NavigationPage.SetHasNavigationBar(cp, false);
+            await nav.PushAsync(cp);
         }
     }
 
@@ -3543,7 +3712,8 @@ public partial class AssistanceChatView : ContentView
             ".md" => "text/markdown",
             ".mp3" or ".wav" or ".flac" or ".ogg" => $"audio/{extension.ToLowerInvariant().TrimStart('.')}",
             ".mp4" or ".avi" or ".mkv" or ".mov" => $"video/{extension.ToLowerInvariant().TrimStart('.')}",
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => $"image/{extension.ToLowerInvariant().TrimStart('.')}",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" or ".gif" or ".bmp" or ".webp" => $"image/{extension.ToLowerInvariant().TrimStart('.')}",
             var s when s.StartsWith('.') => $"application/{s.TrimStart('.')}",
             _ => "application/octet-stream"
         };

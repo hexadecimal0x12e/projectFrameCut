@@ -752,7 +752,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             WindowSize = new Size(w, h);
         }
 
-        var safeZoneRad = UIServices.GetSafeZone();
+        var safeZoneRad = UIServices.GetWindowCornerRadius();
         StatusBarGrid.Margin = new Thickness(safeZoneRad, StatusBarGrid.Margin.Top, safeZoneRad, StatusBarGrid.Margin.Bottom);
         UseCompactLayout ??= (DeviceInfo.Idiom == DeviceIdiom.Phone);
         if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
@@ -5938,12 +5938,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (!force && !IsPopupClosableByTapBackground) return;
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
-            if (_currentCommunityToolkitPopup is not null)
+            try
             {
-                await _currentCommunityToolkitPopup.CloseAsync();
-                _currentCommunityToolkitPopup = null;
+                await Navigation.ClosePopupAsync();
             }
-
+            catch (PopupNotFoundException) { }
+            catch (Exception) { throw; }
+            _currentCommunityToolkitPopup = null;
             OverlayLayer.IsVisible = false;
             OverlayLayer.InputTransparent = true;
         }

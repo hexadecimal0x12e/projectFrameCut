@@ -78,10 +78,8 @@ namespace projectFrameCut.Render.Rendering
         public int Height => writer.Height;
         public IVideoWriter Writer => writer;
 
-
-
         /// <summary>
-        /// Indicates whether the frame has been pended to write. 
+        /// Indicates whether the frame has been pended to write.
         /// </summary>
         /// <remarks>
         /// For each Key-Value pair, the key is the frame index.
@@ -159,7 +157,7 @@ namespace projectFrameCut.Render.Rendering
 
             Interlocked.Increment(ref _totalFramesCount);
             frame.Tag = string.IsNullOrWhiteSpace(frame.Tag) ? $"frame #{index}" : $"{frame.Tag} | frame #{index}";
-
+        write:
             if (!IPicture.AllowPixelModeDowngrade && writer.TargetPPB is IPicture.PicturePixelMode m)
             {
                 if (frame.BitPerPixel < m) throw new InvalidOperationException($"Frame #{index}'s PicturePixelMode {(int)frame.BitPerPixel} is smaller than target's PicturePixelMode {(int)m}, and IPicture.AllowPixelModeDowngrade is false.")
@@ -167,7 +165,6 @@ namespace projectFrameCut.Render.Rendering
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
             }
-        write:
             if (!BlockWrite)
             {
                 Cache.AddOrUpdate(index, frame,
@@ -256,72 +253,24 @@ namespace projectFrameCut.Render.Rendering
 
         public void Finish(Func<uint, IPicture> regenerator, uint totalFrames = 0, Action<uint, float>? onWritingProgressUpdate = null)
         {
+            Log($"[VideoBuilder] Finishing writing job, {Cache.Count} frames are still in cache.");
             running = false;
             WaitForBuildThreadToStop();
 
-            var missingFrames = new List<uint>();
-            uint currentIndex = index;
-
-            while (Cache.Count > 0 || missingFrames.Count > 0)
+            for (uint idx = index; idx < totalFrames; idx++)
             {
-                if (Cache.ContainsKey(currentIndex))
+                if (Cache.ContainsKey(idx))
                 {
-                    writer.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
-                    if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
-                    if (onWritingProgressUpdate is not null) onWritingProgressUpdate(currentIndex, (float)currentIndex / totalFrames);
-                    currentIndex++;
-                    continue;
-                }
-
-                if (missingFrames.Count == 0 && !Cache.ContainsKey(currentIndex))
-                {
-                    uint maxCheck = currentIndex + 100;
-                    for (uint i = currentIndex; i < maxCheck; i++)
-                    {
-                        if (!Cache.ContainsKey(i) && (Cache.Count == 0 || i <= Cache.Keys.Max()) && i <= totalFrames)
-                        {
-                            missingFrames.Add(i);
-                        }
-                        else if (Cache.ContainsKey(i))
-                        {
-                            break;
-                        }
-                    }
-
-                    if (missingFrames.Count > 0)
-                    {
-                        Log($"[VideoBuilder] WARN: Frames #{missingFrames[0]}-#{missingFrames[missingFrames.Count - 1]} not found, rebuilding {missingFrames.Count} frames...");
-                        foreach (var frameIdx in missingFrames)
-                        {
-                            writer.Append(regenerator(frameIdx));
-                        }
-                        missingFrames.Clear();
-                    }
-                    else if (Cache.Count == 0)
-                    {
-                        break;
-                    }
-                }
-                else if (missingFrames.Count > 0)
-                {
-                    uint frameToProcess = missingFrames[0];
-                    missingFrames.RemoveAt(0);
-
-                    if (Cache.ContainsKey(frameToProcess))
-                    {
-                        writer.Append(Cache.TryRemove(frameToProcess, out var f) ? f : throw new KeyNotFoundException());
-                        Log($"[VideoBuilder] Rebuilt frame #{frameToProcess} added.");
-
-                        if (frameToProcess == currentIndex)
-                            currentIndex++;
-                    }
+                    writer.Append(Cache.TryRemove(idx, out var f) ? f : throw new KeyNotFoundException());
+                    if (LogStat) Log($"[VideoBuilder] Frame #{idx} added.");
                 }
                 else
                 {
-                    currentIndex++;
+                    writer.Append(regenerator(idx));
+                    Log($"[VideoBuilder] Frame #{idx} regenerated because of missing frame.");
                 }
 
-
+                if (onWritingProgressUpdate is not null) onWritingProgressUpdate(idx, (float)idx / totalFrames);
             }
 
             Dispose();
@@ -405,6 +354,58 @@ namespace projectFrameCut.Render.Rendering
             ranges.Add(rangeStart == previous ? $"#{rangeStart}" : $"#{rangeStart}-#{previous}");
             return string.Join(", ", ranges);
         }
+
+        public bool TryGetCachedFrame(uint index, out IPicture frame)
+        {
+            return Cache.TryGetValue(index, out frame);
+        }
+
+        /// <summary>
+        /// 静默添加帧到缓存。如果该帧已存在则跳过，不抛异常。
+        /// 用于预缓存场景（如 <see cref="Renderer.RenderSpecificFrame"/> 提前渲染后写入）。
+        /// <see cref="StrictMode"/> 和 <see cref="AllowDuplicatedFrameWrite"/> 不影响此方法的行为。
+        /// </summary>
+        /// <returns>成功添加返回 true，帧已存在返回 false。</returns>
+        public bool TryPreAppend(uint index, IPicture frame)
+        {
+            ArgumentNullException.ThrowIfNull(frame);
+
+            if (FramePendedToWrite.ContainsKey(index))
+                return false;
+
+            if (!FramePendedToWrite.TryAdd(index, false))
+                return false;
+
+            Interlocked.Increment(ref _totalFramesCount);
+            frame.Tag = string.IsNullOrWhiteSpace(frame.Tag) ? $"frame #{index}" : $"{frame.Tag} | frame #{index}";
+
+            if (BlockWrite)
+            {
+                writer.Append(frame);
+                if (LogStat) Log($"[VideoBuilder] Frame #{index} added (pre-cache).");
+            }
+            else
+            {
+                if (!Cache.TryAdd(index, frame))
+                {
+                    // Race: someone added between our checks
+                    FramePendedToWrite.TryRemove(index, out _);
+                    Interlocked.Decrement(ref _totalFramesCount);
+                    try { frame.Dispose(); } catch { }
+                    return false;
+                }
+            }
+
+            // Preview handling
+            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+            {
+                OnPreviewGenerated?.Invoke(this, frame.Clone());
+                countSinceLastPreview = 0;
+            }
+
+            return true;
+        }
+
 
     }
 

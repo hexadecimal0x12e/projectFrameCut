@@ -128,6 +128,18 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(IsMinimizedPropertyKey, value);
         }
 
+#pragma warning disable CS0618
+        [Obsolete("Go forward is an unusual design for stack-based navigation (you can't put back a disappeared things back). Consider using navigation within the window content instead.", false)] // I don't know why I did this hah
+        public bool AllowGoForward
+        {
+            get => (bool)GetValue(AllowGoForwardProperty);
+            set => SetValue(AllowGoForwardProperty, value);
+        }
+
+        public static readonly BindableProperty AllowGoForwardProperty =
+            BindableProperty.Create(nameof(AllowGoForward), typeof(bool), typeof(MultiWindowItem), false);
+#pragma warning restore CS0618 
+
         /// <summary>
         /// A Id to mark this window. Used for comparing.
         /// </summary>
@@ -308,9 +320,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogCancelBtn = GetTemplateChild("DialogCancelBtn") as Button;
             _actionSheetCancelBtn = GetTemplateChild("ActionSheetCancelBtn") as Button;
 
-            if (_dialogOkBtn != null) _dialogOkBtn.Clicked += OnDialogOkClicked;
-            if (_dialogCancelBtn != null) _dialogCancelBtn.Clicked += OnDialogCancelClicked;
-            if (_actionSheetCancelBtn != null) _actionSheetCancelBtn.Clicked += OnActionSheetCancelClicked;
+            _dialogOkBtn?.Clicked += OnDialogOkClicked;
+            _dialogCancelBtn?.Clicked += OnDialogCancelClicked;
+            _actionSheetCancelBtn?.Clicked += OnActionSheetCancelClicked;
 
             // Popup Parts
             _popupOverlay = GetTemplateChild("PopupOverlay") as Grid;
@@ -384,18 +396,18 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (_isInWindowMode)
             {
-                if (_minimizeBtn != null) _minimizeBtn.IsVisible = false;
-                if (_maximizeBtn != null) _maximizeBtn.IsVisible = false;
-                if (_closeBtn != null) _closeBtn.IsVisible = false;
-                if (_popOutBtn != null) _popOutBtn.IsVisible = false; // Hide popout button in window mode
+                _minimizeBtn?.IsVisible = false;
+                _maximizeBtn?.IsVisible = false;
+                _closeBtn?.IsVisible = false;
+                _popOutBtn?.IsVisible = false; // Hide popout button in window mode
                 return;
             }
 
 
-            if (_minimizeBtn != null) _minimizeBtn.IsVisible = IsMinimizable;
-            if (_maximizeBtn != null) _maximizeBtn.IsVisible = IsMaximizable;
-            if (_closeBtn != null) _closeBtn.IsVisible = IsClosable;
-            if (_popOutBtn != null) _popOutBtn.IsVisible = IsPopOutVisible; // Show based on property
+            _minimizeBtn?.IsVisible = IsMinimizable;
+            _maximizeBtn?.IsVisible = IsMaximizable;
+            _closeBtn?.IsVisible = IsClosable;
+            _popOutBtn?.IsVisible = IsPopOutVisible; // Show based on property
         }
         private void UpdateTitleBarVisibility()
         {
@@ -466,7 +478,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 if (_dialogButtonGrid != null) Grid.SetColumnSpan(_dialogCancelBtn, 1);
             }
 
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = true;
+            _dialogButtonGrid?.IsVisible = true;
             _dialogOverlay.IsVisible = true;
 
             _alertTcs = new TaskCompletionSource<bool>();
@@ -511,7 +523,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _dialogInput.Focus();
             }
 
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = true;
+            _dialogButtonGrid?.IsVisible = true;
             _dialogOverlay.IsVisible = true;
 
             _promptTcs = new TaskCompletionSource<string>();
@@ -535,7 +547,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogTitle.Text = title;
             _dialogMessage.IsVisible = false; // Usually ActionSheet has only title
 
-            if (_actionSheetScroll != null) _actionSheetScroll.IsVisible = true;
+            _actionSheetScroll?.IsVisible = true;
             if (_actionSheetContainer != null)
             {
                 _actionSheetContainer.Children.Clear();
@@ -586,7 +598,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void ResetDialogUI()
         {
-            if (_dialogTitle != null) _dialogTitle.Text = "";
+            _dialogTitle?.Text = "";
             if (_dialogMessage != null)
             {
                 _dialogMessage.Text = "";
@@ -597,9 +609,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _dialogInput.IsVisible = false;
                 _dialogInput.Text = "";
             }
-            if (_actionSheetScroll != null) _actionSheetScroll.IsVisible = false;
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = false;
-            if (_actionSheetCancelBtn != null) _actionSheetCancelBtn.IsVisible = false;
+            _actionSheetScroll?.IsVisible = false;
+            _dialogButtonGrid?.IsVisible = false;
+            _actionSheetCancelBtn?.IsVisible = false;
 
             // Reset Grid layout for buttons
             if (_dialogCancelBtn != null) Grid.SetColumnSpan(_dialogCancelBtn, 1);
@@ -609,56 +621,38 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private void OnDialogOkClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_alertTcs != null)
-            {
-                _alertTcs.TrySetResult(true);
-                _alertTcs = null;
-            }
-            if (_promptTcs != null)
-            {
-                _promptTcs.TrySetResult(_dialogInput?.Text);
-                _promptTcs = null;
-            }
+            _alertTcs?.TrySetResult(true);
+            _alertTcs = null;
+            _promptTcs?.TrySetResult(_dialogInput?.Text);
+            _promptTcs = null;
         }
 
         private void OnDialogCancelClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_alertTcs != null)
-            {
-                _alertTcs.TrySetResult(false);
-                _alertTcs = null;
-            }
-            if (_promptTcs != null)
-            {
-                _promptTcs.TrySetResult(null);
-                _promptTcs = null;
-            }
+            _alertTcs?.TrySetResult(false);
+            _alertTcs = null;
+            _promptTcs?.TrySetResult(null);
+            _promptTcs = null;
         }
 
         private void OnActionSheetCancelClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_actionSheetTcs != null)
-            {
-                _actionSheetTcs.TrySetResult(_actionSheetCancelBtn?.Text ?? "Cancel");
-                _actionSheetTcs = null;
-            }
+            _actionSheetTcs?.TrySetResult(_actionSheetCancelBtn?.Text ?? "Cancel");
+            _actionSheetTcs = null;
         }
 
         private void OnActionSheetButtonClicked(string result)
         {
             CloseDialog();
-            if (_actionSheetTcs != null)
-            {
-                _actionSheetTcs.TrySetResult(result);
-                _actionSheetTcs = null;
-            }
+            _actionSheetTcs?.TrySetResult(result);
+            _actionSheetTcs = null;
         }
 
         private void CloseDialog()
         {
-            if (_dialogOverlay != null) _dialogOverlay.IsVisible = false;
+            _dialogOverlay?.IsVisible = false;
         }
 
         #endregion
@@ -775,8 +769,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     _popupContainer.Padding = new Thickness(0);
                 }
 
-                if (_popupBackdrop != null)
-                    _popupBackdrop.GestureRecognizers.Clear();
+                _popupBackdrop?.GestureRecognizers.Clear();
 
                 if (_popupOverlay != null)
                 {
@@ -906,14 +899,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             // 2. Capture Window ref
             var win = _hostWindow;
-            _hostWindow = null;
+            _hostWindow = null!;
             _isInWindowMode = false;
 
             // Force-close any visible popup when transitioning from OS window back to MDI
-            _currentPopup = null;
+            _currentPopup = null!;
 
             // Restore Visual State
-            if (_dockBtn != null) _dockBtn.IsVisible = false;
+            _dockBtn?.IsVisible = false;
 
             // Re-enable internal MDI
             IsDraggable = true;
@@ -923,7 +916,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // Update buttons visibility (restore them)
             UpdatedButtonVisibility();
 
-            if (_resizeGrid != null) _resizeGrid.IsVisible = true;
+            _resizeGrid?.IsVisible = true;
             if (_visualRoot != null)
             {
                 _visualRoot.StrokeThickness = 1; // Default
@@ -1014,7 +1007,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 this.HeightRequest = _preMinHeight;
                 IsMinimized = false;
                 // Re-enable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = true;
+                _resizeGrid?.IsVisible = true;
             }
             else
             {
@@ -1023,7 +1016,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 this.HeightRequest = 35;
                 IsMinimized = true;
                 // Disable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = false;
+                _resizeGrid?.IsVisible = false;
             }
         }
 
@@ -1052,8 +1045,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _isMaximized = false;
 
                 // Re-enable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = true;
-                if (_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 10 };
+                _resizeGrid?.IsVisible = true;
+                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 10 };
             }
             else
             {
@@ -1093,8 +1086,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _isMaximized = true;
 
                 // Disable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = false;
-                if (_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
+                _resizeGrid?.IsVisible = false;
+                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 0 };
             }
         }
 
@@ -1204,32 +1197,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // but handlers delegate to Window (via _isInWindowMode check).
 
             // 2.1 Update internal chrome for Window Mode
-            if (_resizeGrid != null) _resizeGrid.IsVisible = false; // OS handles resizing
+            _resizeGrid?.IsVisible = false; // OS handles resizing
 
-            if (_visualRoot != null)
-            {
-                // Remove rounded corners/border to look like a full window
-                _visualRoot.StrokeThickness = 0;
-                _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
-            }
+            // Remove rounded corners/border to look like a full window
+            _visualRoot?.StrokeThickness = 0;
+            _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 0 };
 
             // Move TitleBarGrid out of visual tree so it can be used in TitleBar control
-            if (_titleBarGrid != null)
+            if (_titleBarGrid?.Parent is Grid parentGrid)
             {
-                if (_titleBarGrid.Parent is Grid parentGrid)
+                _originalTitleBarParent = parentGrid;
+                parentGrid.Children.Remove(_titleBarGrid);
+                if (parentGrid.RowDefinitions.Count > 0)
                 {
-                    _originalTitleBarParent = parentGrid;
-                    parentGrid.Children.Remove(_titleBarGrid);
-                    if (parentGrid.RowDefinitions.Count > 0)
-                    {
-                        parentGrid.RowDefinitions[0].Height = new GridLength(0); // Collapse space
-                    }
+                    parentGrid.RowDefinitions[0].Height = new GridLength(0); // Collapse space
                 }
-                _titleBarGrid.IsVisible = false; // Ensure it's visible for the TitleBar
             }
+            _titleBarGrid?.IsVisible = false; // Ensure it's visible for the TitleBar
 
             // Show Dock Button
-            if (_dockBtn != null) _dockBtn.IsVisible = true;
+            _dockBtn?.IsVisible = true;
 
             // 3. Reset transform and layout properties to fill the new window
             TranslationX = 0;
@@ -1243,28 +1230,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // 4. Create a hosting ContentPage
             this.Background = Colors.Transparent;
 
-            var backbtn = new Button
-            {
-                Text = "◄",
-                VerticalOptions = LayoutOptions.Center,
-#if !WINDOWS || !MACCATALYST
-                WidthRequest = 50,
-#endif
-                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
-            };
-            backbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoBack), source: this));
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoBack);
-            var fwdbtn = new Button
-            {
-                Text = "►",
-                VerticalOptions = LayoutOptions.Center,
-#if !WINDOWS || !MACCATALYST
-                WidthRequest = 50,
-#endif
-                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
-            };
-            fwdbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoForward), source: this));
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoForward);
             var dockBtn = new Button
             {
                 Text = "↙",
@@ -1275,13 +1240,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 #endif
                 Command = new Command(() => OnDockTapped(this, EventArgs.Empty))
             };
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
+            ToolTipProperties.SetText(dockBtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
 #if WINDOWS || MACCATALYST
-            var hostingPage = new ContentPage
+            var parentContainer = new ContentPage
             {
                 Content = this,
-                Title = this.Title ?? "Window"
+                Title = ""
             };
+            NavigationPage.SetHasNavigationBar(parentContainer, false); // Hide default MAUI Navigation Bar
+            var hostingPage = new NavigationPage(parentContainer);
 
             var bar = new TitleBar
             {
@@ -1289,17 +1256,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     dockBtn
                 },
-                LeadingContent = new HorizontalStackLayout
-                {
-                    backbtn,
-                    fwdbtn,
-                    new Label
-                    {
-                        Text = this.Title ?? "Window",
-                        VerticalOptions = LayoutOptions.Center,
-                        Margin = new(8,0,0,0)
-                    }
-                },
+                Title = this.Title
             };
 #else
 
@@ -1316,8 +1273,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                             {
                                 Children =
                                 {
-                                    backbtn,
-                                    fwdbtn,
                                     new Label
                                     {
                                         Text = Title,
@@ -1347,8 +1302,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 IsMinimizable = IsMinimizable,
                 Width = this.Width,
                 Height = this.Height,
-                X = this.TranslationX,
-                Y = this.TranslationY
             };
             _hostWindow = newWindow;
 
@@ -1379,7 +1332,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
                 }
-        };
+            };
 #endif
 
             // 8. Open the window
@@ -1420,7 +1373,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="view"></param>
         public void NavigateTo(View view)
         {
-            if (view == null) return;
+            ArgumentNullException.ThrowIfNull(view, nameof(view));
+
+            if (_hostWindow is not null)
+            {
+                var content = new ContentPage
+                {
+                    Content = view,
+                    Title = view.AutomationId ?? "Page"
+                };
+                NavigationPage.SetHasNavigationBar(content, false);
+                _hostWindow.Page?.Navigation?.PushAsync(content);
+                return;
+            }
 
             // If we have current content, push it to back stack
             if (Content != null)
@@ -1442,6 +1407,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </summary>
         public void GoBack()
         {
+            if (_hostWindow is not null)
+            {
+                if (_hostWindow.Page?.Navigation?.ModalStack.Any() == true) _hostWindow.Page.Navigation.PopModalAsync();
+                else _hostWindow.Page?.Navigation?.PopAsync();
+                return;
+            }
             if (_backStack.Count > 0)
             {
                 if (Content != null)
@@ -1457,10 +1428,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         }
 
         /// <summary>
+        /// Go forward is an unusual operation in .NET MAUI's Navigation stack, but we implement it here for MDI-style navigation. It will only work if the current content was previously navigated back from.
         /// Go forward to the next content if any in the forward stack. 
         /// </summary>
         public void GoForward()
         {
+            if (_hostWindow is not null)
+            {
+                throw new InvalidOperationException("Cannot go forward in standalone window mode, because of .NET MAUI's Navigation stack doesn't allow this. Use NavigateTo instead.");
+            }
             if (_forwardStack.Count > 0)
             {
                 if (Content != null)

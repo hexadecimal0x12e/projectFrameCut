@@ -57,7 +57,7 @@
                                 </Border>
 
                                 <!-- Forward Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}" IsVisible="{TemplateBinding AllowGoForward}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnForwardTapped"/>
                                     </Border.GestureRecognizers>
@@ -237,7 +237,6 @@
                     <!-- Popup content container with shadow and rounded corners -->
                     <Border x:Name="PopupContainer"
                             InputTransparent="False"
-                            CascadeInputTransparent="False"
                             VerticalOptions="Center"
                             HorizontalOptions="Center"
                             StrokeShape="RoundRectangle 12"

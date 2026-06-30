@@ -176,9 +176,35 @@ namespace projectFrameCut
             {
                 EffectHelper.ForcePreferToType = null;
             }
+
+            if (IsBoolSettingTrue("diag_TraceIPictureObject"))
+            {
+                PictureLifecycleTracker.Enabled = true;
+                PictureLifecycleTracker.TrackCollection = true;
+                PictureLifecycleTracker.FireEventOnDispose = true;
+                PictureLifecycleTracker.PictureDisposed += (s, e) =>
+                {
+                    Log($"""
+                        A {e.Picture.GetType().Name} Picture disposed.
+                        Picture info: {e.Picture.Width}x{e.Picture.Height}, bpp: {e.Picture.BitPerPixel}, CanBeDisposed: {e.Picture.CanBeDisposed}
+                        Create at {e.LifecycleState.CreatedAtUtc}, Disposed at {e.LifecycleState.DisposedAtUtc} (survived {e.LifecycleState.LifetimeToDispose})
+
+                        Dispose stack:
+                        {e.LifecycleState.DisposeStack}
+
+                        Process Stack:
+                        {PictureProcessStack.FormatProcessStackForLog(e.Picture.ProcessStack)}
+                        """);
+                };
+            }
+            else
+            {
+                PictureLifecycleTracker.Enabled = false;
+                PictureLifecycleTracker.TrackCollection = false;
+                PictureLifecycleTracker.FireEventOnDispose = false;
+            }
             IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-            PictureLifecycleTracker.Enabled = IsBoolSettingTrue("diag_TraceIPictureObject");
-            PictureLifecycleTracker.TrackCollection = IsBoolSettingTrue("diag_TraceIPictureObject");
+
             var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
             Directory.CreateDirectory(vfdCahceDir);
             VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;

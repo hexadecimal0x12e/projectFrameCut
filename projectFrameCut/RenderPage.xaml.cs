@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
@@ -31,6 +31,8 @@ using projectFrameCut.Render.Compose;
 using System.Reflection;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
+using projectFrameCut.Render.RenderAPIBase.Context;
+
 
 
 
@@ -501,20 +503,6 @@ public partial class RenderPage : ContentPage
 
                 try
                 {
-                    await DoCompute(vm, vidOutputPath, mtdDict);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "render frames", this);
-                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
-                    return;
-                }
-
-                if (_cts.IsCancellationRequested) return;
-
-                try
-                {
                     await ComposeAudio(vm, audOutputPath);
 
                 }
@@ -526,6 +514,20 @@ public partial class RenderPage : ContentPage
                     if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await DoCompute(vm, vidOutputPath, mtdDict, audOutputPath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
                 if (_cts.IsCancellationRequested) return;
 
                 double targetFps = double.Parse(vm.Framerate);
@@ -653,7 +655,7 @@ public partial class RenderPage : ContentPage
         });
     }
 
-    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null)
+    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null)
     {
         try
         {
@@ -840,6 +842,7 @@ public partial class RenderPage : ContentPage
                 PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
                 AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
                 EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
+                RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
                 MinSchedulePreparedFrames = parallelThreadCount,
                 UseHDR = ProjectUsesHDR,
@@ -849,7 +852,8 @@ public partial class RenderPage : ContentPage
                         ? sdrBrightnessInHdrInt
                         : (_project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessInHdr) && int.TryParse(legacySdrBrightnessInHdr, out var legacySdrBrightnessInHdrInt)
                             ? legacySdrBrightnessInHdrInt
-                            : 203)
+                            : 203),
+                AudioFilePath = audioPath
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -905,24 +909,17 @@ public partial class RenderPage : ContentPage
             Log("Start render...");
 
             sw1.Restart();
+            await Task.Run(async () => await renderer.GoRender(_cts.Token), _cts.Token);
+            Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+
             if (blockwrite)
             {
-                await Task.Run(async () => await renderer.GoRenderSync(_cts.Token), _cts.Token);
-                Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+                SetSubProg("WriteVideo");
+                Log("Closing result video stream...");
                 builder?.Writer?.Finish();
             }
             else
             {
-                if (SettingsManager.IsBoolSettingTrue("render_RenderByLayer"))
-                {
-                    await renderer.GoRenderByLayer(_cts.Token);
-                }
-                else
-                {
-                    await renderer.GoRender(_cts.Token);
-                }
-                Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-
                 SetSubProg("WriteVideo");
                 Log("Finish writing video...");
                 await Task.Run(() =>

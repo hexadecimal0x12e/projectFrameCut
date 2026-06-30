@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Text.Entry;
+﻿using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.ClipsAndTracks.Text;
@@ -135,6 +135,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
 
             var sourcePicture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true, aaMode: ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
+            sourcePicture.CanBeDisposed = false;
             sourcePicture.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack

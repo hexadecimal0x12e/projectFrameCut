@@ -115,11 +115,12 @@ public partial class AssistanceChatSessionsView : ContentView
         {
             host.NavigateTo(s);
         }
-        else if(this.Window.Title?.Equals("Assistant P", StringComparison.InvariantCultureIgnoreCase) ?? false)
+        else if (Window?.Page?.Navigation is INavigation nav)
         {
+            // Fallback: push via NavigationPage (covers standalone Assistant P and pushed pages in pop-out)
             var content = new ContentPage { Content = s, Title = "" };
             NavigationPage.SetHasNavigationBar(content, false);
-            Window.Page?.Navigation.PushAsync(content);
+            nav.PushAsync(content);
         }
         else
         {
