@@ -2,22 +2,24 @@
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Graphics.Text;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Converters;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
@@ -28,7 +30,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -48,7 +49,6 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
-using Microsoft.Maui.Graphics.Text;
 
 
 
@@ -64,6 +64,8 @@ using Microsoft.UI.Xaml;
 using projectFrameCut.Platforms.iOS;
 
 #endif
+
+#pragma warning disable CS0618 // We need the old TextClipEntry for compatibility with old projects, so we will keep it for now.
 
 namespace projectFrameCut.DraftStuff
 {
@@ -633,7 +635,7 @@ namespace projectFrameCut.DraftStuff
             .AppendWhen(TargetInstance is IVectorContentClip vc,
                 c =>
                 {
-                    string currentVectorAaLabel = "默认";
+                    string currentVectorAaLabel = PPLocalizedResources.General_VectorClip_AAMode_None;
                     if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr)
                     {
                         currentVectorAaLabel = aaStr switch
@@ -642,13 +644,49 @@ namespace projectFrameCut.DraftStuff
                             "SSAA2x" => "SSAA 2x",
                             "SSAA4x" => "SSAA 4x",
                             "SSAA8x" => "SSAA 8x",
-                            _ => "默认"
+                            _ => PPLocalizedResources.General_VectorClip_AAMode_None
                         };
                     }
 
                     c.AddText(new SingleLineLabel(PPLocalizedResources.General_VectorClip, 20))
                      .AddPicker("vectorAntiAliasMode", PPLocalizedResources.General_VectorClip_AAMode, new[] { PPLocalizedResources.General_VectorClip_AAMode_Default, PPLocalizedResources.General_VectorClip_AAMode_None, "SSAA 2x", "SSAA 4x", "SSAA 8x" }, currentVectorAaLabel);
+                })
+            .AppendWhen(clip.ClipType == ClipMode.VectorCanvasClip,
+                c =>
+                {
+                    c.AddButton("Open Vector Editor", async (s, e) =>
+                    {
+                        if (TargetInstance is not VectorCanvasClip vecClip)
+                        {
+                            page.SetStateFail("Target clip is invalid.");
+                            return;
+                        }
+                        // Ensure the clip is initialised (SourcePicture may be null
+                        // in composition-only mode, which is valid).
+                        if (vecClip.SourcePicture is null && vecClip.Components.Count == 0 && vecClip.FilePath is not null)
+                            vecClip.ReInit(default);
+
+                        var editor = new StoryboardEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
+                        var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                        {
+                            Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
+                            Content = editor,
+                            IsPopOutVisible = true
+                        };
+                        editor.ChangesApplied += (d) =>
+                        {
+                            clip.ExtraData = d;
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("Storyboard", null, null));
+                            page.MainMultiWindowView.CloseWindow(v);
+                        };
+                        editor.ChangesCancelled += (s, e) =>
+                        {
+                            page.MainMultiWindowView.CloseWindow(v);
+                        };
+                        page.MainMultiWindowView.AddWindow(v);
+                    });
                 });
+
 
             ppb.PropertyChanged += async (s, e) =>
             {

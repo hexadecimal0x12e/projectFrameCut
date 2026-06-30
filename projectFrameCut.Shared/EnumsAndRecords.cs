@@ -18,6 +18,7 @@ namespace projectFrameCut.Shared
         SubtitleClip,
         MarkingClip,
         TransformClip,
+        VectorCanvasClip,
         Special = -1
     }
 

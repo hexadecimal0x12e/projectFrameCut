@@ -836,7 +836,7 @@ public partial class RenderPage : ContentPage
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
-                EnableThreadAffinity = EnableThreadAffinity,
+                EnableThreadAffinity = EnableThreadAffinity && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
                 OneByOneRender = blockwrite,
                 PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),

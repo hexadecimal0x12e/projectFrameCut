@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls.Shapes;
+﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -548,7 +548,6 @@ public sealed class DynamicPreview : IDisposable
         {
             return new PreparedPreview(request.Clip.Id, null, "Failed to generate preview source.", request.Clip);
         }
-
         return new PreparedPreview(request.Clip.Id, () =>
             BuildClipPreviewView(sourceData, request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, token),
             sourceData.ErrorMessage, request.Clip);
@@ -940,11 +939,12 @@ public sealed class DynamicPreview : IDisposable
                             : 1f;
                     }
                     generatedView = ApplyEffectPreview(generatedView, effect, provider, canvasWidth, canvasHeight, frameIndex, previewProgress);
+                    LogDiagnostic($"Applied dynamic preview for clip {clip.Id}/{clip.Name}'s effect {effect.TypeName}/{effect.Name}.");
                 }
                 else
                 {
                     var effectKey = $"{clip.Id}:{effect.TypeName}:{effect.Name}";
-                    LogOnce(_effectFallbackLogKeys, effectKey, $"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using clip-local fallback.");
+                    LogDiagnostic($"Clip {clip.Id}/{clip.Name}'s Effect {effect.TypeName}/{effect.Name} does not support dynamic preview, using clip-local fallback.");
                     generatedView = GenerateClipEffectFallbackView(clip, enabledEffects, targetWidth, targetHeight, frameIndex, token);
                     usedFullRenderFallback = true;
                     break;
@@ -993,6 +993,7 @@ public sealed class DynamicPreview : IDisposable
         input.VerticalOptions = LayoutOptions.Start;
         input.TranslationX = x;
         input.TranslationY = y;
+        LogDiagnostic($"Placed clip {clip.Id}/{clip.Name} at ({x},{y}) with size ({w}×{h}) after applying position providers.");
         return input;
     }
 

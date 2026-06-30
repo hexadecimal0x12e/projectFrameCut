@@ -476,7 +476,13 @@ namespace projectFrameCut
                     {
 
                         TextServices.LoadFonts();
-                        TextClipFontRegistry.Initialize(TextServices.LoadedFonts.Values.Select(c => c.InnerFont).Where(c => c is not null));
+                        // 将已发现字体作为懒加载条目注册到 FontRegistry（不加载 FontFace）
+                        foreach (var item in TextServices.LoadedFonts.Values)
+                        {
+                            if (!string.IsNullOrEmpty(item.Path) && File.Exists(item.Path))
+                                TextClipFontRegistry.AddFont(item.Path);
+                        }
+                        TextClipFontRegistry.Initialize();
                     }
 
                 }

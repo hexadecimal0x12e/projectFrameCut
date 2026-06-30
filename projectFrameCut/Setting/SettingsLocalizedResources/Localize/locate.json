@@ -1038,6 +1038,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u4F7F\u7528CommunityToolkit.Maui\u7684Popup\u4F5C\u4E3A\u5F39\u51FA\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "\u4F7F\u7528\u52A8\u6001\u9884\u89C8",
         "Mode": "ConstString",
@@ -2246,6 +2254,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u6B64\u529F\u80FD\u9700\u8981\u4F7F\u7528\u5E26\u6709\u5F02\u6784 (\u5927\u5C0F\u6838) \u67B6\u6784\u5904\u7406\u5668\u7684\u8BBE\u5907\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_EnableBatchProcess",
         "Value": "\u786C\u4EF6\u52A0\u901F\u6548\u679C\u6279\u5904\u7406",
         "Mode": "ConstString",
@@ -2513,14 +2529,6 @@
       {
         "Id": "RenderEffectImplement_Unknown",
         "Value": "\u672A\u77E5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
-        "Value": "\u4F7F\u7528CommunityToolkit.Maui\u7684Popup\u4F5C\u4E3A\u5F39\u51FA\u7A97\u53E3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5293,6 +5301,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Use CommunityToolkit.Maui\u0027s Popup as a popup",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "This feature requires a device with a hybrid core (big and little core) processor.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -8056,6 +8082,24 @@
       {
         "Id": "Render_AllowEffectOutOfOrder",
         "Value": "\u5141\u8A31\u91CD\u6392\u6548\u679C\u4EE5\u52A0\u901F\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u4F7F\u7528CommunityToolkit.Maui\u7684Popup\u4F5C\u70BA\u5F48\u51FA\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u6B64\u529F\u80FD\u9700\u8981\u4F7F\u7528\u642D\u8F09\u7570\u69CB\uFF08\u5927\u5C0F\u6838\uFF09\u67B6\u69CB\u8655\u7406\u5668\u7684\u88DD\u7F6E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10834,6 +10878,24 @@
         "ArgsComment": [],
         "Comment": "\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "CommunityToolkit.Maui\u306EPopup\u3092\u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u3068\u3057\u3066\u4F7F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u672C\u6A5F\u80FD\u306B\u306F\u3001\u5927\u5C0F\u30B3\u30A2\u69CB\u6210\u306E\u30D7\u30ED\u30BB\u30C3\u30B5\u3092\u642D\u8F09\u3057\u305F\u7AEF\u672B\u304C\u5FC5\u8981\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -13601,6 +13663,24 @@
         "ArgsComment": [],
         "Comment": "\u7FFB\u8BD1\u81EA\u4E2D\u6587\u0022\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C\u0022",
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\uC774 \uAE30\uB2A5\uC740 \uC774\uC885 \uCF54\uC5B4(\uBE45/\uB9AC\uD2C0) \uC544\uD0A4\uD14D\uCC98 \uD504\uB85C\uC138\uC11C\uAC00 \uD0D1\uC7AC\uB41C \uAE30\uAE30\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "CommunityToolkit.Maui\uC758 Popup\uC744 \uD31D\uC5C5 \uCC3D\uC73C\uB85C \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -16363,6 +16443,24 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "Forcer l\u0027utilisation du CPU pour l\u0027effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Utiliser le Popup de CommunityToolkit.Maui comme fen\u00EAtre contextuelle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Cette fonctionnalit\u00E9 n\u00E9cessite un appareil \u00E9quip\u00E9 d\u0027un processeur \u00E0 architecture h\u00E9t\u00E9rog\u00E8ne (gros et petits c\u0153urs).",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19141,6 +19239,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u5B9C\u4EE5CommunityToolkit.Maui\u4E4BPopup\u4E3A\u5F39\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u6B64\u6280\u987B\u7528\u5F02\u5236\uFF08\u5927\u5C0F\u6838\uFF09\u67B6\u6784\u7B97\u5668\u4E4B\u5177\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -21912,6 +22028,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 Popup \u0627\u0644\u062E\u0627\u0635 \u0628\u0640 CommunityToolkit.Maui \u0643\u0646\u0627\u0641\u0630\u0629 \u0645\u0646\u0628\u062B\u0642\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u062A\u062A\u0637\u0644\u0628 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629 \u062C\u0647\u0627\u0632\u064B\u0627 \u0645\u0632\u0648\u062F\u064B\u0627 \u0628\u0645\u0639\u0627\u0644\u062C \u0628\u0647\u064A\u0643\u0644\u064A\u0629 \u063A\u064A\u0631 \u0645\u062A\u062C\u0627\u0646\u0633\u0629 (\u0623\u0646\u0648\u064A\u0629 \u0643\u0628\u064A\u0631\u0629 \u0648\u0635\u063A\u064A\u0631\u0629).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -24673,6 +24807,24 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "CPU f\u00FCr Effekte erzwingen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Verwenden Sie das Popup von CommunityToolkit.Maui als Popup-Fenster",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Diese Funktion erfordert ein Ger\u00E4t mit einem Prozessor mit heterogener Architektur (Big- und Little-Cores).",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27447,6 +27599,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Usar el Popup de CommunityToolkit.Maui como ventana emergente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Esta funci\u00F3n requiere un dispositivo con un procesador de arquitectura heterog\u00E9nea (n\u00FAcleos grandes y peque\u00F1os).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -30210,6 +30380,24 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "Forza l\u0027uso della CPU per l\u0027effetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Utilizza il Popup di CommunityToolkit.Maui come finestra popup",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Questa funzione richiede un dispositivo dotato di processore con architettura eterogenea (core grandi e piccoli).",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32983,6 +33171,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Ta funkcja wymaga urz\u0105dzenia z procesorem o architekturze heterogenicznej (du\u017Ce i ma\u0142e rdzenie).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "U\u017Cyj Popup z CommunityToolkit.Maui jako wyskakuj\u0105cego okienka",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -35746,6 +35952,24 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "For\u00E7ar uso da CPU para implementar efeito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "Use o Popup do CommunityToolkit.Maui como janela pop-up",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Este recurso requer um dispositivo com processador de arquitetura heterog\u00EAnea (big.LITTLE).",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38523,6 +38747,24 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 Popup \u0438\u0437 CommunityToolkit.Maui \u0432 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0435 \u0432\u0441\u043F\u043B\u044B\u0432\u0430\u044E\u0449\u0435\u0433\u043E \u043E\u043A\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "\u0414\u043B\u044F \u0440\u0430\u0431\u043E\u0442\u044B \u044D\u0442\u043E\u0439 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E \u0441 \u0433\u0435\u0442\u0435\u0440\u043E\u0433\u0435\u043D\u043D\u044B\u043C \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u043E\u043C (\u0431\u043E\u043B\u044C\u0448\u0438\u0435 \u0438 \u043C\u0430\u043B\u044B\u0435 \u044F\u0434\u0440\u0430).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -41288,6 +41530,24 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "CPU kullanarak efekti zorla uygula",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
+        "Value": "A\u00E7\u0131l\u0131r pencere olarak CommunityToolkit.Maui Popup\u0027\u0131n\u0131 kullan\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableAutoThreadAffinity_Unsupported",
+        "Value": "Bu \u00F6zellik, heterojen (b\u00FCy\u00FCk ve k\u00FC\u00E7\u00FCk \u00E7ekirdek) mimarili i\u015Flemcilere sahip cihazlar gerektirir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

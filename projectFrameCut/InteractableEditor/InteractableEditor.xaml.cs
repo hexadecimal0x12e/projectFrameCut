@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationPluginBase.Text;
+﻿using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
@@ -110,6 +110,7 @@ namespace projectFrameCut.InteractableEditor
         private int _hasPendingPreviewRefresh;
         private int _isCommitUpdateRunning;
         private int _hasPendingCommitUpdate;
+        private int _isUpdatingVisuals;
         private long _lastOverlayTapTick;
 
         private CancellationTokenSource? _commitUpdateDebounceCts;
@@ -1513,90 +1514,103 @@ namespace projectFrameCut.InteractableEditor
             if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
                 return;
 
-            Rect renderRect = GetRenderRect();
-            double scale = renderRect.Width / _videoWidth;
-
-            UpdateRenderRectOverlay(renderRect);
-            UpdateReferenceLines(renderRect, scale);
-            UpdateBottomControlsVisibility(renderRect);
-
-            if (_currentClip is not null)
+            if (Interlocked.CompareExchange(ref _isUpdatingVisuals, 1, 0) != 0)
             {
-                var activeState = _activeState ?? GetOrCreateClipState(_currentClip);
-                SetActiveState(activeState);
-            }
-            else
-            {
-                SetActiveState(null);
-            }
-
-            // 当使用DraftPage中的所有clips时，先处理多clips模式
-            if (_allClips is not null)
-            {
-                UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider);
+                LogDiagnostic("[UpdateVisuals] Skipped — reentrant call detected");
                 return;
             }
 
-            foreach (var entry in _clipStates)
+            try
             {
-                var clipId = entry.Key;
-                var state = entry.Value;
-                Stopwatch sw = Stopwatch.StartNew();
+                Rect renderRect = GetRenderRect();
+                double scale = renderRect.Width / _videoWidth;
 
+                UpdateRenderRectOverlay(renderRect);
+                UpdateReferenceLines(renderRect, scale);
+                UpdateBottomControlsVisibility(renderRect);
 
-                UpdateClipStateZIndex(state, clipId);
-
-                if (!TryResolveClipRect(clipId, ignorePositionProvider, out var x, out var y, out var w, out var h, out var clipType, out var isCurrentClip))
+                if (_currentClip is not null)
                 {
-                    state.Hide();
-                    continue;
+                    var activeState = _activeState ?? GetOrCreateClipState(_currentClip);
+                    SetActiveState(activeState);
+                }
+                else
+                {
+                    SetActiveState(null);
                 }
 
-                // 跳过非可视Clip类型（AudioClip、MarkingClip），避免占据视觉布局空间
-                if (IsNonVisualClipType(clipType))
+                // 当使用DraftPage中的所有clips时，先处理多clips模式
+                if (_allClips is not null)
                 {
-                    state.Hide();
-                    _previewSourceClips.Remove(clipId);
-                    continue;
+                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider);
+                    return;
                 }
 
-                // Clamp to keep UI stable.
-                w = Math.Clamp(w, MinSize, _videoWidth);
-                h = Math.Clamp(h, MinSize, _videoHeight);
-                if (!AllowClipOutOfBounds)
+                foreach (var entry in _clipStates)
                 {
-                    x = Math.Clamp(x, 0, _videoWidth - w);
-                    y = Math.Clamp(y, 0, _videoHeight - h);
+                    var clipId = entry.Key;
+                    var state = entry.Value;
+                    Stopwatch sw = Stopwatch.StartNew();
+
+                    if (!TryResolveClipRect(clipId, ignorePositionProvider, out var x, out var y, out var w, out var h, out var clipType, out var isCurrentClip))
+                    {
+                        state.Hide();
+                        continue;
+                    }
+
+                    // 跳过非可视Clip类型（AudioClip、MarkingClip），避免占据视觉布局空间
+                    if (IsNonVisualClipType(clipType))
+                    {
+                        state.Hide();
+                        _previewSourceClips.Remove(clipId);
+                        continue;
+                    }
+
+                    // Clamp to keep UI stable.
+                    w = Math.Clamp(w, MinSize, _videoWidth);
+                    h = Math.Clamp(h, MinSize, _videoHeight);
+                    if (!AllowClipOutOfBounds)
+                    {
+                        x = Math.Clamp(x, 0, _videoWidth - w);
+                        y = Math.Clamp(y, 0, _videoHeight - h);
+                    }
+
+                    double displayX = renderRect.X + x * scale;
+                    double displayY = renderRect.Y + y * scale;
+                    double displayW = w * scale;
+                    double displayH = h * scale;
+
+                    var showHandles = isCurrentClip;
+                    var showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
+
+                    // 在同一原子步骤中更新 ZIndex 和布局边界，避免分离的依赖属性修改
+                    // 触发中间的布局过程导致原生层崩溃。
+                    UpdateClipStateZIndex(state, clipId);
+                    state.UpdateLayout(
+                        displayX,
+                        displayY,
+                        displayW,
+                        displayH,
+                        w,
+                        h,
+                        showHandles,
+                        showSizeLabel,
+                        showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
+                        isCurrentClip,
+                        isCurrentClip ? GetClipOverlayStroke(_currentClip) : null);
+
+                    UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
+
+                    //LogDiagnostic($"[UpdateVisuals] clip {clipId} debug overlay updated in {sw.ElapsedMilliseconds}ms");
+                    //LogDiagnostic($"[UpdateVisuals] clip {clipId} total update time {sw.ElapsedMilliseconds}ms");
                 }
 
-                double displayX = renderRect.X + x * scale;
-                double displayY = renderRect.Y + y * scale;
-                double displayW = w * scale;
-                double displayH = h * scale;
-
-                var showHandles = isCurrentClip;
-                var showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
-
-                state.UpdateLayout(
-                    displayX,
-                    displayY,
-                    displayW,
-                    displayH,
-                    w,
-                    h,
-                    showHandles,
-                    showSizeLabel,
-                    showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                    isCurrentClip,
-                    isCurrentClip ? GetClipOverlayStroke(_currentClip) : null);
-
-                UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
-
-                //LogDiagnostic($"[UpdateVisuals] clip {clipId} debug overlay updated in {sw.ElapsedMilliseconds}ms");
-                //LogDiagnostic($"[UpdateVisuals] clip {clipId} total update time {sw.ElapsedMilliseconds}ms");
+                ReorderClipStateRootsByZIndex();
             }
-
-            ReorderClipStateRootsByZIndex();
+            finally
+            {
+                Interlocked.Exchange(ref _isUpdatingVisuals, 0);
+            }
         }
 
         private void UpdatePreviewDebugOverlay(ClipOverlayState state, Guid clipId, double logicalW, double logicalH, double displayW, double displayH)
@@ -1912,10 +1926,10 @@ namespace projectFrameCut.InteractableEditor
             // 遍历所有clips，筛选出在当前帧范围内的clips
             foreach (var clip in activeClips)
             {
+                LogDiagnostic($"Updating layout of {clip.Id}");
                 Stopwatch sw = Stopwatch.StartNew();
 
                 var state = GetOrCreateClipState(clip.Id);
-                UpdateClipStateZIndex(state, clip.Id);
 
                 // 计算clip的位置和大小
                 double x;
@@ -1944,11 +1958,13 @@ namespace projectFrameCut.InteractableEditor
                     h = textRect.Height;
                 }
 
-                if (clip.Effects?.Count > 0 && !ignorePositionProvider)
+                // 安全获取 clip 实例用于位置提供器；回调未配置时跳过。
+                var clipInstance = GetClipInstance(clip);
+                if (clip.Effects?.Count > 0 && !ignorePositionProvider && clipInstance is not null)
                 {
                     ApplyPositionProvidersToRect(
                         clip.Effects.Values,
-                        clipSource: GetClipInstance(clip),
+                        clipSource: clipInstance,
                         _currentFrame,
                         (int)Math.Round(_videoWidth),
                         (int)Math.Round(_videoHeight),
@@ -1974,24 +1990,26 @@ namespace projectFrameCut.InteractableEditor
                 bool showHandles = isCurrentClip;
                 bool showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 
-                Dispatcher.Dispatch(() =>
-                {
-                    state.UpdateLayout(
-                        displayX,
-                        displayY,
-                        displayW,
-                        displayH,
-                        w,
-                        h,
-                        showHandles: showHandles,
-                        showSizeLabel: showSizeLabel,
-                        sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                        showClipVisual: isCurrentClip,
-                        clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
+                // 在同一原子步骤中更新 ZIndex 和布局边界，无需嵌套 Dispatcher.Dispatch。
+                // 该方法已在 UI 线程上被调用（由外层 Dispatcher.DispatchAsync 保证）。
+                // 移除嵌套 Dispatch 可避免在布局过程中创建同步重入上下文导致原生层崩溃 (0xc000027b)。
+                UpdateClipStateZIndex(state, clip.Id);
+                state.UpdateLayout(
+                    displayX,
+                    displayY,
+                    displayW,
+                    displayH,
+                    w,
+                    h,
+                    showHandles: showHandles,
+                    showSizeLabel: showSizeLabel,
+                    sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
+                    showClipVisual: isCurrentClip,
+                    clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
 
-                    UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
+                UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
-                });
+                LogDiagnostic($"Updated layout for {clip.Id}");
 
 
             }
@@ -2074,23 +2092,22 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            Dispatcher.Dispatch(() =>
+            // 直接在 UI 线程上操作 Children 集合；该方法总是在 UpdateVisuals 的重入保护内被调用。
+            // 避免嵌套 Dispatcher.Dispatch 以防止布局重入导致原生层崩溃 (0xc000027b)。
+            Stopwatch sw = Stopwatch.StartNew();
+            foreach (var root in orderedRoots)
             {
-                Stopwatch sw = Stopwatch.StartNew();
-                foreach (var root in orderedRoots)
+                try
                 {
-                    try
-                    {
-                        ClipStatesHost.Children.Remove(root);
-                        ClipStatesHost.Children.Add(root);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "reorder the clips overlay state", this);
-                    }
+                    ClipStatesHost.Children.Remove(root);
+                    ClipStatesHost.Children.Add(root);
                 }
-                //LogDiagnostic($"[UpdateVisuals] Render clip overlay for frame {_currentFrame} reordered {orderedRoots.Count} states by ZIndex in {sw.ElapsedMilliseconds} ms");
-            });
+                catch (Exception ex)
+                {
+                    Log(ex, "reorder the clips overlay state", this);
+                }
+            }
+            //LogDiagnostic($"[UpdateVisuals] Render clip overlay for frame {_currentFrame} reordered {orderedRoots.Count} states by ZIndex in {sw.ElapsedMilliseconds} ms");
         }
 
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
@@ -3182,11 +3199,9 @@ namespace projectFrameCut.InteractableEditor
 
         private IClip? GetClipInstance(ClipElementUI clip)
         {
-            if (_getClipInstanceCallback is not null)
-            {
-                return _getClipInstanceCallback(clip);
-            }
-            throw new InvalidOperationException("Couldn't get the clip instance.");
+            // 安全地获取 clip 实例；当回调未配置时返回 null 而非抛出异常，
+            // 避免在布局更新过程中传播未处理异常导致 XAML 原生层状态损坏 (0xc000027b)。
+            return _getClipInstanceCallback?.Invoke(clip);
         }
 
         #endregion

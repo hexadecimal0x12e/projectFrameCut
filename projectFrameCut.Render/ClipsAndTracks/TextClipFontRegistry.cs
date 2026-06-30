@@ -68,6 +68,15 @@ public static class TextClipFontRegistry
                 FallbackFonts.Add(f1);
             if (LoadedFonts.TryGetValue("Arial Regular", out var f2))
                 FallbackFonts.Add(f2);
+
+            // 懒加载模式下 LoadedFonts 可能为空，尝试从 PendingFonts 加载后备字体
+            if (FallbackFonts.Count == 0)
+            {
+                var fallback = LoadPendingFont("HarmonyOS Sans SC Medium")
+                            ?? LoadPendingFont("Arial Regular");
+                if (fallback is not null)
+                    FallbackFonts.Add(fallback);
+            }
         }
 
         // 目录扫描仅一次
@@ -370,7 +379,7 @@ public static class TextClipFontRegistry
             {
                 case 1: familyName ??= value; break;
                 case 2: subfamilyName ??= value; break;
-                case 4: uniqueName ??= value; break;
+                case 3: uniqueName ??= value; break; // Unique identifier (与 FontFace.UniqueName 一致)
                 case 6: uniqueName ??= value; break; // PostScript name
             }
 

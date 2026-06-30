@@ -208,7 +208,12 @@ namespace projectFrameCut.Services
 
                 if (!string.IsNullOrWhiteSpace(item.Path) && File.Exists(item.Path))
                 {
-                    try { return FontFace.Load(item.Path); }
+                    try
+                    {
+                        var fontFace = FontFace.Load(item.Path);
+                        item.InnerFont = fontFace; // 回填缓存，下次直接复用
+                        return fontFace;
+                    }
                     catch { }
                 }
             }
@@ -232,6 +237,7 @@ namespace projectFrameCut.Services
                 try
                 {
                     fontFace = FontFace.Load(item.Path);
+                    item.InnerFont = fontFace; // 回填缓存，下次直接复用
                     return true;
                 }
                 catch (Exception ex)

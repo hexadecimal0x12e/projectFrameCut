@@ -322,11 +322,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
-
-    /// <summary>
-    /// Resolution divisor for dynamic preview. 1 = full, 2 = half, etc.
-    /// Higher values reduce rendering load.
-    /// </summary>
     public int DynamicPreviewResolutionDivisor { get; set; } = 1;
 
 
@@ -8151,6 +8146,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         UpdateAllExtendToWholeDraftClips();
     }
 
+    [DebuggerNonUserCode()] //too annoying in step-through debugging
     private IClip? OnGetClipInstanceCallback(ClipElementUI element)
     {
         if (previewer?.Clips is not null && previewer.Clips.Length > 0)
@@ -9463,7 +9459,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    private void SetStateWarn(string text)
+    public void SetStateWarn(string text)
     {
         SetStateFail();
         Dispatcher.Dispatch(() =>
@@ -9486,7 +9482,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
     }
 
-    private void SetStateFail(string text)
+    public void SetStateFail(string text)
     {
         SetStateFail();
         Dispatcher.Dispatch(() =>
@@ -9515,7 +9511,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             StatusLabel.TextColor = Colors.White;
             StatusLabel.Text = text;
-            SemanticScreenReader.Default.Announce(text);
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
         HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>

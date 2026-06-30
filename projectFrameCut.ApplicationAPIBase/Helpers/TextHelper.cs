@@ -398,20 +398,22 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         {
             try
             {
+                // 根据扩展名优先尝试对应格式，失败后回退到另一种格式
+                // （某些文件可能存在扩展名与实际格式不匹配的情况）
                 bool ttcTried = false, ttfTried = false;
-                if (Path.GetExtension(path).ToLower() == "ttc") goto ttc;
+                if (Path.GetExtension(path).ToLowerInvariant() == ".ttc") goto ttc;
             ttf:
                 try
                 {
                     ttfTried = true;
-                    var face = Drawing.Text.FontHelper.FontFace.Load(path);
+                    var meta = FontMetadataReader.ReadFromFile(path);
                     return [new FontItem
                     {
-                        FontName = face.UniqueName ?? $"{face.FamilyName} {face.SubfamilyName}",
-                        DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
+                        FontName = meta.UniqueName ?? $"{meta.FamilyName} {meta.SubfamilyName}",
+                        DisplayName = $"{meta.DisplayName} {LocalizeFontStyleName(meta.SubfamilyName)}",
                         Path = path,
                         Category = category,
-                        InnerFont = face,
+                        PrimaryLanguageTag = meta.PrimaryLanguageTag,
                     }];
                 }
                 catch
@@ -423,14 +425,14 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                 try
                 {
                     ttcTried = true;
-                    var faces = Drawing.Text.FontHelper.FontCollection.Load(path);
-                    return faces.Select(c => c.Load()).Select(face => new FontItem
+                    var metas = FontMetadataReader.ReadFromTtc(path);
+                    return metas.Select(meta => new FontItem
                     {
-                        FontName = face.UniqueName ?? $"{face.FamilyName} {face.SubfamilyName}",
-                        DisplayName = $"{face.DisplayName} {LocalizeFontStyleName(face.SubfamilyName)}",
+                        FontName = meta.UniqueName ?? $"{meta.FamilyName} {meta.SubfamilyName}",
+                        DisplayName = $"{meta.DisplayName} {LocalizeFontStyleName(meta.SubfamilyName)}",
                         Path = path,
                         Category = category,
-                        InnerFont = face
+                        PrimaryLanguageTag = meta.PrimaryLanguageTag,
                     });
                 }
                 catch
