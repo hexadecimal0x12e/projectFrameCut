@@ -150,13 +150,13 @@ public sealed class DynamicPreview : IDisposable
     /// </summary>
     public int PreviewResolutionDivisor { get; set; } = 1;
 
-    public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight, CancellationToken token)
+    public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double CanvasWidth, double CanvasHeight, CancellationToken token, bool applyClipTargetLayout = true)
     {
         var prepareVersion = Interlocked.Increment(ref _prepareVersion);
         try
         {
             var dimensions = ResolveDimensions(targetWidth, targetHeight, CanvasWidth, CanvasHeight);
-            return await GetFinalRequests(frameIndex, targetWidth, targetHeight, prepareVersion, dimensions.canvasWidth, dimensions.canvasHeight, token).ConfigureAwait(false);
+            return await GetFinalRequests(frameIndex, targetWidth, targetHeight, prepareVersion, dimensions.canvasWidth, dimensions.canvasHeight, token, applyClipTargetLayout).ConfigureAwait(false);
         }
         finally
         {
@@ -178,11 +178,11 @@ public sealed class DynamicPreview : IDisposable
         return (canvasWidth, canvasHeight);
     }
 
-    public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int targetWidth, int targetHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token)
+    public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int targetWidth, int targetHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token, bool applyClipTargetLayout = true)
     {
         var clipsSnapshot = AcquireClipsSnapshot();
         var requests = ResolveRequests(clipsSnapshot, frameIndex, canvasWidth, canvasHeight);
-        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
+        var prepared = await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout, checkVersion: true, prepareVersion, token).ConfigureAwait(false);
         if (prepared is not null)
         {
             return prepared;
@@ -2045,6 +2045,127 @@ public sealed class DynamicPreview : IDisposable
         if(skippedSegmentCount >= sortedElements.Count())
         {
             throw new ArgumentOutOfRangeException($"all vector segment exceeds device limit of {deviceLimit}. Please check your source, or disable Vector dynamic previewing function.");
+        }
+
+        return container;
+    }
+
+    internal static View BuildViewportVectorPreviewView(
+        IReadOnlyList<VectorCanvasElement> elements,
+        int canvasWidth,
+        int canvasHeight,
+        int viewportX,
+        int viewportY,
+        int viewportWidth,
+        int viewportHeight)
+    {
+        float viewW = Math.Max(1, viewportWidth);
+        float viewH = Math.Max(1, viewportHeight);
+        float vpW = Math.Max(1f, viewportWidth);
+        float vpH = Math.Max(1f, viewportHeight);
+        float vpX = viewportX;
+        float vpY = viewportY;
+        float scaleX = viewW / vpW;
+        float scaleY = viewH / vpH;
+
+        var container = new AbsoluteLayout
+        {
+            WidthRequest = viewW,
+            HeightRequest = viewH,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start,
+            InputTransparent = true,
+            Clip = new RectangleGeometry
+            {
+                Rect = new Rect(0, 0, viewW, viewH),
+            },
+        };
+
+        if (elements.Count == 0)
+        {
+            return container;
+        }
+
+        int safeCanvasWidth = Math.Max(1, canvasWidth);
+        int safeCanvasHeight = Math.Max(1, canvasHeight);
+        int deviceLimit = GetDeviceMaxSize();
+
+        foreach (var element in elements.OrderBy(e => e.LayerIndex))
+        {
+            var segments = element.Draw();
+            if (segments is null || segments.Length == 0)
+            {
+                continue;
+            }
+
+            float elementScaleX;
+            float elementScaleY;
+            float originX;
+            float originY;
+
+            if (element.UseUniformScale)
+            {
+                float uniform = MathF.Min(safeCanvasWidth, safeCanvasHeight);
+                elementScaleX = uniform;
+                elementScaleY = uniform;
+                originX = element.BaseX * safeCanvasWidth + element.RelativeX * uniform;
+                originY = element.BaseY * safeCanvasHeight + element.RelativeY * uniform;
+            }
+            else
+            {
+                elementScaleX = safeCanvasWidth;
+                elementScaleY = safeCanvasHeight;
+                originX = element.RelativeX * safeCanvasWidth;
+                originY = element.RelativeY * safeCanvasHeight;
+            }
+
+            float screenOriginX = (originX - vpX) * scaleX;
+            float screenOriginY = (originY - vpY) * scaleY;
+            float screenScaleX = elementScaleX * scaleX;
+            float screenScaleY = elementScaleY * scaleY;
+
+            float cosA = 0;
+            float sinA = 0;
+            bool hasRotation = MathF.Abs(element.Rotation) > 0.0001f;
+            if (hasRotation)
+            {
+                cosA = MathF.Cos(element.Rotation);
+                sinA = MathF.Sin(element.Rotation);
+            }
+
+            foreach (var segment in segments)
+            {
+                if (segment is null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var path = CreatePathFromSegment(
+                        segment,
+                        screenScaleX,
+                        screenScaleY,
+                        screenOriginX,
+                        screenOriginY,
+                        hasRotation,
+                        cosA,
+                        sinA,
+                        deviceLimit);
+                    if (path is not null)
+                    {
+                        container.Children.Add(path);
+                    }
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    break;
+                }
+                catch (Exception ex) when (ex.Message.Contains("CanvasImageSource") || ex.Message.Contains("MaximumBitmapSize"))
+                {
+                    break;
+                }
+            }
         }
 
         return container;

@@ -210,7 +210,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             AddStrokeLine(primitives,
                 CX(s.X1, ox, sx), CY(s.Y1, oy, sy),
                 CX(s.X2, ox, sx), CY(s.Y2, oy, sy),
-                s.Thickness * Math.Min(sx, sy),
+                s.Thickness,
                 s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
         }
 
@@ -234,7 +234,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
             {
-                float t = s.Thickness * Math.Min(sx, sy);
+                float t = s.Thickness;
                 AddStrokeLine(primitives, x0, y0, x1, y0, t, s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
                 AddStrokeLine(primitives, x1, y0, x1, y1, t, s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
                 AddStrokeLine(primitives, x1, y1, x0, y1, t, s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
@@ -300,7 +300,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
             {
-                float t = s.Thickness * Math.Min(sx, sy);
+                float t = s.Thickness;
                 for (int i = 0; i < totalVerts; i++)
                 {
                     int j = (i + 1) % totalVerts;
@@ -335,7 +335,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
             {
-                float t = s.Thickness * Math.Min(sx, sy);
+                float t = s.Thickness;
                 float prevX = cx + rx, prevY = cy;
                 for (int i = 1; i <= segs; i++)
                 {
@@ -354,7 +354,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         {
             if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
 
-            float t = s.Thickness * Math.Min(sx, sy);
+            float t = s.Thickness;
             var pts = new List<(float x, float y)>();
             FlattenCubicBezier(
                 CX(s.X1, ox, sx), CY(s.Y1, oy, sy),
@@ -409,7 +409,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         {
             if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
 
-            float t = s.Thickness * Math.Min(sx, sy);
+            float t = s.Thickness;
             var pts = new List<(float x, float y)>();
             FlattenQuadraticBezier(
                 CX(s.X1, ox, sx), CY(s.Y1, oy, sy),
@@ -463,7 +463,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (rx <= 0f || ry <= 0f) return;
 
-            float t = s.Thickness * Math.Min(sx, sy);
+            float t = s.Thickness;
             int segs = Math.Max(4, (int)(MathF.Abs(s.SweepAngle) * MathF.Sqrt(rx + ry) * 0.3f));
             float step = s.SweepAngle / segs;
             float angle = s.StartAngle;
@@ -516,7 +516,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
             {
-                float t = s.Thickness * Math.Min(sx, sy);
+                float t = s.Thickness;
                 for (int i = 0; i < pts.Length; i++)
                 {
                     int j = (i + 1) % pts.Length;
@@ -532,7 +532,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         {
             if (s.Thickness <= 0f || s.StrokeA <= 0f || s.Points.Length < 2) return;
 
-            float t = s.Thickness * Math.Min(sx, sy);
+            float t = s.Thickness;
             var pts = s.Points;
             for (int i = 1; i < pts.Length; i++)
             {

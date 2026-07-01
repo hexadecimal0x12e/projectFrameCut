@@ -61,9 +61,17 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                 primData[i * FloatsPerPrimitive + 13] = p.BBoxMaxY;
             }
 
+            // --- Bin primitives into tiles so each pixel only tests the
+            // primitives that actually overlap its tile, instead of every
+            // primitive in the scene. This turns an O(pixels * primitives)
+            // kernel into roughly O(pixels * primitivesPerTile). ---
+            var bins = TileBinner.Build(primitives, width, height);
+
             // --- Allocate GPU buffers ---
             using var dPrimInfo = accel.Allocate1D(primInfo);
             using var dPrimData = accel.Allocate1D(primData);
+            using var dTileOffsets = accel.Allocate1D(bins.TileOffsets);
+            using var dTileIndices = accel.Allocate1D(bins.TileIndices);
 
             using var dOutR = accel.Allocate1D<float>(pixels);
             using var dOutG = accel.Allocate1D<float>(pixels);
@@ -81,6 +89,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                 {
                     kernel(pixels, dPrimInfo.View, dPrimData.View, pc,
                            width, height, transparent,
+                           dTileOffsets.View, dTileIndices.View, bins.TilesX, bins.TileSize,
                            dOutR.View, dOutG.View, dOutB.View, dOutA.View);
                     accel.Synchronize();
                 }
@@ -89,6 +98,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             {
                 kernel(pixels, dPrimInfo.View, dPrimData.View, pc,
                        width, height, transparent,
+                       dTileOffsets.View, dTileIndices.View, bins.TilesX, bins.TileSize,
                        dOutR.View, dOutG.View, dOutB.View, dOutA.View);
             }
 
@@ -104,15 +114,19 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             var bOut = new ushort[pixels];
             var aOut = new float[pixels];
 
-            var hasAlpha = false;
-            for (int i = 0; i < pixels; i++)
+            // Convert & scan for alpha in parallel — this was previously a
+            // single-threaded loop that could take a noticeable chunk of the
+            // total render time on large canvases.
+            int alphaFlag = 0;
+            Parallel.For(0, pixels, i =>
             {
                 rOut[i] = ClampUshort(rFloat[i]);
                 gOut[i] = ClampUshort(gFloat[i]);
                 bOut[i] = ClampUshort(bFloat[i]);
                 aOut[i] = aFloat[i];
-                if (aOut[i] < 1f) hasAlpha = true;
-            }
+                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+            });
+            var hasAlpha = alphaFlag != 0;
             Logger.LogDiagnostic($"Rasterization operation done within {sw.Elapsed}.");
 
             return new Picture16bpp(width, height)
@@ -140,12 +154,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             Action<Index1D,
                 ArrayView<int>, ArrayView<float>, int,
                 int, int, int,
+                ArrayView<int>, ArrayView<int>, int, int,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>>
             KernelCache = new();
 
         private static Action<Index1D,
             ArrayView<int>, ArrayView<float>, int,
             int, int, int,
+            ArrayView<int>, ArrayView<int>, int, int,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>
         GetOrCreateKernel(Accelerator accel)
         {
@@ -157,6 +173,10 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     int primCount,
                     int w, int h,
                     int transparentBg,
+                    ArrayView<int> tileOffsets, // CSR offsets, length tilesX*tilesY + 1
+                    ArrayView<int> tileIndices, // flat primitive indices per tile
+                    int tilesX,
+                    int tileSize,
                     ArrayView<float> outR,
                     ArrayView<float> outG,
                     ArrayView<float> outB,
@@ -178,9 +198,17 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                         pr = 65535f; pg = 65535f; pb = 65535f; pa = 1f;
                     }
 
-                    // Iterate over primitives (pre-sorted by layer on CPU)
-                    for (int p = 0; p < primCount; p++)
+                    // Only test primitives that overlap this pixel's tile
+                    // instead of every primitive in the scene.
+                    int tileX = x / tileSize;
+                    int tileY = y / tileSize;
+                    int tileIdx = tileY * tilesX + tileX;
+                    int tileStart = tileOffsets[tileIdx];
+                    int tileEnd = tileOffsets[tileIdx + 1];
+
+                    for (int ti = tileStart; ti < tileEnd; ti++)
                     {
+                        int p = tileIndices[ti];
                         int type = primInfo[p * 2 + 0];
                         // layer = primInfo[p * 2 + 1]; // not needed — pre-sorted
 

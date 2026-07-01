@@ -66,7 +66,7 @@ public class ComponentStoryboard
     /// If the component's duration is shorter than the clip's, the animation
     /// finishes early and holds at progress 1.0.
     /// </summary>
-    internal float CalculateLocalProgress(uint clipFrame, uint clipDuration)
+    public float CalculateLocalProgress(uint clipFrame, uint clipDuration)
     {
         uint effectiveDuration = Math.Max(1, DurationInFrames);
         uint clampedFrame = Math.Min(clipFrame, effectiveDuration - 1);

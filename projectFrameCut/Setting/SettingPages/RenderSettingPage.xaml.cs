@@ -125,6 +125,7 @@ public partial class RenderSettingPage : ContentPage
     private void BuildPPB()
     {
         var isCPUBigLittleCore = ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
+        if (!isCPUBigLittleCore && !Settings.ContainsKey("render_enableThreadAffinity")) WriteSetting("render_enableThreadAffinity", "False");
         Content = new VerticalStackLayout();
         rootPPB = new();
         rootPPB
@@ -215,6 +216,7 @@ public partial class RenderSettingPage : ContentPage
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddCheckbox("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
                 .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric)
+                .AppendWhen(!isCPUBigLittleCore ,c => c.AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore)))
                 .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc);
 
         }
@@ -414,7 +416,7 @@ public partial class RenderSettingPage : ContentPage
                 case "render_forceImpType_ForceHwAccel":
                     {
                         WriteSetting(args.Id, args.Value?.ToString() ?? "");
-                        
+
                         if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel") && IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
                         {
                             WriteSetting("render_forceImpType_ForceIPicture", "False");

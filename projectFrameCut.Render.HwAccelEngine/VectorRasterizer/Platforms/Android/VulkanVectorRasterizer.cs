@@ -60,15 +60,31 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 primDataFloat[db + 13] = p.BBoxMaxY;
             }
 
+            // Bin primitives into tiles so each pixel only tests the
+            // primitives that overlap its tile instead of every primitive in
+            // the scene (turns an O(pixels * primitives) kernel into roughly
+            // O(pixels * primitivesPerTile)). Tile offsets/indices are ints,
+            // but the compute-view buffers are float-typed, so encode them
+            // as floats — values stay well within the 2^24 exact-integer
+            // range of a 32-bit float.
+            var bins = TileBinner.Build(primitives, width, height);
+            var tileOffsetsFloat = ToFloatArray(bins.TileOffsets);
+            var tileIndicesFloat = ToFloatArray(bins.TileIndices);
+            int tileOffsetsLen = tileOffsetsFloat.Length;
+            int tileIndicesLen = tileIndicesFloat.Length;
+
             // VulkanComputeView validates all inputs have the same length.
             // Pad to the maximum needed size to avoid the constraint.
-            int vkPad = Math.Max(packedOutputLen, Math.Max(primInfoLen, primDataLen));
+            int vkPad = Math.Max(packedOutputLen,
+                Math.Max(primInfoLen, Math.Max(primDataLen, Math.Max(tileOffsetsLen, tileIndicesLen))));
             var dummyFirst = new float[vkPad];
             var padInfo = PadArray(primInfoFloat, vkPad);
             var padData = PadArray(primDataFloat, vkPad);
+            var padTileOffsets = PadArray(tileOffsetsFloat, vkPad);
+            var padTileIndices = PadArray(tileIndicesFloat, vkPad);
 
             int transparent = transparentBg ? 1 : 0;
-            string shader = BuildShader(pc, width, height, transparent, pixelCount);
+            string shader = BuildShader(pc, width, height, transparent, pixelCount, bins.TilesX, bins.TileSize);
 
             float[] packedOutput;
             try
@@ -77,7 +93,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 {
                     var (accelerator, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(
                         shader,
-                        new float[][] { dummyFirst, padInfo, padData },
+                        new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices },
                         GLComputeView.OutputElementType.Float32);
 
                     var raw = (float[])await vkView.RunComputeAsync();
@@ -95,16 +111,19 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
             var gOut = new ushort[pixelCount];
             var bOut = new ushort[pixelCount];
             var aOut = new float[pixelCount];
-            bool hasAlpha = false;
 
-            for (int i = 0; i < pixelCount; i++)
+            // Parallelize the readback conversion — a single-threaded loop
+            // here was a needless bottleneck on larger canvases.
+            int alphaFlag = 0;
+            Parallel.For(0, pixelCount, i =>
             {
                 rOut[i] = ClampUshort(packedOutput[i]);
                 gOut[i] = ClampUshort(packedOutput[i + pixelCount]);
                 bOut[i] = ClampUshort(packedOutput[i + pixelCount * 2]);
                 aOut[i] = packedOutput[i + pixelCount * 3];
-                if (aOut[i] < 1f) hasAlpha = true;
-            }
+                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+            });
+            bool hasAlpha = alphaFlag != 0;
 
             Logger.LogDiagnostic($"VulkanVectorRasterizer done in {sw.Elapsed}.");
             return new Picture16bpp(width, height)
@@ -118,7 +137,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         }
 
         private static string BuildShader(int primCount, int width, int height, int transparentBg,
-            int pixelCount)
+            int pixelCount, int tilesX, int tileSize)
         {
             return $$"""
 {{'#'}}version 450
@@ -127,7 +146,9 @@ layout(local_size_x = {{WorkGroupSize}}) in;
 layout(set = 0, binding = 0, std430) buffer _Dummy { float _d[]; };
 layout(set = 0, binding = 1, std430) buffer PrimInfoBuf { float primInfo[]; };
 layout(set = 0, binding = 2, std430) buffer PrimDataBuf { float primData[]; };
-layout(set = 0, binding = 3, std430) buffer OutBuf { float outPacked[]; };
+layout(set = 0, binding = 3, std430) buffer TileOffsetsBuf { float tileOffsets[]; };
+layout(set = 0, binding = 4, std430) buffer TileIndicesBuf { float tileIndices[]; };
+layout(set = 0, binding = 5, std430) buffer OutBuf { float outPacked[]; };
 
 void main()
 {
@@ -147,8 +168,17 @@ void main()
         pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
     {{'#'}}endif
 
-    for (int p = 0; p < {{primCount}}; p++)
+    // Only test primitives that overlap this pixel's tile instead of every
+    // primitive in the scene.
+    int tileX = x / {{tileSize}};
+    int tileY = y / {{tileSize}};
+    int tileIdx = tileY * {{tilesX}} + tileX;
+    int tileStart = int(tileOffsets[tileIdx]);
+    int tileEnd = int(tileOffsets[tileIdx + 1]);
+
+    for (int ti = tileStart; ti < tileEnd; ti++)
     {
+        int p = int(tileIndices[ti]);
         int type = int(primInfo[p * 2]);
         int dataBase = p * {{FloatsPerPrimitive}};
 
@@ -238,6 +268,14 @@ void main()
     outPacked[i + {{pixelCount * 3}}] = pa;
 }
 """;
+        }
+
+        private static float[] ToFloatArray(int[] src)
+        {
+            var dst = new float[src.Length];
+            for (int i = 0; i < src.Length; i++)
+                dst[i] = src[i];
+            return dst;
         }
 
         private static float[] PadArray(float[] src, int targetLen)

@@ -67,7 +67,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             BindableProperty.Create(nameof(AutoArrangeOnWindowAdded), typeof(bool), typeof(MultiWindowView), false);
 
         public static readonly BindableProperty SnapThresholdProperty =
-            BindableProperty.Create(nameof(SnapThreshold), typeof(double), typeof(MultiWindowView), 36d);
+            BindableProperty.Create(nameof(SnapThreshold), typeof(double), typeof(MultiWindowView), 8d);
 
         public static readonly BindableProperty AutoArrangeModeProperty =
             BindableProperty.Create(nameof(AutoArrangeMode), typeof(WindowArrangeMode), typeof(MultiWindowView), WindowArrangeMode.Grid);

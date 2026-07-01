@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.InteractableEditor.InteractableEditor"
@@ -12,7 +12,6 @@
           InputTransparent="False">
         <Image x:Name="PreviewOverlayImage"
              x:FieldModifier="public"
-               BackgroundColor="#112233"
                Aspect="AspectFit"
                InputTransparent="True"
                IsVisible="True"
@@ -30,7 +29,7 @@
             <Border x:Name="RenderRectVisual"
                 IsVisible="False"
                 Stroke="#80ffffff"
-                Background="#000000"
+                Background="{Binding EditorCanvasBackground}"
                 StrokeThickness="2"
                 BackgroundColor="Transparent"
                 InputTransparent="True"
@@ -47,7 +46,7 @@
             <AbsoluteLayout x:Name="ReferenceLinesHost"
                     BackgroundColor="Transparent"
                     InputTransparent="True"
-                    ZIndex="110"
+                    ZIndex="500"
                     AbsoluteLayout.LayoutFlags="None" />
 
 

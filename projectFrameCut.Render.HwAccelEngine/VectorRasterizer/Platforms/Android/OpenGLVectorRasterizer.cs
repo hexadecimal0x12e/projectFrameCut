@@ -63,11 +63,23 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 primDataFloat[db + 13] = p.BBoxMaxY;
             }
 
+            // Bin primitives into tiles so each pixel only tests the
+            // primitives that overlap its tile instead of every primitive in
+            // the scene. Tile offsets/indices are ints, but the compute-view
+            // buffers are float-typed, so encode them as floats — values
+            // stay well within the 2^24 exact-integer range of a float.
+            var bins = TileBinner.Build(primitives, width, height);
+            var tileOffsetsFloat = ToFloatArray(bins.TileOffsets);
+            var tileIndicesFloat = ToFloatArray(bins.TileIndices);
+
             // All SSBOs must have the same element count for GLComputeView.
             // Pad to accommodate the largest buffer (packed output: pixelCount * 4).
-            int glPad = Math.Max(packedOutputLen, Math.Max(primInfoLen, primDataLen));
+            int glPad = Math.Max(packedOutputLen,
+                Math.Max(primInfoLen, Math.Max(primDataLen, Math.Max(tileOffsetsFloat.Length, tileIndicesFloat.Length))));
             var padInfo = PadArray(primInfoFloat, glPad);
             var padData = PadArray(primDataFloat, glPad);
+            var padTileOffsets = PadArray(tileOffsetsFloat, glPad);
+            var padTileIndices = PadArray(tileIndicesFloat, glPad);
 
             // Pack a dummy array for the first input which controls dispatch sizing.
             // The shader only processes work items i < pixelCount.
@@ -75,7 +87,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
 
             int transparent = transparentBg ? 1 : 0;
 
-            string shader = BuildShader(pc, width, height, transparent, pixelCount, glPad);
+            string shader = BuildShader(pc, width, height, transparent, pixelCount, glPad, bins.TilesX, bins.TileSize);
 
             float[] packedOutput;
             try
@@ -87,7 +99,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                         NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                         {
                             ShaderSource = shader,
-                            Inputs = new float[][] { dummyFirst, padInfo, padData },
+                            Inputs = new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices },
                             WidthRequest = 50,
                             HeightRequest = 50,
                             JobID = "OpenGLVectorRasterizer",
@@ -149,21 +161,23 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 throw;
             }
 
-            // Extract packed RGBA channels.
+            // Extract packed RGBA channels. Parallelized — this was a
+            // single-threaded bottleneck on larger canvases.
             var rOut = new ushort[pixelCount];
             var gOut = new ushort[pixelCount];
             var bOut = new ushort[pixelCount];
             var aOut = new float[pixelCount];
-            bool hasAlpha = false;
 
-            for (int i = 0; i < pixelCount; i++)
+            int alphaFlag = 0;
+            Parallel.For(0, pixelCount, i =>
             {
                 rOut[i] = ClampUshort(packedOutput[i]);
                 gOut[i] = ClampUshort(packedOutput[i + pixelCount]);
                 bOut[i] = ClampUshort(packedOutput[i + pixelCount * 2]);
                 aOut[i] = packedOutput[i + pixelCount * 3];
-                if (aOut[i] < 1f) hasAlpha = true;
-            }
+                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+            });
+            bool hasAlpha = alphaFlag != 0;
 
             Logger.LogDiagnostic($"OpenGLVectorRasterizer done in {sw.Elapsed}.");
             return new Picture16bpp(width, height)
@@ -177,7 +191,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         }
 
         private static string BuildShader(int primCount, int width, int height, int transparentBg,
-            int pixelCount, int glPad)
+            int pixelCount, int glPad, int tilesX, int tileSize)
         {
             return 
                 $$"""
@@ -187,6 +201,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 layout(std430, binding = 0) buffer _Dummy { float _d[]; };
                 layout(std430, binding = 1) buffer PrimInfoBuf { float primInfo[]; };
                 layout(std430, binding = 2) buffer PrimDataBuf { float primData[]; };
+                layout(std430, binding = 3) buffer TileOffsetsBuf { float tileOffsets[]; };
+                layout(std430, binding = 4) buffer TileIndicesBuf { float tileIndices[]; };
                 layout(std430, binding = 6) buffer OutBuf { float outPacked[]; };
 
                 void main()
@@ -207,8 +223,17 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                         pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
                     {{'#'}}endif
 
-                    for (int p = 0; p < {{primCount}}; p++)
+                    // Only test primitives that overlap this pixel's tile
+                    // instead of every primitive in the scene.
+                    int tileX = x / {{tileSize}};
+                    int tileY = y / {{tileSize}};
+                    int tileIdx = tileY * {{tilesX}} + tileX;
+                    int tileStart = int(tileOffsets[tileIdx]);
+                    int tileEnd = int(tileOffsets[tileIdx + 1]);
+
+                    for (int ti = tileStart; ti < tileEnd; ti++)
                     {
+                        int p = int(tileIndices[ti]);
                         int type = int(primInfo[p * 2]);
                         int dataBase = p * {{FloatsPerPrimitive}};
 
@@ -298,6 +323,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                     outPacked[i + {{pixelCount * 3}}] = pa;
                 }
                 """;
+        }
+
+        private static float[] ToFloatArray(int[] src)
+        {
+            var dst = new float[src.Length];
+            for (int i = 0; i < src.Length; i++)
+                dst[i] = src[i];
+            return dst;
         }
 
         private static float[] PadArray(float[] src, int targetLen)

@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Vector;
+﻿using projectFrameCut.Drawing.Vector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,8 +41,8 @@ public static class VectorComponentFactory
         shape = shape.WithFill(def.FillR, def.FillG, def.FillB, def.FillA);
 
         // Apply element-level transform
-        shape.WithPosition(def.RelativeX, def.RelativeY)
-             .WithLayer(def.LayerIndex);
+        shape = shape.WithPosition(def.RelativeX, def.RelativeY)
+                     .WithLayer(def.LayerIndex);
 
         shape.Rotation = def.Rotation;
         shape.BaseX = def.BaseX;

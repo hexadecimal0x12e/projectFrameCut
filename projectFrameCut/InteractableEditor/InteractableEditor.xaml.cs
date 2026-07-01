@@ -220,6 +220,16 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        public Brush EditorCanvasBackground
+        {
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(EditorCanvasBackground));
+            }
+        } = Colors.Black;
+
         public bool ShowDetailReferenceLineControl { get; set; } = false;
 
         private static bool AreColorsClose(Color a, Color b) =>
@@ -640,6 +650,26 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        public void SelectClip(Guid? clipId)
+        {
+            CancelPendingCommitUpdate();
+            _isClipPanInProgress = false;
+            _isHandleResizeInProgress = false;
+            _panPreviewRect = null;
+
+            if (!clipId.HasValue || !Clips.TryGetValue(clipId.Value, out var clip))
+            {
+                _currentClip = null;
+                SetActiveState(null);
+                UpdateVisuals();
+                return;
+            }
+
+            _currentClip = clip;
+            SetActiveState(GetOrCreateClipState(clip));
+            UpdateVisuals();
+        }
+
         #endregion
 
         #region init/config
@@ -823,6 +853,8 @@ namespace projectFrameCut.InteractableEditor
             {
                 return;
             }
+
+            SelectClip(state.ClipId);
 
             var callback = _overlayClipTappedCallback;
             if (callback is null)
@@ -1926,7 +1958,7 @@ namespace projectFrameCut.InteractableEditor
             // 遍历所有clips，筛选出在当前帧范围内的clips
             foreach (var clip in activeClips)
             {
-                LogDiagnostic($"Updating layout of {clip.Id}");
+                //LogDiagnostic($"Updating layout of {clip.Id}");
                 Stopwatch sw = Stopwatch.StartNew();
 
                 var state = GetOrCreateClipState(clip.Id);
@@ -2009,7 +2041,7 @@ namespace projectFrameCut.InteractableEditor
 
                 UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
-                LogDiagnostic($"Updated layout for {clip.Id}");
+                //LogDiagnostic($"Updated layout for {clip.Id}");
 
 
             }
@@ -2110,6 +2142,7 @@ namespace projectFrameCut.InteractableEditor
             //LogDiagnostic($"[UpdateVisuals] Render clip overlay for frame {_currentFrame} reordered {orderedRoots.Count} states by ZIndex in {sw.ElapsedMilliseconds} ms");
         }
 
+        [DebuggerStepThrough()]
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
         {
             if (!clip.ShouldDisplayInUI)
