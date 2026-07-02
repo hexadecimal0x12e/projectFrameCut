@@ -161,9 +161,10 @@ public partial class ComponentClip : IClip
 
     [JsonIgnore]
     public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
-
     [JsonIgnore]
     public IMixture? MixtureInstance { get; set; }
+    [JsonIgnore]
+    public ISourceReplacementEffect? AlternativeSource { get; set; }
 
     // ── Construction ─────────────────────────────────────────
 
@@ -776,6 +777,7 @@ public static class ComponentClipToClipElementUI
             ShouldDisplayInUI = true,
             CanSnapWhilePlacing = true,
             CanSnapWhileResizing = true,
+            AllowFreeScaleResize = true,
             layoutX = 0,
             layoutY = 0,
             origLength = clip.Duration,

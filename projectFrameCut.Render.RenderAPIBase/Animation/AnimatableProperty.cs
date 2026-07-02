@@ -34,4 +34,59 @@ public enum AnimatableProperty
 
     /// <summary>Stroke opacity (0 = transparent, 1 = opaque) applied to all segments.</summary>
     StrokeColorA,
+
+    // ── Shape-specific dimensions ───────────────────────────
+    // These values are applied to specific segment types via TransformSegments
+    // to modify geometric properties (width, height, radius, control points, etc.).
+
+    /// <summary>Width of Rectangle / RoundedRectangle segments.</summary>
+    ShapeWidth,
+
+    /// <summary>Height of Rectangle / RoundedRectangle segments.</summary>
+    ShapeHeight,
+
+    /// <summary>Corner radius of RoundedRectangle segments.</summary>
+    ShapeCornerRadius,
+
+    /// <summary>X-radius of Ellipse / Arc segments.</summary>
+    ShapeRadiusX,
+
+    /// <summary>Y-radius of Ellipse / Arc segments.</summary>
+    ShapeRadiusY,
+
+    /// <summary>Start angle (radians) of Arc segments.</summary>
+    ShapeStartAngle,
+
+    /// <summary>Sweep angle (radians) of Arc segments.</summary>
+    ShapeSweepAngle,
+
+    /// <summary>Center X of Arc segments.</summary>
+    ShapeCenterX,
+
+    /// <summary>Center Y of Arc segments.</summary>
+    ShapeCenterY,
+
+    /// <summary>First control-point X (Line, CubicBezier, QuadraticBezier).</summary>
+    ShapePointX1,
+
+    /// <summary>First control-point Y (Line, CubicBezier, QuadraticBezier).</summary>
+    ShapePointY1,
+
+    /// <summary>Second control-point X (Line, CubicBezier, QuadraticBezier).</summary>
+    ShapePointX2,
+
+    /// <summary>Second control-point Y (Line, CubicBezier, QuadraticBezier).</summary>
+    ShapePointY2,
+
+    /// <summary>Third control-point X (CubicBezier, QuadraticBezier).</summary>
+    ShapePointX3,
+
+    /// <summary>Third control-point Y (CubicBezier, QuadraticBezier).</summary>
+    ShapePointY3,
+
+    /// <summary>Fourth control-point X (CubicBezier only).</summary>
+    ShapePointX4,
+
+    /// <summary>Fourth control-point Y (CubicBezier only).</summary>
+    ShapePointY4,
 }

@@ -113,6 +113,10 @@ namespace projectFrameCut.InteractableEditor
         private int _isUpdatingVisuals;
         private long _lastOverlayTapTick;
 
+        private ShapeHandleProvider? _shapeHandleProvider;
+        private ShapeHandleDragHandler? _shapeHandleDragHandler;
+        private bool _isShapeHandleDragInProgress;
+
         private CancellationTokenSource? _commitUpdateDebounceCts;
         private readonly object _commitUpdateDebounceLock = new();
         private bool _autoHideBottomControls;
@@ -266,6 +270,9 @@ namespace projectFrameCut.InteractableEditor
         {
             private readonly InteractableEditor _owner;
             public Guid ClipId { get; init; }
+
+            // Dynamic custom shape handles
+            private readonly List<(BoxView View, PanGestureRecognizer Pan, string HandleId, double StartX, double StartY)> _customHandles = new();
 
             public ClipOverlayState(InteractableEditor owner, Guid clipId, string? displayName = null)
             {
@@ -486,6 +493,80 @@ namespace projectFrameCut.InteractableEditor
                 PreviewHost.Content = null;
                 SizeLabel.IsVisible = false;
                 DebugLabel.IsVisible = false;
+                ClearCustomHandles();
+            }
+
+            public void UpdateCustomHandles(
+                IReadOnlyList<ShapeHandleDescriptor> descriptors,
+                double displayW,
+                double displayH,
+                Action<string, PanUpdatedEventArgs>? dragCallback)
+            {
+                int targetCount = descriptors?.Count ?? 0;
+
+                // Remove excess handles
+                while (_customHandles.Count > targetCount)
+                {
+                    var last = _customHandles[^1];
+                    Root.Children.Remove(last.View);
+                    _customHandles.RemoveAt(_customHandles.Count - 1);
+                }
+
+                // Update or create handles
+                for (int i = 0; i < targetCount; i++)
+                {
+                    var desc = descriptors![i];
+                    double size = desc.Size > 0 ? desc.Size : 12;
+                    double hx = desc.NormalizedX * displayW - size / 2;
+                    double hy = desc.NormalizedY * displayH - size / 2;
+
+                    if (i < _customHandles.Count)
+                    {
+                        var existing = _customHandles[i];
+                        AbsoluteLayout.SetLayoutBounds(existing.View, new Rect(hx, hy, size, size));
+                        existing.View.Color = desc.FillColor;
+                        existing.View.IsVisible = true;
+                        _customHandles[i] = (existing.View, existing.Pan, desc.Id, hx, hy);
+                    }
+                    else
+                    {
+                        var handle = new BoxView
+                        {
+                            WidthRequest = size,
+                            HeightRequest = size,
+                            CornerRadius = size / 2,
+                            Color = desc.FillColor,
+                            InputTransparent = false,
+                            ZIndex = int.MaxValue
+                        };
+                        var pan = new PanGestureRecognizer();
+                        var handleId = desc.Id;
+                        // Capture the initial position for visual drag tracking
+                        double startHx = hx;
+                        double startHy = hy;
+                        pan.PanUpdated += (_, e) =>
+                        {
+                            // Visual tracking: move the handle with the finger
+                            if (e.StatusType == GestureStatus.Running)
+                            {
+                                AbsoluteLayout.SetLayoutBounds(handle, new Rect(
+                                    startHx + e.TotalX, startHy + e.TotalY, size, size));
+                            }
+                            dragCallback?.Invoke(handleId, e);
+                        };
+                        handle.GestureRecognizers.Add(pan);
+                        AbsoluteLayout.SetLayoutBounds(handle, new Rect(hx, hy, size, size));
+                        Root.Children.Add(handle);
+                        _customHandles.Add((handle, pan, desc.Id, hx, hy));
+                    }
+                }
+            }
+
+            public void ClearCustomHandles()
+            {
+                foreach (var (view, _, _, _, _) in _customHandles)
+                    Root.Children.Remove(view);
+                _customHandles.Clear();
             }
 
             public void UpdateDebugInfo(bool isVisible, string? text, double displayW, double displayH)
@@ -688,12 +769,21 @@ namespace projectFrameCut.InteractableEditor
             BottomControlsHost.GestureRecognizers.Add(hoverPointer);
         }
 
-        public void ConfigurePreviewRefresh(Func<Task>? refreshCallback)
+
+        public void Init(Func<Task> updateCallback, double videoWidth, double videoHeight)
         {
-            _previewRefreshCallback = refreshCallback;
+            _updateCallback = updateCallback;
+            _videoWidth = videoWidth;
+            _videoHeight = videoHeight;
         }
 
-        public void ConfigureOverlayClipTap(Func<Guid, Task>? tapCallback)
+        public InteractableEditor ConfigurePreviewRefresh(Func<Task>? refreshCallback)
+        {
+            _previewRefreshCallback = refreshCallback;
+            return this;
+        }
+
+        public InteractableEditor ConfigureOverlayClipTap(Func<Guid, Task>? tapCallback)
         {
             _overlayClipTappedCallback = tapCallback;
             foreach (var state in _clipStates.Values)
@@ -701,54 +791,62 @@ namespace projectFrameCut.InteractableEditor
                 state.RefreshPreviewVisibility();
             }
             UpdateVisuals();
+            return this;
         }
 
-        public void ConfigureOverlayClipDoubleTap(Func<Guid, Task>? doubleTapCallback)
+        public InteractableEditor ConfigureOverlayClipDoubleTap(Func<Guid, Task>? doubleTapCallback)
         {
             _overlayClipDoubleTappedCallback = doubleTapCallback;
+            return this;
         }
 
-        public void ConfigureBlankAreaTap(Func<Task>? tapCallback)
+        public InteractableEditor ConfigureBlankAreaTap(Func<Task>? tapCallback)
         {
             _blankAreaTappedCallback = tapCallback;
+            return this;
         }
 
-        public void ConfigureReferenceLinesChanged(Func<Task>? callback)
+        public InteractableEditor ConfigureReferenceLinesChanged(Func<Task>? callback)
         {
             _referenceLinesChangedCallback = callback;
+            return this;
         }
 
-        public void ConfigureKeyframeCandidateCaptured(Action<string, uint, ClipPositionTuple>? callback)
+        public InteractableEditor ConfigureKeyframeCandidateCaptured(Action<string, uint, ClipPositionTuple>? callback)
         {
             _keyframeCandidateCapturedCallback = callback;
+            return this;
         }
 
-        public void ConfigureManageReferenceLinesRequested(Action? callback)
+        public InteractableEditor ConfigureManageReferenceLinesRequested(Action? callback)
         {
             _manageReferenceLinesRequestedCallback = callback;
+            return this;
         }
 
-        public void ConfigureDefaultColorPickerRequested(Action<Color>? callback)
+        public InteractableEditor ConfigureDefaultColorPickerRequested(Action<Color>? callback)
         {
             _defaultColorPickerRequestedCallback = callback;
+            return this;
         }
 
-        public void ConfigureGetClipInstanceCallback(Func<ClipElementUI, IClip?>? callback)
+        public InteractableEditor ConfigureGetClipInstanceCallback(Func<ClipElementUI, IClip?>? callback)
         {
             _getClipInstanceCallback = callback;
+            return this;
+        }
+
+        public InteractableEditor ConfigureCustomHandles(ShapeHandleProvider? provider, ShapeHandleDragHandler? dragHandler)
+        {
+            _shapeHandleProvider = provider;
+            _shapeHandleDragHandler = dragHandler;
+            return this;
         }
 
         protected override void OnSizeAllocated(double width, double height)
         {
             base.OnSizeAllocated(width, height);
             UpdateCanvasSize(width, height, true);
-        }
-
-        public void Init(Func<Task> updateCallback, double videoWidth, double videoHeight)
-        {
-            _updateCallback = updateCallback;
-            _videoWidth = videoWidth;
-            _videoHeight = videoHeight;
         }
 
         public void UpdateCanvasSize(double width, double height, bool ignorePositionProvider = false)
@@ -1067,6 +1165,7 @@ namespace projectFrameCut.InteractableEditor
         {
             foreach (var state in _clipStates.Values)
             {
+                state.ClearCustomHandles();
                 state.Hide();
             }
 
@@ -1074,6 +1173,53 @@ namespace projectFrameCut.InteractableEditor
             _clipStates.Clear();
             _previewSourceClips.Clear();
             _activeState = null;
+        }
+
+        private void OnCustomHandlePanUpdated(Guid clipId, string handleId, PanUpdatedEventArgs e)
+        {
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    _isShapeHandleDragInProgress = true;
+                    break;
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    _isShapeHandleDragInProgress = false;
+                    break;
+            }
+
+            if (_shapeHandleDragHandler is null) return;
+
+            double logicalW = _videoWidth;
+            double logicalH = _videoHeight;
+            if (_currentClip is not null && _currentClip.Id == clipId)
+            {
+                logicalW = _currentClip.TargetWidth > 0 ? _currentClip.TargetWidth : _videoWidth;
+                logicalH = _currentClip.TargetHeight > 0 ? _currentClip.TargetHeight : _videoHeight;
+            }
+            else if (Clips.TryGetValue(clipId, out var clip))
+            {
+                logicalW = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
+                logicalH = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+            }
+
+            var state = GetOrCreateClipState(clipId);
+            var rootBounds = AbsoluteLayout.GetLayoutBounds(state.Root);
+
+            var context = new ShapeHandleDragContext
+            {
+                ClipId = clipId,
+                HandleId = handleId,
+                DisplayW = rootBounds.Width,
+                DisplayH = rootBounds.Height,
+                LogicalW = logicalW,
+                LogicalH = logicalH,
+            };
+
+            _shapeHandleDragHandler(clipId, handleId, e, context);
+
+            if (e.StatusType == GestureStatus.Completed)
+                RequestInteractivePreviewRefresh();
         }
 
         #endregion
@@ -1633,6 +1779,18 @@ namespace projectFrameCut.InteractableEditor
 
                     UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
 
+                    // Update custom shape handles (only for the selected clip)
+                    if (isCurrentClip && _shapeHandleProvider is not null)
+                    {
+                        var handles = _shapeHandleProvider(clipId);
+                        state.UpdateCustomHandles(handles, displayW, displayH,
+                            (handleId, e) => OnCustomHandlePanUpdated(clipId, handleId, e));
+                    }
+                    else
+                    {
+                        state.ClearCustomHandles();
+                    }
+
                     //LogDiagnostic($"[UpdateVisuals] clip {clipId} debug overlay updated in {sw.ElapsedMilliseconds}ms");
                     //LogDiagnostic($"[UpdateVisuals] clip {clipId} total update time {sw.ElapsedMilliseconds}ms");
                 }
@@ -2040,6 +2198,18 @@ namespace projectFrameCut.InteractableEditor
                     clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
 
                 UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
+
+                // Update custom shape handles (only for the selected clip)
+                if (isCurrentClip && _shapeHandleProvider is not null)
+                {
+                    var handles = _shapeHandleProvider(clip.Id);
+                    state.UpdateCustomHandles(handles, displayW, displayH,
+                        (handleId, e) => OnCustomHandlePanUpdated(clip.Id, handleId, e));
+                }
+                else
+                {
+                    state.ClearCustomHandles();
+                }
 
                 //LogDiagnostic($"Updated layout for {clip.Id}");
 
@@ -2505,10 +2675,10 @@ namespace projectFrameCut.InteractableEditor
         }
 
         private bool IsInteractiveManipulationInProgress
-            => _isClipPanInProgress || _isHandleResizeInProgress;
+            => _isClipPanInProgress || _isHandleResizeInProgress || _isShapeHandleDragInProgress;
 
         private bool ShouldKeepExistingPreviewFrame(Guid clipId)
-            => _isClipPanInProgress
+            => (_isClipPanInProgress || _isShapeHandleDragInProgress)
                 && !_isHandleResizeInProgress
                 && _currentClip is not null
                 && _currentClip.Id == clipId;
@@ -2615,10 +2785,12 @@ namespace projectFrameCut.InteractableEditor
 
         private List<double> GetHorizontalSnapTargets()
         {
-            var targets = new List<double>(3 + _referenceLines.Count);
-            targets.Add(0);
-            targets.Add(_videoWidth);
-            targets.Add(_videoWidth / 2.0);
+            var targets = new List<double>(3 + _referenceLines.Count)
+            {
+                0,
+                _videoWidth,
+                _videoWidth / 2.0
+            };
             foreach (var rl in _referenceLines.Values)
             {
                 if (rl.Orientation == ReferenceLineOrientation.Vertical)
@@ -2630,10 +2802,12 @@ namespace projectFrameCut.InteractableEditor
 
         private List<double> GetVerticalSnapTargets()
         {
-            var targets = new List<double>(3 + _referenceLines.Count);
-            targets.Add(0);
-            targets.Add(_videoHeight);
-            targets.Add(_videoHeight / 2.0);
+            var targets = new List<double>(3 + _referenceLines.Count)
+            {
+                0,
+                _videoHeight,
+                _videoHeight / 2.0
+            };
             foreach (var rl in _referenceLines.Values)
             {
                 if (rl.Orientation == ReferenceLineOrientation.Horizontal)
@@ -3186,7 +3360,7 @@ namespace projectFrameCut.InteractableEditor
 
         private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
         {
-            if (clip.ClipType == ClipMode.SolidColorClip) return true;
+            if (clip.ClipType == ClipMode.SolidColorClip || clip.AllowFreeScaleResize) return true;
 
             if (clip.ClipType == ClipMode.TextClip)
             {

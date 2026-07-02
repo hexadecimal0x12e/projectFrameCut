@@ -51,6 +51,7 @@ namespace projectFrameCut.DraftStuff
         public bool IsVerticalResizable { get; set; } = true;
         public bool CanSnapWhilePlacing { get; set; } = true;
         public bool CanSnapWhileResizing { get; set; } = true;
+        public bool AllowFreeScaleResize { get; set; } = false;
 
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>

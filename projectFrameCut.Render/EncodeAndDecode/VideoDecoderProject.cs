@@ -165,7 +165,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 };
 
                 renderer.PrepareRender(CancellationToken.None);
-                renderer.InitializeRenderCaches();
                 Environment.CurrentDirectory = origWorkdir;
                 inited = true;
             }

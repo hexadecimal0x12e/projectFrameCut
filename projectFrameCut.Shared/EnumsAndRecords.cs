@@ -52,6 +52,7 @@ namespace projectFrameCut.Shared
         MixtureProvider,
         TextEffect,
         ContinuousTextEffect,
+        SourceReplacement,
         NotSpecified = -1,
     }
 

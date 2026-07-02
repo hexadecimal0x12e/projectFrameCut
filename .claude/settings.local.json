@@ -30,16 +30,15 @@
       "WebFetch(domain:github.com)",
       "WebSearch",
       "Bash(git clone *)",
-      "Read(//c/Users/azert/.claude/temp/maui-source/src/Controls/src/Core/Platform/**)",
-      "Read(//c/Users/azert/.claude/temp/**)",
-      "PowerShell(git clone *)"
+      "PowerShell(git clone *)",
+      "Bash(xgrep -l \"*\" --include=\"*.cs\")"
     ],
     "deny": [
       "Bash(Select-*)",
       "Bash(Get-*)",
       "Bash(Set-*)",
       "Bash(git commit *)",
-      "Powershell(git commit *)"
+      "PowerShell(git commit *)"
     ]
   },
   "skillOverrides": {

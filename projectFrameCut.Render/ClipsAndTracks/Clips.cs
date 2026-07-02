@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Text;
+﻿using projectFrameCut.Drawing.Text;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -68,6 +68,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
         {
@@ -81,13 +82,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
         public void ReInit()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -197,6 +198,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public string? MarkData;
         public Guid MarkID;

@@ -120,6 +120,173 @@ public class Storyboard
                 if (element is ShapeCanvasElement strokeShape)
                     strokeShape.TransformSegments(s => s with { StrokeA = ClampAlpha(value) });
                 break;
+
+            // ── Shape-specific dimensions ────────────────────
+
+            case AnimatableProperty.ShapeWidth:
+                if (element is ShapeCanvasElement sShape)
+                    sShape.TransformSegments(s => s switch
+                    {
+                        RectangleVectorSegment r => r with { Width = Math.Max(0.0001f, value) },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeHeight:
+                if (element is ShapeCanvasElement sShape2)
+                    sShape2.TransformSegments(s => s switch
+                    {
+                        RectangleVectorSegment r => r with { Height = Math.Max(0.0001f, value) },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeCornerRadius:
+                if (element is ShapeCanvasElement sShape3)
+                    sShape3.TransformSegments(s => s switch
+                    {
+                        RoundedRectangleVectorSegment rr => rr with { CornerRadius = Math.Max(0f, value) },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeRadiusX:
+                if (element is ShapeCanvasElement sShape4)
+                    sShape4.TransformSegments(s => s switch
+                    {
+                        EllipseVectorSegment e => e with { RadiusX = Math.Max(0.0001f, value) },
+                        ArcVectorSegment a => a with { RadiusX = Math.Max(0.0001f, value) },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeRadiusY:
+                if (element is ShapeCanvasElement sShape5)
+                    sShape5.TransformSegments(s => s switch
+                    {
+                        EllipseVectorSegment e => e with { RadiusY = Math.Max(0.0001f, value) },
+                        ArcVectorSegment a => a with { RadiusY = Math.Max(0.0001f, value) },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeStartAngle:
+                if (element is ShapeCanvasElement sShape6)
+                    sShape6.TransformSegments(s => s switch
+                    {
+                        ArcVectorSegment a => a with { StartAngle = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeSweepAngle:
+                if (element is ShapeCanvasElement sShape7)
+                    sShape7.TransformSegments(s => s switch
+                    {
+                        ArcVectorSegment a => a with { SweepAngle = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeCenterX:
+                if (element is ShapeCanvasElement sShape8)
+                    sShape8.TransformSegments(s => s switch
+                    {
+                        ArcVectorSegment a => a with { X = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapeCenterY:
+                if (element is ShapeCanvasElement sShape9)
+                    sShape9.TransformSegments(s => s switch
+                    {
+                        ArcVectorSegment a => a with { Y = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointX1:
+                if (element is ShapeCanvasElement sShape10)
+                    sShape10.TransformSegments(s => s switch
+                    {
+                        StraightLineVectorSegment l => l with { X1 = value },
+                        CubicBezierVectorSegment b => b with { X1 = value },
+                        QuadraticBezierVectorSegment q => q with { X1 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointY1:
+                if (element is ShapeCanvasElement sShape11)
+                    sShape11.TransformSegments(s => s switch
+                    {
+                        StraightLineVectorSegment l => l with { Y1 = value },
+                        CubicBezierVectorSegment b => b with { Y1 = value },
+                        QuadraticBezierVectorSegment q => q with { Y1 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointX2:
+                if (element is ShapeCanvasElement sShape12)
+                    sShape12.TransformSegments(s => s switch
+                    {
+                        StraightLineVectorSegment l => l with { X2 = value },
+                        CubicBezierVectorSegment b => b with { X2 = value },
+                        QuadraticBezierVectorSegment q => q with { X2 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointY2:
+                if (element is ShapeCanvasElement sShape13)
+                    sShape13.TransformSegments(s => s switch
+                    {
+                        StraightLineVectorSegment l => l with { Y2 = value },
+                        CubicBezierVectorSegment b => b with { Y2 = value },
+                        QuadraticBezierVectorSegment q => q with { Y2 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointX3:
+                if (element is ShapeCanvasElement sShape14)
+                    sShape14.TransformSegments(s => s switch
+                    {
+                        CubicBezierVectorSegment b => b with { X3 = value },
+                        QuadraticBezierVectorSegment q => q with { X3 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointY3:
+                if (element is ShapeCanvasElement sShape15)
+                    sShape15.TransformSegments(s => s switch
+                    {
+                        CubicBezierVectorSegment b => b with { Y3 = value },
+                        QuadraticBezierVectorSegment q => q with { Y3 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointX4:
+                if (element is ShapeCanvasElement sShape16)
+                    sShape16.TransformSegments(s => s switch
+                    {
+                        CubicBezierVectorSegment b => b with { X4 = value },
+                        _ => s,
+                    });
+                break;
+
+            case AnimatableProperty.ShapePointY4:
+                if (element is ShapeCanvasElement sShape17)
+                    sShape17.TransformSegments(s => s switch
+                    {
+                        CubicBezierVectorSegment b => b with { Y4 = value },
+                        _ => s,
+                    });
+                break;
         }
     }
 

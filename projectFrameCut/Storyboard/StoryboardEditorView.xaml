@@ -465,6 +465,351 @@
                                VerticalOptions="Center" Grid.Row="3" Grid.Column="2" WidthRequest="26" />
                     </Grid>
 
+                    <!-- ═══ Shape Parameters ═══ -->
+                    <VerticalStackLayout Spacing="8" Margin="0,6,0,0">
+
+                        <Label Text="Shape" FontSize="12" FontAttributes="Bold"
+                               TextColor="#D1D5DB" />
+
+                        <!-- ── Rectangle / RoundedRectangle: Width, Height ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasWidthHeight}"
+                                             Spacing="4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="W:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="1"
+                                        Value="{Binding SelectedComponent.ShapeWidth}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ShapeWidth, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="H:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="1"
+                                        Value="{Binding SelectedComponent.ShapeHeight}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ShapeHeight, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── RoundedRectangle: CornerRadius ── -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"
+                              IsVisible="{Binding SelectedComponent.HasCornerRadius}">
+                            <Label Text="Corner:" FontSize="11" TextColor="#9CA3AF"
+                                   VerticalOptions="Center" Grid.Column="0" WidthRequest="36" />
+                            <Slider Minimum="0" Maximum="0.5"
+                                    Value="{Binding SelectedComponent.CornerRadius}"
+                                    Grid.Column="1" />
+                            <Label Text="{Binding SelectedComponent.CornerRadius, StringFormat='{0:F3}'}"
+                                   FontSize="10" TextColor="#6B7280"
+                                   VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                        </Grid>
+
+                        <!-- ── Ellipse: RadiusX, RadiusY ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasRadiusXY}"
+                                             Spacing="4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="RX:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="0.5"
+                                        Value="{Binding SelectedComponent.RadiusX}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.RadiusX, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="RY:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="0.5"
+                                        Value="{Binding SelectedComponent.RadiusY}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.RadiusY, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── Arc: Center, Radius, Angles ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasArcParams}"
+                                             Spacing="4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="CX:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.ArcCenterX}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ArcCenterX, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="CY:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.ArcCenterY}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ArcCenterY, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="RX:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="0.5"
+                                        Value="{Binding SelectedComponent.RadiusX}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.RadiusX, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="RY:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0.01" Maximum="0.5"
+                                        Value="{Binding SelectedComponent.RadiusY}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.RadiusY, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Start:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="28" />
+                                <Slider Minimum="-6.2832" Maximum="6.2832"
+                                        Value="{Binding SelectedComponent.ArcStartAngle}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ArcStartAngle, StringFormat='{0:F2}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Sweep:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="28" />
+                                <Slider Minimum="-6.2832" Maximum="6.2832"
+                                        Value="{Binding SelectedComponent.ArcSweepAngle}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.ArcSweepAngle, StringFormat='{0:F2}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── Line: X1,Y1 to X2,Y2 ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasLinePoints}"
+                                             Spacing="4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X1:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.LineX1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.LineX1, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y1:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.LineY1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.LineY1, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X2:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.LineX2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.LineX2, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y2:" FontSize="11" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="22" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.LineY2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.LineY2, StringFormat='{0:F3}'}"
+                                       FontSize="10" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── Cubic Bezier: X1..X4, Y1..Y4 ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasCubicBezierPoints}"
+                                             Spacing="4">
+                            <Label Text="Cubic Bezier Control Points" FontSize="10"
+                                   TextColor="#6B7280" FontAttributes="Italic" />
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X1:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicX1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicX1, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y1:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicY1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicY1, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X2:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicX2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicX2, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y2:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicY2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicY2, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X3:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicX3}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicX3, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y3:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicY3}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicY3, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X4:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicX4}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicX4, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y4:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.CubicY4}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.CubicY4, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── Quadratic Bezier: X1..X3, Y1..Y3 ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasQuadraticBezierPoints}"
+                                             Spacing="4">
+                            <Label Text="Quadratic Bezier Control Points" FontSize="10"
+                                   TextColor="#6B7280" FontAttributes="Italic" />
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X1:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadX1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadX1, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y1:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadY1}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadY1, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X2:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadX2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadX2, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y2:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadY2}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadY2, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="X3:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadX3}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadX3, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                <Label Text="Y3:" FontSize="10" TextColor="#9CA3AF"
+                                       VerticalOptions="Center" Grid.Column="0" WidthRequest="18" />
+                                <Slider Minimum="0" Maximum="1"
+                                        Value="{Binding SelectedComponent.QuadY3}"
+                                        Grid.Column="1" />
+                                <Label Text="{Binding SelectedComponent.QuadY3, StringFormat='{0:F3}'}"
+                                       FontSize="9" TextColor="#6B7280"
+                                       VerticalOptions="Center" Grid.Column="2" WidthRequest="36" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- ── Polygon / Polyline: vertex info ── -->
+                        <VerticalStackLayout IsVisible="{Binding SelectedComponent.HasPointsList}"
+                                             Spacing="4">
+                            <Label Text="Vertices" FontSize="11" FontAttributes="Bold"
+                                   TextColor="#9CA3AF" />
+                            <Label Text="{Binding SelectedComponent.VertexCountText}"
+                                   FontSize="10" TextColor="#6B7280" />
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                    <!-- End of shape parameters -->
+
                     </VerticalStackLayout>
                     <!-- End of shape-editable properties -->
 

@@ -60,6 +60,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public void Dispose()
         {

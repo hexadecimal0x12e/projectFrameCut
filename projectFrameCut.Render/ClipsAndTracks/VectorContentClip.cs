@@ -91,6 +91,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         public bool IsCompositionOnly => string.IsNullOrEmpty(FilePath);
 
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
+
         // ── Core: animated vector picture per frame ─────────
 
         /// <summary>
@@ -189,7 +191,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) =
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) =
                 EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
@@ -348,6 +350,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         [System.Text.Json.Serialization.JsonIgnore]
         public VectorPicture? Picture { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public void Dispose()
         {
@@ -360,7 +363,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             Picture = SVGToVectorElement.ImportFromFile(FilePath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
     }
 }

@@ -15,6 +15,7 @@ using System.Windows.Input;
 using Color = Microsoft.Maui.Graphics.Color;
 using IDispatcher = Microsoft.Maui.Dispatching.IDispatcher;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using Point = projectFrameCut.Drawing.Vector.Point;
 using PointF = Microsoft.Maui.Graphics.PointF;
 using RectF = Microsoft.Maui.Graphics.RectF;
 
@@ -107,12 +108,12 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             videoWidth: canvasW,
             videoHeight: canvasH);
 
-        InteractiveEditor.UpdateCanvasSize(canvasW, canvasH);
-
-        InteractiveEditor.ConfigureOverlayClipTap(OnComponentClipTapped);
-        InteractiveEditor.ConfigureBlankAreaTap(OnBlankAreaTapped);
-        InteractiveEditor.ConfigurePreviewRefresh(OnPreviewRefreshRequested);
-        InteractiveEditor.ConfigureGetClipInstanceCallback(GetClipInstanceForEditor);
+        InteractiveEditor.ConfigureOverlayClipTap(OnComponentClipTapped)
+                         .ConfigureBlankAreaTap(OnBlankAreaTapped)
+                         .ConfigurePreviewRefresh(OnPreviewRefreshRequested)
+                         .ConfigureGetClipInstanceCallback(GetClipInstanceForEditor)
+                         .ConfigureCustomHandles(ProvideShapeHandles, OnShapeHandleDrag)
+                         .UpdateCanvasSize(canvasW, canvasH);
 
         InteractiveEditor.EditorCanvasBackground = Colors.Transparent;
 
@@ -332,7 +333,6 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
                 OnPropertyChanged(nameof(CanRemoveTrack));
                 OnPropertyChanged(nameof(CanAddKeyFrame));
                 _timelineInvalidateAction?.Invoke();
-                _ = DebouncedRefreshPreview();
             }
         }
     }
@@ -782,6 +782,15 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     public void RequestPreviewRefresh()
     {
         _ = DebouncedRefreshPreview();
+    }
+
+    /// <summary>
+    /// Called by VectorComponentItem when a shape parameter changes
+    /// and the component clip bounds need to be recalculated.
+    /// </summary>
+    public void RequestComponentClipsRebuild()
+    {
+        MainThread.BeginInvokeOnMainThread(RebuildComponentClips);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1247,6 +1256,559 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     }
 
     // ═══════════════════════════════════════════════════════════
+    // Shape handle integration — InteractiveEditor custom handles
+    // ═══════════════════════════════════════════════════════════
+
+    private readonly Dictionary<(Guid clipId, string handleId), (float x, float y)> _handleDragOrigins = new();
+
+    /// <summary>
+    /// Provides shape-specific handles for a clip to the InteractableEditor.
+    /// Positions are in normalized clip-local space [0..1].
+    /// </summary>
+    private IReadOnlyList<ShapeHandleDescriptor> ProvideShapeHandles(Guid clipId)
+    {
+        var component = Components.FirstOrDefault(c => c.Id == clipId);
+        if (component is null || !component.IsShapeEditable)
+            return Array.Empty<ShapeHandleDescriptor>();
+
+        var cc = _componentClips.FirstOrDefault(c => c.Id == clipId);
+        if (cc is null)
+            return Array.Empty<ShapeHandleDescriptor>();
+
+        return component.ShapeType switch
+        {
+            VectorShapeType.Line => BuildLineHandles(component),
+            VectorShapeType.CubicBezier => BuildCubicBezierHandles(component),
+            VectorShapeType.QuadraticBezier => BuildQuadraticBezierHandles(component),
+            VectorShapeType.RoundedRectangle => BuildRoundedRectHandles(component),
+            VectorShapeType.Ellipse => BuildEllipseHandles(component),
+            VectorShapeType.Arc => BuildArcHandles(component),
+            VectorShapeType.Polygon or VectorShapeType.Polyline => BuildPolyHandles(component),
+            _ => Array.Empty<ShapeHandleDescriptor>(),
+        };
+    }
+
+    private static readonly Color HandleColorAnchor = Color.FromRgba(255, 152, 0, 230);   // Orange
+    private static readonly Color HandleColorControl = Color.FromRgba(255, 235, 59, 230);  // Yellow
+    private static readonly Color HandleColorRadius = Color.FromRgba(0, 188, 212, 230);    // Cyan
+    private static readonly Color HandleColorCenter = Color.FromRgba(244, 67, 54, 230);    // Red
+    private static readonly Color HandleColorAngle = Color.FromRgba(233, 30, 99, 230);     // Pink
+    private static readonly Color HandleColorCorner = Color.FromRgba(0, 150, 136, 230);    // Teal
+
+    private static (float x, float y) GetElementLocalPoint(VectorComponentItem c, string handleId)
+    {
+        switch (c.ShapeType)
+        {
+            case VectorShapeType.Line:
+                return handleId switch
+                {
+                    "p1" => (c.LineX1, c.LineY1),
+                    "p2" => (c.LineX2, c.LineY2),
+                    _ => (0, 0),
+                };
+            case VectorShapeType.CubicBezier:
+                return handleId switch
+                {
+                    "p1" => (c.CubicX1, c.CubicY1),
+                    "p2" => (c.CubicX2, c.CubicY2),
+                    "p3" => (c.CubicX3, c.CubicY3),
+                    "p4" => (c.CubicX4, c.CubicY4),
+                    _ => (0, 0),
+                };
+            case VectorShapeType.QuadraticBezier:
+                return handleId switch
+                {
+                    "p1" => (c.QuadX1, c.QuadY1),
+                    "p2" => (c.QuadX2, c.QuadY2),
+                    "p3" => (c.QuadX3, c.QuadY3),
+                    _ => (0, 0),
+                };
+            case VectorShapeType.RoundedRectangle:
+                {
+                    float maxDim = Math.Min(c.ShapeWidth, c.ShapeHeight) / 2f;
+                    float r = Math.Clamp(c.CornerRadius, 0f, maxDim);
+                    return handleId switch
+                    {
+                        "corner-r" => (c.ShapeWidth - r, r),
+                        _ => (0.5f, 0.5f),
+                    };
+                }
+            case VectorShapeType.Ellipse:
+                return handleId switch
+                {
+                    "rx" => (0.5f + c.RadiusX, 0.5f),
+                    "ry" => (0.5f, 0.5f + c.RadiusY),
+                    _ => (0.5f, 0.5f),
+                };
+            case VectorShapeType.Arc:
+                {
+                    float cx = c.ArcCenterX;
+                    float cy = c.ArcCenterY;
+                    float rx = c.RadiusX;
+                    float ry = c.RadiusY;
+                    float start = c.ArcStartAngle;
+                    float end = start + c.ArcSweepAngle;
+                    return handleId switch
+                    {
+                        "center" => (cx, cy),
+                        "rx" => (cx + rx, cy),
+                        "ry" => (cx, cy + ry),
+                        "start" => (cx + rx * MathF.Cos(start), cy + ry * MathF.Sin(start)),
+                        "end" => (cx + rx * MathF.Cos(end), cy + ry * MathF.Sin(end)),
+                        _ => (cx, cy),
+                    };
+                }
+            case VectorShapeType.Polygon:
+            case VectorShapeType.Polyline:
+                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int idx))
+                {
+                    var points = c.Source.Definition.Points;
+                    if (points is not null && idx >= 0 && idx < points.Count)
+                        return ((float)points[idx].X, (float)points[idx].Y);
+                }
+                return (0.5f, 0.5f);
+            default:
+                return (0.5f, 0.5f);
+        }
+    }
+
+    private ShapeHandleDescriptor[] BuildLineHandles(VectorComponentItem c)
+    {
+        var (x1, y1) = ElementToClipLocal(c, c.LineX1, c.LineY1);
+        var (x2, y2) = ElementToClipLocal(c, c.LineX2, c.LineY2);
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
+            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorAnchor, Size = 14 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildCubicBezierHandles(VectorComponentItem c)
+    {
+        var (x1, y1) = ElementToClipLocal(c, c.CubicX1, c.CubicY1);
+        var (x2, y2) = ElementToClipLocal(c, c.CubicX2, c.CubicY2);
+        var (x3, y3) = ElementToClipLocal(c, c.CubicX3, c.CubicY3);
+        var (x4, y4) = ElementToClipLocal(c, c.CubicX4, c.CubicY4);
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
+            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorControl, Size = 12 },
+            new ShapeHandleDescriptor { Id = "p3", NormalizedX = x3, NormalizedY = y3, FillColor = HandleColorControl, Size = 12 },
+            new ShapeHandleDescriptor { Id = "p4", NormalizedX = x4, NormalizedY = y4, FillColor = HandleColorAnchor, Size = 14 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildQuadraticBezierHandles(VectorComponentItem c)
+    {
+        var (x1, y1) = ElementToClipLocal(c, c.QuadX1, c.QuadY1);
+        var (x2, y2) = ElementToClipLocal(c, c.QuadX2, c.QuadY2);
+        var (x3, y3) = ElementToClipLocal(c, c.QuadX3, c.QuadY3);
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
+            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorControl, Size = 12 },
+            new ShapeHandleDescriptor { Id = "p3", NormalizedX = x3, NormalizedY = y3, FillColor = HandleColorAnchor, Size = 14 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildRoundedRectHandles(VectorComponentItem c)
+    {
+        float w = c.ShapeWidth;
+        float h = c.ShapeHeight;
+        float cr = c.CornerRadius;
+        float maxDim = Math.Min(w, h) / 2f;
+        float hx = w - Math.Min(cr, maxDim);
+        float hy = Math.Min(cr, maxDim);
+        var (chx, chy) = ElementToClipLocal(c, hx, hy);
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "corner-r", NormalizedX = chx, NormalizedY = chy, FillColor = HandleColorCorner, Size = 12 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildEllipseHandles(VectorComponentItem c)
+    {
+        float cx = 0.5f;
+        float cy = 0.5f;
+        float rx = c.RadiusX;
+        float ry = c.RadiusY;
+        var (rxPos, _) = ElementToClipLocal(c, cx + rx, cy);
+        var (_, ryPos) = ElementToClipLocal(c, cx, cy + ry);
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "rx", NormalizedX = rxPos, NormalizedY = 0.5f, FillColor = HandleColorRadius, Size = 12 },
+            new ShapeHandleDescriptor { Id = "ry", NormalizedX = 0.5f, NormalizedY = ryPos, FillColor = HandleColorRadius, Size = 12 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildArcHandles(VectorComponentItem c)
+    {
+        float cx = c.ArcCenterX;
+        float cy = c.ArcCenterY;
+        float rx = c.RadiusX;
+        float ry = c.RadiusY;
+        float start = c.ArcStartAngle;
+        float sweep = c.ArcSweepAngle;
+        var (cPosX, cPosY) = ElementToClipLocal(c, cx, cy);
+        var (rxPosX, rxPosY) = ElementToClipLocal(c, cx + rx, cy);
+        var (ryPosX, ryPosY) = ElementToClipLocal(c, cx, cy + ry);
+        var (sx, sy) = ElementToClipLocal(c, cx + rx * MathF.Cos(start), cy + ry * MathF.Sin(start));
+        var (ex, ey) = ElementToClipLocal(c, cx + rx * MathF.Cos(start + sweep), cy + ry * MathF.Sin(start + sweep));
+        return new[]
+        {
+            new ShapeHandleDescriptor { Id = "center", NormalizedX = cPosX, NormalizedY = cPosY, FillColor = HandleColorCenter, Size = 14 },
+            new ShapeHandleDescriptor { Id = "rx", NormalizedX = rxPosX, NormalizedY = rxPosY, FillColor = HandleColorRadius, Size = 12 },
+            new ShapeHandleDescriptor { Id = "ry", NormalizedX = ryPosX, NormalizedY = ryPosY, FillColor = HandleColorRadius, Size = 12 },
+            new ShapeHandleDescriptor { Id = "start", NormalizedX = sx, NormalizedY = sy, FillColor = HandleColorAngle, Size = 12 },
+            new ShapeHandleDescriptor { Id = "end", NormalizedX = ex, NormalizedY = ey, FillColor = HandleColorAngle, Size = 12 },
+        };
+    }
+
+    private ShapeHandleDescriptor[] BuildPolyHandles(VectorComponentItem c)
+    {
+        var points = c.Source.Definition.Points;
+        if (points is null || points.Count == 0)
+            return Array.Empty<ShapeHandleDescriptor>();
+
+        var handles = new ShapeHandleDescriptor[points.Count];
+        for (int i = 0; i < points.Count; i++)
+        {
+            var (nx, ny) = ElementToClipLocal(c, points[i].X, points[i].Y);
+            handles[i] = new ShapeHandleDescriptor
+            {
+                Id = $"v{i}",
+                NormalizedX = nx,
+                NormalizedY = ny,
+                FillColor = HandleColorAnchor,
+                Size = 12,
+            };
+        }
+        return handles;
+    }
+
+    /// <summary>
+    /// Maps an element-local point to clip-local normalized coordinates [0..1]
+    /// using the same origin/scale transform as DynamicPreview.BuildViewportVectorPreviewView.
+    /// </summary>
+    private (float x, float y) ElementToClipLocal(VectorComponentItem component, float localX, float localY)
+    {
+        var cc = _componentClips.FirstOrDefault(c => c.Id == component.Id);
+        if (cc is null) return (localX, localY);
+        if (!TryGetElementTransform(component, out var originX, out var originY, out var scaleX, out var scaleY))
+            return (localX, localY);
+
+        float canvasX = originX + localX * scaleX;
+        float canvasY = originY + localY * scaleY;
+
+        return (
+            (canvasX - cc.TargetX) / Math.Max(1, cc.TargetWidth),
+            (canvasY - cc.TargetY) / Math.Max(1, cc.TargetHeight)
+        );
+    }
+
+    /// <summary>
+    /// Inverse mapping of <see cref="ElementToClipLocal"/>, converting clip-local [0..1]
+    /// coordinates back to element-local coordinates.
+    /// </summary>
+    private (float x, float y) ClipLocalToElement(VectorComponentItem component, float clipX, float clipY)
+    {
+        var cc = _componentClips.FirstOrDefault(c => c.Id == component.Id);
+        if (cc is null) return (clipX, clipY);
+        if (!TryGetElementTransform(component, out var originX, out var originY, out var scaleX, out var scaleY))
+            return (clipX, clipY);
+
+        float canvasX = cc.TargetX + clipX * cc.TargetWidth;
+        float canvasY = cc.TargetY + clipY * cc.TargetHeight;
+
+        return (
+            scaleX > 0.000001f ? (canvasX - originX) / scaleX : clipX,
+            scaleY > 0.000001f ? (canvasY - originY) / scaleY : clipY
+        );
+    }
+
+    private bool TryGetElementTransform(
+        VectorComponentItem component,
+        out float originX,
+        out float originY,
+        out float scaleX,
+        out float scaleY)
+    {
+        float canvasW = Math.Max(1, PreviewWidth);
+        float canvasH = Math.Max(1, PreviewHeight);
+        uint frame = GetCurrentFrameNumber();
+        uint duration = Math.Max(1, _clip.Duration);
+        var elements = component.Source.GetAnimatedElements(frame, duration);
+        if (elements is null || elements.Count == 0)
+        {
+            originX = originY = 0f;
+            scaleX = scaleY = 1f;
+            return false;
+        }
+
+        var element = elements[0];
+        if (element.UseUniformScale)
+        {
+            float uniform = MathF.Min(canvasW, canvasH);
+            scaleX = uniform;
+            scaleY = uniform;
+            originX = element.BaseX * canvasW + element.RelativeX * uniform;
+            originY = element.BaseY * canvasH + element.RelativeY * uniform;
+        }
+        else
+        {
+            scaleX = canvasW;
+            scaleY = canvasH;
+            originX = element.RelativeX * canvasW;
+            originY = element.RelativeY * canvasH;
+        }
+
+        return true;
+    }
+
+    // ── Drag handler dispatch ──────────────────────────────
+
+    private void OnShapeHandleDrag(Guid clipId, string handleId, PanUpdatedEventArgs e, ShapeHandleDragContext context)
+    {
+        var component = Components.FirstOrDefault(c => c.Id == clipId);
+        if (component is null || !component.IsShapeEditable) return;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                RecordDragOrigin(component, handleId);
+                break;
+            case GestureStatus.Running:
+                ApplyHandleDrag(component, handleId, e.TotalX, e.TotalY, context, isLive: true);
+                break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                ApplyHandleDrag(component, handleId, e.TotalX, e.TotalY, context, isLive: false);
+                _handleDragOrigins.Remove((clipId, handleId));
+                RequestComponentClipsRebuild();
+                break;
+        }
+    }
+
+    private void RecordDragOrigin(VectorComponentItem comp, string handleId)
+    {
+        var (x, y) = GetElementLocalPoint(comp, handleId);
+        _handleDragOrigins[(comp.Id, handleId)] = (x, y);
+    }
+
+    private void ApplyHandleDrag(VectorComponentItem comp, string handleId, double totalX, double totalY, ShapeHandleDragContext ctx, bool isLive)
+    {
+        if (!_handleDragOrigins.TryGetValue((comp.Id, handleId), out var origin))
+        {
+            RecordDragOrigin(comp, handleId);
+            if (!_handleDragOrigins.TryGetValue((comp.Id, handleId), out origin))
+                return;
+        }
+
+        var (originClipX, originClipY) = ElementToClipLocal(comp, origin.x, origin.y);
+        float targetClipX = Math.Clamp(originClipX + ctx.DeltaXToNormalized(totalX), 0f, 1f);
+        float targetClipY = Math.Clamp(originClipY + ctx.DeltaYToNormalized(totalY), 0f, 1f);
+        var (newXRaw, newYRaw) = ClipLocalToElement(comp, targetClipX, targetClipY);
+        float newX = Math.Clamp(newXRaw, 0f, 1f);
+        float newY = Math.Clamp(newYRaw, 0f, 1f);
+
+        // During live drag, write directly to ShapeParameters to avoid triggering
+        // expensive RequestComponentClipsRebuild on every gesture frame.
+        // On completion, use the typed setters for full refresh + rebuild.
+        if (isLive)
+            ApplyHandleDragLive(comp, handleId, newX, newY);
+        else
+            ApplyHandleDragFinal(comp, handleId, newX, newY);
+
+        // Keep overlay bounds in sync with edited geometry so the selection box
+        // follows shape-bound changes while dragging.
+        SyncComponentClipLayoutToEditor(comp);
+        _ = RefreshInteractivePreviewsAsync();
+        RequestPreviewRefresh();
+    }
+
+    private void SyncComponentClipLayoutToEditor(VectorComponentItem component)
+    {
+        var cc = _componentClips.FirstOrDefault(c => c.Id == component.Id);
+        if (cc is null)
+            return;
+
+        cc.SyncFromDefinition();
+        if (_clipElementUIs.TryGetValue(component.Id, out var ui))
+        {
+            ui.TargetX = cc.TargetX;
+            ui.TargetY = cc.TargetY;
+            ui.TargetWidth = cc.TargetWidth;
+            ui.TargetHeight = cc.TargetHeight;
+        }
+
+        _ = InteractiveEditor.UpdateClips(
+            new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(_clipElementUIs));
+    }
+
+    // ── Live drag: write directly to ShapeParameters (no clip rebuild) ──
+
+    private static void ApplyHandleDragLive(VectorComponentItem comp, string handleId, float nx, float ny)
+    {
+        var dict = comp.ShapeParameters;
+        switch (comp.ShapeType)
+        {
+            case VectorShapeType.Line:
+                switch (handleId)
+                {
+                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
+                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
+                }
+                break;
+            case VectorShapeType.CubicBezier:
+                switch (handleId)
+                {
+                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
+                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
+                    case "p3": dict["X3"] = nx; dict["Y3"] = ny; break;
+                    case "p4": dict["X4"] = nx; dict["Y4"] = ny; break;
+                }
+                break;
+            case VectorShapeType.QuadraticBezier:
+                switch (handleId)
+                {
+                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
+                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
+                    case "p3": dict["X3"] = nx; dict["Y3"] = ny; break;
+                }
+                break;
+            case VectorShapeType.RoundedRectangle:
+                {
+                    float w = TryGetParam(dict, "Width", 0.3f);
+                    float h = TryGetParam(dict, "Height", 0.3f);
+                    float maxR = Math.Min(w, h) / 2f;
+                    dict["CornerRadius"] = Math.Clamp(ny, 0f, maxR);
+                }
+                break;
+            case VectorShapeType.Ellipse:
+                switch (handleId)
+                {
+                    case "rx": dict["RadiusX"] = Math.Max(0.001f, nx - 0.5f); break;
+                    case "ry": dict["RadiusY"] = Math.Max(0.001f, ny - 0.5f); break;
+                }
+                break;
+            case VectorShapeType.Arc:
+                LiveArcDrag(dict, handleId, nx, ny);
+                break;
+            case VectorShapeType.Polygon:
+            case VectorShapeType.Polyline:
+                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int vidx))
+                {
+                    var pts = comp.Source.Definition.Points;
+                    if (pts is not null && vidx >= 0 && vidx < pts.Count)
+                        pts[vidx] = new Point(nx, ny);
+                }
+                break;
+        }
+    }
+
+    private static void LiveArcDrag(Dictionary<string, float> dict, string handleId, float nx, float ny)
+    {
+        float cx = TryGetParam(dict, "CenterX", 0.5f);
+        float cy = TryGetParam(dict, "CenterY", 0.5f);
+        switch (handleId)
+        {
+            case "center": dict["CenterX"] = nx; dict["CenterY"] = ny; break;
+            case "rx": dict["RadiusX"] = Math.Max(0.001f, nx - cx); break;
+            case "ry": dict["RadiusY"] = Math.Max(0.001f, ny - cy); break;
+            case "start":
+                dict["StartAngle"] = MathF.Atan2(ny - cy, nx - cx);
+                break;
+            case "end":
+                float endAngle = MathF.Atan2(ny - cy, nx - cx);
+                float startA = TryGetParam(dict, "StartAngle", 0f);
+                float sweep = endAngle - startA;
+                if (sweep < 0) sweep += 2 * MathF.PI;
+                if (sweep < 0.001f) sweep = 0.001f;
+                dict["SweepAngle"] = sweep;
+                break;
+        }
+    }
+
+    private static float TryGetParam(Dictionary<string, float> dict, string key, float defaultValue)
+        => dict.TryGetValue(key, out float v) ? v : defaultValue;
+
+    // ── Final apply: use typed setters for full refresh + rebuild ──
+
+    private void ApplyHandleDragFinal(VectorComponentItem comp, string handleId, float nx, float ny)
+    {
+        switch (comp.ShapeType)
+        {
+            case VectorShapeType.Line:
+                switch (handleId)
+                {
+                    case "p1": comp.LineX1 = nx; comp.LineY1 = ny; break;
+                    case "p2": comp.LineX2 = nx; comp.LineY2 = ny; break;
+                }
+                break;
+            case VectorShapeType.CubicBezier:
+                switch (handleId)
+                {
+                    case "p1": comp.CubicX1 = nx; comp.CubicY1 = ny; break;
+                    case "p2": comp.CubicX2 = nx; comp.CubicY2 = ny; break;
+                    case "p3": comp.CubicX3 = nx; comp.CubicY3 = ny; break;
+                    case "p4": comp.CubicX4 = nx; comp.CubicY4 = ny; break;
+                }
+                break;
+            case VectorShapeType.QuadraticBezier:
+                switch (handleId)
+                {
+                    case "p1": comp.QuadX1 = nx; comp.QuadY1 = ny; break;
+                    case "p2": comp.QuadX2 = nx; comp.QuadY2 = ny; break;
+                    case "p3": comp.QuadX3 = nx; comp.QuadY3 = ny; break;
+                }
+                break;
+            case VectorShapeType.RoundedRectangle:
+                {
+                    float maxR = Math.Min(comp.ShapeWidth, comp.ShapeHeight) / 2f;
+                    comp.CornerRadius = Math.Clamp(ny, 0f, maxR);
+                }
+                break;
+            case VectorShapeType.Ellipse:
+                switch (handleId)
+                {
+                    case "rx": comp.RadiusX = Math.Max(0.001f, nx - 0.5f); break;
+                    case "ry": comp.RadiusY = Math.Max(0.001f, ny - 0.5f); break;
+                }
+                break;
+            case VectorShapeType.Arc:
+                switch (handleId)
+                {
+                    case "center": comp.ArcCenterX = nx; comp.ArcCenterY = ny; break;
+                    case "rx": comp.RadiusX = Math.Max(0.001f, nx - comp.ArcCenterX); break;
+                    case "ry": comp.RadiusY = Math.Max(0.001f, ny - comp.ArcCenterY); break;
+                    case "start": comp.ArcStartAngle = MathF.Atan2(ny - comp.ArcCenterY, nx - comp.ArcCenterX); break;
+                    case "end":
+                        float endA = MathF.Atan2(ny - comp.ArcCenterY, nx - comp.ArcCenterX);
+                        float sweep = endA - comp.ArcStartAngle;
+                        if (sweep < 0) sweep += 2 * MathF.PI;
+                        if (sweep < 0.001f) sweep = 0.001f;
+                        comp.ArcSweepAngle = sweep;
+                        break;
+                }
+                break;
+            case VectorShapeType.Polygon:
+            case VectorShapeType.Polyline:
+                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int vidx))
+                {
+                    var pts = comp.Source.Definition.Points;
+                    if (pts is not null && vidx >= 0 && vidx < pts.Count)
+                    {
+                        pts[vidx] = new Point(nx, ny);
+                    }
+                }
+                // Trigger full refresh for polygon/polyline vertex changes
+                RequestPreviewRefresh();
+                RequestComponentClipsRebuild();
+                break;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // INotifyPropertyChanged
     // ═══════════════════════════════════════════════════════════
 
@@ -1302,6 +1864,23 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         AnimatableProperty.BaseY => 0f,
         AnimatableProperty.FillColorA => 1f,
         AnimatableProperty.StrokeColorA => 1f,
+        AnimatableProperty.ShapeWidth => 0.3f,
+        AnimatableProperty.ShapeHeight => 0.3f,
+        AnimatableProperty.ShapeCornerRadius => 0.05f,
+        AnimatableProperty.ShapeRadiusX => 0.15f,
+        AnimatableProperty.ShapeRadiusY => 0.15f,
+        AnimatableProperty.ShapeStartAngle => 0f,
+        AnimatableProperty.ShapeSweepAngle => MathF.PI,
+        AnimatableProperty.ShapeCenterX => 0.5f,
+        AnimatableProperty.ShapeCenterY => 0.5f,
+        AnimatableProperty.ShapePointX1 => 0.1f,
+        AnimatableProperty.ShapePointY1 => 0.1f,
+        AnimatableProperty.ShapePointX2 => 0.9f,
+        AnimatableProperty.ShapePointY2 => 0.9f,
+        AnimatableProperty.ShapePointX3 => 0.9f,
+        AnimatableProperty.ShapePointY3 => 0.1f,
+        AnimatableProperty.ShapePointX4 => 0.9f,
+        AnimatableProperty.ShapePointY4 => 0.7f,
         _ => 0f,
     };
 }

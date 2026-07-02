@@ -336,6 +336,23 @@ public class AnimationTrackItem : INotifyPropertyChanged
         AnimatableProperty.BaseY => "Base Y",
         AnimatableProperty.FillColorA => "Fill Opacity",
         AnimatableProperty.StrokeColorA => "Stroke Opacity",
+        AnimatableProperty.ShapeWidth => "Width",
+        AnimatableProperty.ShapeHeight => "Height",
+        AnimatableProperty.ShapeCornerRadius => "Corner Radius",
+        AnimatableProperty.ShapeRadiusX => "Radius X",
+        AnimatableProperty.ShapeRadiusY => "Radius Y",
+        AnimatableProperty.ShapeStartAngle => "Start Angle",
+        AnimatableProperty.ShapeSweepAngle => "Sweep Angle",
+        AnimatableProperty.ShapeCenterX => "Center X",
+        AnimatableProperty.ShapeCenterY => "Center Y",
+        AnimatableProperty.ShapePointX1 => "Point X1",
+        AnimatableProperty.ShapePointY1 => "Point Y1",
+        AnimatableProperty.ShapePointX2 => "Point X2",
+        AnimatableProperty.ShapePointY2 => "Point Y2",
+        AnimatableProperty.ShapePointX3 => "Point X3",
+        AnimatableProperty.ShapePointY3 => "Point Y3",
+        AnimatableProperty.ShapePointX4 => "Point X4",
+        AnimatableProperty.ShapePointY4 => "Point Y4",
         _ => p.ToString(),
     };
 }
@@ -422,6 +439,226 @@ public class VectorComponentItem : INotifyPropertyChanged
     public string ShapeTypeDisplayName => IsFromSvg
         ? System.IO.Path.GetFileName(SourceFilePath ?? "SVG")
         : ShapeDefaults.GetDisplayName(ShapeType);
+
+    // ── Shape parameter visibility ──────────────────────────
+
+    /// <summary>Whether the shape has Width/Height dimension parameters.</summary>
+    public bool HasWidthHeight => ShapeType is VectorShapeType.Rectangle or VectorShapeType.RoundedRectangle;
+
+    /// <summary>Whether the shape has a CornerRadius parameter.</summary>
+    public bool HasCornerRadius => ShapeType is VectorShapeType.RoundedRectangle;
+
+    /// <summary>Whether the shape has RadiusX/RadiusY parameters.</summary>
+    public bool HasRadiusXY => ShapeType is VectorShapeType.Ellipse or VectorShapeType.Arc;
+
+    /// <summary>Whether the shape has Arc-specific params (center, angles).</summary>
+    public bool HasArcParams => ShapeType is VectorShapeType.Arc;
+
+    /// <summary>Whether the shape has line endpoint parameters (X1/Y1, X2/Y2).</summary>
+    public bool HasLinePoints => ShapeType is VectorShapeType.Line;
+
+    /// <summary>Whether the shape has cubic bezier control points (X1..X4, Y1..Y4).</summary>
+    public bool HasCubicBezierPoints => ShapeType is VectorShapeType.CubicBezier;
+
+    /// <summary>Whether the shape has quadratic bezier control points (X1..X3, Y1..Y3).</summary>
+    public bool HasQuadraticBezierPoints => ShapeType is VectorShapeType.QuadraticBezier;
+
+    /// <summary>Whether the shape has bezier control points (cubic or quadratic).</summary>
+    public bool HasAnyBezierPoints => HasCubicBezierPoints || HasQuadraticBezierPoints;
+
+    /// <summary>Whether the shape has a vertex point list (Polygon/Polyline).</summary>
+    public bool HasPointsList => ShapeType is VectorShapeType.Polygon or VectorShapeType.Polyline;
+
+    /// <summary>Number of vertices for Polygon/Polyline shapes.</summary>
+    public int VertexCount => _source.Definition.Points?.Count ?? 0;
+
+    /// <summary>Human-readable vertex count label.</summary>
+    public string VertexCountText => ShapeType switch
+    {
+        VectorShapeType.Polygon => $"{VertexCount} vertices (min 3)",
+        VectorShapeType.Polyline => $"{VertexCount} vertices (min 2)",
+        _ => "",
+    };
+
+    // ── Shape-specific parameter accessors ──────────────────
+
+    /// <summary>Width of Rectangle / RoundedRectangle shapes.</summary>
+    public float ShapeWidth
+    {
+        get => GetShapeParam("Width", 0.3f);
+        set
+        {
+            float clamped = Math.Max(0.001f, value);
+            if (!Equals(GetShapeParam("Width", 0.3f), clamped))
+            {
+                ShapeParameters["Width"] = clamped;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Height of Rectangle / RoundedRectangle shapes.</summary>
+    public float ShapeHeight
+    {
+        get => GetShapeParam("Height", 0.3f);
+        set
+        {
+            float clamped = Math.Max(0.001f, value);
+            if (!Equals(GetShapeParam("Height", 0.3f), clamped))
+            {
+                ShapeParameters["Height"] = clamped;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Corner radius of RoundedRectangle shapes.</summary>
+    public float CornerRadius
+    {
+        get => GetShapeParam("CornerRadius", 0.05f);
+        set
+        {
+            float clamped = Math.Max(0f, value);
+            if (!Equals(GetShapeParam("CornerRadius", 0.05f), clamped))
+            {
+                ShapeParameters["CornerRadius"] = clamped;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>X-radius of Ellipse / Arc shapes.</summary>
+    public float RadiusX
+    {
+        get => GetShapeParam("RadiusX", 0.15f);
+        set
+        {
+            float clamped = Math.Max(0.001f, value);
+            if (!Equals(GetShapeParam("RadiusX", 0.15f), clamped))
+            {
+                ShapeParameters["RadiusX"] = clamped;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Y-radius of Ellipse / Arc shapes.</summary>
+    public float RadiusY
+    {
+        get => GetShapeParam("RadiusY", 0.15f);
+        set
+        {
+            float clamped = Math.Max(0.001f, value);
+            if (!Equals(GetShapeParam("RadiusY", 0.15f), clamped))
+            {
+                ShapeParameters["RadiusY"] = clamped;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    // ── Arc-specific parameters ─────────────────────────────
+
+    /// <summary>Center X of Arc shapes.</summary>
+    public float ArcCenterX
+    {
+        get => GetShapeParam("CenterX", 0.5f);
+        set
+        {
+            if (!Equals(GetShapeParam("CenterX", 0.5f), value))
+            {
+                ShapeParameters["CenterX"] = value;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Center Y of Arc shapes.</summary>
+    public float ArcCenterY
+    {
+        get => GetShapeParam("CenterY", 0.5f);
+        set
+        {
+            if (!Equals(GetShapeParam("CenterY", 0.5f), value))
+            {
+                ShapeParameters["CenterY"] = value;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Start angle (radians) of Arc shapes.</summary>
+    public float ArcStartAngle
+    {
+        get => GetShapeParam("StartAngle", 0f);
+        set
+        {
+            if (!Equals(GetShapeParam("StartAngle", 0f), value))
+            {
+                ShapeParameters["StartAngle"] = value;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    /// <summary>Sweep angle (radians) of Arc shapes.</summary>
+    public float ArcSweepAngle
+    {
+        get => GetShapeParam("SweepAngle", MathF.PI);
+        set
+        {
+            if (!Equals(GetShapeParam("SweepAngle", MathF.PI), value))
+            {
+                ShapeParameters["SweepAngle"] = value;
+                OnPropertyChanged();
+                _owner.RequestPreviewRefresh();
+                _owner.RequestComponentClipsRebuild();
+            }
+        }
+    }
+
+    // ── Line parameters ─────────────────────────────────────
+
+    public float LineX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float LineY1 { get => GetShapeParam("Y1", 0.1f); set { if (!Equals(GetShapeParam("Y1", 0.1f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float LineX2 { get => GetShapeParam("X2", 0.9f); set { if (!Equals(GetShapeParam("X2", 0.9f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float LineY2 { get => GetShapeParam("Y2", 0.9f); set { if (!Equals(GetShapeParam("Y2", 0.9f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+
+    // ── Cubic Bezier parameters ─────────────────────────────
+
+    public float CubicX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicY1 { get => GetShapeParam("Y1", 0.3f); set { if (!Equals(GetShapeParam("Y1", 0.3f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicX2 { get => GetShapeParam("X2", 0.3f); set { if (!Equals(GetShapeParam("X2", 0.3f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicY2 { get => GetShapeParam("Y2", 0.7f); set { if (!Equals(GetShapeParam("Y2", 0.7f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicX3 { get => GetShapeParam("X3", 0.7f); set { if (!Equals(GetShapeParam("X3", 0.7f), value)) { ShapeParameters["X3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicY3 { get => GetShapeParam("Y3", 0.3f); set { if (!Equals(GetShapeParam("Y3", 0.3f), value)) { ShapeParameters["Y3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicX4 { get => GetShapeParam("X4", 0.9f); set { if (!Equals(GetShapeParam("X4", 0.9f), value)) { ShapeParameters["X4"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float CubicY4 { get => GetShapeParam("Y4", 0.7f); set { if (!Equals(GetShapeParam("Y4", 0.7f), value)) { ShapeParameters["Y4"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+
+    // ── Quadratic Bezier parameters ─────────────────────────
+
+    public float QuadX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float QuadY1 { get => GetShapeParam("Y1", 0.1f); set { if (!Equals(GetShapeParam("Y1", 0.1f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float QuadX2 { get => GetShapeParam("X2", 0.5f); set { if (!Equals(GetShapeParam("X2", 0.5f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float QuadY2 { get => GetShapeParam("Y2", 0.9f); set { if (!Equals(GetShapeParam("Y2", 0.9f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float QuadX3 { get => GetShapeParam("X3", 0.9f); set { if (!Equals(GetShapeParam("X3", 0.9f), value)) { ShapeParameters["X3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    public float QuadY3 { get => GetShapeParam("Y3", 0.1f); set { if (!Equals(GetShapeParam("Y3", 0.1f), value)) { ShapeParameters["Y3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
 
     public uint DurationInFrames
     {
