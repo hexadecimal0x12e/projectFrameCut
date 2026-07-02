@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Microsoft.Maui.Graphics;
-using projectFrameCut.Render.RenderAPIBase.Animation;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -34,25 +34,25 @@ public class ElementItem
 }
 
 // ═══════════════════════════════════════════════════════════════
-// KeyFrameItem — wrappper around KeyFrame for two-way binding
+// KeyFrameItem — wrappper around VectorAnimationKeyFrame for two-way binding
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps a <see cref="KeyFrame"/> for two-way binding in the storyboard editor UI.
+/// Wraps a <see cref="KeyFrame"/> for two-way binding in the vector animation editor UI.
 /// </summary>
 public class KeyFrameItem : INotifyPropertyChanged
 {
-    private KeyFrame _source;
+    private VectorAnimationKeyFrame _source;
     private AnimationTrackItem? _parentTrack;
 
-    public KeyFrameItem(KeyFrame source, bool isLast, AnimationTrackItem? parentTrack = null)
+    public KeyFrameItem(VectorAnimationKeyFrame source, bool isLast, AnimationTrackItem? parentTrack = null)
     {
         _source = source;
         IsLast = isLast;
         _parentTrack = parentTrack;
     }
 
-    public KeyFrame Source => _source;
+    public VectorAnimationKeyFrame Source => _source;
     public AnimationTrackItem? ParentTrack => _parentTrack;
 
     public float Time
@@ -150,15 +150,15 @@ public class KeyFrameItem : INotifyPropertyChanged
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps an <see cref="AnimationTrack"/> for editing in the storyboard editor UI.
-/// Owned by <see cref="StoryboardEditorView"/> (the page itself, not a ViewModel).
+/// Wraps an <see cref="AnimationTrack"/> for editing in the vector animation editor UI.
+/// Owned by <see cref="VectorContentEditorView"/> (the page itself, not a ViewModel).
 /// </summary>
 public class AnimationTrackItem : INotifyPropertyChanged
 {
     private readonly AnimationTrack _source;
-    private readonly StoryboardEditorView _owner;
+    private readonly VectorContentEditorView _owner;
 
-    public AnimationTrackItem(AnimationTrack source, StoryboardEditorView owner)
+    public AnimationTrackItem(AnimationTrack source, VectorContentEditorView owner)
     {
         _source = source;
         _owner = owner;
@@ -244,7 +244,7 @@ public class AnimationTrackItem : INotifyPropertyChanged
         time = Math.Clamp(time, 0f, 1f);
         if (easing == default) easing = EasingMode.Linear;
 
-        var kf = new KeyFrame(time, value, easing);
+        var kf = new VectorAnimationKeyFrame(time, value, easing);
         _source.KeyFrames.Add(kf);
         _source.KeyFrames.Sort((a, b) => a.Time.CompareTo(b.Time));
 
@@ -362,21 +362,21 @@ public class AnimationTrackItem : INotifyPropertyChanged
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps a <see cref="VectorComponent"/> for editing in the storyboard editor UI.
+/// Wraps a <see cref="VectorComponent"/> for editing in the vector animation editor UI.
 /// Manages per-component tracks, shape properties, and visual configuration.
-/// Owned by <see cref="StoryboardEditorView"/> (the page itself).
+/// Owned by <see cref="VectorContentEditorView"/> (the page itself).
 /// </summary>
 public class VectorComponentItem : INotifyPropertyChanged
 {
     private readonly VectorComponent _source;
-    private readonly StoryboardEditorView _owner;
+    private readonly VectorContentEditorView _owner;
 
-    public VectorComponentItem(VectorComponent source, StoryboardEditorView owner)
+    public VectorComponentItem(VectorComponent source, VectorContentEditorView owner)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
 
-        foreach (var track in source.Storyboard.Tracks)
+        foreach (var track in source.Timeline.Tracks)
         {
             var trackItem = new AnimationTrackItem(track, owner);
             trackItem.PropertyChanged += (_, e) =>
@@ -662,12 +662,12 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public uint DurationInFrames
     {
-        get => _source.Storyboard.DurationInFrames;
+        get => _source.Timeline.DurationInFrames;
         set
         {
-            if (_source.Storyboard.DurationInFrames != value)
+            if (_source.Timeline.DurationInFrames != value)
             {
-                _source.Storyboard.DurationInFrames = Math.Max(1, value);
+                _source.Timeline.DurationInFrames = Math.Max(1, value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(DurationText));
                 _owner.InvalidateTimeline();
@@ -803,7 +803,7 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public void AddTrack(AnimationTrack track)
     {
-        _source.Storyboard.Tracks.Add(track);
+        _source.Timeline.Tracks.Add(track);
 
         var trackItem = new AnimationTrackItem(track, _owner);
         trackItem.PropertyChanged += (_, _) => _owner.InvalidateTimeline();
@@ -815,7 +815,7 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public void RemoveTrack(AnimationTrackItem trackItem)
     {
-        _source.Storyboard.Tracks.Remove(trackItem.Source);
+        _source.Timeline.Tracks.Remove(trackItem.Source);
         Tracks.Remove(trackItem);
 
         OnPropertyChanged(nameof(TrackCount));

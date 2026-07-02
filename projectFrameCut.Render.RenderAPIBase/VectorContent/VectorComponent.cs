@@ -1,14 +1,14 @@
-using projectFrameCut.Drawing.Vector;
+﻿using projectFrameCut.Drawing.Vector;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
-/// Runtime aggregation of a component definition and its storyboard.
+/// Runtime aggregation of a component definition and its vector animation.
 /// Combines shape creation (from the definition) with per-component
-/// animation (from the storyboard) to produce animated elements
+/// animation (from the vector animation) to produce animated elements
 /// for any given clip frame.
 /// </summary>
 public class VectorComponent
@@ -17,7 +17,7 @@ public class VectorComponent
     public VectorComponentDefinition Definition { get; set; } = new();
 
     /// <summary>Per-component animation timeline.</summary>
-    public ComponentStoryboard Storyboard { get; set; } = new();
+    public ComponentAnimations Timeline { get; set; } = new();
 
     // ── SVG import cache ───────────────────────────────────
 
@@ -43,7 +43,7 @@ public class VectorComponent
     }
 
     /// <summary>
-    /// Build the element and apply this component's storyboard for the
+    /// Build the element and apply this component's vector animation for the
     /// given clip frame. For SVG components, returns the first element.
     /// Prefer <see cref="GetAnimatedElements"/> for multi-element components.
     /// </summary>
@@ -106,12 +106,12 @@ public class VectorComponent
 
     private void ApplySvgAnimation(List<VectorCanvasElement> elements, uint clipFrame, uint clipDuration)
     {
-        if (Storyboard.Tracks is null || Storyboard.Tracks.Count == 0)
+        if (Timeline.Tracks is null || Timeline.Tracks.Count == 0)
             return;
 
-        float localProgress = Storyboard.CalculateLocalProgress(clipFrame, clipDuration);
+        float localProgress = Timeline.CalculateLocalProgress(clipFrame, clipDuration);
 
-        foreach (var track in Storyboard.Tracks)
+        foreach (var track in Timeline.Tracks)
         {
             if (track is null || track.KeyFrames is null || track.KeyFrames.Count == 0)
                 continue;
@@ -125,7 +125,7 @@ public class VectorComponent
 
             var cloned = shape.Clone();
             float value = track.GetValue(localProgress);
-            projectFrameCut.Render.RenderAPIBase.Animation.Storyboard.ApplyValue(cloned, track.Property, value);
+            VectorAnimations.ApplyValue(cloned, track.Property, value);
             elements[idx] = cloned;
         }
     }
@@ -134,7 +134,7 @@ public class VectorComponent
     {
         if (elements[0] is ShapeCanvasElement shape)
         {
-            var animated = Storyboard.Apply(shape, clipFrame, clipDuration);
+            var animated = Timeline.Apply(shape, clipFrame, clipDuration);
             elements[0] = animated;
         }
     }

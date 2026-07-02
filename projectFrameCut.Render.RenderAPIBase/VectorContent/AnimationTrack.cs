@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Describes an animation of a single <see cref="AnimatableProperty"/> on a
 /// single element (identified by its index in <c>VectorPicture.Elements</c>)
-/// over a set of <see cref="KeyFrame"/>s.
+/// over a set of <see cref="VectorAnimationKeyFrame"/>s.
 /// </summary>
 public class AnimationTrack
 {
@@ -20,11 +20,11 @@ public class AnimationTrack
     public AnimatableProperty Property { get; set; }
 
     /// <summary>
-    /// Keyframes sorted by <see cref="KeyFrame.Time"/> ascending.
+    /// Keyframes sorted by <see cref="VectorAnimationKeyFrame.Time"/> ascending.
     /// Must contain at least one entry; with a single entry the value
     /// is considered constant.
     /// </summary>
-    public List<KeyFrame> KeyFrames { get; set; } = new();
+    public List<VectorAnimationKeyFrame> KeyFrames { get; set; } = new();
 
     /// <summary>
     /// Evaluate the track's value at the given normalised progress [0…1].
@@ -45,15 +45,15 @@ public class AnimationTrack
             return frames[0].Value;
 
         // After or at the last keyframe
-        KeyFrame last = frames[^1];
+        VectorAnimationKeyFrame last = frames[^1];
         if (progress >= last.Time)
             return last.Value;
 
         // Find the segment containing this progress and interpolate
         for (int i = 1; i < frames.Count; i++)
         {
-            KeyFrame prev = frames[i - 1];
-            KeyFrame next = frames[i];
+            VectorAnimationKeyFrame prev = frames[i - 1];
+            VectorAnimationKeyFrame next = frames[i];
 
             if (progress >= next.Time)
                 continue;

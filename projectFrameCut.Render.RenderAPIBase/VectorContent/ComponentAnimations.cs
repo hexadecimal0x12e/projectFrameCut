@@ -1,15 +1,15 @@
-using projectFrameCut.Drawing.Vector;
+﻿using projectFrameCut.Drawing.Vector;
 using System;
 using System.Collections.Generic;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Per-component animation timeline with independent duration.
 /// Each <see cref="VectorComponent"/> owns one of these to control
 /// how its shape animates over the clip's total duration.
 /// </summary>
-public class ComponentStoryboard
+public class ComponentAnimations
 {
     /// <summary>
     /// Duration of this component's animation in source frames.
@@ -55,7 +55,7 @@ public class ComponentStoryboard
                 continue;
 
             float value = track.GetValue(localProgress);
-            Storyboard.ApplyValue(animated, track.Property, value);
+            VectorAnimations.ApplyValue(animated, track.Property, value);
         }
 
         return animated;

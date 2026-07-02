@@ -2,9 +2,9 @@
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.RenderAPIBase.Animation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,8 +12,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     /// <summary>
     /// A mutable vector-content clip whose <see cref="VectorPicture"/> can be
-    /// animated per frame via an associated <see cref="Animation.Storyboard"/>.
-    /// The storyboard defines keyframe-driven animation of element-level
+    /// animated per frame via an associated <see cref="Animation.vector animation"/>.
+    /// The vector animation defines keyframe-driven animation of element-level
     /// properties (position, rotation) and segment-level appearance (fill/stroke
     /// opacity).
     /// </summary>
@@ -64,21 +64,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// <summary>
         /// The base (static) vector picture loaded from <see cref="FilePath"/>.
         /// This is never mutated; animation works by cloning and applying
-        /// storyboard deltas on top.
+        /// vector animation deltas on top.
         /// </summary>
         [JsonIgnore]
         public VectorPicture? SourcePicture { get; set; }
 
         /// <summary>
-        /// The animation storyboard attached to this clip. When set, frames
+        /// The animation data attached to this clip. When set, frames
         /// produced by <see cref="GetVectorPictureRelativeToStartPointOfSource"/>
-        /// will have the storyboard applied at the corresponding progress.
+        /// will have the vector animation applied at the corresponding progress.
         /// </summary>
         [JsonIgnore]
-        public Storyboard? AnimationStoryboard { get; set; }
+        public VectorAnimations? AnimationPayload { get; set; }
 
         /// <summary>
-        /// User-created vector components with per-component storyboards.
+        /// User-created vector components with per-component vector animations.
         /// These are composed on top of any SVG-imported <see cref="SourcePicture"/>
         /// elements during frame generation.
         /// </summary>
@@ -97,21 +97,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         /// <summary>
         /// Produces a <see cref="VectorPicture"/> for the given <paramref name="frameIndex"/>
-        /// by evaluating the <see cref="AnimationStoryboard"/> (if SVG source present)
-        /// and/or composing <see cref="Components"/> with their per-component storyboards.
+        /// by evaluating the <see cref="AnimationPayload"/> (if SVG source present)
+        /// and/or composing <see cref="Components"/> with their per-component vector animations.
         /// </summary>
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight)
         {
             var result = new VectorPicture();
 
-            // Stage 1: SVG source with global storyboard (if present)
+            // Stage 1: SVG source with global vector animation (if present)
             if (SourcePicture is not null)
             {
-                if (AnimationStoryboard is { Tracks.Count: > 0 })
+                if (AnimationPayload is { Tracks.Count: > 0 })
                 {
                     float progress = CalculateProgress(frameIndex);
-                    result = AnimationStoryboard.Apply(SourcePicture, progress);
+                    result = AnimationPayload.Apply(SourcePicture, progress);
                 }
                 else
                 {
@@ -120,7 +120,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
-            // Stage 2: User-created components with per-component storyboards
+            // Stage 2: User-created components with per-component vector animations
             foreach (var component in Components)
             {
                 var animatedElements = component.GetAnimatedElements(frameIndex, Duration);
@@ -160,12 +160,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
             if (FilePath is not null)
             {
                 SourcePicture = SVGToVectorElement.ImportFromFile(FilePath);
-                AnimationStoryboard = DeserializeStoryboard();
+                AnimationPayload = DeserializePayload();
             }
             else
             {
                 SourcePicture = null;
-                AnimationStoryboard = null;
+                AnimationPayload = null;
             }
 
             // Deserialize user-created components
@@ -215,19 +215,19 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return Math.Clamp(frameIndex / (float)(Duration - 1), 0f, 1f);
         }
 
-        // ── Storyboard serialisation via ExtraData ─────────
+        // ── VectorAnimations serialisation via ExtraData ─────────
 
-        private const string StoryboardDataKey = "VectorAnimation.Storyboard";
+        private const string AnimationPayloadKey = "VectorAnimation.Payload";
 
-        private static readonly JsonSerializerOptions _storyboardJsonOptions = new()
+        private static readonly JsonSerializerOptions _animationPayloadJsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = null, // Preserve PascalCase to match C# property names
         };
 
-        private Storyboard? DeserializeStoryboard()
+        private VectorAnimations? DeserializePayload()
         {
-            if (ExtraData is null || !ExtraData.TryGetValue(StoryboardDataKey, out var raw))
+            if (ExtraData is null || !ExtraData.TryGetValue(AnimationPayloadKey, out var raw))
                 return null;
 
             string? json = raw switch
@@ -243,24 +243,23 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             try
             {
-                return JsonSerializer.Deserialize<Storyboard>(json, _storyboardJsonOptions);
+                return JsonSerializer.Deserialize<VectorAnimations>(json, _animationPayloadJsonOptions);
             }
             catch (Exception ex)
             {
-                Log(ex, $"Failed to deserialize Storyboard from ExtraData. JSON length: {json.Length}. "
-                    + "The Storyboard data will be discarded for this clip.", this);
+                Log(ex, $"Failed to deserialize payload from ExtraData. JSON length: {json.Length}. The animation data will be discarded for this clip.", this);
                 return null;
             }
         }
 
         /// <summary>
-        /// Serialises the <see cref="AnimationStoryboard"/> into <see cref="ExtraData"/>
+        /// Serialises the <see cref="AnimationPayload"/> into <see cref="ExtraData"/>
         /// so it persists with the clip's metadata.
         /// </summary>
-        public void SerializeStoryboard(Storyboard storyboard)
+        public void SerializePayload(VectorAnimations payload)
         {
             ExtraData ??= new();
-            ExtraData[StoryboardDataKey] = JsonSerializer.Serialize(storyboard, _storyboardJsonOptions);
+            ExtraData[AnimationPayloadKey] = JsonSerializer.Serialize(payload, _animationPayloadJsonOptions);
         }
 
         // ── Component serialisation via ExtraData ────────────

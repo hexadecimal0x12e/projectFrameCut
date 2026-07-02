@@ -1,7 +1,7 @@
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+﻿namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
-/// Standard easing-curve types used by <see cref="KeyFrame"/> and
+/// Standard easing-curve types used by <see cref="VectorAnimationKeyFrame"/> and
 /// <see cref="EasingFunctions"/>.
 /// Based on Robert Penner's easing functions.
 /// </summary>

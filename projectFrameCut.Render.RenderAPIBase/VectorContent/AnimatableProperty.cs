@@ -1,4 +1,4 @@
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+﻿namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Identifies which property of a <see cref="Drawing.Vector.VectorCanvasElement"/> (or its

@@ -1,10 +1,10 @@
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+﻿namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// A single keyframe that records a value at a normalised point in time
 /// and the easing curve used to reach the <b>next</b> keyframe.
 /// </summary>
-public class KeyFrame
+public class VectorAnimationKeyFrame
 {
     /// <summary>
     /// Normalised time [0…1] within the track's parent duration.
@@ -22,9 +22,9 @@ public class KeyFrame
     /// </summary>
     public EasingMode Easing { get; set; } = EasingMode.Linear;
 
-    public KeyFrame() { }
+    public VectorAnimationKeyFrame() { }
 
-    public KeyFrame(float time, float value, EasingMode easing = EasingMode.Linear)
+    public VectorAnimationKeyFrame(float time, float value, EasingMode easing = EasingMode.Linear)
     {
         Time = time;
         Value = value;

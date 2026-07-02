@@ -1,15 +1,15 @@
-using projectFrameCut.Drawing.Vector;
+﻿using projectFrameCut.Drawing.Vector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// A complete animation definition: a collection of <see cref="AnimationTrack"/>s
 /// that, together, describe how a <see cref="VectorPicture"/> changes over time.
 /// </summary>
-public class Storyboard
+public class VectorAnimations
 {
     /// <summary>
     /// Duration of the entire animation in source frames.
@@ -17,7 +17,7 @@ public class Storyboard
     /// </summary>
     public uint DurationInFrames { get; set; } = 30;
 
-    /// <summary>All animation tracks in this storyboard.</summary>
+    /// <summary>All animation tracks in this vector animation.</summary>
     public List<AnimationTrack> Tracks { get; set; } = new();
 
     /// <summary>
@@ -87,7 +87,7 @@ public class Storyboard
 
     /// <summary>
     /// Apply an animated value to a specific property of an element.
-    /// Made public so <see cref="ComponentStoryboard"/> can reuse this logic
+    /// Made public so <see cref="ComponentAnimations"/> can reuse this logic
     /// for per-component animation.
     /// </summary>
     public static void ApplyValue(
@@ -291,4 +291,52 @@ public class Storyboard
     }
 
     private static float ClampAlpha(float value) => Math.Clamp(value, 0f, 1f);
+
+    /// <summary>
+    /// Creates a single-track vector animation that animates one property of one
+    /// element between two values over the given duration.
+    /// </summary>
+    /// <param name="durationInFrames">Total animation length in frames.</param>
+    /// <param name="elementIndex">Index into <c>VectorPicture.Elements</c>.</param>
+    /// <param name="property">The property to animate.</param>
+    /// <param name="fromValue">Value at progress = 0.</param>
+    /// <param name="toValue">Value at progress = 1.</param>
+    /// <param name="easing">Easing applied to the (from → to) segment.</param>
+    public static VectorAnimations CreateSimple(
+        uint durationInFrames,
+        int elementIndex,
+        AnimatableProperty property,
+        float fromValue,
+        float toValue,
+        EasingMode easing = EasingMode.Linear)
+    {
+        var track = new AnimationTrack
+        {
+            ElementIndex = elementIndex,
+            Property = property,
+            KeyFrames = new()
+            {
+                new VectorAnimationKeyFrame(0f, fromValue, easing),
+                new VectorAnimationKeyFrame(1f, toValue, EasingMode.Linear),
+            },
+        };
+
+        return new VectorAnimations
+        {
+            DurationInFrames = durationInFrames,
+            Tracks = new() { track },
+        };
+    }
+
+    /// <summary>
+    /// Creates a vector animation from a pre-built list of tracks.
+    /// </summary>
+    public static VectorAnimations Create(uint durationInFrames, params AnimationTrack[] tracks)
+    {
+        return new VectorAnimations
+        {
+            DurationInFrames = durationInFrames,
+            Tracks = new(tracks),
+        };
+    }
 }

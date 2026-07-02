@@ -1,7 +1,7 @@
-using projectFrameCut.Drawing.Vector;
+﻿using projectFrameCut.Drawing.Vector;
 using System.Collections.Generic;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Serializable blueprint for a user-created vector shape.

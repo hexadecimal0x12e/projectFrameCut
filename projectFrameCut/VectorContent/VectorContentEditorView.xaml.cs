@@ -4,8 +4,8 @@ using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.RenderAPIBase.Animation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,9 +22,9 @@ using RectF = Microsoft.Maui.Graphics.RectF;
 namespace projectFrameCut.DraftStuff;
 
 /// <summary>
-/// Storyboard 编辑器——MVU 风格自包含页面。
+/// VectorAnimations 编辑器——MVU 风格自包含页面。
 /// </summary>
-public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
+public partial class VectorContentEditorView : ContentView, INotifyPropertyChanged
 {
     // ═══════════════════════════════════════════════════════════
     // Injected state
@@ -32,7 +32,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
 
     private readonly VectorCanvasClip _clip;
     private VectorPicture? _sourcePicture;
-    private Storyboard _storyboard;
+    private VectorAnimations _animations;
     private readonly IDispatcher _dispatcher;
     private readonly Func<Task<string?>>? _pickSvgFile;
 
@@ -41,7 +41,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     private TimelineDrawable _timelineDrawable = null!;
 
     // ── InteractableEditor integration ──────────────────────
-    private List<ComponentClip> _componentClips = new();
+    private List<VectorComponentWrapperClip> _componentClips = new();
     private Dictionary<Guid, ClipElementUI> _clipElementUIs = new();
     private bool _suppressComponentPropertySync;
 
@@ -50,7 +50,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>Parameterless constructor required by XAML parser.</summary>
-    public StoryboardEditorView()
+    public VectorContentEditorView()
     {
         InitializeComponent();
     }
@@ -59,7 +59,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     /// Create the editor for the given <paramref name="clip"/>.
     /// Works for both SVG-backed and composition-only clips.
     /// </summary>
-    public StoryboardEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight) : this()
+    public VectorContentEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight) : this()
     {
         _clip = clip ?? throw new ArgumentNullException(nameof(clip));
         _sourcePicture = clip.SourcePicture;
@@ -72,10 +72,10 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         PreviewHeight = clip.TargetHeight > 0 ? clip.TargetHeight : previewProjectHeight;
 
         // Work on a clone so Cancel can discard changes
-        if (clip.AnimationStoryboard is not null)
-            _storyboard = CloneStoryboard(clip.AnimationStoryboard);
+        if (clip.AnimationPayload is not null)
+            _animations = CloneAnimations(clip.AnimationPayload);
         else
-            _storyboard = new Storyboard { DurationInFrames = Math.Max(1, clip.Duration) };
+            _animations = new VectorAnimations { DurationInFrames = Math.Max(1, clip.Duration) };
 
         _editingComponents = CloneComponents(clip.Components);
         _componentsBackup = CloneComponents(clip.Components);
@@ -173,12 +173,12 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
 
     public uint DurationInFrames
     {
-        get => _storyboard.DurationInFrames;
+        get => _animations.DurationInFrames;
         set
         {
-            if (_storyboard.DurationInFrames != value)
+            if (_animations.DurationInFrames != value)
             {
-                _storyboard.DurationInFrames = value < 1 ? 1 : value;
+                _animations.DurationInFrames = value < 1 ? 1 : value;
                 OnPropertyChanged();
             }
         }
@@ -432,8 +432,8 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             }
         }
 
-        // Build track items (SVG storyboard tracks)
-        foreach (var track in _storyboard.Tracks)
+        // Build track items (SVG vector animation tracks)
+        foreach (var track in _animations.Tracks)
         {
             var trackItem = new AnimationTrackItem(track, this);
             trackItem.PropertyChanged += (_, e) =>
@@ -475,8 +475,8 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
                 Property = SelectedPropertyForNewTrack,
                 KeyFrames = new()
                 {
-                    new KeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-                    new KeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
+                    new VectorAnimationKeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
+                    new VectorAnimationKeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
                 },
             };
 
@@ -495,12 +495,12 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             Property = SelectedPropertyForNewTrack,
             KeyFrames = new()
             {
-                new KeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-                new KeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
+                new VectorAnimationKeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
+                new VectorAnimationKeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
             },
         };
 
-        _storyboard.Tracks.Add(svgTrack);
+        _animations.Tracks.Add(svgTrack);
 
         var svgTrackItem = new AnimationTrackItem(svgTrack, this);
         svgTrackItem.PropertyChanged += (_, _) => InvalidateTimeline();
@@ -525,7 +525,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         }
 
         var source = SelectedTrack.Source;
-        _storyboard.Tracks.Remove(source);
+        _animations.Tracks.Remove(source);
         Tracks.Remove(SelectedTrack);
         SelectedTrack = Tracks.FirstOrDefault();
 
@@ -600,8 +600,8 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     {
         if (!IsPlaying) return;
 
-        float step = _storyboard.DurationInFrames > 0
-            ? 1f / _storyboard.DurationInFrames
+        float step = _animations.DurationInFrames > 0
+            ? 1f / _animations.DurationInFrames
             : 0.033f;
 
         CurrentProgress += step;
@@ -637,16 +637,16 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             var sourcePic = _sourcePicture;
             var resultPicture = new VectorPicture();
 
-            // Stage 1: SVG source with editing storyboard
+            // Stage 1: SVG source with editing vector animation
             if (sourcePic is not null)
             {
-                if (_storyboard.Tracks.Count > 0)
-                    resultPicture = _storyboard.Apply(sourcePic, CurrentProgress);
+                if (_animations.Tracks.Count > 0)
+                    resultPicture = _animations.Apply(sourcePic, CurrentProgress);
                 else
                     resultPicture.Elements.AddRange(sourcePic.Elements);
             }
 
-            // Stage 2: Editing components with their storyboards
+            // Stage 2: Editing components with their vector animations
             uint clipDuration = Math.Max(1, _clip.Duration);
             uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(1, clipDuration - 1));
             foreach (var compItem in Components)
@@ -699,7 +699,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Log(ex, "StoryboardEditor preview render", this);
+            Log(ex, "VectorContentEditor preview render", this);
             _dispatcher.Dispatch(() =>
             {
                 PreviewImage = null;
@@ -714,12 +714,12 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
 
     private void ApplyChanges()
     {
-        _clip.AnimationStoryboard = _storyboard;
+        _clip.AnimationPayload = _animations;
 
         var finalComponents = Components.Select(vm => vm.Source).ToList();
         _clip.Components = finalComponents;
         _clip.SerializeComponents(finalComponents);
-        _clip.SerializeStoryboard(_storyboard);
+        _clip.SerializePayload(_animations);
 
         ChangesApplied?.Invoke(_clip.ExtraData);
     }
@@ -748,7 +748,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         var component = new VectorComponent
         {
             Definition = def,
-            Storyboard = new ComponentStoryboard
+            Timeline = new ComponentAnimations
             {
                 DurationInFrames = Math.Max(1, _clip.Duration),
             },
@@ -828,7 +828,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             var component = new VectorComponent
             {
                 Definition = def,
-                Storyboard = new ComponentStoryboard
+                Timeline = new ComponentAnimations
                 {
                     DurationInFrames = Math.Max(1, _clip.Duration),
                 },
@@ -860,7 +860,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     {
         uint duration = Math.Max(1, _clip.Duration);
         uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(0, duration - 1));
-        float localProgress = component.Source.Storyboard.CalculateLocalProgress(currentFrame, duration);
+        float localProgress = component.Source.Timeline.CalculateLocalProgress(currentFrame, duration);
 
         float x = component.RelativeX;
         float y = component.RelativeY;
@@ -927,8 +927,8 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         var sourcePic = _sourcePicture;
         if (sourcePic is not null)
         {
-            if (_storyboard.Tracks.Count > 0)
-                elements.AddRange(_storyboard.Apply(sourcePic, CurrentProgress).Elements);
+            if (_animations.Tracks.Count > 0)
+                elements.AddRange(_animations.Apply(sourcePic, CurrentProgress).Elements);
             else
                 elements.AddRange(sourcePic.Elements);
         }
@@ -1048,7 +1048,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         _componentClips = Components
             .Select(vm =>
             {
-                var cc = new ComponentClip(vm.Source)
+                var cc = new VectorComponentWrapperClip(vm.Source)
                 {
                     ParentCanvasWidth = canvasW,
                     ParentCanvasHeight = canvasH,
@@ -1065,7 +1065,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
             })
             .ToList();
 
-        _clipElementUIs = _componentClips.ToClipElementUIDictionary();
+        _clipElementUIs = VectorComponentWrapperClip.ToClipElementUIDictionary(_componentClips);
 
         InteractiveEditor.SetCurrentFrame(GetCurrentFrameNumber());
         InteractiveEditor.SetClipsFromDraftPage(_clipElementUIs, 1.0);
@@ -1087,7 +1087,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
                 var cc = _componentClips.FirstOrDefault(c => c.Id == id);
                 if (cc is null) continue;
 
-                ui.SyncToComponentClip(cc);
+                VectorComponentWrapperClip.SyncToComponentClip(ui, cc);
                 cc.SyncToDefinition();
                 cc.SyncLayerToDefinition();
             }
@@ -1139,7 +1139,7 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
         InteractiveEditor.SelectClip(SelectedComponent?.Id);
     }
 
-    // ── Property sync: right panel → ComponentClip → InteractableEditor ──
+    // ── Property sync: right panel → VectorComponentWrapperClip → InteractableEditor ──
 
     private void SubscribeToComponentPropertyChanges()
     {
@@ -1823,17 +1823,17 @@ public partial class StoryboardEditorView : ContentView, INotifyPropertyChanged
     // Static helpers — cloning
     // ═══════════════════════════════════════════════════════════
 
-    private static Storyboard CloneStoryboard(Storyboard original)
+    private static VectorAnimations CloneAnimations(VectorAnimations original)
     {
         try
         {
             var json = JsonSerializer.Serialize(original);
-            return JsonSerializer.Deserialize<Storyboard>(json,
+            return JsonSerializer.Deserialize<VectorAnimations>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
         catch
         {
-            return new Storyboard
+            return new VectorAnimations
             {
                 DurationInFrames = original.DurationInFrames,
                 Tracks = new(),

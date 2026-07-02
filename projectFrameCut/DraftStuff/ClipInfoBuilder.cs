@@ -666,7 +666,7 @@ namespace projectFrameCut.DraftStuff
                         if (vecClip.SourcePicture is null && vecClip.Components.Count == 0 && vecClip.FilePath is not null)
                             vecClip.ReInit(default);
 
-                        var editor = new StoryboardEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
+                        var editor = new VectorContentEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
                         var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
                         {
                             Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
@@ -676,7 +676,7 @@ namespace projectFrameCut.DraftStuff
                         editor.ChangesApplied += (d) =>
                         {
                             clip.ExtraData = d;
-                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("Storyboard", null, null));
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
                             page.MainMultiWindowView.CloseWindow(v);
                         };
                         editor.ChangesCancelled += (s, e) =>

@@ -3,9 +3,9 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Plugin;
-using projectFrameCut.Render.RenderAPIBase.Animation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 /// <summary>
 /// Lightweight IClip wrapper around a <see cref="VectorComponent"/> so that
 /// <see cref="InteractableEditor.InteractableEditor"/> can manage component layout
-/// (drag, resize, snap, reference lines) without knowing about the storyboard domain.
+/// (drag, resize, snap, reference lines) without knowing about the vector animation domain.
 /// </summary>
 /// <remarks>
 /// Coordinate mapping:
@@ -31,7 +31,7 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 ///   RelativeX = (TargetX + TargetWidth/2 - BaseX * canvasW) / canvasW
 ///   RelativeY = (TargetY + TargetHeight/2 - BaseX * canvasW) / canvasW    
 /// </remarks>
-public partial class ComponentClip : IClip
+public partial class VectorComponentWrapperClip : IClip
 {
     private readonly record struct LocalBounds(double MinX, double MinY, double MaxX, double MaxY)
     {
@@ -103,8 +103,8 @@ public partial class ComponentClip : IClip
 
     public uint Duration
     {
-        get => Math.Max(1, Component.Storyboard.DurationInFrames);
-        set => Component.Storyboard.DurationInFrames = Math.Max(1, value);
+        get => Math.Max(1, Component.Timeline.DurationInFrames);
+        set => Component.Timeline.DurationInFrames = Math.Max(1, value);
     }
 
     public float FrameTime { get; init; } = 1f / 30f;
@@ -168,7 +168,7 @@ public partial class ComponentClip : IClip
 
     // ── Construction ─────────────────────────────────────────
 
-    public ComponentClip(VectorComponent component)
+    public VectorComponentWrapperClip(VectorComponent component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
 
@@ -289,7 +289,7 @@ public partial class ComponentClip : IClip
     {
         int w = Math.Max(1, requiredWidth);
         int h = Math.Max(1, requiredHeight);
-        uint duration = Math.Max(1, Component.Storyboard.DurationInFrames);
+        uint duration = Math.Max(1, Component.Timeline.DurationInFrames);
         uint frame = Math.Min(frameIndex, duration - 1);
 
         var elements = Component.GetAnimatedElements(frame, duration);
@@ -693,7 +693,7 @@ public partial class ComponentClip : IClip
 
     public void ReInit(IPicture.PicturePixelMode targetPPB)
     {
-        // ComponentClip has no heavy source to reload; definition is already in memory.
+        // VectorComponentWrapperClip has no heavy source to reload; definition is already in memory.
         // Effects are always empty.
     }
 
@@ -702,15 +702,7 @@ public partial class ComponentClip : IClip
         // No unmanaged resources. CachedElements belong to the VectorComponent,
         // which is owned by the ViewModel — do not dispose here.
     }
-}
 
-
-/// <summary>
-/// Conversion helpers between <see cref="ComponentClip"/> and <see cref="ClipElementUI"/>
-/// so that <see cref="InteractableEditor.InteractableEditor"/> can manage component layouts.
-/// </summary>
-public static class ComponentClipToClipElementUI
-{
     // Shared hidden Border instances — we don't need visible timeline clips,
     // but InteractableEditor requires non-null Clip/LeftHandle/RightHandle.
     private static readonly Border SharedClipBorder = new()
@@ -735,12 +727,11 @@ public static class ComponentClipToClipElementUI
     };
 
     /// <summary>
-    /// Converts a collection of <see cref="ComponentClip"/>s into a dictionary
+    /// Converts a collection of <see cref="VectorComponentWrapperClip"/>s into a dictionary
     /// keyed by <see cref="IClip.Id"/>, suitable for passing to
     /// <see cref="InteractableEditor.InteractableEditor.SetClipsFromDraftPage"/>.
     /// </summary>
-    public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(
-        this IEnumerable<ComponentClip> clips)
+    public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(IEnumerable<VectorComponentWrapperClip> clips)
     {
         var dict = new Dictionary<Guid, ClipElementUI>();
         foreach (var clip in clips)
@@ -753,9 +744,9 @@ public static class ComponentClipToClipElementUI
     }
 
     /// <summary>
-    /// Creates a single <see cref="ClipElementUI"/> from a <see cref="ComponentClip"/>.
+    /// Creates a single <see cref="ClipElementUI"/> from a <see cref="VectorComponentWrapperClip"/>.
     /// </summary>
-    public static ClipElementUI CreateClipElementUI(ComponentClip clip)
+    public static ClipElementUI CreateClipElementUI(VectorComponentWrapperClip clip)
     {
         return new ClipElementUI
         {
@@ -787,9 +778,9 @@ public static class ComponentClipToClipElementUI
 
     /// <summary>
     /// Synchronises the layout properties from a <see cref="ClipElementUI"/>
-    /// (modified by InteractableEditor) back to the <see cref="ComponentClip"/>.
+    /// (modified by InteractableEditor) back to the <see cref="VectorComponentWrapperClip"/>.
     /// </summary>
-    public static void SyncToComponentClip(this ClipElementUI ui, ComponentClip clip)
+    public static void SyncToComponentClip(ClipElementUI ui, VectorComponentWrapperClip clip)
     {
         clip.TargetX = ui.TargetX;
         clip.TargetY = ui.TargetY;
@@ -799,7 +790,7 @@ public static class ComponentClipToClipElementUI
 }
 
 /// <summary>
-/// A simple wrapper to allow a <see cref="ComponentClip"/> to have dynamic position information.
+/// A simple wrapper to allow a <see cref="VectorComponentWrapperClip"/> to have dynamic position information.
 /// </summary>
 public class DynamicPositionProviderEffect : IContinuousClipPositionProvider
 {

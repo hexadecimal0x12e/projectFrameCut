@@ -1,4 +1,4 @@
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+﻿namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Types of vector shapes that users can add to a composition.

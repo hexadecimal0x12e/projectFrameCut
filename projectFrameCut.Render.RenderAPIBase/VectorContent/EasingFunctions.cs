@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 
-namespace projectFrameCut.Render.RenderAPIBase.Animation;
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// Static helper that applies an easing curve to a normalised time value.
