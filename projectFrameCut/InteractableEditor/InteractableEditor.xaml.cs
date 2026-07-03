@@ -456,7 +456,7 @@ namespace projectFrameCut.InteractableEditor
                 ClipVisual.IsVisible = showClipVisual;
                 if (showClipVisual)
                 {
-                    ClipVisual.Stroke = clipStroke ?? Colors.Yellow;
+                    ClipVisual.Stroke = _owner.Clips[ClipId].ShowDefaultBorder ? (clipStroke ?? Colors.Yellow) : Colors.Transparent;
                 }
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
                 UpdateRootInputTransparency();

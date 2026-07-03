@@ -1,11 +1,25 @@
-﻿namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
+﻿using System.Text.Json.Serialization;
+
+namespace projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 /// <summary>
 /// A single keyframe that records a value at a normalised point in time
 /// and the easing curve used to reach the <b>next</b> keyframe.
 /// </summary>
-public class VectorAnimationKeyFrame
+public record VectorAnimationKeyFrame
 {
+    /// <summary>
+    /// The target field that this keyframe animates.
+    /// </summary>
+    [JsonIgnore]
+    public AnimatableField TargetField { get; set; }
+
+    /// <summary>
+    /// The ID of the target field that this keyframe animates.
+    /// Used in serialization to reference the field without serializing the entire object.
+    /// </summary>
+    public string TargetFieldId => TargetField?.Id ?? string.Empty;
+
     /// <summary>
     /// Normalised time [0…1] within the track's parent duration.
     /// </summary>

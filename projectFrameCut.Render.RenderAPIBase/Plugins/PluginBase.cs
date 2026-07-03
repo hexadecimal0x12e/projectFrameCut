@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -216,20 +217,26 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Obtains an instance of IClip from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any clip.
+        /// Obtains an instance of IClip from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> (default behavior in API V7+) to indicate that this plugin does not provide any clip.
         /// </summary>
         /// <param name="element">the source element</param>
         /// <returns>the clip</returns>
         /// <exception cref="NotImplementedException">indicates that this plugin does not provide any clip.</exception>
-        public IClip ClipCreator(JsonElement element);
+        public virtual IClip ClipCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
-        /// Obtains an instance of ISoundTrack from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any soundtrack.
+        /// Obtains an instance of ISoundTrack from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> (default behavior in API V7+) to indicate that this plugin does not provide any soundtrack.
         /// </summary>
         /// <param name="element">the source element</param>
         /// <returns>the soundtrack</returns>
         /// <exception cref="NotImplementedException">indicates that this plugin does not provide any clip.</exception>
-        public ISoundTrack SoundTrackCreator(JsonElement element);
+        public virtual ISoundTrack SoundTrackCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Obtains an instance of ITransform from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any transform.
@@ -237,7 +244,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <param name="element">the source element</param>
         /// <returns>the transform</returns>
         /// <exception cref="NotImplementedException">indicates that this plugin does not provide any transform.</exception>
-        public virtual ITransform TransformCreator(JsonElement element) => throw new NotImplementedException();
+        public virtual ITransform TransformCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Obtains an instance of IVectorComponent from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any vector component.
+        /// </summary>
+        /// <param name="element">the source element</param>
+        /// <returns>the vector component</returns>
+        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any vector component.</exception>
+        public virtual IVectorComponent VectComponentCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Creates an effect instance from the given JSON structure.

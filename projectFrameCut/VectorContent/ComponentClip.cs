@@ -16,7 +16,7 @@ using Point = projectFrameCut.Drawing.Vector.Point;
 namespace projectFrameCut.Render.ClipsAndTracks;
 
 /// <summary>
-/// Lightweight IClip wrapper around a <see cref="VectorComponent"/> so that
+/// Lightweight IClip wrapper around an <see cref="IVectorComponent"/> so that
 /// <see cref="InteractableEditor.InteractableEditor"/> can manage component layout
 /// (drag, resize, snap, reference lines) without knowing about the vector animation domain.
 /// </summary>
@@ -29,7 +29,7 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 ///
 /// Reverse:
 ///   RelativeX = (TargetX + TargetWidth/2 - BaseX * canvasW) / canvasW
-///   RelativeY = (TargetY + TargetHeight/2 - BaseX * canvasW) / canvasW    
+///   RelativeY = (TargetY + TargetHeight/2 - BaseX * canvasW) / canvasW
 /// </remarks>
 public partial class VectorComponentWrapperClip : IClip
 {
@@ -55,7 +55,15 @@ public partial class VectorComponentWrapperClip : IClip
 
     /// <summary>The wrapped component — never null after construction.</summary>
     [JsonIgnore]
-    public VectorComponent Component { get; }
+    public IVectorComponent Component { get; }
+
+    /// <summary>Editor-side: cached SVG elements for imported-SVG components.</summary>
+    [JsonIgnore]
+    public List<VectorCanvasElement>? CachedSvgElements { get; set; }
+
+    /// <summary>Duration in frames. Defaults to 30.</summary>
+    [JsonIgnore]
+    public uint DurationInFrames { get; set; } = 30;
 
     /// <summary>Reference width of the parent canvas, used for coordinate mapping.</summary>
     [JsonIgnore]
@@ -65,21 +73,61 @@ public partial class VectorComponentWrapperClip : IClip
     [JsonIgnore]
     public int ParentCanvasHeight { get; set; } = 1080;
 
+    // ── Parameter key constants ───────────────────────────────
+
+    private const string KeyRelativeX = "RelativeX";
+    private const string KeyRelativeY = "RelativeY";
+    private const string KeyBaseX = "BaseX";
+    private const string KeyBaseY = "BaseY";
+    private const string KeyRotation = "Rotation";
+    private const string KeyLayerIndex = "LayerIndex";
+    private const string KeyStrokeR = "StrokeR";
+    private const string KeyStrokeG = "StrokeG";
+    private const string KeyStrokeB = "StrokeB";
+    private const string KeyStrokeA = "StrokeA";
+    private const string KeyFillR = "FillR";
+    private const string KeyFillG = "FillG";
+    private const string KeyFillB = "FillB";
+    private const string KeyFillA = "FillA";
+    private const string KeyThickness = "Thickness";
+
+    // ── Parameter helpers ─────────────────────────────────────
+
+    private float GetFloatParam(string key, float defaultValue)
+    {
+        if (Component.Parameters.TryGetValue(key, out var val))
+        {
+            return val switch
+            {
+                float f => f,
+                double d => (float)d,
+                int i => i,
+                _ => defaultValue,
+            };
+        }
+        return defaultValue;
+    }
+
+    private void SetFloatParam(string key, float value)
+    {
+        Component.Parameters[key] = value;
+    }
+
     // ── IClip identity ───────────────────────────────────────
 
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public ClipMode ClipType => ClipMode.VectorCanvasClip;
-    public string TypeName => "ComponentClip";
+    string IClip.TypeName => "ComponentClip";
 
     public Guid Id
     {
-        get => Component.Definition.Id;
+        get => Component.Id;
         init { }
     }
 
     public string Name
     {
-        get => Component.Definition.DisplayName ?? "Unnamed Component";
+        get => Component.Name ?? "Unnamed Component";
         init { }
     }
 
@@ -89,7 +137,7 @@ public partial class VectorComponentWrapperClip : IClip
 
     public uint LayerIndex
     {
-        get => (uint)Math.Max(0, Component.Definition.LayerIndex);
+        get => (uint)Math.Max(0, Component.Index);
         init { }
     }
 
@@ -103,44 +151,33 @@ public partial class VectorComponentWrapperClip : IClip
 
     public uint Duration
     {
-        get => Math.Max(1, Component.Timeline.DurationInFrames);
-        set => Component.Timeline.DurationInFrames = Math.Max(1, value);
+        get => Math.Max(1, DurationInFrames);
+        set => DurationInFrames = Math.Max(1, value);
     }
 
     public float FrameTime { get; init; } = 1f / 30f;
 
     public bool ExtendToWholeDraft { get => true; set { } } //force to extend
 
-    // ── Layout (pixel coordinates, mapped from definition) ───
-
-    private int _targetWidth;
-    private int _targetHeight;
-    private int _targetX;
-    private int _targetY;
+    // ── Layout (pixel coordinates, mapped from parameters) ───
 
     public int TargetWidth
     {
-        get => _targetWidth;
-        set => _targetWidth = Math.Max(1, value);
+        get;
+        set => field = Math.Max(1, value);
     }
 
     public int TargetHeight
     {
-        get => _targetHeight;
-        set => _targetHeight = Math.Max(1, value);
+        get;
+        set => field = Math.Max(1, value);
     }
 
-    public int TargetX
-    {
-        get => _targetX;
-        set => _targetX = value;
-    }
+    public int TargetX { get; set; }
 
-    public int TargetY
-    {
-        get => _targetY;
-        set => _targetY = value;
-    }
+    public int TargetY { get; set; }
+
+    public bool ShowDefaultClipBorder { get; set; } = true;
 
     // ── Effects / source (minimal — no effects for components) ──
 
@@ -168,28 +205,26 @@ public partial class VectorComponentWrapperClip : IClip
 
     // ── Construction ─────────────────────────────────────────
 
-    public VectorComponentWrapperClip(VectorComponent component)
+    public VectorComponentWrapperClip(IVectorComponent component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
-
         SyncFromDefinition();
     }
 
     // ── Coordinate sync ──────────────────────────────────────
 
     /// <summary>
-    /// Reads <see cref="VectorComponentDefinition.RelativeX"/> / <see cref="VectorComponentDefinition.RelativeY"/>
-    /// and maps them to pixel-space <see cref="TargetX"/> / <see cref="TargetY"/>.
+    /// Reads relative transform parameters and maps them to pixel-space
+    /// <see cref="TargetX"/> / <see cref="TargetY"/>.
     /// Initialises <see cref="TargetWidth"/> / <see cref="TargetHeight"/> to a sensible default
     /// if they are not already set.
     /// </summary>
     public void SyncFromDefinition()
     {
-        var def = Component.Definition;
         double canvasW = Math.Max(1, ParentCanvasWidth);
         double canvasH = Math.Max(1, ParentCanvasHeight);
 
-        if (TryComputeComponentPixelBounds(Component, canvasW, canvasH, out var bounds))
+        if (TryComputeComponentPixelBounds(this, canvasW, canvasH, out var bounds))
         {
             TargetX = (int)Math.Round(bounds.X);
             TargetY = (int)Math.Round(bounds.Y);
@@ -206,35 +241,41 @@ public partial class VectorComponentWrapperClip : IClip
             TargetHeight = defaultSize;
         }
 
-        double centerX = def.RelativeX * canvasW + def.BaseX * canvasW;
-        double centerY = def.RelativeY * canvasH + def.BaseY * canvasH;
+        double relX = GetFloatParam(KeyRelativeX, 0.5f);
+        double relY = GetFloatParam(KeyRelativeY, 0.5f);
+        double baseX = GetFloatParam(KeyBaseX, 0f);
+        double baseY = GetFloatParam(KeyBaseY, 0f);
+
+        double centerX = relX * canvasW + baseX * canvasW;
+        double centerY = relY * canvasH + baseY * canvasH;
 
         TargetX = (int)Math.Round(centerX - TargetWidth / 2.0);
         TargetY = (int)Math.Round(centerY - TargetHeight / 2.0);
     }
 
     /// <summary>
-    /// Writes <see cref="TargetX"/> / <see cref="TargetY"/> back to the definition's
-    /// <see cref="VectorComponentDefinition.RelativeX"/> / <see cref="VectorComponentDefinition.RelativeY"/>.
+    /// Writes <see cref="TargetX"/> / <see cref="TargetY"/> back to the component's
+    /// RelativeX / RelativeY parameters.
     /// </summary>
     public void SyncToDefinition()
     {
         double canvasW = Math.Max(1, ParentCanvasWidth);
         double canvasH = Math.Max(1, ParentCanvasHeight);
-        var def = Component.Definition;
 
-        if (!TryComputePrimaryElementLocalBounds(Component, out var localBounds))
+        if (!TryComputePrimaryElementLocalBounds(this, out var localBounds))
         {
             double centerX = TargetX + TargetWidth / 2.0;
             double centerY = TargetY + TargetHeight / 2.0;
-            def.RelativeX = (float)Math.Clamp(
-                (centerX - def.BaseX * canvasW) / canvasW, 0f, 1f);
-            def.RelativeY = (float)Math.Clamp(
-                (centerY - def.BaseY * canvasH) / canvasH, 0f, 1f);
+            double baseX = GetFloatParam(KeyBaseX, 0f);
+            double baseY = GetFloatParam(KeyBaseY, 0f);
+            SetFloatParam(KeyRelativeX, (float)Math.Clamp(
+                (centerX - baseX * canvasW) / canvasW, 0f, 1f));
+            SetFloatParam(KeyRelativeY, (float)Math.Clamp(
+                (centerY - baseY * canvasH) / canvasH, 0f, 1f));
             return;
         }
 
-        var currentBounds = ComputePixelBounds(localBounds, def, canvasW, canvasH);
+        var currentBounds = ComputePixelBounds(localBounds, this, canvasW, canvasH);
         if (!currentBounds.IsValid)
         {
             return;
@@ -244,33 +285,33 @@ public partial class VectorComponentWrapperClip : IClip
         var scaleY = currentBounds.Height > 0d ? TargetHeight / currentBounds.Height : 1d;
         if (!NearlyEqual(scaleX, 1d) || !NearlyEqual(scaleY, 1d))
         {
-            ApplyResizeToDefinition(def, localBounds, scaleX, scaleY);
-            if (TryComputePrimaryElementLocalBounds(Component, out var resizedBounds))
+            ApplyResizeToComponent(this, localBounds, scaleX, scaleY);
+            if (TryComputePrimaryElementLocalBounds(this, out var resizedBounds))
             {
                 localBounds = resizedBounds;
             }
         }
 
-        def.RelativeX = (float)Math.Clamp((TargetX - localBounds.MinX * canvasW) / canvasW, -4f, 4f);
-        def.RelativeY = (float)Math.Clamp((TargetY - localBounds.MinY * canvasH) / canvasH, -4f, 4f);
+        SetFloatParam(KeyRelativeX, (float)Math.Clamp(
+            (TargetX - localBounds.MinX * canvasW) / canvasW, -4f, 4f));
+        SetFloatParam(KeyRelativeY, (float)Math.Clamp(
+            (TargetY - localBounds.MinY * canvasH) / canvasH, -4f, 4f));
     }
 
     /// <summary>
-    /// Syncs the definition's <see cref="VectorComponentDefinition.LayerIndex"/>
-    /// from the clip's <see cref="LayerIndex"/>.
+    /// Syncs the component's layer index from the clip's <see cref="LayerIndex"/>.
     /// </summary>
     public void SyncLayerToDefinition()
     {
-        Component.Definition.LayerIndex = (int)LayerIndex;
+        Component.Index = (int)LayerIndex;
     }
 
     /// <summary>
-    /// Syncs the definition's <see cref="VectorComponentDefinition.Rotation"/>
-    /// from <paramref name="rotationRadians"/>.
+    /// Syncs the component's rotation parameter from <paramref name="rotationRadians"/>.
     /// </summary>
     public void SyncRotationToDefinition(float rotationRadians)
     {
-        Component.Definition.Rotation = rotationRadians;
+        SetFloatParam(KeyRotation, rotationRadians);
     }
 
     // ── IClip core methods ───────────────────────────────────
@@ -289,10 +330,10 @@ public partial class VectorComponentWrapperClip : IClip
     {
         int w = Math.Max(1, requiredWidth);
         int h = Math.Max(1, requiredHeight);
-        uint duration = Math.Max(1, Component.Timeline.DurationInFrames);
+        uint duration = Math.Max(1, DurationInFrames);
         uint frame = Math.Min(frameIndex, duration - 1);
 
-        var elements = Component.GetAnimatedElements(frame, duration);
+        var elements = ComputeAnimatedElements(this, frame, duration);
         if (elements is null || elements.Count == 0)
         {
             // Return a transparent placeholder
@@ -329,7 +370,7 @@ public partial class VectorComponentWrapperClip : IClip
         double canvasW = Math.Max(1, ParentCanvasWidth);
         double canvasH = Math.Max(1, ParentCanvasHeight);
 
-        var elements = Component.GetAnimatedElements(frame, duration);
+        var elements = ComputeAnimatedElements(this, frame, duration);
         if (elements is null || elements.Count == 0)
         {
             return false;
@@ -375,131 +416,227 @@ public partial class VectorComponentWrapperClip : IClip
         return true;
     }
 
-    private static bool NearlyEqual(double a, double b)
-        => Math.Abs(a - b) < 0.0001d;
+    // ═══════════════════════════════════════════════════════════
+    // Static helpers — operate on IVectorComponent + clip data
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Build elements from an <see cref="IVectorComponent"/>.
+    /// For SVG-style components (when <paramref name="cachedSvgElements"/> is set),
+    /// returns deep-cloned cached elements. Otherwise uses <c>Compute(0)</c>.
+    /// </summary>
+    public static List<VectorCanvasElement> BuildElements(IVectorComponent component, List<VectorCanvasElement>? cachedSvgElements)
+    {
+        if (cachedSvgElements is { Count: > 0 })
+        {
+            return cachedSvgElements.Select(e => e is ShapeCanvasElement shape ? shape.Clone() : e).ToList();
+        }
+
+        var element = component.Compute(0f);
+        if (element is not null)
+            return new() { element };
+        return new();
+    }
+
+    /// <summary>
+    /// Computes animated elements for the given frame.
+    /// For SVG components uses cached elements with per-element progress.
+    /// For others uses <c>Component.Compute(progress)</c>.
+    /// </summary>
+    public static List<VectorCanvasElement> ComputeAnimatedElements(
+        VectorComponentWrapperClip clip, uint frame, uint duration)
+    {
+        float progress = duration <= 1 ? 0f : Math.Clamp(frame / (float)(duration - 1), 0f, 1f);
+
+        if (clip.CachedSvgElements is { Count: > 0 })
+        {
+            // SVG: evaluate component's animation and apply to cached elements
+            var animFrames = clip.Component.AnimationFrames;
+            if (animFrames is { Count: > 0 })
+            {
+                var grouped = animFrames
+                    .Where(kf => !string.IsNullOrWhiteSpace(kf.TargetFieldId))
+                    .GroupBy(kf => kf.TargetFieldId);
+
+                return clip.CachedSvgElements.Select(e =>
+                {
+                    if (e is not ShapeCanvasElement shape) return e;
+                    var cloned = shape.Clone();
+                    foreach (var group in grouped)
+                    {
+                        var ordered = group.OrderBy(kf => kf.Time).ToList();
+                        float value = EvaluateKeyframes(ordered, progress);
+                        Render.VectorContent.AnimationApplier.ApplyFieldValue(cloned, group.Key, value);
+                    }
+                    return cloned;
+                }).ToList();
+            }
+            return clip.CachedSvgElements.ToList();
+        }
+
+        var element = clip.Component.Compute(progress);
+        if (element is not null)
+            return new() { element };
+        return new();
+    }
+
+    private static float EvaluateKeyframes(List<VectorAnimationKeyFrame> keyframes, float progress)
+    {
+        if (keyframes.Count == 0) return 0f;
+        if (keyframes.Count == 1) return keyframes[0].Value;
+
+        progress = Math.Clamp(progress, 0f, 1f);
+        if (progress <= keyframes[0].Time) return keyframes[0].Value;
+
+        var last = keyframes[^1];
+        if (progress >= last.Time) return last.Value;
+
+        for (int i = 1; i < keyframes.Count; i++)
+        {
+            var prev = keyframes[i - 1];
+            var next = keyframes[i];
+            if (progress >= next.Time) continue;
+
+            float span = next.Time - prev.Time;
+            if (span <= 0f) return next.Value;
+
+            float t = (progress - prev.Time) / span;
+            float eased = EasingFunctions.Apply(prev.Easing, t);
+            return prev.Value + (next.Value - prev.Value) * eased;
+        }
+        return last.Value;
+    }
+
+    // ── Shape parameter helpers (static) ────────────────────
+
+    private static float GetParam(Dictionary<string, object> parameters, string key, float defaultValue)
+    {
+        if (parameters.TryGetValue(key, out var val))
+        {
+            return val switch
+            {
+                float f => f,
+                double d => (float)d,
+                int i => i,
+                _ => defaultValue,
+            };
+        }
+        return defaultValue;
+    }
 
     private static double ScaleCoordinate(double value, double min, double scale)
         => min + (value - min) * scale;
 
-    private static void ApplyResizeToDefinition(
-        VectorComponentDefinition def,
+    private static void ApplyResizeToComponent(
+        VectorComponentWrapperClip clip,
         LocalBounds localBounds,
         double scaleX,
         double scaleY)
     {
+        var parameters = clip.Component.Parameters;
+        string typeName = clip.Component.TypeName;
         scaleX = double.IsFinite(scaleX) && scaleX > 0d ? scaleX : 1d;
         scaleY = double.IsFinite(scaleY) && scaleY > 0d ? scaleY : 1d;
 
-        switch (def.ShapeType)
+        switch (typeName)
         {
-            case VectorShapeType.Rectangle:
-                ScaleShapeParam(def.ShapeParameters, "Width", scaleX);
-                ScaleShapeParam(def.ShapeParameters, "Height", scaleY);
+            case "Rectangle":
+            case "RoundedRectangle":
+                ScaleShapeParam(parameters, "Width", scaleX);
+                ScaleShapeParam(parameters, "Height", scaleY);
+                if (typeName == "RoundedRectangle")
+                    ScaleShapeParam(parameters, "CornerRadius", Math.Min(scaleX, scaleY));
                 break;
-            case VectorShapeType.RoundedRectangle:
-                ScaleShapeParam(def.ShapeParameters, "Width", scaleX);
-                ScaleShapeParam(def.ShapeParameters, "Height", scaleY);
-                ScaleShapeParam(def.ShapeParameters, "CornerRadius", Math.Min(scaleX, scaleY));
+            case "Ellipse":
+                ScaleShapeParam(parameters, "RadiusX", scaleX);
+                ScaleShapeParam(parameters, "RadiusY", scaleY);
                 break;
-            case VectorShapeType.Ellipse:
-                ScaleShapeParam(def.ShapeParameters, "RadiusX", scaleX);
-                ScaleShapeParam(def.ShapeParameters, "RadiusY", scaleY);
-                break;
-            case VectorShapeType.Line:
-                ScalePointParams(def.ShapeParameters, localBounds, scaleX, scaleY,
+            case "Line":
+                ScalePointParams(parameters, localBounds, scaleX, scaleY,
                     ("X1", "Y1"), ("X2", "Y2"));
                 break;
-            case VectorShapeType.CubicBezier:
-                ScalePointParams(def.ShapeParameters, localBounds, scaleX, scaleY,
+            case "CubicBezier":
+                ScalePointParams(parameters, localBounds, scaleX, scaleY,
                     ("X1", "Y1"), ("X2", "Y2"), ("X3", "Y3"), ("X4", "Y4"));
                 break;
-            case VectorShapeType.QuadraticBezier:
-                ScalePointParams(def.ShapeParameters, localBounds, scaleX, scaleY,
+            case "QuadraticBezier":
+                ScalePointParams(parameters, localBounds, scaleX, scaleY,
                     ("X1", "Y1"), ("X2", "Y2"), ("X3", "Y3"));
                 break;
-            case VectorShapeType.Arc:
-                ScaleShapeParam(def.ShapeParameters, "RadiusX", scaleX);
-                ScaleShapeParam(def.ShapeParameters, "RadiusY", scaleY);
-                ScaleCoordinateParam(def.ShapeParameters, "CenterX", localBounds.MinX, scaleX);
-                ScaleCoordinateParam(def.ShapeParameters, "CenterY", localBounds.MinY, scaleY);
+            case "Arc":
+                ScaleShapeParam(parameters, "RadiusX", scaleX);
+                ScaleShapeParam(parameters, "RadiusY", scaleY);
+                ScaleCoordinateParam(parameters, "CenterX", localBounds.MinX, scaleX);
+                ScaleCoordinateParam(parameters, "CenterY", localBounds.MinY, scaleY);
                 break;
-            case VectorShapeType.Polygon:
-            case VectorShapeType.Polyline:
-                ScalePoints(def.Points, localBounds, scaleX, scaleY);
+            case "Polygon":
+            case "Polyline":
+                // Polygon/polyline vertices stored via EditorPoints — handled by the editor
                 break;
         }
     }
 
-    private static void ScaleShapeParam(Dictionary<string, float>? parameters, string key, double scale)
+    private static void ScaleShapeParam(Dictionary<string, object>? parameters, string key, double scale)
     {
-        if (parameters is null || !parameters.TryGetValue(key, out var value))
+        if (parameters is null || !parameters.TryGetValue(key, out var raw)) return;
+        float value = raw switch
         {
-            return;
-        }
-
+            float f => f,
+            double d => (float)d,
+            int i => i,
+            _ => 0f,
+        };
         parameters[key] = (float)Math.Max(0.0001d, value * scale);
     }
 
-    private static void ScaleCoordinateParam(Dictionary<string, float>? parameters, string key, double min, double scale)
+    private static void ScaleCoordinateParam(Dictionary<string, object>? parameters, string key, double min, double scale)
     {
-        if (parameters is null || !parameters.TryGetValue(key, out var value))
+        if (parameters is null || !parameters.TryGetValue(key, out var raw)) return;
+        float value = raw switch
         {
-            return;
-        }
-
+            float f => f,
+            double d => (float)d,
+            int i => i,
+            _ => 0f,
+        };
         parameters[key] = (float)ScaleCoordinate(value, min, scale);
     }
 
     private static void ScalePointParams(
-        Dictionary<string, float>? parameters,
+        Dictionary<string, object>? parameters,
         LocalBounds localBounds,
         double scaleX,
         double scaleY,
         params (string XKey, string YKey)[] keys)
     {
-        if (parameters is null)
-        {
-            return;
-        }
+        if (parameters is null) return;
 
         foreach (var (xKey, yKey) in keys)
         {
-            if (parameters.TryGetValue(xKey, out var x))
+            if (parameters.TryGetValue(xKey, out var rawX))
             {
+                float x = rawX switch { float f => f, double d => (float)d, int i => i, _ => 0f };
                 parameters[xKey] = (float)ScaleCoordinate(x, localBounds.MinX, scaleX);
             }
 
-            if (parameters.TryGetValue(yKey, out var y))
+            if (parameters.TryGetValue(yKey, out var rawY))
             {
+                float y = rawY switch { float f => f, double d => (float)d, int i => i, _ => 0f };
                 parameters[yKey] = (float)ScaleCoordinate(y, localBounds.MinY, scaleY);
             }
         }
     }
 
-    private static void ScalePoints(List<Point>? points, LocalBounds localBounds, double scaleX, double scaleY)
-    {
-        if (points is null || points.Count == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < points.Count; i++)
-        {
-            var point = points[i];
-            points[i] = new Point(
-                (float)ScaleCoordinate(point.X, localBounds.MinX, scaleX),
-                (float)ScaleCoordinate(point.Y, localBounds.MinY, scaleY));
-        }
-    }
+    // ── Bounds computation helpers ───────────────────────────
 
     private static bool TryComputeComponentPixelBounds(
-        VectorComponent component,
+        VectorComponentWrapperClip clip,
         double canvasW,
         double canvasH,
         out PixelBounds bounds)
     {
         bounds = default;
-        var elements = component.BuildElements();
+        var elements = BuildElements(clip.Component, clip.CachedSvgElements);
         if (elements.Count == 0)
         {
             return false;
@@ -540,20 +677,20 @@ public partial class VectorComponentWrapperClip : IClip
         return bounds.IsValid;
     }
 
-    private static bool TryComputePrimaryElementLocalBounds(VectorComponent component, out LocalBounds bounds)
+    private static bool TryComputePrimaryElementLocalBounds(VectorComponentWrapperClip clip, out LocalBounds bounds)
     {
         bounds = default;
-        var elements = component.BuildElements();
+        var elements = BuildElements(clip.Component, clip.CachedSvgElements);
         return elements.Count > 0 && TryComputeElementLocalBounds(elements[0], out bounds);
     }
 
     private static PixelBounds ComputePixelBounds(
         LocalBounds localBounds,
-        VectorComponentDefinition definition,
+        VectorComponentWrapperClip clip,
         double canvasW,
         double canvasH)
     {
-        var elements = new VectorComponent { Definition = definition }.BuildElements();
+        var elements = BuildElements(clip.Component, clip.CachedSvgElements);
         return elements.Count == 0 ? default : ComputePixelBounds(localBounds, elements[0], canvasW, canvasH);
     }
 
@@ -680,27 +817,27 @@ public partial class VectorComponentWrapperClip : IClip
 
     private static void IncludePoints(Point[]? points, Action<double, double> include)
     {
-        if (points is null)
-        {
-            return;
-        }
-
+        if (points is null) return;
         foreach (var point in points)
         {
             include(point.X, point.Y);
         }
     }
 
+    private static bool NearlyEqual(double a, double b)
+        => Math.Abs(a - b) < 0.0001d;
+
+    // ═══════════════════════════════════════════════════════════
+
     public void ReInit(IPicture.PicturePixelMode targetPPB)
     {
-        // VectorComponentWrapperClip has no heavy source to reload; definition is already in memory.
-        // Effects are always empty.
+        // VectorComponentWrapperClip has no heavy source to reload;
+        // component definition is already in memory. Effects are always empty.
     }
 
     public void Dispose()
     {
-        // No unmanaged resources. CachedElements belong to the VectorComponent,
-        // which is owned by the ViewModel — do not dispose here.
+        // No unmanaged resources.
     }
 
     // Shared hidden Border instances — we don't need visible timeline clips,
@@ -731,17 +868,15 @@ public partial class VectorComponentWrapperClip : IClip
     /// keyed by <see cref="IClip.Id"/>, suitable for passing to
     /// <see cref="InteractableEditor.InteractableEditor.SetClipsFromDraftPage"/>.
     /// </summary>
-    public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(IEnumerable<VectorComponentWrapperClip> clips)
-    {
-        var dict = new Dictionary<Guid, ClipElementUI>();
-        foreach (var clip in clips)
-        {
-            var ui = CreateClipElementUI(clip);
-            ui.Effects = clip.EffectsInstances?.ToDictionary(c => c.Id, c => c) ?? new();
-            dict[clip.Id] = ui;
-        }
-        return dict;
-    }
+    public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(IEnumerable<VectorComponentWrapperClip> clips, Action<ClipElementUI> clipSetter)
+        =>  clips.ToDictionary(c => c.Id, 
+            clip =>
+            {
+                var ui = CreateClipElementUI(clip);
+                ui.Effects = clip.EffectsInstances?.ToDictionary(c => c.Id, c => c) ?? new();
+                clipSetter(ui);
+                return ui;
+            });
 
     /// <summary>
     /// Creates a single <see cref="ClipElementUI"/> from a <see cref="VectorComponentWrapperClip"/>.
@@ -773,6 +908,7 @@ public partial class VectorComponentWrapperClip : IClip
             layoutY = 0,
             origLength = clip.Duration,
             SubLayerIndex = (int)clip.LayerIndex,
+            ExtraData = clip.ExtraData,
         };
     }
 

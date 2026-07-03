@@ -157,13 +157,13 @@ public partial class TestPage : ContentPage
                     {
                         var noNoise = denoise.Process(e.TotalX);
                         b.TranslationX = noNoise + _origX;
-                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
+                        DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
                         DraggingX.Push(e.TotalX);
                         DenoisedX.Push(noNoise);
                     }
                     else
                     {
-                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
+                        DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
                         b.TranslationX = e.TotalX + _origX;
                         DraggingX.Push(e.TotalX);
                         DenoisedX.Push(0);
@@ -176,6 +176,7 @@ public partial class TestPage : ContentPage
             case GestureStatus.Canceled:
             case GestureStatus.Completed:
                 {
+                    DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
                     var src = DraggingX.ToList();
                     var dn = DenoisedX.ToList();
                     src.Reverse();

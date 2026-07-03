@@ -12,6 +12,8 @@ using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 
 namespace projectFrameCut.ApplicationPluginBase
@@ -25,7 +27,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
-            { "Crop", () => new Effect.CropEffectBundle() }, 
+            { "Crop", () => new Effect.CropEffectBundle() },
             { "Place", () => new Effect.PlaceEffectBundle() },
             { "Resize", () => new Effect.ResizeEffectBundle() },
             { "Flip", () => new Effect.FlipEffectBundle() },
@@ -47,6 +49,19 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Title", () => new TitleTextStyleProvider() },
             { "Pinyin", () => new PinyinTextStyleProvider() },
             { "LlmTranslate", () => new LlmTranslateTextStyleProvider() },
+        };
+
+        public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider => new()
+        {
+            ["Rectangle"] = () => new RectangleHandler(),
+            ["RoundedRectangle"] = () => new RoundedRectangleHandler(),
+            ["Ellipse"] = () => new EllipseHandler(),
+            ["Line"] = () => new LineHandler(),
+            ["CubicBezier"] = () => new CubicBezierHandler(),
+            ["QuadraticBezier"] = () => new QuadraticBezierHandler(),
+            ["Arc"] = () => new ArcHandler(),
+            ["Polygon"] = () => new PolygonHandler(),
+            ["Polyline"] = () => new PolylineHandler(),
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

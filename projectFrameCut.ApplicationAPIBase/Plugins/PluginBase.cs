@@ -15,6 +15,7 @@ using System.Text.Json.Serialization;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 
 
 namespace projectFrameCut.ApplicationAPIBase.Plugins
@@ -55,6 +56,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
         /// </summary>
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
+
+        /// <summary>
+        /// Gets a dictionary that maps vector component type names to their corresponding handler creation functions.
+        /// </summary>
+        public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider { get; }
 
         /// <summary>
         /// Get a helper for dynamic preview generation. The key of the dictionary is the type name of the clip or effect that the provider can generate preview for. The value is the provider itself.
@@ -138,6 +144,15 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
             {
                 sb.AppendLine("TextClipStyleProvider:");
                 foreach (var item in pluginBase.TextClipStyleProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            if (pluginBase.VectorComponentHandlerProvider.Any())
+            {
+                sb.AppendLine("VectorComponentHandler:");
+                foreach (var item in pluginBase.VectorComponentHandlerProvider)
                 {
                     sb.AppendLine($"- {item.Key}");
                 }

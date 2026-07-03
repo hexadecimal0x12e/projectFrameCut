@@ -2140,30 +2140,19 @@ public sealed class DynamicPreview : IDisposable
                     continue;
                 }
 
-                try
+                var path = CreatePathFromSegment(
+                    segment,
+                    screenScaleX,
+                    screenScaleY,
+                    screenOriginX,
+                    screenOriginY,
+                    hasRotation,
+                    cosA,
+                    sinA,
+                    deviceLimit);
+                if (path is not null)
                 {
-                    var path = CreatePathFromSegment(
-                        segment,
-                        screenScaleX,
-                        screenScaleY,
-                        screenOriginX,
-                        screenOriginY,
-                        hasRotation,
-                        cosA,
-                        sinA,
-                        deviceLimit);
-                    if (path is not null)
-                    {
-                        container.Children.Add(path);
-                    }
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    break;
-                }
-                catch (Exception ex) when (ex.Message.Contains("CanvasImageSource") || ex.Message.Contains("MaximumBitmapSize"))
-                {
-                    break;
+                    container.Children.Add(path);
                 }
             }
         }

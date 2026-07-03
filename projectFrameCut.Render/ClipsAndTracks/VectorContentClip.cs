@@ -2,8 +2,10 @@
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -61,35 +63,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         // ── Vector-specific state ──────────────────────────
 
+        [JsonIgnore]
+        public List<IVectorComponent> Components { get; set; } = new();
+
         /// <summary>
-        /// The base (static) vector picture loaded from <see cref="FilePath"/>.
-        /// This is never mutated; animation works by cloning and applying
-        /// vector animation deltas on top.
+        /// Source SVG vector picture for legacy compatibility.
         /// </summary>
         [JsonIgnore]
         public VectorPicture? SourcePicture { get; set; }
-
-        /// <summary>
-        /// The animation data attached to this clip. When set, frames
-        /// produced by <see cref="GetVectorPictureRelativeToStartPointOfSource"/>
-        /// will have the vector animation applied at the corresponding progress.
-        /// </summary>
-        [JsonIgnore]
-        public VectorAnimations? AnimationPayload { get; set; }
-
-        /// <summary>
-        /// User-created vector components with per-component vector animations.
-        /// These are composed on top of any SVG-imported <see cref="SourcePicture"/>
-        /// elements during frame generation.
-        /// </summary>
-        [JsonIgnore]
-        public List<VectorComponent> Components { get; set; } = new();
-
-        /// <summary>
-        /// When true, this clip has no SVG source file and relies entirely
-        /// on <see cref="Components"/> for its vector content.
-        /// </summary>
-        public bool IsCompositionOnly => string.IsNullOrEmpty(FilePath);
 
         public ISourceReplacementEffect? AlternativeSource { get; set; }
 
@@ -104,27 +85,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
             uint frameIndex, int requiredWidth, int requiredHeight)
         {
             var result = new VectorPicture();
-
-            // Stage 1: SVG source with global vector animation (if present)
-            if (SourcePicture is not null)
-            {
-                if (AnimationPayload is { Tracks.Count: > 0 })
-                {
-                    float progress = CalculateProgress(frameIndex);
-                    result = AnimationPayload.Apply(SourcePicture, progress);
-                }
-                else
-                {
-                    // No animation — shallow clone
-                    result.Elements.AddRange(SourcePicture.Elements);
-                }
-            }
-
-            // Stage 2: User-created components with per-component vector animations
+            float progress = CalculateProgress(frameIndex);
             foreach (var component in Components)
             {
-                var animatedElements = component.GetAnimatedElements(frameIndex, Duration);
-                result.Elements.AddRange(animatedElements);
+                result.Elements.Add(component.Compute(progress));
             }
 
             return result;
@@ -156,40 +120,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
-            // Load SVG source if a file path is provided
-            if (FilePath is not null)
-            {
-                SourcePicture = SVGToVectorElement.ImportFromFile(FilePath);
-                AnimationPayload = DeserializePayload();
-            }
-            else
-            {
-                SourcePicture = null;
-                AnimationPayload = null;
-            }
-
-            // Deserialize user-created components
             Components = DeserializeComponents();
-
-            // Rebuild SVG element caches for imported SVG components
-            foreach (var component in Components)
-            {
-                if (component.Definition.ShapeType == VectorShapeType.ImportedSvg
-                    && !string.IsNullOrEmpty(component.Definition.SourceFilePath))
-                {
-                    try
-                    {
-                        var svgPicture = SVGToVectorElement.ImportFromFile(
-                            component.Definition.SourceFilePath);
-                        component.CachedElements = svgPicture.Elements.ToList();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, $"Failed to reload SVG '{component.Definition.SourceFilePath}'", this);
-                        component.CachedElements = new();
-                    }
-                }
-            }
 
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) =
                 EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
@@ -197,7 +128,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
-            SourcePicture = null;
         }
 
         // ── Progress calculation ───────────────────────────
@@ -215,53 +145,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return Math.Clamp(frameIndex / (float)(Duration - 1), 0f, 1f);
         }
 
-        // ── VectorAnimations serialisation via ExtraData ─────────
-
-        private const string AnimationPayloadKey = "VectorAnimation.Payload";
-
-        private static readonly JsonSerializerOptions _animationPayloadJsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = null, // Preserve PascalCase to match C# property names
-        };
-
-        private VectorAnimations? DeserializePayload()
-        {
-            if (ExtraData is null || !ExtraData.TryGetValue(AnimationPayloadKey, out var raw))
-                return null;
-
-            string? json = raw switch
-            {
-                string s when !string.IsNullOrEmpty(s) => s,
-                JsonElement { ValueKind: JsonValueKind.String } je => je.GetString(),
-                JsonElement je => je.GetRawText(),
-                _ => null,
-            };
-
-            if (string.IsNullOrEmpty(json))
-                return null;
-
-            try
-            {
-                return JsonSerializer.Deserialize<VectorAnimations>(json, _animationPayloadJsonOptions);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, $"Failed to deserialize payload from ExtraData. JSON length: {json.Length}. The animation data will be discarded for this clip.", this);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Serialises the <see cref="AnimationPayload"/> into <see cref="ExtraData"/>
-        /// so it persists with the clip's metadata.
-        /// </summary>
-        public void SerializePayload(VectorAnimations payload)
-        {
-            ExtraData ??= new();
-            ExtraData[AnimationPayloadKey] = JsonSerializer.Serialize(payload, _animationPayloadJsonOptions);
-        }
-
         // ── Component serialisation via ExtraData ────────────
 
         private const string ComponentsDataKey = "VectorCanvas.Components";
@@ -272,7 +155,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             PropertyNamingPolicy = null, // Preserve PascalCase to match C# property names
         };
 
-        private List<VectorComponent> DeserializeComponents()
+        private List<IVectorComponent> DeserializeComponents()
         {
             if (ExtraData is null || !ExtraData.TryGetValue(ComponentsDataKey, out var raw))
             {
@@ -293,7 +176,28 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             try
             {
-                return JsonSerializer.Deserialize<List<VectorComponent>>(json, _componentsJsonOptions) ?? new();
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    return new();
+                }
+
+                var result = new List<IVectorComponent>();
+                foreach (var element in doc.RootElement.EnumerateArray())
+                {
+                    var pluginId = element.TryGetProperty("FromPlugin", out var pluginElement)
+                        ? pluginElement.GetString()
+                        : Plugin.InternalPluginBase.InternalPluginBaseID;
+                    var resolvedPluginId = string.IsNullOrWhiteSpace(pluginId)
+                        ? InternalPluginBase.InternalPluginBaseID
+                        : pluginId;
+                    var plugin = PluginManager.LoadedPlugins.TryGetValue(resolvedPluginId, out var loaded)
+                        ? loaded
+                        : PluginManager.LoadedPlugins[InternalPluginBase.InternalPluginBaseID];
+                    result.Add(plugin.VectComponentCreator(element));
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -306,11 +210,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// Serialises the <see cref="Components"/> list into <see cref="ExtraData"/>
         /// so they persist with the clip's metadata.
         /// </summary>
-        public void SerializeComponents(List<VectorComponent> components)
+        public void SerializeComponents(List<IVectorComponent> components)
         {
             ExtraData ??= new();
             ExtraData[ComponentsDataKey] = JsonSerializer.Serialize(components, _componentsJsonOptions);
         }
+
     }
 
     // ── VectorPhotoClip — immutable vector clip from SVG file ──

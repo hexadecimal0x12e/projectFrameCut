@@ -15,6 +15,8 @@ using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Transform;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Render.VectorContent.Components;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -255,6 +257,25 @@ public class InternalPluginBase : IPluginBase
             "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
             "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
             _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
+        };
+    }
+
+    IVectorComponent IPluginBase.VectComponentCreator(JsonElement element)
+    {
+        var typeName = element.GetProperty("TypeName").GetString();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return typeName switch
+        {
+            "Rectangle" => element.Deserialize<RectangleComponent>(options)!,
+            "RoundedRectangle" => element.Deserialize<RoundedRectangleComponent>(options)!,
+            "Ellipse" => element.Deserialize<EllipseComponent>(options)!,
+            "Line" => element.Deserialize<LineComponent>(options)!,
+            "CubicBezier" => element.Deserialize<CubicBezierComponent>(options)!,
+            "QuadraticBezier" => element.Deserialize<QuadraticBezierComponent>(options)!,
+            "Arc" => element.Deserialize<ArcComponent>(options)!,
+            "Polygon" => element.Deserialize<PolygonComponent>(options)!,
+            "Polyline" => element.Deserialize<PolylineComponent>(options)!,
+            _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
     }
 

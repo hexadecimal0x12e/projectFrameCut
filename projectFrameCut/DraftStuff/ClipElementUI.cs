@@ -52,6 +52,7 @@ namespace projectFrameCut.DraftStuff
         public bool CanSnapWhilePlacing { get; set; } = true;
         public bool CanSnapWhileResizing { get; set; } = true;
         public bool AllowFreeScaleResize { get; set; } = false;
+        public bool ShowDefaultBorder { get; set; } = true;
 
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>

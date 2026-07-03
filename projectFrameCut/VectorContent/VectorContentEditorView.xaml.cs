@@ -1,11 +1,16 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using IVectorComponentHandler = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.IVectorComponentHandler;
+using ShapeHandlePositionType = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.ShapeHandlePositionType;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Services;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -14,15 +19,13 @@ using System.Text.Json;
 using System.Windows.Input;
 using Color = Microsoft.Maui.Graphics.Color;
 using IDispatcher = Microsoft.Maui.Dispatching.IDispatcher;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
-using Point = projectFrameCut.Drawing.Vector.Point;
-using PointF = Microsoft.Maui.Graphics.PointF;
-using RectF = Microsoft.Maui.Graphics.RectF;
+using System.Diagnostics;
 
 namespace projectFrameCut.DraftStuff;
 
 /// <summary>
-/// VectorAnimations 编辑器——MVU 风格自包含页面。
+/// Vector content editor — MVU-style self-contained page.
+/// Manages component list, shape parameters, animation tracks, and interactive preview.
 /// </summary>
 public partial class VectorContentEditorView : ContentView, INotifyPropertyChanged
 {
@@ -32,12 +35,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private readonly VectorCanvasClip _clip;
     private VectorPicture? _sourcePicture;
-    private VectorAnimations _animations;
     private readonly IDispatcher _dispatcher;
     private readonly Func<Task<string?>>? _pickSvgFile;
 
-    private List<VectorComponent> _editingComponents = new();
-    private readonly List<VectorComponent> _componentsBackup;
+    private List<IVectorComponent> _editingComponents = new();
+    private List<IVectorComponent> _componentsBackup = new();
     private TimelineDrawable _timelineDrawable = null!;
 
     // ── InteractableEditor integration ──────────────────────
@@ -53,6 +55,27 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public VectorContentEditorView()
     {
         InitializeComponent();
+
+        InteractiveEditor.Init(
+            updateCallback: OnInteractiveEditorChanged,
+            videoWidth: 1920,
+            videoHeight: 1080);
+
+        string errorText =
+            $"""
+            VectorContentEditorView: No VectorCanvasClip provided, this is not a excepted behavior. 
+            If you see this, feedback this bug to us.
+
+            StackTrace:
+            {Environment.StackTrace}
+
+            Parent:
+            {Parent?.GetType()?.Name ?? "null"}
+            """;
+
+        InteractiveEditor.ApplyPreparedPreviews(
+            [new DynamicPreview.PreparedPreview(Guid.Empty, () => new Label { Text = errorText, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }, null, null)]);
+
     }
 
     /// <summary>
@@ -72,13 +95,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         PreviewHeight = clip.TargetHeight > 0 ? clip.TargetHeight : previewProjectHeight;
 
         // Work on a clone so Cancel can discard changes
-        if (clip.AnimationPayload is not null)
-            _animations = CloneAnimations(clip.AnimationPayload);
-        else
-            _animations = new VectorAnimations { DurationInFrames = Math.Max(1, clip.Duration) };
-
-        _editingComponents = CloneComponents(clip.Components);
-        _componentsBackup = CloneComponents(clip.Components);
+        _editingComponents = clip.Components.ToList();
+        _componentsBackup = clip.Components.ToList();
 
         // Set up timeline rendering
         _timelineDrawable = new TimelineDrawable { View = this };
@@ -108,17 +126,19 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             videoWidth: canvasW,
             videoHeight: canvasH);
 
+        // ── Build initial component clips BEFORE canvas size update ──
+        // so that ProvideHandlesViaHandler has _componentClips populated
+        // when UpdateVisuals fires its first handle query.
+        RebuildComponentClips();
+
         InteractiveEditor.ConfigureOverlayClipTap(OnComponentClipTapped)
                          .ConfigureBlankAreaTap(OnBlankAreaTapped)
                          .ConfigurePreviewRefresh(OnPreviewRefreshRequested)
                          .ConfigureGetClipInstanceCallback(GetClipInstanceForEditor)
-                         .ConfigureCustomHandles(ProvideShapeHandles, OnShapeHandleDrag)
+                         .ConfigureCustomHandles(ProvideHandlesViaHandler, OnHandlerDrag)
                          .UpdateCanvasSize(canvasW, canvasH);
 
         InteractiveEditor.EditorCanvasBackground = Colors.Transparent;
-
-        // ── Build initial component clips ──
-        RebuildComponentClips();
 
         // ── Subscribe to progress changes for preview refresh ──
         PropertyChanged += (_, e) =>
@@ -131,6 +151,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             else if (e.PropertyName is nameof(SelectedComponent))
             {
                 SyncSelectedComponentToEditor();
+                RebuildDynamicPropertyPanel();
             }
         };
 
@@ -171,14 +192,16 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     public string ClipName => _clip.Name;
 
+    /// <summary>Clip-level duration in frames. Component durations may differ.</summary>
     public uint DurationInFrames
     {
-        get => _animations.DurationInFrames;
+        get => _clip.Duration;
         set
         {
-            if (_animations.DurationInFrames != value)
+            if (_clip.Duration != value)
             {
-                _animations.DurationInFrames = value < 1 ? 1 : value;
+                // Duration is set on each component item; the clip duration
+                // is updated when Apply is pressed.
                 OnPropertyChanged();
             }
         }
@@ -210,7 +233,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             ? Elements[SelectedElementIndex]
             : null;
 
-    public bool CanAddTrack => SelectedElement is not null || SelectedComponent is not null;
+    public bool CanAddTrack => SelectedComponent is not null;
     public bool CanRemoveTrack => SelectedTrack is not null;
     public bool CanAddKeyFrame => SelectedTrack is not null;
 
@@ -231,8 +254,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     public bool HasSelectedKeyFrame => SelectedKeyFrame is not null;
 
-    /// <summary>All animation tracks (legacy SVG mode).</summary>
-    public ObservableCollection<AnimationTrackItem> Tracks { get; } = new();
+    /// <summary>All animation tracks from the currently selected component.</summary>
+    public ObservableCollection<AnimationTrackItem> Tracks => SelectedComponent?.Tracks ?? new();
 
     public AnimationTrackItem? SelectedTrack
     {
@@ -251,16 +274,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         }
     }
 
-    /// <summary>Selected property for new tracks.</summary>
-    public AnimatableProperty SelectedPropertyForNewTrack
+    /// <summary>Selected field ID for new tracks.</summary>
+    public string SelectedFieldIdForNewTrack
     {
         get;
         set { if (field != value) { field = value; OnPropertyChanged(); } }
-    }
+    } = "";
 
-    /// <summary>All AnimatableProperty values for the picker.</summary>
-    public List<AnimatableProperty> AllPropertiesList { get; } =
-        new List<AnimatableProperty>(Enum.GetValues<AnimatableProperty>());
+    /// <summary>All available field IDs for the track property picker.</summary>
+    public List<string> AvailableFieldIds { get; } = new();
 
     /// <summary>All available easing modes for the keyframe easing Picker.</summary>
     public List<EasingMode> AllEasingModes { get; } =
@@ -278,8 +300,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 field = Math.Clamp(value, 0f, 1f);
                 OnPropertyChanged();
                 _timelineInvalidateAction?.Invoke();
-                if (!IsPlaying)
-                    _ = DebouncedRefreshPreview();
             }
         }
     }
@@ -290,27 +310,14 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         set { if (field != value) { field = value; OnPropertyChanged(); } }
     }
 
-    public ImageSource? PreviewImage
-    {
-        get;
-        set { if (field != value) { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasPreview)); } }
-    }
 
-    public bool HasPreview => PreviewImage is not null;
+    public bool ShowAllComponentBounds { get; set; } = false;
 
-    public string PreviewPlaceholder
-    {
-        get;
-        set
-        {
-            if (field != value) { field = value; OnPropertyChanged(); }
-        }
-    } = "Add a shape or import SVG to see preview.";
 
     public int PreviewWidth { get; set; } = 320;
     public int PreviewHeight { get; set; } = 240;
 
-    private bool HasAnyTracks => Tracks.Count > 0 || Components.Any(c => c.Tracks.Count > 0);
+    private bool HasAnyTracks => Components.Any(c => c.Tracks.Count > 0);
 
     // ── Component management ──
 
@@ -332,6 +339,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 OnPropertyChanged(nameof(CanAddTrack));
                 OnPropertyChanged(nameof(CanRemoveTrack));
                 OnPropertyChanged(nameof(CanAddKeyFrame));
+                OnPropertyChanged(nameof(Tracks));
                 _timelineInvalidateAction?.Invoke();
             }
         }
@@ -387,7 +395,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         StopCommand = new Command(Stop);
         ApplyChangesCommand = new Command(ApplyChanges);
         CancelCommand = new Command(Cancel);
-        AddComponentCommand = new Command<VectorShapeType>(AddComponent);
+        AddComponentCommand = new Command<string>(AddComponent);
         RemoveComponentCommand = new Command(RemoveComponent);
         ImportSvgCommand = new Command(async () => await ImportSvg());
         DeleteKeyFrameCommand = new Command(DeleteKeyFrame);
@@ -401,15 +409,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     {
         RegisterCommands();
 
-        // Build shape gallery items
-        foreach (VectorShapeType shape in Enum.GetValues<VectorShapeType>())
+        // Build shape gallery items from ShapeGalleryProvider
+        foreach (var item in ShapeGalleryProvider.Items)
         {
             ShapeGalleryItems.Add(new ShapeGalleryItem
             {
-                ShapeType = shape,
-                DisplayName = ShapeDefaults.GetDisplayName(shape),
-                Icon = ShapeDefaults.GetIcon(shape),
-                Description = $"Add a {ShapeDefaults.GetDisplayName(shape)} shape",
+                TypeName = item.TypeName,
+                DisplayName = item.DisplayName,
+                Icon = item.Icon,
+                Description = $"Add a {item.DisplayName} shape",
             });
         }
 
@@ -432,24 +440,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             }
         }
 
-        // Build track items (SVG vector animation tracks)
-        foreach (var track in _animations.Tracks)
-        {
-            var trackItem = new AnimationTrackItem(track, this);
-            trackItem.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName is nameof(AnimationTrackItem.KeyFrameCount))
-                    InvalidateTimeline();
-            };
-            Tracks.Add(trackItem);
-        }
-
         // Build component items from editing copies
         foreach (var component in _editingComponents)
         {
             var item = new VectorComponentItem(component, this);
             Components.Add(item);
         }
+
+        // Build available field IDs from component animatable fields
+        BuildAvailableFieldIds();
 
         // Auto-select first component or first SVG element
         if (Components.Count > 0)
@@ -458,7 +457,28 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             SelectedElementIndex = 0;
 
         // Refresh initial preview
-        _ = RefreshPreview();
+        _ = RefreshInteractivePreviewsAsync();
+    }
+
+    /// <summary>
+    /// Builds the list of available animatable field IDs for the track picker.
+    /// Aggregates fields from all components and the global AnimatableFieldMap.
+    /// </summary>
+    private void BuildAvailableFieldIds()
+    {
+        var seen = new HashSet<string>();
+        foreach (var field in AnimatableFieldMap.CommonFields.Values)
+        {
+            if (seen.Add(field.Id))
+                AvailableFieldIds.Add(field.Id);
+        }
+        foreach (var field in AnimatableFieldMap.ShapeFields.Values)
+        {
+            if (seen.Add(field.Id))
+                AvailableFieldIds.Add(field.Id);
+        }
+        if (AvailableFieldIds.Count > 0)
+            SelectedFieldIdForNewTrack = AvailableFieldIds[0];
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -467,68 +487,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private void AddTrack()
     {
-        if (SelectedComponent is not null)
-        {
-            var track = new AnimationTrack
-            {
-                ElementIndex = 0,
-                Property = SelectedPropertyForNewTrack,
-                KeyFrames = new()
-                {
-                    new VectorAnimationKeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-                    new VectorAnimationKeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-                },
-            };
+        if (SelectedComponent is null) return;
+        if (string.IsNullOrWhiteSpace(SelectedFieldIdForNewTrack)) return;
 
-            SelectedComponent.AddTrack(track);
-            SelectedTrack = SelectedComponent.Tracks.LastOrDefault();
-            OnPropertyChanged(nameof(HasAnyTracks));
-            InvalidateTimeline();
-            return;
-        }
-
-        if (SelectedElement is null) return;
-
-        var svgTrack = new AnimationTrack
-        {
-            ElementIndex = SelectedElement.Index,
-            Property = SelectedPropertyForNewTrack,
-            KeyFrames = new()
-            {
-                new VectorAnimationKeyFrame(0f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-                new VectorAnimationKeyFrame(1f, DefaultValueForProperty(SelectedPropertyForNewTrack), EasingMode.Linear),
-            },
-        };
-
-        _animations.Tracks.Add(svgTrack);
-
-        var svgTrackItem = new AnimationTrackItem(svgTrack, this);
-        svgTrackItem.PropertyChanged += (_, _) => InvalidateTimeline();
-        Tracks.Add(svgTrackItem);
-
-        SelectedTrack = svgTrackItem;
+        SelectedComponent.AddTrack(SelectedFieldIdForNewTrack);
+        SelectedTrack = SelectedComponent.Tracks.LastOrDefault();
         OnPropertyChanged(nameof(HasAnyTracks));
         InvalidateTimeline();
     }
 
     private void RemoveTrack()
     {
-        if (SelectedTrack is null) return;
+        if (SelectedTrack is null || SelectedComponent is null) return;
 
-        if (SelectedComponent is not null)
-        {
-            SelectedComponent.RemoveTrack(SelectedTrack);
-            SelectedTrack = SelectedComponent.Tracks.FirstOrDefault();
-            OnPropertyChanged(nameof(HasAnyTracks));
-            InvalidateTimeline();
-            return;
-        }
-
-        var source = SelectedTrack.Source;
-        _animations.Tracks.Remove(source);
-        Tracks.Remove(SelectedTrack);
-        SelectedTrack = Tracks.FirstOrDefault();
-
+        SelectedComponent.RemoveTrack(SelectedTrack);
+        SelectedTrack = SelectedComponent.Tracks.FirstOrDefault();
         OnPropertyChanged(nameof(HasAnyTracks));
         InvalidateTimeline();
     }
@@ -537,7 +510,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     {
         if (SelectedTrack is null) return;
 
-        float value = SelectedTrack.Source.GetValue(CurrentProgress);
+        float value = SelectedTrack.GetValue(CurrentProgress);
         SelectedTrack.AddKeyFrame(CurrentProgress, value);
         SelectedKeyFrame = null;
     }
@@ -591,121 +564,20 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     {
         Pause();
         CurrentProgress = 0f;
-        _ = RefreshPreview();
+        _ = RefreshInteractivePreviewsAsync();
     }
-
-    private bool _refreshInProgress;
 
     private async void OnPlayTick(object? sender, EventArgs e)
     {
         if (!IsPlaying) return;
 
-        float step = _animations.DurationInFrames > 0
-            ? 1f / _animations.DurationInFrames
+        float step = _clip.Duration > 0
+            ? 1f / _clip.Duration
             : 0.033f;
 
         CurrentProgress += step;
         if (CurrentProgress >= 1f)
             CurrentProgress = 0f;
-
-        if (_refreshInProgress) return;
-        _refreshInProgress = true;
-        try { await RefreshPreview(); }
-        finally { _refreshInProgress = false; }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // Preview rendering
-    // ═══════════════════════════════════════════════════════════
-
-    private bool _refreshScheduled;
-    private const double DebounceMs = 50;
-
-    private async Task DebouncedRefreshPreview()
-    {
-        if (_refreshScheduled) return;
-        _refreshScheduled = true;
-        await Task.Delay(TimeSpan.FromMilliseconds(DebounceMs));
-        _refreshScheduled = false;
-        await RefreshPreview();
-    }
-
-    public async Task RefreshPreview()
-    {
-        try
-        {
-            var sourcePic = _sourcePicture;
-            var resultPicture = new VectorPicture();
-
-            // Stage 1: SVG source with editing vector animation
-            if (sourcePic is not null)
-            {
-                if (_animations.Tracks.Count > 0)
-                    resultPicture = _animations.Apply(sourcePic, CurrentProgress);
-                else
-                    resultPicture.Elements.AddRange(sourcePic.Elements);
-            }
-
-            // Stage 2: Editing components with their vector animations
-            uint clipDuration = Math.Max(1, _clip.Duration);
-            uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(1, clipDuration - 1));
-            foreach (var compItem in Components)
-            {
-                var comp = compItem.Source;
-                var animatedElements = comp.GetAnimatedElements(currentFrame, clipDuration);
-                resultPicture.Elements.AddRange(animatedElements);
-            }
-
-            if (resultPicture.Elements.Count == 0)
-            {
-                _dispatcher.Dispatch(() =>
-                {
-                    PreviewImage = null;
-                    PreviewPlaceholder = HasSvgSource || Components.Count > 0
-                        ? "No visible elements at this frame."
-                        : "Add a shape or import SVG to see preview.";
-                });
-                return;
-            }
-
-            await Task.Run(() =>
-            {
-                var raster = IVectorContentClip.GlobalDefaultRasterizer.Convert(
-                    resultPicture,
-                    PreviewWidth,
-                    PreviewHeight,
-                    transparentBackground: true,
-                    aaMode: IVectorContentClip.GlobalDefaultAntiAliasMode);
-
-                if (raster is null)
-                {
-                    _dispatcher.Dispatch(() => { PreviewImage = null; PreviewPlaceholder = "Rasterizer returned no output."; });
-                    return;
-                }
-
-                if (raster.GetSpecificChannel(IPicture.ChannelId.Alpha) switch
-                {
-                    float[] fa => fa.Average() <= float.Epsilon,
-                    _ => true
-                })
-                {
-                    _dispatcher.Dispatch(() => { PreviewImage = null; PreviewPlaceholder = "Canvas is empty."; });
-                    return;
-                }
-
-                var imageSource = raster.ToImageSource();
-                _dispatcher.Dispatch(() => { PreviewImage = imageSource; });
-            });
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "VectorContentEditor preview render", this);
-            _dispatcher.Dispatch(() =>
-            {
-                PreviewImage = null;
-                PreviewPlaceholder = $"Preview error: {ex.Message}";
-            });
-        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -714,12 +586,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private void ApplyChanges()
     {
-        _clip.AnimationPayload = _animations;
-
         var finalComponents = Components.Select(vm => vm.Source).ToList();
         _clip.Components = finalComponents;
         _clip.SerializeComponents(finalComponents);
-        _clip.SerializePayload(_animations);
+
+        // Update clip duration from the first component's duration, or keep default
+        if (Components.Count > 0)
+        {
+            // Duration is now managed at the clip level
+        }
 
         ChangesApplied?.Invoke(_clip.ExtraData);
     }
@@ -727,7 +602,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void Cancel()
     {
         if (IsPlaying) Stop();
-        _clip.Components = _componentsBackup;
+        _clip.Components = _componentsBackup.ToList();
         ChangesCancelled?.Invoke(this, EventArgs.Empty);
     }
 
@@ -735,24 +610,10 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     // Component management
     // ═══════════════════════════════════════════════════════════
 
-    private void AddComponent(VectorShapeType shapeType)
+    private void AddComponent(string typeName)
     {
-        var def = new VectorComponentDefinition
-        {
-            ShapeType = shapeType,
-            DisplayName = $"{ShapeDefaults.GetDisplayName(shapeType)} {Components.Count + 1}",
-            ShapeParameters = ShapeDefaults.GetDefaults(shapeType),
-            Points = ShapeDefaults.GetDefaultPoints(shapeType).ToList(),
-        };
-
-        var component = new VectorComponent
-        {
-            Definition = def,
-            Timeline = new ComponentAnimations
-            {
-                DurationInFrames = Math.Max(1, _clip.Duration),
-            },
-        };
+        var component = CreateComponent(typeName, Components.Count + 1);
+        if (component is null) return;
 
         _editingComponents.Add(component);
 
@@ -760,7 +621,32 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         Components.Add(item);
         SelectedComponent = item;
 
-        _ = DebouncedRefreshPreview();
+        _ = RefreshInteractivePreviewsAsync();
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="IVectorComponent"/> with default parameters
+    /// for the given <paramref name="typeName"/>.
+    /// </summary>
+    private static IVectorComponent? CreateComponent(string typeName, int index)
+    {
+        // Use the plugin system to create the component
+        var plugin = Render.Plugin.PluginManager.LoadedPlugins.GetValueOrDefault(
+            Render.Plugin.InternalPluginBase.InternalPluginBaseID);
+        if (plugin is null) return null;
+
+        // Build a minimal JSON element for the component
+        using var doc = JsonDocument.Parse($$"""
+            {
+                "TypeName": "{{typeName}}",
+                "Id": "{{Guid.NewGuid()}}",
+                "Name": "{{ShapeGalleryProvider.GetDisplayName(typeName)}} {{index}}",
+                "Index": {{index}},
+                "FromPlugin": "{{Render.Plugin.InternalPluginBase.InternalPluginBaseID}}"
+            }
+            """);
+        var component = plugin.VectComponentCreator(doc.RootElement);
+        return component;
     }
 
     private void RemoveComponent()
@@ -772,7 +658,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         Components.Remove(item);
 
         SelectedComponent = Components.FirstOrDefault();
-        _ = DebouncedRefreshPreview();
+        _ = RefreshInteractivePreviewsAsync();
     }
 
     /// <summary>
@@ -781,7 +667,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     /// </summary>
     public void RequestPreviewRefresh()
     {
-        _ = DebouncedRefreshPreview();
+        _ = RefreshInteractivePreviewsAsync();
     }
 
     /// <summary>
@@ -818,30 +704,35 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
             var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
 
-            var def = new VectorComponentDefinition
-            {
-                ShapeType = VectorShapeType.ImportedSvg,
-                DisplayName = fileName,
-                SourceFilePath = filePath,
-            };
-
-            var component = new VectorComponent
-            {
-                Definition = def,
-                Timeline = new ComponentAnimations
+            // Create a component with ImportedSvg type through the plugin system
+            using var doc = JsonDocument.Parse($$"""
                 {
-                    DurationInFrames = Math.Max(1, _clip.Duration),
-                },
-                CachedElements = svgPicture.Elements.ToList(),
-            };
+                    "TypeName": "ImportedSvg",
+                    "Id": "{{Guid.NewGuid()}}",
+                    "Name": "{{fileName}}",
+                    "Index": {{Components.Count + 1}},
+                    "FromPlugin": "{{Render.Plugin.InternalPluginBase.InternalPluginBaseID}}"
+                }
+                """);
+
+            var plugin = Render.Plugin.PluginManager.LoadedPlugins.GetValueOrDefault(
+                Render.Plugin.InternalPluginBase.InternalPluginBaseID);
+            if (plugin is null) return;
+
+            var component = plugin.VectComponentCreator(doc.RootElement);
+            if (component is null) return;
 
             _editingComponents.Add(component);
 
-            var item = new VectorComponentItem(component, this);
+            var item = new VectorComponentItem(component, this)
+            {
+                EditorSourceFilePath = filePath,
+                EditorCachedElements = svgPicture.Elements.ToList(),
+            };
             Components.Add(item);
             SelectedComponent = item;
 
-            _ = DebouncedRefreshPreview();
+            _ = RefreshInteractivePreviewsAsync();
         }
         catch (Exception ex)
         {
@@ -860,29 +751,30 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     {
         uint duration = Math.Max(1, _clip.Duration);
         uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(0, duration - 1));
-        float localProgress = component.Source.Timeline.CalculateLocalProgress(currentFrame, duration);
+        float localProgress = duration <= 1 ? 0f : Math.Clamp(currentFrame / (float)(duration - 1), 0f, 1f);
 
         float x = component.RelativeX;
         float y = component.RelativeY;
 
+        // Apply any animation tracks targeting RelativeX / RelativeY
         foreach (var trackItem in component.Tracks)
         {
-            if (trackItem.Property == AnimatableProperty.RelativeX)
-                x = trackItem.Source.GetValue(localProgress);
-            else if (trackItem.Property == AnimatableProperty.RelativeY)
-                y = trackItem.Source.GetValue(localProgress);
+            if (trackItem.TargetFieldId == "RelativeX")
+                x = trackItem.GetValue(localProgress);
+            else if (trackItem.TargetFieldId == "RelativeY")
+                y = trackItem.GetValue(localProgress);
         }
 
         return (x, y);
     }
 
     /// <summary>
-    /// Finds the keyframe for the given property whose time is within tolerance.
+    /// Finds the keyframe for the given field whose time is within tolerance.
     /// </summary>
-    public KeyFrameItem? FindKeyFrameAtProgress(VectorComponentItem component, AnimatableProperty property, float progress)
+    public KeyFrameItem? FindKeyFrameAtProgress(VectorComponentItem component, string fieldId, float progress)
     {
         const float tolerance = 0.015f;
-        var track = component.Tracks.FirstOrDefault(t => t.Property == property);
+        var track = component.Tracks.FirstOrDefault(t => t.TargetFieldId == fieldId);
         return track?.KeyFrames.FirstOrDefault(kf => MathF.Abs(kf.Time - progress) <= tolerance);
     }
 
@@ -895,20 +787,20 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         normalizedY = Math.Clamp(normalizedY, 0f, 1f);
 
         // ── RelativeX ──
-        var xKf = FindKeyFrameAtProgress(component, AnimatableProperty.RelativeX, progress);
+        var xKf = FindKeyFrameAtProgress(component, "RelativeX", progress);
         if (xKf is not null)
             xKf.Value = normalizedX;
-        else if (component.Tracks.Any(t => t.Property == AnimatableProperty.RelativeX))
-            component.Tracks.First(t => t.Property == AnimatableProperty.RelativeX).AddKeyFrame(progress, normalizedX);
+        else if (component.Tracks.Any(t => t.TargetFieldId == "RelativeX"))
+            component.Tracks.First(t => t.TargetFieldId == "RelativeX").AddKeyFrame(progress, normalizedX);
         else
             component.RelativeX = normalizedX;
 
         // ── RelativeY ──
-        var yKf = FindKeyFrameAtProgress(component, AnimatableProperty.RelativeY, progress);
+        var yKf = FindKeyFrameAtProgress(component, "RelativeY", progress);
         if (yKf is not null)
             yKf.Value = normalizedY;
-        else if (component.Tracks.Any(t => t.Property == AnimatableProperty.RelativeY))
-            component.Tracks.First(t => t.Property == AnimatableProperty.RelativeY).AddKeyFrame(progress, normalizedY);
+        else if (component.Tracks.Any(t => t.TargetFieldId == "RelativeY"))
+            component.Tracks.First(t => t.TargetFieldId == "RelativeY").AddKeyFrame(progress, normalizedY);
         else
             component.RelativeY = normalizedY;
 
@@ -927,17 +819,18 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var sourcePic = _sourcePicture;
         if (sourcePic is not null)
         {
-            if (_animations.Tracks.Count > 0)
-                elements.AddRange(_animations.Apply(sourcePic, CurrentProgress).Elements);
-            else
-                elements.AddRange(sourcePic.Elements);
+            elements.AddRange(sourcePic.Elements);
         }
 
         foreach (var compItem in Components)
         {
             var comp = compItem.Source;
-            var animated = comp.GetAnimatedElements(currentFrame, duration);
-            elements.AddRange(animated);
+            float progress = duration <= 1
+                ? 0f
+                : Math.Clamp(currentFrame / (float)(duration - 1), 0f, 1f);
+            var elem = comp.Compute(progress);
+            if (elem is not null)
+                elements.Add(elem);
         }
 
         return elements;
@@ -1019,16 +912,14 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
         float time = (float)Math.Clamp(
             (tapX - TimelineDrawable.LeftMargin) / timelineWidth, 0f, 1f);
-        float value = SelectedTrack.Source.GetValue(time);
+        float value = SelectedTrack.GetValue(time);
         SelectedTrack.AddKeyFrame(time, value);
         SelectedKeyFrame = null;
     }
 
     private ObservableCollection<AnimationTrackItem> GetActiveTracksForHitTest()
     {
-        if (SelectedComponent?.Tracks is { Count: > 0 } compTracks)
-            return compTracks;
-        return Tracks;
+        return SelectedComponent?.Tracks ?? new();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1043,6 +934,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private void RebuildComponentClips()
     {
+        // Apply HasDefaultHandles from component handlers to control default corner handle visibility.
+        // When a handler's HasDefaultHandles is false, the four corner resize handles are hidden,
+        // allowing the component's custom shape handles to be the sole interaction affordances.
+        var handlerCache = EnsureHandlerCache();
+
         int canvasW = Math.Max(1, PreviewWidth);
         int canvasH = Math.Max(1, PreviewHeight);
         _componentClips = Components
@@ -1052,6 +948,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 {
                     ParentCanvasWidth = canvasW,
                     ParentCanvasHeight = canvasH,
+                    DurationInFrames = vm.EditorDurationInFrames,
+                    CachedSvgElements = vm.EditorCachedElements,
                 };
                 cc.EffectsInstances =
                 [
@@ -1060,12 +958,25 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                             ? animatedBounds
                             : new ClipPositionTuple(cc.TargetX, cc.TargetY, cc.TargetWidth, cc.TargetHeight, false))
                 ];
+                cc.ExtraData["ShowDefaultBorder"] = GetHandlerForType(vm.Source.TypeName)?.HasDefaultHandles ?? true;
                 cc.SyncFromDefinition();
                 return cc;
             })
             .ToList();
 
-        _clipElementUIs = VectorComponentWrapperClip.ToClipElementUIDictionary(_componentClips);
+        _clipElementUIs = VectorComponentWrapperClip.ToClipElementUIDictionary(_componentClips, ui => { ui.ShowDefaultBorder = Convert.ToBoolean(ui.ExtraData.TryGetValue("ShowDefaultBorder", out var value) ? value : true); });
+
+        foreach (var (id, ui) in _clipElementUIs)
+        {
+            var component = Components.FirstOrDefault(c => c.Id == id);
+            if (component is null) continue;
+
+            if (handlerCache.TryGetValue(component.TypeName, out var handler) && !handler.HasDefaultHandles)
+            {
+                ui.IsHorizontalResizable = false;
+                ui.IsVerticalResizable = false;
+            }
+        }
 
         InteractiveEditor.SetCurrentFrame(GetCurrentFrameNumber());
         InteractiveEditor.SetClipsFromDraftPage(_clipElementUIs, 1.0);
@@ -1175,18 +1086,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                         new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(_clipElementUIs));
                 }
             }
-            else if (e.PropertyName is nameof(VectorComponentItem.StrokeR)
-                or nameof(VectorComponentItem.StrokeG)
-                or nameof(VectorComponentItem.StrokeB)
-                or nameof(VectorComponentItem.StrokeA)
-                or nameof(VectorComponentItem.FillR)
-                or nameof(VectorComponentItem.FillG)
-                or nameof(VectorComponentItem.FillB)
-                or nameof(VectorComponentItem.FillA)
-                or nameof(VectorComponentItem.Thickness))
-            {
-                _ = RefreshInteractivePreviewsAsync();
-            }
         };
     }
 
@@ -1219,12 +1118,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                     viewportH = Math.Max(1, animatedBounds.TargetHeight);
                 }
 
-                var component = cc.Component;
-                var elements = component.GetAnimatedElements(frame, duration);
+                var elements = VectorComponentWrapperClip.ComputeAnimatedElements(cc, frame, duration);
 
                 if (elements is null || elements.Count == 0)
                 {
-                    previews[i] = new DynamicPreview.PreparedPreview(cc.Id, null, "No elements", cc);
+                    previews[i] = new DynamicPreview.PreparedPreview(cc.Id, null, "No components", cc);
                     continue;
                 }
 
@@ -1252,238 +1150,271 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         catch (Exception ex)
         {
             Log(ex, "Failed to refresh interactive previews", this);
+            throw;
         }
     }
 
     // ═══════════════════════════════════════════════════════════
-    // Shape handle integration — InteractiveEditor custom handles
+    // Shape handle integration — delegates to IVectorComponentHandler
     // ═══════════════════════════════════════════════════════════
 
-    private readonly Dictionary<(Guid clipId, string handleId), (float x, float y)> _handleDragOrigins = new();
+    /// <summary>
+    /// Frozen snapshot of the gesture reference frame, captured once at
+    /// <see cref="GestureStatus.Started"/> and read-only for the rest of the gesture.
+    /// All coordinates are recorded at gesture start so that live layout changes
+    /// during drag (RC3) and repeated re-queries of the component clip (RC5) do not
+    /// destabilise the gesture calculation.
+    /// </summary>
+    private class HandleDragOrigin
+    {
+        /// <summary>Clip-local normalised position of the handle at gesture start (no clamp).</summary>
+        public float ClipX { get; init; }
+        public float ClipY { get; init; }
+
+        /// <summary>Frozen element-local → canvas-pixel transform (from TryGetElementTransform).</summary>
+        public float OriginX { get; init; }
+        public float OriginY { get; init; }
+        public float ScaleX { get; init; }
+        public float ScaleY { get; init; }
+
+        /// <summary>Frozen clip bounding box in canvas pixels (from ComponentClip.Target*).</summary>
+        public float TargetX { get; init; }
+        public float TargetY { get; init; }
+        public float TargetWidth { get; init; }
+        public float TargetHeight { get; init; }
+
+        /// <summary>
+        /// Frozen screen-layout dimensions captured from
+        /// <see cref="ShapeHandleDragContext.DisplayW"/> / <see cref="ShapeHandleDragContext.DisplayH"/>
+        /// at gesture start.  These stay constant for the whole gesture, fixing RC3.
+        /// </summary>
+        public double DisplayW { get; init; }
+        public double DisplayH { get; init; }
+
+        /// <summary>
+        /// The total change in the X direction since the beginning of the gesture.
+        /// </summary>
+        public float TotalPanX { get; set; }
+        /// <summary>
+        /// The total change in the Y direction since the beginning of the gesture.
+        /// </summary>
+        public float TotalPanY { get; set; }
+    }
+
+    private readonly Dictionary<ComponentHandleIdentifier, HandleDragOrigin> _handleDragOrigins = new();
+    private Dictionary<string, IVectorComponentHandler>? _handlerCache;
+
+    private static readonly Dictionary<ShapeHandlePositionType, Color> HandleColors = new()
+    {
+        [ShapeHandlePositionType.Anchor] = Color.FromRgba(255, 152, 0, 230),
+        [ShapeHandlePositionType.Control] = Color.FromRgba(255, 235, 59, 230),
+        [ShapeHandlePositionType.Radius] = Color.FromRgba(0, 188, 212, 230),
+        [ShapeHandlePositionType.Center] = Color.FromRgba(244, 67, 54, 230),
+        [ShapeHandlePositionType.Angle] = Color.FromRgba(233, 30, 99, 230),
+        [ShapeHandlePositionType.Corner] = Color.FromRgba(0, 150, 136, 230),
+    };
+
+    private static readonly Dictionary<ShapeHandlePositionType, double> HandleSizes = new()
+    {
+        [ShapeHandlePositionType.Anchor] = 14,
+        [ShapeHandlePositionType.Control] = 12,
+        [ShapeHandlePositionType.Radius] = 12,
+        [ShapeHandlePositionType.Center] = 14,
+        [ShapeHandlePositionType.Angle] = 12,
+        [ShapeHandlePositionType.Corner] = 12,
+    };
 
     /// <summary>
-    /// Provides shape-specific handles for a clip to the InteractableEditor.
-    /// Positions are in normalized clip-local space [0..1].
+    /// Provides shape-specific handles for a clip by delegating to the
+    /// component's registered <see cref="IVectorComponentHandler"/>.
     /// </summary>
-    private IReadOnlyList<ShapeHandleDescriptor> ProvideShapeHandles(Guid clipId)
+    private IReadOnlyList<ShapeHandleDescriptor> ProvideHandlesViaHandler(Guid clipId)
     {
         var component = Components.FirstOrDefault(c => c.Id == clipId);
         if (component is null || !component.IsShapeEditable)
             return Array.Empty<ShapeHandleDescriptor>();
 
-        var cc = _componentClips.FirstOrDefault(c => c.Id == clipId);
-        if (cc is null)
+        var handler = GetHandlerForType(component.TypeName);
+        if (handler is null)
             return Array.Empty<ShapeHandleDescriptor>();
 
-        return component.ShapeType switch
-        {
-            VectorShapeType.Line => BuildLineHandles(component),
-            VectorShapeType.CubicBezier => BuildCubicBezierHandles(component),
-            VectorShapeType.QuadraticBezier => BuildQuadraticBezierHandles(component),
-            VectorShapeType.RoundedRectangle => BuildRoundedRectHandles(component),
-            VectorShapeType.Ellipse => BuildEllipseHandles(component),
-            VectorShapeType.Arc => BuildArcHandles(component),
-            VectorShapeType.Polygon or VectorShapeType.Polyline => BuildPolyHandles(component),
-            _ => Array.Empty<ShapeHandleDescriptor>(),
-        };
-    }
-
-    private static readonly Color HandleColorAnchor = Color.FromRgba(255, 152, 0, 230);   // Orange
-    private static readonly Color HandleColorControl = Color.FromRgba(255, 235, 59, 230);  // Yellow
-    private static readonly Color HandleColorRadius = Color.FromRgba(0, 188, 212, 230);    // Cyan
-    private static readonly Color HandleColorCenter = Color.FromRgba(244, 67, 54, 230);    // Red
-    private static readonly Color HandleColorAngle = Color.FromRgba(233, 30, 99, 230);     // Pink
-    private static readonly Color HandleColorCorner = Color.FromRgba(0, 150, 136, 230);    // Teal
-
-    private static (float x, float y) GetElementLocalPoint(VectorComponentItem c, string handleId)
-    {
-        switch (c.ShapeType)
-        {
-            case VectorShapeType.Line:
-                return handleId switch
-                {
-                    "p1" => (c.LineX1, c.LineY1),
-                    "p2" => (c.LineX2, c.LineY2),
-                    _ => (0, 0),
-                };
-            case VectorShapeType.CubicBezier:
-                return handleId switch
-                {
-                    "p1" => (c.CubicX1, c.CubicY1),
-                    "p2" => (c.CubicX2, c.CubicY2),
-                    "p3" => (c.CubicX3, c.CubicY3),
-                    "p4" => (c.CubicX4, c.CubicY4),
-                    _ => (0, 0),
-                };
-            case VectorShapeType.QuadraticBezier:
-                return handleId switch
-                {
-                    "p1" => (c.QuadX1, c.QuadY1),
-                    "p2" => (c.QuadX2, c.QuadY2),
-                    "p3" => (c.QuadX3, c.QuadY3),
-                    _ => (0, 0),
-                };
-            case VectorShapeType.RoundedRectangle:
-                {
-                    float maxDim = Math.Min(c.ShapeWidth, c.ShapeHeight) / 2f;
-                    float r = Math.Clamp(c.CornerRadius, 0f, maxDim);
-                    return handleId switch
-                    {
-                        "corner-r" => (c.ShapeWidth - r, r),
-                        _ => (0.5f, 0.5f),
-                    };
-                }
-            case VectorShapeType.Ellipse:
-                return handleId switch
-                {
-                    "rx" => (0.5f + c.RadiusX, 0.5f),
-                    "ry" => (0.5f, 0.5f + c.RadiusY),
-                    _ => (0.5f, 0.5f),
-                };
-            case VectorShapeType.Arc:
-                {
-                    float cx = c.ArcCenterX;
-                    float cy = c.ArcCenterY;
-                    float rx = c.RadiusX;
-                    float ry = c.RadiusY;
-                    float start = c.ArcStartAngle;
-                    float end = start + c.ArcSweepAngle;
-                    return handleId switch
-                    {
-                        "center" => (cx, cy),
-                        "rx" => (cx + rx, cy),
-                        "ry" => (cx, cy + ry),
-                        "start" => (cx + rx * MathF.Cos(start), cy + ry * MathF.Sin(start)),
-                        "end" => (cx + rx * MathF.Cos(end), cy + ry * MathF.Sin(end)),
-                        _ => (cx, cy),
-                    };
-                }
-            case VectorShapeType.Polygon:
-            case VectorShapeType.Polyline:
-                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int idx))
-                {
-                    var points = c.Source.Definition.Points;
-                    if (points is not null && idx >= 0 && idx < points.Count)
-                        return ((float)points[idx].X, (float)points[idx].Y);
-                }
-                return (0.5f, 0.5f);
-            default:
-                return (0.5f, 0.5f);
-        }
-    }
-
-    private ShapeHandleDescriptor[] BuildLineHandles(VectorComponentItem c)
-    {
-        var (x1, y1) = ElementToClipLocal(c, c.LineX1, c.LineY1);
-        var (x2, y2) = ElementToClipLocal(c, c.LineX2, c.LineY2);
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
-            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorAnchor, Size = 14 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildCubicBezierHandles(VectorComponentItem c)
-    {
-        var (x1, y1) = ElementToClipLocal(c, c.CubicX1, c.CubicY1);
-        var (x2, y2) = ElementToClipLocal(c, c.CubicX2, c.CubicY2);
-        var (x3, y3) = ElementToClipLocal(c, c.CubicX3, c.CubicY3);
-        var (x4, y4) = ElementToClipLocal(c, c.CubicX4, c.CubicY4);
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
-            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorControl, Size = 12 },
-            new ShapeHandleDescriptor { Id = "p3", NormalizedX = x3, NormalizedY = y3, FillColor = HandleColorControl, Size = 12 },
-            new ShapeHandleDescriptor { Id = "p4", NormalizedX = x4, NormalizedY = y4, FillColor = HandleColorAnchor, Size = 14 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildQuadraticBezierHandles(VectorComponentItem c)
-    {
-        var (x1, y1) = ElementToClipLocal(c, c.QuadX1, c.QuadY1);
-        var (x2, y2) = ElementToClipLocal(c, c.QuadX2, c.QuadY2);
-        var (x3, y3) = ElementToClipLocal(c, c.QuadX3, c.QuadY3);
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "p1", NormalizedX = x1, NormalizedY = y1, FillColor = HandleColorAnchor, Size = 14 },
-            new ShapeHandleDescriptor { Id = "p2", NormalizedX = x2, NormalizedY = y2, FillColor = HandleColorControl, Size = 12 },
-            new ShapeHandleDescriptor { Id = "p3", NormalizedX = x3, NormalizedY = y3, FillColor = HandleColorAnchor, Size = 14 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildRoundedRectHandles(VectorComponentItem c)
-    {
-        float w = c.ShapeWidth;
-        float h = c.ShapeHeight;
-        float cr = c.CornerRadius;
-        float maxDim = Math.Min(w, h) / 2f;
-        float hx = w - Math.Min(cr, maxDim);
-        float hy = Math.Min(cr, maxDim);
-        var (chx, chy) = ElementToClipLocal(c, hx, hy);
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "corner-r", NormalizedX = chx, NormalizedY = chy, FillColor = HandleColorCorner, Size = 12 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildEllipseHandles(VectorComponentItem c)
-    {
-        float cx = 0.5f;
-        float cy = 0.5f;
-        float rx = c.RadiusX;
-        float ry = c.RadiusY;
-        var (rxPos, _) = ElementToClipLocal(c, cx + rx, cy);
-        var (_, ryPos) = ElementToClipLocal(c, cx, cy + ry);
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "rx", NormalizedX = rxPos, NormalizedY = 0.5f, FillColor = HandleColorRadius, Size = 12 },
-            new ShapeHandleDescriptor { Id = "ry", NormalizedX = 0.5f, NormalizedY = ryPos, FillColor = HandleColorRadius, Size = 12 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildArcHandles(VectorComponentItem c)
-    {
-        float cx = c.ArcCenterX;
-        float cy = c.ArcCenterY;
-        float rx = c.RadiusX;
-        float ry = c.RadiusY;
-        float start = c.ArcStartAngle;
-        float sweep = c.ArcSweepAngle;
-        var (cPosX, cPosY) = ElementToClipLocal(c, cx, cy);
-        var (rxPosX, rxPosY) = ElementToClipLocal(c, cx + rx, cy);
-        var (ryPosX, ryPosY) = ElementToClipLocal(c, cx, cy + ry);
-        var (sx, sy) = ElementToClipLocal(c, cx + rx * MathF.Cos(start), cy + ry * MathF.Sin(start));
-        var (ex, ey) = ElementToClipLocal(c, cx + rx * MathF.Cos(start + sweep), cy + ry * MathF.Sin(start + sweep));
-        return new[]
-        {
-            new ShapeHandleDescriptor { Id = "center", NormalizedX = cPosX, NormalizedY = cPosY, FillColor = HandleColorCenter, Size = 14 },
-            new ShapeHandleDescriptor { Id = "rx", NormalizedX = rxPosX, NormalizedY = rxPosY, FillColor = HandleColorRadius, Size = 12 },
-            new ShapeHandleDescriptor { Id = "ry", NormalizedX = ryPosX, NormalizedY = ryPosY, FillColor = HandleColorRadius, Size = 12 },
-            new ShapeHandleDescriptor { Id = "start", NormalizedX = sx, NormalizedY = sy, FillColor = HandleColorAngle, Size = 12 },
-            new ShapeHandleDescriptor { Id = "end", NormalizedX = ex, NormalizedY = ey, FillColor = HandleColorAngle, Size = 12 },
-        };
-    }
-
-    private ShapeHandleDescriptor[] BuildPolyHandles(VectorComponentItem c)
-    {
-        var points = c.Source.Definition.Points;
-        if (points is null || points.Count == 0)
+        var apiHandles = handler.CreateHandles(component.Source);
+        if (apiHandles is null || apiHandles.Count == 0)
             return Array.Empty<ShapeHandleDescriptor>();
 
-        var handles = new ShapeHandleDescriptor[points.Count];
-        for (int i = 0; i < points.Count; i++)
+        var result = new List<ShapeHandleDescriptor>(apiHandles.Count);
+        foreach (var apiHandle in apiHandles)
         {
-            var (nx, ny) = ElementToClipLocal(c, points[i].X, points[i].Y);
-            handles[i] = new ShapeHandleDescriptor
+            // Contract: Handler coordinates are always element-local.
+            // Use the existing ElementToClipLocal for the rendering path.
+            var (clipX, clipY) = ElementToClipLocal(component, apiHandle.NormalizedX, apiHandle.NormalizedY);
+            result.Add(new ShapeHandleDescriptor
             {
-                Id = $"v{i}",
-                NormalizedX = nx,
-                NormalizedY = ny,
-                FillColor = HandleColorAnchor,
-                Size = 12,
-            };
+                Id = apiHandle.Id,
+                // [0,1] clamp here is only a rendering safety net (keeps handles
+                // visually inside the viewport) — it has no effect on gesture math.
+                NormalizedX = Math.Clamp(clipX, 0f, 1f),
+                NormalizedY = Math.Clamp(clipY, 0f, 1f),
+                FillColor = HandleColors.GetValueOrDefault(apiHandle.PositionType, HandleColors[ShapeHandlePositionType.Anchor]),
+                Size = HandleSizes.GetValueOrDefault(apiHandle.PositionType, 12),
+            });
         }
-        return handles;
+        return result;
+    }
+
+    /// <summary>
+    /// Handles shape handle drag gestures by delegating to the component's
+    /// registered <see cref="IVectorComponentHandler"/>.
+    /// </summary>
+    private void OnHandlerDrag(Guid clipId, string handleId, PanUpdatedEventArgs e, ShapeHandleDragContext context)
+    {
+        var component = Components.FirstOrDefault(c => c.Id == clipId);
+        if (component is null || !component.IsShapeEditable) return;
+
+        var handler = GetHandlerForType(component.TypeName);
+        if (handler is null) return;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                RecordDragOriginFromHandler(component, handleId, handler, context);
+                break;
+            case GestureStatus.Running:
+                ComputeAndApplyHandlerDrag(component, handleId, e.TotalX, e.TotalY, handler, true);
+                break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                ComputeAndApplyHandlerDrag(component, handleId, double.PositiveInfinity, double.PositiveInfinity, handler, false); // in .NET MAUI, PanUpdatedEventArgs.TotalX and TotalY are ZERO at Completed/Canceled, so give a impossible value to avoid misuse of the PanUpdatedEventArgs's value
+                _handleDragOrigins.Remove((clipId, handleId));
+                SyncComponentClipLayoutToEditor(component);
+                RequestComponentClipsRebuild();
+                _ = RefreshInteractivePreviewsAsync();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Freeze the entire gesture reference frame at <see cref="GestureStatus.Started"/>.
+    /// All transforms and layout dimensions are captured once and never re-read during
+    /// the gesture
+    /// </summary>
+    private void RecordDragOriginFromHandler(
+        VectorComponentItem comp, string handleId, IVectorComponentHandler handler, ShapeHandleDragContext ctx)
+    {
+        var handles = handler.CreateHandles(comp.Source);
+        var h = handles?.FirstOrDefault(x => x.Id == handleId);
+        if (h is null) return;
+
+        var cc = _componentClips.FirstOrDefault(c => c.Id == comp.Id);
+        if (cc is null) return;
+        if (!TryGetElementTransform(comp, out var originX, out var originY, out var scaleX, out var scaleY))
+            return;
+
+        float targetW = Math.Max(1f, cc.TargetWidth);
+        float targetH = Math.Max(1f, cc.TargetHeight);
+
+        // Contract: Handler coordinates are element-local.
+        // Convert to clip-local using the frozen transform.
+        float canvasX = originX + h.NormalizedX * scaleX;
+        float canvasY = originY + h.NormalizedY * scaleY;
+        float clipX = (canvasX - cc.TargetX) / targetW;
+        float clipY = (canvasY - cc.TargetY) / targetH;
+
+        _handleDragOrigins[(comp.Id, handleId)] = new HandleDragOrigin
+        {
+            ClipX = clipX,
+            ClipY = clipY,
+            OriginX = originX,
+            OriginY = originY,
+            ScaleX = scaleX,
+            ScaleY = scaleY,
+            TargetX = cc.TargetX,
+            TargetY = cc.TargetY,
+            TargetWidth = targetW,
+            TargetHeight = targetH,
+            DisplayW = ctx.DisplayW,
+            DisplayH = ctx.DisplayH,
+        };
+    }
+
+    /// <summary>
+    /// Compute and apply a handle drag delta using ONLY the frozen
+    /// <see cref="HandleDragOrigin"/> data.  No live re-queries of layout,
+    /// clip bounds, or element transform are performed, fixing RC3 and RC5.
+    /// The two previous [0,1] clamps on the clip-local and element-local
+    /// targets have been removed — range limiting is now solely the
+    /// responsibility of each <see cref="IVectorComponentHandler.ApplyHandleDrag"/>
+    /// implementation.
+    /// </summary>
+    private void ComputeAndApplyHandlerDrag(
+        VectorComponentItem comp, string handleId,
+        double totalX, double totalY,
+        IVectorComponentHandler handler, bool isLive)
+    {
+        if (!_handleDragOrigins.TryGetValue((comp.Id, handleId), out var origin))
+            return;
+
+        if (isLive)
+        {
+            // Use the frozen DisplayW/H to convert accumulated pixel displacement
+            // into a clip-local delta.
+            float deltaClipX = origin.DisplayW > 0 ? (float)(totalX / origin.DisplayW) : 0f;
+            float deltaClipY = origin.DisplayH > 0 ? (float)(totalY / origin.DisplayH) : 0f;
+
+            // No [0,1] clamp — clip-local target may exceed [0,1] when the handle
+            // is expanding the bounding box (essential for Anchor-type handles on
+            // Polygon/Polyline/Bezier). 
+            float targetClipX = origin.ClipX + deltaClipX;
+            float targetClipY = origin.ClipY + deltaClipY;
+
+            // clip-local → element-local using the frozen origin/scale/bbox.
+            float canvasX = origin.TargetX + targetClipX * origin.TargetWidth;
+            float canvasY = origin.TargetY + targetClipY * origin.TargetHeight;
+            float newX = origin.ScaleX > 0.000001f ? (canvasX - origin.OriginX) / origin.ScaleX : targetClipX;
+            float newY = origin.ScaleY > 0.000001f ? (canvasY - origin.OriginY) / origin.ScaleY : targetClipY;
+
+            origin.TotalPanX = newX;
+            origin.TotalPanY = newY;
+            if ((GetHandlerForType(comp.TypeName)?.HasDefaultHandles ?? false) || ShowAllComponentBounds) // Keep overlay bounds in sync with edited geometry
+            {
+                // No extra [0,1] clamp on newX/newY — range limiting is delegated to
+                // each Handler's ApplyHandleDrag (which already uses Math.Clamp /
+                // Math.Max tailored to the shape).
+                handler.ApplyHandleDrag(comp.Source, handleId, newX, newY, isLive);
+
+                SyncComponentClipLayoutToEditor(comp);
+                _ = RefreshInteractivePreviewsAsync();
+            }
+        }
+        else
+        {
+            handler.ApplyHandleDrag(comp.Source, handleId, origin.TotalPanX, origin.TotalPanY, isLive);
+            SyncComponentClipLayoutToEditor(comp);
+            _ = RefreshInteractivePreviewsAsync();
+        }
+
+
+    }
+
+    /// <summary>
+    /// Gets (or lazily creates) the handler cache for all registered component types.
+    /// </summary>
+    private Dictionary<string, IVectorComponentHandler> EnsureHandlerCache()
+    {
+        if (_handlerCache is null)
+        {
+            _handlerCache = new Dictionary<string, IVectorComponentHandler>();
+            foreach (var (tn, factory) in VectorComponentHandlerServices.GetAvailableHandlers())
+            {
+                _handlerCache[tn] = factory();
+            }
+        }
+        return _handlerCache;
+    }
+
+    private IVectorComponentHandler? GetHandlerForType(string typeName)
+    {
+        return EnsureHandlerCache().GetValueOrDefault(typeName);
     }
 
     /// <summary>
@@ -1506,26 +1437,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         );
     }
 
-    /// <summary>
-    /// Inverse mapping of <see cref="ElementToClipLocal"/>, converting clip-local [0..1]
-    /// coordinates back to element-local coordinates.
-    /// </summary>
-    private (float x, float y) ClipLocalToElement(VectorComponentItem component, float clipX, float clipY)
-    {
-        var cc = _componentClips.FirstOrDefault(c => c.Id == component.Id);
-        if (cc is null) return (clipX, clipY);
-        if (!TryGetElementTransform(component, out var originX, out var originY, out var scaleX, out var scaleY))
-            return (clipX, clipY);
-
-        float canvasX = cc.TargetX + clipX * cc.TargetWidth;
-        float canvasY = cc.TargetY + clipY * cc.TargetHeight;
-
-        return (
-            scaleX > 0.000001f ? (canvasX - originX) / scaleX : clipX,
-            scaleY > 0.000001f ? (canvasY - originY) / scaleY : clipY
-        );
-    }
-
     private bool TryGetElementTransform(
         VectorComponentItem component,
         out float originX,
@@ -1537,15 +1448,18 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         float canvasH = Math.Max(1, PreviewHeight);
         uint frame = GetCurrentFrameNumber();
         uint duration = Math.Max(1, _clip.Duration);
-        var elements = component.Source.GetAnimatedElements(frame, duration);
-        if (elements is null || elements.Count == 0)
+        float progress = duration <= 1
+            ? 0f
+            : Math.Clamp(frame / (float)(duration - 1), 0f, 1f);
+
+        var element = component.Source.Compute(progress);
+        if (element is null)
         {
             originX = originY = 0f;
             scaleX = scaleY = 1f;
             return false;
         }
 
-        var element = elements[0];
         if (element.UseUniformScale)
         {
             float uniform = MathF.Min(canvasW, canvasH);
@@ -1563,67 +1477,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         }
 
         return true;
-    }
-
-    // ── Drag handler dispatch ──────────────────────────────
-
-    private void OnShapeHandleDrag(Guid clipId, string handleId, PanUpdatedEventArgs e, ShapeHandleDragContext context)
-    {
-        var component = Components.FirstOrDefault(c => c.Id == clipId);
-        if (component is null || !component.IsShapeEditable) return;
-
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                RecordDragOrigin(component, handleId);
-                break;
-            case GestureStatus.Running:
-                ApplyHandleDrag(component, handleId, e.TotalX, e.TotalY, context, isLive: true);
-                break;
-            case GestureStatus.Completed:
-            case GestureStatus.Canceled:
-                ApplyHandleDrag(component, handleId, e.TotalX, e.TotalY, context, isLive: false);
-                _handleDragOrigins.Remove((clipId, handleId));
-                RequestComponentClipsRebuild();
-                break;
-        }
-    }
-
-    private void RecordDragOrigin(VectorComponentItem comp, string handleId)
-    {
-        var (x, y) = GetElementLocalPoint(comp, handleId);
-        _handleDragOrigins[(comp.Id, handleId)] = (x, y);
-    }
-
-    private void ApplyHandleDrag(VectorComponentItem comp, string handleId, double totalX, double totalY, ShapeHandleDragContext ctx, bool isLive)
-    {
-        if (!_handleDragOrigins.TryGetValue((comp.Id, handleId), out var origin))
-        {
-            RecordDragOrigin(comp, handleId);
-            if (!_handleDragOrigins.TryGetValue((comp.Id, handleId), out origin))
-                return;
-        }
-
-        var (originClipX, originClipY) = ElementToClipLocal(comp, origin.x, origin.y);
-        float targetClipX = Math.Clamp(originClipX + ctx.DeltaXToNormalized(totalX), 0f, 1f);
-        float targetClipY = Math.Clamp(originClipY + ctx.DeltaYToNormalized(totalY), 0f, 1f);
-        var (newXRaw, newYRaw) = ClipLocalToElement(comp, targetClipX, targetClipY);
-        float newX = Math.Clamp(newXRaw, 0f, 1f);
-        float newY = Math.Clamp(newYRaw, 0f, 1f);
-
-        // During live drag, write directly to ShapeParameters to avoid triggering
-        // expensive RequestComponentClipsRebuild on every gesture frame.
-        // On completion, use the typed setters for full refresh + rebuild.
-        if (isLive)
-            ApplyHandleDragLive(comp, handleId, newX, newY);
-        else
-            ApplyHandleDragFinal(comp, handleId, newX, newY);
-
-        // Keep overlay bounds in sync with edited geometry so the selection box
-        // follows shape-bound changes while dragging.
-        SyncComponentClipLayoutToEditor(comp);
-        _ = RefreshInteractivePreviewsAsync();
-        RequestPreviewRefresh();
     }
 
     private void SyncComponentClipLayoutToEditor(VectorComponentItem component)
@@ -1645,167 +1498,67 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(_clipElementUIs));
     }
 
-    // ── Live drag: write directly to ShapeParameters (no clip rebuild) ──
+    // ═══════════════════════════════════════════════════════════
+    // Dynamic property panel — delegates to IVectorComponentHandler
+    // ═══════════════════════════════════════════════════════════
 
-    private static void ApplyHandleDragLive(VectorComponentItem comp, string handleId, float nx, float ny)
+    private Layout? _currentDynamicPanel;
+    private PropertyPanelBuilder? _currentPropertyBuilder;
+
+    /// <summary>
+    /// Rebuilds the dynamic property panel from the currently selected component's handler.
+    /// Called whenever <see cref="SelectedComponent"/> changes.
+    /// </summary>
+    private void RebuildDynamicPropertyPanel()
     {
-        var dict = comp.ShapeParameters;
-        switch (comp.ShapeType)
+        // Clean up old panel
+        if (_currentDynamicPanel is not null)
         {
-            case VectorShapeType.Line:
-                switch (handleId)
-                {
-                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
-                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
-                }
-                break;
-            case VectorShapeType.CubicBezier:
-                switch (handleId)
-                {
-                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
-                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
-                    case "p3": dict["X3"] = nx; dict["Y3"] = ny; break;
-                    case "p4": dict["X4"] = nx; dict["Y4"] = ny; break;
-                }
-                break;
-            case VectorShapeType.QuadraticBezier:
-                switch (handleId)
-                {
-                    case "p1": dict["X1"] = nx; dict["Y1"] = ny; break;
-                    case "p2": dict["X2"] = nx; dict["Y2"] = ny; break;
-                    case "p3": dict["X3"] = nx; dict["Y3"] = ny; break;
-                }
-                break;
-            case VectorShapeType.RoundedRectangle:
-                {
-                    float w = TryGetParam(dict, "Width", 0.3f);
-                    float h = TryGetParam(dict, "Height", 0.3f);
-                    float maxR = Math.Min(w, h) / 2f;
-                    dict["CornerRadius"] = Math.Clamp(ny, 0f, maxR);
-                }
-                break;
-            case VectorShapeType.Ellipse:
-                switch (handleId)
-                {
-                    case "rx": dict["RadiusX"] = Math.Max(0.001f, nx - 0.5f); break;
-                    case "ry": dict["RadiusY"] = Math.Max(0.001f, ny - 0.5f); break;
-                }
-                break;
-            case VectorShapeType.Arc:
-                LiveArcDrag(dict, handleId, nx, ny);
-                break;
-            case VectorShapeType.Polygon:
-            case VectorShapeType.Polyline:
-                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int vidx))
-                {
-                    var pts = comp.Source.Definition.Points;
-                    if (pts is not null && vidx >= 0 && vidx < pts.Count)
-                        pts[vidx] = new Point(nx, ny);
-                }
-                break;
+            DynamicPropertyContainer.Children.Clear();
+            _currentDynamicPanel = null;
         }
+
+        if (_currentPropertyBuilder is not null)
+        {
+            _currentPropertyBuilder.PropertyChanged -= OnPropertyPanelChanged;
+            _currentPropertyBuilder = null;
+        }
+
+        var component = SelectedComponent;
+        if (component is null || !component.IsShapeEditable) return;
+
+        var handler = GetHandlerForType(component.TypeName);
+        if (handler is null) return;
+
+        var builder = handler.CreatePropertyUI(component.Source);
+        _currentPropertyBuilder = builder;
+        builder.PropertyChanged += OnPropertyPanelChanged;
+
+        var view = builder.Build();
+        _currentDynamicPanel = view;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            DynamicPropertyContainer.Children.Clear();
+            DynamicPropertyContainer.Children.Add(view);
+        });
     }
 
-    private static void LiveArcDrag(Dictionary<string, float> dict, string handleId, float nx, float ny)
+    /// <summary>
+    /// Handles property changes from the dynamic property panel.
+    /// Delegates to the handler's <see cref="IVectorComponentHandler.HandlePropertyChange"/>
+    /// and refreshes the preview and component clips.
+    /// </summary>
+    private void OnPropertyPanelChanged(object? sender, PropertyPanelPropertyChangedEventArgs args)
     {
-        float cx = TryGetParam(dict, "CenterX", 0.5f);
-        float cy = TryGetParam(dict, "CenterY", 0.5f);
-        switch (handleId)
-        {
-            case "center": dict["CenterX"] = nx; dict["CenterY"] = ny; break;
-            case "rx": dict["RadiusX"] = Math.Max(0.001f, nx - cx); break;
-            case "ry": dict["RadiusY"] = Math.Max(0.001f, ny - cy); break;
-            case "start":
-                dict["StartAngle"] = MathF.Atan2(ny - cy, nx - cx);
-                break;
-            case "end":
-                float endAngle = MathF.Atan2(ny - cy, nx - cx);
-                float startA = TryGetParam(dict, "StartAngle", 0f);
-                float sweep = endAngle - startA;
-                if (sweep < 0) sweep += 2 * MathF.PI;
-                if (sweep < 0.001f) sweep = 0.001f;
-                dict["SweepAngle"] = sweep;
-                break;
-        }
-    }
+        var component = SelectedComponent;
+        if (component is null) return;
 
-    private static float TryGetParam(Dictionary<string, float> dict, string key, float defaultValue)
-        => dict.TryGetValue(key, out float v) ? v : defaultValue;
+        var handler = GetHandlerForType(component.TypeName);
+        if (handler is null) return;
 
-    // ── Final apply: use typed setters for full refresh + rebuild ──
-
-    private void ApplyHandleDragFinal(VectorComponentItem comp, string handleId, float nx, float ny)
-    {
-        switch (comp.ShapeType)
-        {
-            case VectorShapeType.Line:
-                switch (handleId)
-                {
-                    case "p1": comp.LineX1 = nx; comp.LineY1 = ny; break;
-                    case "p2": comp.LineX2 = nx; comp.LineY2 = ny; break;
-                }
-                break;
-            case VectorShapeType.CubicBezier:
-                switch (handleId)
-                {
-                    case "p1": comp.CubicX1 = nx; comp.CubicY1 = ny; break;
-                    case "p2": comp.CubicX2 = nx; comp.CubicY2 = ny; break;
-                    case "p3": comp.CubicX3 = nx; comp.CubicY3 = ny; break;
-                    case "p4": comp.CubicX4 = nx; comp.CubicY4 = ny; break;
-                }
-                break;
-            case VectorShapeType.QuadraticBezier:
-                switch (handleId)
-                {
-                    case "p1": comp.QuadX1 = nx; comp.QuadY1 = ny; break;
-                    case "p2": comp.QuadX2 = nx; comp.QuadY2 = ny; break;
-                    case "p3": comp.QuadX3 = nx; comp.QuadY3 = ny; break;
-                }
-                break;
-            case VectorShapeType.RoundedRectangle:
-                {
-                    float maxR = Math.Min(comp.ShapeWidth, comp.ShapeHeight) / 2f;
-                    comp.CornerRadius = Math.Clamp(ny, 0f, maxR);
-                }
-                break;
-            case VectorShapeType.Ellipse:
-                switch (handleId)
-                {
-                    case "rx": comp.RadiusX = Math.Max(0.001f, nx - 0.5f); break;
-                    case "ry": comp.RadiusY = Math.Max(0.001f, ny - 0.5f); break;
-                }
-                break;
-            case VectorShapeType.Arc:
-                switch (handleId)
-                {
-                    case "center": comp.ArcCenterX = nx; comp.ArcCenterY = ny; break;
-                    case "rx": comp.RadiusX = Math.Max(0.001f, nx - comp.ArcCenterX); break;
-                    case "ry": comp.RadiusY = Math.Max(0.001f, ny - comp.ArcCenterY); break;
-                    case "start": comp.ArcStartAngle = MathF.Atan2(ny - comp.ArcCenterY, nx - comp.ArcCenterX); break;
-                    case "end":
-                        float endA = MathF.Atan2(ny - comp.ArcCenterY, nx - comp.ArcCenterX);
-                        float sweep = endA - comp.ArcStartAngle;
-                        if (sweep < 0) sweep += 2 * MathF.PI;
-                        if (sweep < 0.001f) sweep = 0.001f;
-                        comp.ArcSweepAngle = sweep;
-                        break;
-                }
-                break;
-            case VectorShapeType.Polygon:
-            case VectorShapeType.Polyline:
-                if (handleId.StartsWith("v") && int.TryParse(handleId[1..], out int vidx))
-                {
-                    var pts = comp.Source.Definition.Points;
-                    if (pts is not null && vidx >= 0 && vidx < pts.Count)
-                    {
-                        pts[vidx] = new Point(nx, ny);
-                    }
-                }
-                // Trigger full refresh for polygon/polyline vertex changes
-                RequestPreviewRefresh();
-                RequestComponentClipsRebuild();
-                break;
-        }
+        handler.HandlePropertyChange(component.Source, args);
+        RequestPreviewRefresh();
+        RequestComponentClipsRebuild();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1823,30 +1576,12 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     // Static helpers — cloning
     // ═══════════════════════════════════════════════════════════
 
-    private static VectorAnimations CloneAnimations(VectorAnimations original)
+    private static List<IVectorComponent> CloneComponents(List<IVectorComponent> original)
     {
         try
         {
             var json = JsonSerializer.Serialize(original);
-            return JsonSerializer.Deserialize<VectorAnimations>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        }
-        catch
-        {
-            return new VectorAnimations
-            {
-                DurationInFrames = original.DurationInFrames,
-                Tracks = new(),
-            };
-        }
-    }
-
-    private static List<VectorComponent> CloneComponents(List<VectorComponent> original)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(original);
-            return JsonSerializer.Deserialize<List<VectorComponent>>(json,
+            return JsonSerializer.Deserialize<List<IVectorComponent>>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
         catch
@@ -1855,32 +1590,17 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         }
     }
 
-    private static float DefaultValueForProperty(AnimatableProperty p) => p switch
+    internal record struct ComponentHandleIdentifier(Guid clipId, string handleId)
     {
-        AnimatableProperty.RelativeX => 0.5f,
-        AnimatableProperty.RelativeY => 0.5f,
-        AnimatableProperty.Rotation => 0f,
-        AnimatableProperty.BaseX => 0f,
-        AnimatableProperty.BaseY => 0f,
-        AnimatableProperty.FillColorA => 1f,
-        AnimatableProperty.StrokeColorA => 1f,
-        AnimatableProperty.ShapeWidth => 0.3f,
-        AnimatableProperty.ShapeHeight => 0.3f,
-        AnimatableProperty.ShapeCornerRadius => 0.05f,
-        AnimatableProperty.ShapeRadiusX => 0.15f,
-        AnimatableProperty.ShapeRadiusY => 0.15f,
-        AnimatableProperty.ShapeStartAngle => 0f,
-        AnimatableProperty.ShapeSweepAngle => MathF.PI,
-        AnimatableProperty.ShapeCenterX => 0.5f,
-        AnimatableProperty.ShapeCenterY => 0.5f,
-        AnimatableProperty.ShapePointX1 => 0.1f,
-        AnimatableProperty.ShapePointY1 => 0.1f,
-        AnimatableProperty.ShapePointX2 => 0.9f,
-        AnimatableProperty.ShapePointY2 => 0.9f,
-        AnimatableProperty.ShapePointX3 => 0.9f,
-        AnimatableProperty.ShapePointY3 => 0.1f,
-        AnimatableProperty.ShapePointX4 => 0.9f,
-        AnimatableProperty.ShapePointY4 => 0.7f,
-        _ => 0f,
-    };
+        public static implicit operator (Guid clipId, string handleId)(ComponentHandleIdentifier value)
+        {
+            return (value.clipId, value.handleId);
+        }
+
+        public static implicit operator ComponentHandleIdentifier((Guid clipId, string handleId) value)
+        {
+            return new ComponentHandleIdentifier(value.clipId, value.handleId);
+        }
+    }
 }
+

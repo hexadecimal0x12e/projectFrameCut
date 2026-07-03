@@ -1,21 +1,43 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Microsoft.Maui.Graphics;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Render.VectorContent;
+using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.DraftStuff;
 
 // ═══════════════════════════════════════════════════════════════
-// MVU Model types — pure data, no ViewModel overhead.
-// These are the "Model" in MVU: mutable state containers with
-// property-change notification for XAML two-way binding.
+// Shape gallery provider — maps component TypeName to display info
 // ═══════════════════════════════════════════════════════════════
+
+public static class ShapeGalleryProvider
+{
+    public static readonly IReadOnlyList<ShapeGalleryItem> Items = new List<ShapeGalleryItem>
+    {
+        new() { TypeName = "Rectangle",         DisplayName = "Rectangle",        Icon = "▭" },
+        new() { TypeName = "RoundedRectangle",  DisplayName = "Rounded Rect",     Icon = "▢" },
+        new() { TypeName = "Ellipse",           DisplayName = "Ellipse",          Icon = "⬭" },
+        new() { TypeName = "Line",              DisplayName = "Line",             Icon = "╱" },
+        new() { TypeName = "CubicBezier",       DisplayName = "Cubic Bezier",     Icon = "∿" },
+        new() { TypeName = "QuadraticBezier",   DisplayName = "Quad Bezier",      Icon = "⌈" },
+        new() { TypeName = "Arc",               DisplayName = "Arc",              Icon = "⌒" },
+        new() { TypeName = "Polygon",           DisplayName = "Polygon",          Icon = "⬣" },
+        new() { TypeName = "Polyline",          DisplayName = "Polyline",         Icon = "⦚" },
+    };
+
+    public static string GetIcon(string typeName) =>
+        Items.FirstOrDefault(i => i.TypeName == typeName)?.Icon ?? "□";
+
+    public static string GetDisplayName(string typeName) =>
+        Items.FirstOrDefault(i => i.TypeName == typeName)?.DisplayName ?? typeName;
+}
 
 /// <summary>Display model for a shape in the shape gallery panel.</summary>
 public class ShapeGalleryItem
 {
-    public VectorShapeType ShapeType { get; init; }
+    public string TypeName { get; init; } = "";
     public string DisplayName { get; init; } = "";
     public string Icon { get; init; } = "";
     public string Description { get; init; } = "";
@@ -34,11 +56,12 @@ public class ElementItem
 }
 
 // ═══════════════════════════════════════════════════════════════
-// KeyFrameItem — wrappper around VectorAnimationKeyFrame for two-way binding
+// KeyFrameItem — wrapper around VectorAnimationKeyFrame for two-way binding
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps a <see cref="KeyFrame"/> for two-way binding in the vector animation editor UI.
+/// Wraps a <see cref="VectorAnimationKeyFrame"/> for two-way binding in the
+/// vector animation editor UI.
 /// </summary>
 public class KeyFrameItem : INotifyPropertyChanged
 {
@@ -146,90 +169,46 @@ public class KeyFrameItem : INotifyPropertyChanged
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AnimationTrackItem — wrappper around AnimationTrack for binding
+// AnimationTrackItem — wraps keyframes for a single target field
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps an <see cref="AnimationTrack"/> for editing in the vector animation editor UI.
-/// Owned by <see cref="VectorContentEditorView"/> (the page itself, not a ViewModel).
+/// Represents a single animation track targeting one field.
+/// Owned by <see cref="VectorComponentItem"/>.
 /// </summary>
 public class AnimationTrackItem : INotifyPropertyChanged
 {
-    private readonly AnimationTrack _source;
-    private readonly VectorContentEditorView _owner;
+    private readonly List<VectorAnimationKeyFrame> _keyFrames;
+    private readonly VectorComponentItem _owner;
 
-    public AnimationTrackItem(AnimationTrack source, VectorContentEditorView owner)
+    public AnimationTrackItem(VectorComponentItem owner, string targetFieldId, string fieldDisplayName)
     {
-        _source = source;
+        _keyFrames = owner.Source.AnimationFrames
+            .Where(kf => kf.TargetFieldId == targetFieldId)
+            .ToList();
         _owner = owner;
+        TargetFieldId = targetFieldId;
+        FieldDisplayName = fieldDisplayName;
 
         // Build keyframe child items
-        for (int i = 0; i < source.KeyFrames.Count; i++)
+        for (int i = 0; i < _keyFrames.Count; i++)
         {
-            bool isLast = i == source.KeyFrames.Count - 1;
-            var kfItem = new KeyFrameItem(source.KeyFrames[i], isLast, this);
+            bool isLast = i == _keyFrames.Count - 1;
+            var kfItem = new KeyFrameItem(_keyFrames[i], isLast, this);
             kfItem.PropertyChanged += OnKeyFramePropertyChanged;
             KeyFrames.Add(kfItem);
         }
     }
 
-    public AnimationTrack Source => _source;
-
-    public int ElementIndex
-    {
-        get => _source.ElementIndex;
-        set
-        {
-            if (_source.ElementIndex != value)
-            {
-                _source.ElementIndex = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayName));
-            }
-        }
-    }
-
-    public AnimatableProperty Property
-    {
-        get => _source.Property;
-        set
-        {
-            if (_source.Property != value)
-            {
-                _source.Property = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayName));
-            }
-        }
-    }
+    public string TargetFieldId { get; }
+    public string FieldDisplayName { get; }
 
     public string DisplayName
     {
         get
         {
-            string elemName;
-
-            if (_owner.SelectedComponent?.IsFromSvg == true)
-            {
-                string compName = _owner.SelectedComponent.DisplayName;
-                elemName = ElementIndex < _owner.SelectedComponent.ElementCount
-                    ? $"{compName}[{ElementIndex}]"
-                    : $"{compName}[?]";
-            }
-            else if (_owner.SelectedComponent is not null)
-            {
-                elemName = _owner.SelectedComponent.DisplayName;
-            }
-            else if (ElementIndex < _owner.Elements.Count)
-            {
-                elemName = _owner.Elements[ElementIndex].DisplayName;
-            }
-            else
-            {
-                elemName = $"Elem {ElementIndex}";
-            }
-
-            return $"{elemName} — {PropertyName(Property)}";
+            string compName = _owner.DisplayName;
+            return $"{compName} — {FieldDisplayName}";
         }
     }
 
@@ -245,30 +224,30 @@ public class AnimationTrackItem : INotifyPropertyChanged
         if (easing == default) easing = EasingMode.Linear;
 
         var kf = new VectorAnimationKeyFrame(time, value, easing);
-        _source.KeyFrames.Add(kf);
-        _source.KeyFrames.Sort((a, b) => a.Time.CompareTo(b.Time));
+        kf.TargetField = _owner.Source.AnimatableFields?.GetValueOrDefault(TargetFieldId) as AnimatableField;
+        _keyFrames.Add(kf);
+        _owner.Source.AnimationFrames.Add(kf);
 
-        RebuildKeyFrameItems();
-
+        SortKeyFrames();
         OnPropertyChanged(nameof(KeyFrameCount));
-        _owner.InvalidateTimeline();
     }
 
     public void RemoveKeyFrameAt(int index)
     {
-        if (index < 0 || index >= _source.KeyFrames.Count) return;
-        if (_source.KeyFrames.Count <= 1) return;
+        if (index < 0 || index >= _keyFrames.Count) return;
+        if (_keyFrames.Count <= 1) return;
 
-        _source.KeyFrames.RemoveAt(index);
+        var removed = _keyFrames[index];
+        _keyFrames.RemoveAt(index);
+        _owner.Source.AnimationFrames.Remove(removed);
         RebuildKeyFrameItems();
 
         OnPropertyChanged(nameof(KeyFrameCount));
-        _owner.InvalidateTimeline();
     }
 
     public void SortKeyFrames()
     {
-        _source.KeyFrames.Sort((a, b) => a.Time.CompareTo(b.Time));
+        _keyFrames.Sort((a, b) => a.Time.CompareTo(b.Time));
 
         var sorted = KeyFrames.OrderBy(vm => vm.Time).ToList();
         for (int i = 0; i < sorted.Count; i++)
@@ -280,15 +259,52 @@ public class AnimationTrackItem : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(KeyFrameCount));
-        _owner.InvalidateTimeline();
     }
 
     public void MoveKeyFrame(int index, float newTime)
     {
-        if (index < 0 || index >= _source.KeyFrames.Count) return;
+        if (index < 0 || index >= _keyFrames.Count) return;
         newTime = Math.Clamp(newTime, 0f, 1f);
-        _source.KeyFrames[index].Time = newTime;
+        _keyFrames[index].Time = newTime;
         SortKeyFrames();
+    }
+
+    // ── Evaluate track value at a given progress ────────────
+
+    public float GetValue(float progress)
+    {
+        if (_keyFrames.Count == 0) return 0f;
+
+        if (_keyFrames.Count == 1)
+            return _keyFrames[0].Value;
+
+        progress = Math.Clamp(progress, 0f, 1f);
+
+        if (progress <= _keyFrames[0].Time)
+            return _keyFrames[0].Value;
+
+        var last = _keyFrames[^1];
+        if (progress >= last.Time)
+            return last.Value;
+
+        for (int i = 1; i < _keyFrames.Count; i++)
+        {
+            var prev = _keyFrames[i - 1];
+            var next = _keyFrames[i];
+
+            if (progress >= next.Time)
+                continue;
+
+            float span = next.Time - prev.Time;
+            if (span <= 0f)
+                return next.Value;
+
+            float t = (progress - prev.Time) / span;
+            float eased = EasingFunctions.Apply(prev.Easing, t);
+            return prev.Value + (next.Value - prev.Value) * eased;
+        }
+
+        return last.Value;
     }
 
     // ── Helpers ───────────────────────────────────────────
@@ -300,10 +316,10 @@ public class AnimationTrackItem : INotifyPropertyChanged
 
         KeyFrames.Clear();
 
-        for (int i = 0; i < _source.KeyFrames.Count; i++)
+        for (int i = 0; i < _keyFrames.Count; i++)
         {
-            bool isLast = i == _source.KeyFrames.Count - 1;
-            var item = new KeyFrameItem(_source.KeyFrames[i], isLast, this);
+            bool isLast = i == _keyFrames.Count - 1;
+            var item = new KeyFrameItem(_keyFrames[i], isLast, this);
             item.PropertyChanged += OnKeyFramePropertyChanged;
             KeyFrames.Add(item);
         }
@@ -314,7 +330,7 @@ public class AnimationTrackItem : INotifyPropertyChanged
         if (e.PropertyName is nameof(KeyFrameItem.Time)
             or nameof(KeyFrameItem.Value))
         {
-            _owner.InvalidateTimeline();
+            _owner.InvalidateTimeline?.Invoke();
         }
     }
 
@@ -326,87 +342,69 @@ public class AnimationTrackItem : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
-    private static string PropertyName(AnimatableProperty p) => p switch
-    {
-        AnimatableProperty.RelativeX => "Relative X",
-        AnimatableProperty.RelativeY => "Relative Y",
-        AnimatableProperty.Rotation => "Rotation",
-        AnimatableProperty.BaseX => "Base X",
-        AnimatableProperty.BaseY => "Base Y",
-        AnimatableProperty.FillColorA => "Fill Opacity",
-        AnimatableProperty.StrokeColorA => "Stroke Opacity",
-        AnimatableProperty.ShapeWidth => "Width",
-        AnimatableProperty.ShapeHeight => "Height",
-        AnimatableProperty.ShapeCornerRadius => "Corner Radius",
-        AnimatableProperty.ShapeRadiusX => "Radius X",
-        AnimatableProperty.ShapeRadiusY => "Radius Y",
-        AnimatableProperty.ShapeStartAngle => "Start Angle",
-        AnimatableProperty.ShapeSweepAngle => "Sweep Angle",
-        AnimatableProperty.ShapeCenterX => "Center X",
-        AnimatableProperty.ShapeCenterY => "Center Y",
-        AnimatableProperty.ShapePointX1 => "Point X1",
-        AnimatableProperty.ShapePointY1 => "Point Y1",
-        AnimatableProperty.ShapePointX2 => "Point X2",
-        AnimatableProperty.ShapePointY2 => "Point Y2",
-        AnimatableProperty.ShapePointX3 => "Point X3",
-        AnimatableProperty.ShapePointY3 => "Point Y3",
-        AnimatableProperty.ShapePointX4 => "Point X4",
-        AnimatableProperty.ShapePointY4 => "Point Y4",
-        _ => p.ToString(),
-    };
 }
 
 // ═══════════════════════════════════════════════════════════════
-// VectorComponentItem — wraps a VectorComponent for editing
+// VectorComponentItem — wraps an IVectorComponent for editing
 // ═══════════════════════════════════════════════════════════════
 
 /// <summary>
-/// Wraps a <see cref="VectorComponent"/> for editing in the vector animation editor UI.
-/// Manages per-component tracks, shape properties, and visual configuration.
-/// Owned by <see cref="VectorContentEditorView"/> (the page itself).
+/// Wraps an <see cref="IVectorComponent"/> for editing in the vector animation editor UI.
+/// Manages per-component animation tracks and shape parameters.
+/// Owned by <see cref="VectorContentEditorView"/>.
 /// </summary>
 public class VectorComponentItem : INotifyPropertyChanged
 {
-    private readonly VectorComponent _source;
+    private readonly IVectorComponent _source;
     private readonly VectorContentEditorView _owner;
 
-    public VectorComponentItem(VectorComponent source, VectorContentEditorView owner)
+    /// <summary>Callback invoked when timeline needs repainting.</summary>
+    public Action? InvalidateTimeline { get; set; }
+
+    // ── Editor-side storage for concepts not on IVectorComponent ──
+
+    /// <summary>Per-component animation duration in frames.</summary>
+    public uint EditorDurationInFrames { get; set; } = 30;
+
+    /// <summary>SVG import: cached parsed elements.</summary>
+    public List<VectorCanvasElement>? EditorCachedElements { get; set; }
+
+    /// <summary>SVG import: source file path.</summary>
+    public string? EditorSourceFilePath { get; set; }
+
+    /// <summary>Polygon/Polyline vertices.</summary>
+    public List<Point> EditorPoints { get; set; } = new();
+
+    public VectorComponentItem(IVectorComponent source, VectorContentEditorView owner)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        InvalidateTimeline = owner.InvalidateTimeline;
 
-        foreach (var track in source.Timeline.Tracks)
-        {
-            var trackItem = new AnimationTrackItem(track, owner);
-            trackItem.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName is nameof(AnimationTrackItem.KeyFrameCount))
-                    _owner.InvalidateTimeline();
-            };
-            Tracks.Add(trackItem);
-        }
+        // Build tracks from animation frames grouped by target field
+        RebuildTracks();
     }
 
-    public VectorComponent Source => _source;
-    public Guid Id => _source.Definition.Id;
+    public IVectorComponent Source => _source;
+    public Guid Id => _source.Id;
 
     public string DisplayName
     {
-        get => _source.Definition.DisplayName;
+        get => _source.Name;
         set
         {
-            if (_source.Definition.DisplayName != value)
+            if (_source.Name != value)
             {
-                _source.Definition.DisplayName = value;
+                _source.Name = value;
                 OnPropertyChanged();
             }
         }
     }
 
-    public VectorShapeType ShapeType => _source.Definition.ShapeType;
-    public string ShapeIcon => ShapeDefaults.GetIcon(ShapeType);
-    public bool IsFromSvg => _source.Definition.ShapeType == VectorShapeType.ImportedSvg;
+    public string TypeName => _source.TypeName;
+    public string ShapeIcon => ShapeGalleryProvider.GetIcon(TypeName);
+
+    public bool IsFromSvg => TypeName == "ImportedSvg";
     public bool IsShapeEditable => !IsFromSvg;
 
     public int ElementCount
@@ -414,7 +412,7 @@ public class VectorComponentItem : INotifyPropertyChanged
         get
         {
             if (IsFromSvg)
-                return _source.CachedElements?.Count ?? 0;
+                return EditorCachedElements?.Count ?? 0;
             return 1;
         }
     }
@@ -423,14 +421,16 @@ public class VectorComponentItem : INotifyPropertyChanged
         ? $"{ElementCount} elements"
         : "1 shape";
 
+    // ── SVG-specific properties ──────────────────────────────
+
     public string? SourceFilePath
     {
-        get => _source.Definition.SourceFilePath;
+        get => EditorSourceFilePath;
         set
         {
-            if (_source.Definition.SourceFilePath != value)
+            if (EditorSourceFilePath != value)
             {
-                _source.Definition.SourceFilePath = value;
+                EditorSourceFilePath = value;
                 OnPropertyChanged();
             }
         }
@@ -438,236 +438,82 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public string ShapeTypeDisplayName => IsFromSvg
         ? System.IO.Path.GetFileName(SourceFilePath ?? "SVG")
-        : ShapeDefaults.GetDisplayName(ShapeType);
+        : ShapeGalleryProvider.GetDisplayName(TypeName);
 
-    // ── Shape parameter visibility ──────────────────────────
+    // ── Parameter helpers (generic shape access — used by handlers) ──
 
-    /// <summary>Whether the shape has Width/Height dimension parameters.</summary>
-    public bool HasWidthHeight => ShapeType is VectorShapeType.Rectangle or VectorShapeType.RoundedRectangle;
-
-    /// <summary>Whether the shape has a CornerRadius parameter.</summary>
-    public bool HasCornerRadius => ShapeType is VectorShapeType.RoundedRectangle;
-
-    /// <summary>Whether the shape has RadiusX/RadiusY parameters.</summary>
-    public bool HasRadiusXY => ShapeType is VectorShapeType.Ellipse or VectorShapeType.Arc;
-
-    /// <summary>Whether the shape has Arc-specific params (center, angles).</summary>
-    public bool HasArcParams => ShapeType is VectorShapeType.Arc;
-
-    /// <summary>Whether the shape has line endpoint parameters (X1/Y1, X2/Y2).</summary>
-    public bool HasLinePoints => ShapeType is VectorShapeType.Line;
-
-    /// <summary>Whether the shape has cubic bezier control points (X1..X4, Y1..Y4).</summary>
-    public bool HasCubicBezierPoints => ShapeType is VectorShapeType.CubicBezier;
-
-    /// <summary>Whether the shape has quadratic bezier control points (X1..X3, Y1..Y3).</summary>
-    public bool HasQuadraticBezierPoints => ShapeType is VectorShapeType.QuadraticBezier;
-
-    /// <summary>Whether the shape has bezier control points (cubic or quadratic).</summary>
-    public bool HasAnyBezierPoints => HasCubicBezierPoints || HasQuadraticBezierPoints;
-
-    /// <summary>Whether the shape has a vertex point list (Polygon/Polyline).</summary>
-    public bool HasPointsList => ShapeType is VectorShapeType.Polygon or VectorShapeType.Polyline;
-
-    /// <summary>Number of vertices for Polygon/Polyline shapes.</summary>
-    public int VertexCount => _source.Definition.Points?.Count ?? 0;
-
-    /// <summary>Human-readable vertex count label.</summary>
-    public string VertexCountText => ShapeType switch
+    private float GetParam(string key, float defaultValue)
     {
-        VectorShapeType.Polygon => $"{VertexCount} vertices (min 3)",
-        VectorShapeType.Polyline => $"{VertexCount} vertices (min 2)",
-        _ => "",
-    };
-
-    // ── Shape-specific parameter accessors ──────────────────
-
-    /// <summary>Width of Rectangle / RoundedRectangle shapes.</summary>
-    public float ShapeWidth
-    {
-        get => GetShapeParam("Width", 0.3f);
-        set
+        if (_source.Parameters.TryGetValue(key, out var val))
         {
-            float clamped = Math.Max(0.001f, value);
-            if (!Equals(GetShapeParam("Width", 0.3f), clamped))
+            return val switch
             {
-                ShapeParameters["Width"] = clamped;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
+                float f => f,
+                double d => (float)d,
+                int i => i,
+                uint u => u,
+                _ => defaultValue,
+            };
         }
+        return defaultValue;
     }
 
-    /// <summary>Height of Rectangle / RoundedRectangle shapes.</summary>
-    public float ShapeHeight
+    private void SetParam(string key, float value)
     {
-        get => GetShapeParam("Height", 0.3f);
-        set
-        {
-            float clamped = Math.Max(0.001f, value);
-            if (!Equals(GetShapeParam("Height", 0.3f), clamped))
-            {
-                ShapeParameters["Height"] = clamped;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        _source.Parameters[key] = value;
+        OnPropertyChanged();
     }
 
-    /// <summary>Corner radius of RoundedRectangle shapes.</summary>
-    public float CornerRadius
+    public Dictionary<string, object> Parameters => _source.Parameters;
+
+    public float GetShapeParam(string key, float defaultValue)
     {
-        get => GetShapeParam("CornerRadius", 0.05f);
-        set
-        {
-            float clamped = Math.Max(0f, value);
-            if (!Equals(GetShapeParam("CornerRadius", 0.05f), clamped))
-            {
-                ShapeParameters["CornerRadius"] = clamped;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        return GetParam(key, defaultValue);
     }
 
-    /// <summary>X-radius of Ellipse / Arc shapes.</summary>
-    public float RadiusX
+    public void SetShapeParam(string key, float value)
     {
-        get => GetShapeParam("RadiusX", 0.15f);
-        set
-        {
-            float clamped = Math.Max(0.001f, value);
-            if (!Equals(GetShapeParam("RadiusX", 0.15f), clamped))
-            {
-                ShapeParameters["RadiusX"] = clamped;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        SetParam(key, value);
+        OnPropertyChanged(nameof(Parameters));
+        _owner.RequestPreviewRefresh();
     }
 
-    /// <summary>Y-radius of Ellipse / Arc shapes.</summary>
-    public float RadiusY
+    // ── Transform property accessors (used by interactive editor) ──
+
+    public float RelativeX
     {
-        get => GetShapeParam("RadiusY", 0.15f);
-        set
-        {
-            float clamped = Math.Max(0.001f, value);
-            if (!Equals(GetShapeParam("RadiusY", 0.15f), clamped))
-            {
-                ShapeParameters["RadiusY"] = clamped;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        get => GetParam("RelativeX", 0.5f);
+        set { SetParam("RelativeX", Math.Clamp(value, 0f, 1f)); _owner.RequestPreviewRefresh(); }
     }
 
-    // ── Arc-specific parameters ─────────────────────────────
-
-    /// <summary>Center X of Arc shapes.</summary>
-    public float ArcCenterX
+    public float RelativeY
     {
-        get => GetShapeParam("CenterX", 0.5f);
-        set
-        {
-            if (!Equals(GetShapeParam("CenterX", 0.5f), value))
-            {
-                ShapeParameters["CenterX"] = value;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        get => GetParam("RelativeY", 0.5f);
+        set { SetParam("RelativeY", Math.Clamp(value, 0f, 1f)); _owner.RequestPreviewRefresh(); }
     }
 
-    /// <summary>Center Y of Arc shapes.</summary>
-    public float ArcCenterY
+    public float Rotation
     {
-        get => GetShapeParam("CenterY", 0.5f);
-        set
-        {
-            if (!Equals(GetShapeParam("CenterY", 0.5f), value))
-            {
-                ShapeParameters["CenterY"] = value;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        get => GetParam("Rotation", 0f);
+        set { SetParam("Rotation", value); _owner.RequestPreviewRefresh(); }
     }
 
-    /// <summary>Start angle (radians) of Arc shapes.</summary>
-    public float ArcStartAngle
+    public int LayerIndex
     {
-        get => GetShapeParam("StartAngle", 0f);
-        set
-        {
-            if (!Equals(GetShapeParam("StartAngle", 0f), value))
-            {
-                ShapeParameters["StartAngle"] = value;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
+        get => _source.Index;
+        set { _source.Index = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
     }
 
-    /// <summary>Sweep angle (radians) of Arc shapes.</summary>
-    public float ArcSweepAngle
-    {
-        get => GetShapeParam("SweepAngle", MathF.PI);
-        set
-        {
-            if (!Equals(GetShapeParam("SweepAngle", MathF.PI), value))
-            {
-                ShapeParameters["SweepAngle"] = value;
-                OnPropertyChanged();
-                _owner.RequestPreviewRefresh();
-                _owner.RequestComponentClipsRebuild();
-            }
-        }
-    }
-
-    // ── Line parameters ─────────────────────────────────────
-
-    public float LineX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float LineY1 { get => GetShapeParam("Y1", 0.1f); set { if (!Equals(GetShapeParam("Y1", 0.1f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float LineX2 { get => GetShapeParam("X2", 0.9f); set { if (!Equals(GetShapeParam("X2", 0.9f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float LineY2 { get => GetShapeParam("Y2", 0.9f); set { if (!Equals(GetShapeParam("Y2", 0.9f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-
-    // ── Cubic Bezier parameters ─────────────────────────────
-
-    public float CubicX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicY1 { get => GetShapeParam("Y1", 0.3f); set { if (!Equals(GetShapeParam("Y1", 0.3f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicX2 { get => GetShapeParam("X2", 0.3f); set { if (!Equals(GetShapeParam("X2", 0.3f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicY2 { get => GetShapeParam("Y2", 0.7f); set { if (!Equals(GetShapeParam("Y2", 0.7f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicX3 { get => GetShapeParam("X3", 0.7f); set { if (!Equals(GetShapeParam("X3", 0.7f), value)) { ShapeParameters["X3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicY3 { get => GetShapeParam("Y3", 0.3f); set { if (!Equals(GetShapeParam("Y3", 0.3f), value)) { ShapeParameters["Y3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicX4 { get => GetShapeParam("X4", 0.9f); set { if (!Equals(GetShapeParam("X4", 0.9f), value)) { ShapeParameters["X4"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float CubicY4 { get => GetShapeParam("Y4", 0.7f); set { if (!Equals(GetShapeParam("Y4", 0.7f), value)) { ShapeParameters["Y4"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-
-    // ── Quadratic Bezier parameters ─────────────────────────
-
-    public float QuadX1 { get => GetShapeParam("X1", 0.1f); set { if (!Equals(GetShapeParam("X1", 0.1f), value)) { ShapeParameters["X1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float QuadY1 { get => GetShapeParam("Y1", 0.1f); set { if (!Equals(GetShapeParam("Y1", 0.1f), value)) { ShapeParameters["Y1"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float QuadX2 { get => GetShapeParam("X2", 0.5f); set { if (!Equals(GetShapeParam("X2", 0.5f), value)) { ShapeParameters["X2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float QuadY2 { get => GetShapeParam("Y2", 0.9f); set { if (!Equals(GetShapeParam("Y2", 0.9f), value)) { ShapeParameters["Y2"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float QuadX3 { get => GetShapeParam("X3", 0.9f); set { if (!Equals(GetShapeParam("X3", 0.9f), value)) { ShapeParameters["X3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
-    public float QuadY3 { get => GetShapeParam("Y3", 0.1f); set { if (!Equals(GetShapeParam("Y3", 0.1f), value)) { ShapeParameters["Y3"] = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); _owner.RequestComponentClipsRebuild(); } } }
+    // ── Duration ────────────────────────────────────────────
 
     public uint DurationInFrames
     {
-        get => _source.Timeline.DurationInFrames;
+        get => EditorDurationInFrames;
         set
         {
-            if (_source.Timeline.DurationInFrames != value)
+            if (EditorDurationInFrames != value)
             {
-                _source.Timeline.DurationInFrames = Math.Max(1, value);
+                EditorDurationInFrames = Math.Max(1, value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(DurationText));
                 _owner.InvalidateTimeline();
@@ -677,147 +523,67 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public string DurationText => $"{DurationInFrames} frames";
 
+    // ── Tracks ──────────────────────────────────────────────
+
     public ObservableCollection<AnimationTrackItem> Tracks { get; } = new();
     public int TrackCount => Tracks.Count;
 
-    // ── Shape parameter accessors ───────────────────────────
-
-    public Dictionary<string, float> ShapeParameters => _source.Definition.ShapeParameters;
-
-    public float GetShapeParam(string key, float defaultValue)
+    public void RebuildTracks()
     {
-        if (ShapeParameters.TryGetValue(key, out float value))
-            return value;
-        return defaultValue;
-    }
+        Tracks.Clear();
 
-    public void SetShapeParam(string key, float value)
-    {
-        ShapeParameters[key] = value;
-        OnPropertyChanged(nameof(ShapeParameters));
-        _owner.RequestPreviewRefresh();
-    }
+        var grouped = _source.AnimationFrames
+            .Where(kf => !string.IsNullOrWhiteSpace(kf.TargetFieldId))
+            .GroupBy(kf => kf.TargetFieldId);
 
-    // ── Transform property accessors ────────────────────────
+        foreach (var group in grouped)
+        {
+            var fieldDisplayName = _source.AnimatableFields?
+                .GetValueOrDefault(group.Key)?.DisplayName ?? group.Key;
+            var track = new AnimationTrackItem(this, group.Key, fieldDisplayName);
+            track.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(AnimationTrackItem.KeyFrameCount))
+                    _owner.InvalidateTimeline();
+            };
+            Tracks.Add(track);
+        }
 
-    public float RelativeX
-    {
-        get => _source.Definition.RelativeX;
-        set { _source.Definition.RelativeX = Math.Clamp(value, 0f, 1f); OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public float RelativeY
-    {
-        get => _source.Definition.RelativeY;
-        set { _source.Definition.RelativeY = Math.Clamp(value, 0f, 1f); OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public float Rotation
-    {
-        get => _source.Definition.Rotation;
-        set { _source.Definition.Rotation = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public int LayerIndex
-    {
-        get => _source.Definition.LayerIndex;
-        set { _source.Definition.LayerIndex = value; OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    // ── Visual property accessors ───────────────────────────
-
-    public ushort StrokeR
-    {
-        get => _source.Definition.StrokeR;
-        set { _source.Definition.StrokeR = value; OnPropertyChanged(); NotifyColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public ushort StrokeG
-    {
-        get => _source.Definition.StrokeG;
-        set { _source.Definition.StrokeG = value; OnPropertyChanged(); NotifyColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public ushort StrokeB
-    {
-        get => _source.Definition.StrokeB;
-        set { _source.Definition.StrokeB = value; OnPropertyChanged(); NotifyColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public float StrokeA
-    {
-        get => _source.Definition.StrokeA;
-        set { _source.Definition.StrokeA = Math.Clamp(value, 0f, 1f); OnPropertyChanged(); NotifyColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public float Thickness
-    {
-        get => _source.Definition.Thickness;
-        set { _source.Definition.Thickness = Math.Max(0, value); OnPropertyChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public ushort FillR
-    {
-        get => _source.Definition.FillR;
-        set { _source.Definition.FillR = value; OnPropertyChanged(); NotifyFillColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public ushort FillG
-    {
-        get => _source.Definition.FillG;
-        set { _source.Definition.FillG = value; OnPropertyChanged(); NotifyFillColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public ushort FillB
-    {
-        get => _source.Definition.FillB;
-        set { _source.Definition.FillB = value; OnPropertyChanged(); NotifyFillColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    public float FillA
-    {
-        get => _source.Definition.FillA;
-        set { _source.Definition.FillA = Math.Clamp(value, 0f, 1f); OnPropertyChanged(); NotifyFillColorChanged(); _owner.RequestPreviewRefresh(); }
-    }
-
-    // ── Color preview helpers ────────────────────────────────
-
-    public Color StrokeColorPreview => Color.FromRgba(StrokeR, StrokeG, StrokeB, (int)Math.Round(StrokeA * 255));
-    public string StrokeColorHex => $"#{StrokeR:X2}{StrokeG:X2}{StrokeB:X2}";
-    public Color FillColorPreview => Color.FromRgba(FillR, FillG, FillB, (int)Math.Round(FillA * 255));
-    public string FillColorHex => $"#{FillR:X2}{FillG:X2}{FillB:X2}";
-
-    private void NotifyColorChanged()
-    {
-        OnPropertyChanged(nameof(StrokeColorPreview));
-        OnPropertyChanged(nameof(StrokeColorHex));
-    }
-
-    private void NotifyFillColorChanged()
-    {
-        OnPropertyChanged(nameof(FillColorPreview));
-        OnPropertyChanged(nameof(FillColorHex));
+        OnPropertyChanged(nameof(TrackCount));
     }
 
     // ── Track management ────────────────────────────────────
 
-    public void AddTrack(AnimationTrack track)
+    public void AddTrack(string targetFieldId)
     {
-        _source.Timeline.Tracks.Add(track);
+        var field = _source.AnimatableFields?.GetValueOrDefault(targetFieldId) as AnimatableField;
+        float defaultValue = field is not null
+            ? (field.MinimumValue + field.MaximumValue) / 2f
+            : 0.5f;
 
-        var trackItem = new AnimationTrackItem(track, _owner);
-        trackItem.PropertyChanged += (_, _) => _owner.InvalidateTimeline();
-        Tracks.Add(trackItem);
+        var kf1 = new VectorAnimationKeyFrame(0f, defaultValue, EasingMode.Linear);
+        kf1.TargetField = field;
+        var kf2 = new VectorAnimationKeyFrame(1f, defaultValue, EasingMode.Linear);
+        kf2.TargetField = field;
 
+        _source.AnimationFrames.Add(kf1);
+        _source.AnimationFrames.Add(kf2);
+
+        RebuildTracks();
         OnPropertyChanged(nameof(TrackCount));
         _owner.InvalidateTimeline();
     }
 
     public void RemoveTrack(AnimationTrackItem trackItem)
     {
-        _source.Timeline.Tracks.Remove(trackItem.Source);
-        Tracks.Remove(trackItem);
+        var toRemove = _source.AnimationFrames
+            .Where(kf => kf.TargetFieldId == trackItem.TargetFieldId)
+            .ToList();
 
+        foreach (var kf in toRemove)
+            _source.AnimationFrames.Remove(kf);
+
+        Tracks.Remove(trackItem);
         OnPropertyChanged(nameof(TrackCount));
         _owner.InvalidateTimeline();
     }
