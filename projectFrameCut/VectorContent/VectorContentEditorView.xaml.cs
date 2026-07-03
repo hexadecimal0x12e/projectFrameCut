@@ -11,7 +11,9 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
+using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Shared;
+using Point = projectFrameCut.Drawing.Vector.Point;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -184,6 +186,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void OnChangesCancelledForward(object? sender, EventArgs e) =>
         ChangesCancelled?.Invoke(this, EventArgs.Empty);
 
+    private void OnComponentsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        SelectedComponents.Clear();
+        if (sender is CollectionView cv && cv.SelectedItems is not null)
+        {
+            foreach (var item in cv.SelectedItems.OfType<VectorComponentItem>())
+                SelectedComponents.Add(item);
+        }
+
+        OnPropertyChanged(nameof(CanGroupComponents));
+        OnPropertyChanged(nameof(CanUngroupComponent));
+        if (GroupComponentsCommand is Command groupCmd) groupCmd.ChangeCanExecute();
+        if (UngroupComponentCommand is Command ungroupCmd) ungroupCmd.ChangeCanExecute();
+    }
+
     // ═══════════════════════════════════════════════════════════
     // Properties — INotifyPropertyChanged
     // ═══════════════════════════════════════════════════════════
@@ -340,12 +357,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 OnPropertyChanged(nameof(CanRemoveTrack));
                 OnPropertyChanged(nameof(CanAddKeyFrame));
                 OnPropertyChanged(nameof(Tracks));
+                OnPropertyChanged(nameof(CanGroupComponents));
+                OnPropertyChanged(nameof(CanUngroupComponent));
                 _timelineInvalidateAction?.Invoke();
             }
         }
     }
 
+    /// <summary>All currently selected components in the list (supports multi-select for grouping).</summary>
+    public ObservableCollection<VectorComponentItem> SelectedComponents { get; } = new();
+
     public bool HasSelectedComponent => SelectedComponent is not null;
+
+    public bool CanGroupComponents => SelectedComponents.Count >= 2 && SelectedComponents.All(c => c.Source is not ComponentGroup);
+
+    public bool CanUngroupComponent => SelectedComponents.Count == 1 && SelectedComponent?.Source is ComponentGroup;
 
     /// <summary>Whether there is an SVG source picture with elements.</summary>
     public bool HasSvgSource => _sourcePicture is { Elements.Count: > 0 };
@@ -383,6 +409,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public ICommand CancelCommand { get; private set; } = null!;
     public ICommand AddComponentCommand { get; private set; } = null!;
     public ICommand RemoveComponentCommand { get; private set; } = null!;
+    public ICommand GroupComponentsCommand { get; private set; } = null!;
+    public ICommand UngroupComponentCommand { get; private set; } = null!;
     public ICommand ImportSvgCommand { get; private set; } = null!;
     public ICommand DeleteKeyFrameCommand { get; private set; } = null!;
 
@@ -397,6 +425,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         CancelCommand = new Command(Cancel);
         AddComponentCommand = new Command<string>(AddComponent);
         RemoveComponentCommand = new Command(RemoveComponent);
+        GroupComponentsCommand = new Command(GroupComponents, () => CanGroupComponents);
+        UngroupComponentCommand = new Command(UngroupComponent, () => CanUngroupComponent);
         ImportSvgCommand = new Command(async () => await ImportSvg());
         DeleteKeyFrameCommand = new Command(DeleteKeyFrame);
     }
@@ -662,6 +692,145 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     }
 
     /// <summary>
+    /// Groups the currently selected components into a new <see cref="ComponentGroup"/>.
+    /// The group captures the current bounding box as its reference frame.
+    /// </summary>
+    private void GroupComponents()
+    {
+        if (SelectedComponents.Count < 2) return;
+        if (SelectedComponents.Any(c => c.Source is ComponentGroup)) return;
+
+        var itemsToGroup = SelectedComponents.ToList();
+        var sourcesToGroup = itemsToGroup.Select(vm => vm.Source).ToList();
+
+        // Compute the union bounds of the selected components at the current progress.
+        var bounds = ComputeComponentBounds(sourcesToGroup);
+        if (!bounds.IsValid)
+        {
+            // Fallback to a small default centered on the first component.
+            bounds = (sourcesToGroup[0].Parameters.GetFloat("RelativeX", 0.5f),
+                      sourcesToGroup[0].Parameters.GetFloat("RelativeY", 0.5f),
+                      0.1f, 0.1f, true);
+        }
+
+        float groupCenterX = bounds.relX + bounds.width / 2f;
+        float groupCenterY = bounds.relY + bounds.height / 2f;
+
+        var group = new ComponentGroup
+        {
+            Name = $"Group {Components.Count(c => c.Source is ComponentGroup) + 1}",
+            Index = itemsToGroup.Min(vm => vm.Source.Index),
+        };
+        group.Parameters["RelativeX"] = groupCenterX;
+        group.Parameters["RelativeY"] = groupCenterY;
+        group.Parameters["Width"] = bounds.width;
+        group.Parameters["Height"] = bounds.height;
+        group.SetInitialBounds(groupCenterX, groupCenterY, bounds.width, bounds.height);
+        group.SetChildren(sourcesToGroup);
+
+        foreach (var item in itemsToGroup)
+        {
+            _editingComponents.Remove(item.Source);
+            Components.Remove(item);
+        }
+
+        _editingComponents.Add(group);
+        var groupItem = new VectorComponentItem(group, this);
+        Components.Add(groupItem);
+
+        SelectedComponents.Clear();
+        ComponentsListView.SelectedItems?.Clear();
+        SelectedComponent = groupItem;
+
+        RebuildComponentClips();
+        _ = RefreshInteractivePreviewsAsync();
+    }
+
+    /// <summary>
+    /// Ungroups the selected <see cref="ComponentGroup"/> back into individual components.
+    /// </summary>
+    private void UngroupComponent()
+    {
+        if (SelectedComponent?.Source is not ComponentGroup group) return;
+
+        var groupItem = SelectedComponent;
+        var children = group.Children.ToList();
+
+        _editingComponents.Remove(group);
+        Components.Remove(groupItem);
+
+        foreach (var child in children)
+        {
+            _editingComponents.Add(child);
+            Components.Add(new VectorComponentItem(child, this));
+        }
+
+        SelectedComponents.Clear();
+        ComponentsListView.SelectedItems?.Clear();
+        SelectedComponent = Components.FirstOrDefault(c => children.Contains(c.Source));
+
+        RebuildComponentClips();
+        _ = RefreshInteractivePreviewsAsync();
+    }
+
+    private (float relX, float relY, float width, float height, bool IsValid) ComputeComponentBounds(IReadOnlyList<IVectorComponent> components)
+    {
+        if (components.Count == 0) return (0f, 0f, 0f, 0f, false);
+
+        uint duration = Math.Max(1, _clip.Duration);
+        uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(0, duration - 1));
+        float progress = duration <= 1 ? 0f : Math.Clamp(currentFrame / (float)(duration - 1), 0f, 1f);
+
+        float minX = float.MaxValue, minY = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue;
+        bool found = false;
+
+        foreach (var component in components)
+        {
+            var elements = component.ComputeAll(progress);
+            foreach (var element in elements)
+            {
+                var segments = element.Draw();
+                if (segments is null) continue;
+
+                foreach (var segment in segments)
+                {
+                    var points = GetSegmentPoints(segment);
+                    foreach (var pt in points)
+                    {
+                        minX = Math.Min(minX, pt.X);
+                        minY = Math.Min(minY, pt.Y);
+                        maxX = Math.Max(maxX, pt.X);
+                        maxY = Math.Max(maxY, pt.Y);
+                        found = true;
+                    }
+                }
+            }
+        }
+
+        if (!found) return (0f, 0f, 0f, 0f, false);
+
+        return (minX, minY, maxX - minX, maxY - minY, true);
+    }
+
+    private static IEnumerable<Point> GetSegmentPoints(VectorSegment segment)
+    {
+        return segment switch
+        {
+            StraightLineVectorSegment l => [new Point(l.X1, l.Y1), new Point(l.X2, l.Y2)],
+            RoundedRectangleVectorSegment rr => [new Point(rr.X, rr.Y), new Point(rr.X + rr.Width, rr.Y + rr.Height)],
+            RectangleVectorSegment r => [new Point(r.X, r.Y), new Point(r.X + r.Width, r.Y + r.Height)],
+            EllipseVectorSegment e => [new Point(e.X - e.RadiusX, e.Y - e.RadiusY), new Point(e.X + e.RadiusX, e.Y + e.RadiusY)],
+            ArcVectorSegment a => [new Point(a.X - a.RadiusX, a.Y - a.RadiusY), new Point(a.X + a.RadiusX, a.Y + a.RadiusY)],
+            CubicBezierVectorSegment b => [new Point(b.X1, b.Y1), new Point(b.X2, b.Y2), new Point(b.X3, b.Y3), new Point(b.X4, b.Y4)],
+            QuadraticBezierVectorSegment q => [new Point(q.X1, q.Y1), new Point(q.X2, q.Y2), new Point(q.X3, q.Y3)],
+            PolygonVectorSegment p => p.Points,
+            PolylineVectorSegment p => p.Points,
+            _ => Array.Empty<Point>(),
+        };
+    }
+
+    /// <summary>
     /// Called by VectorComponentItem when a shape property changes
     /// and the preview needs to be refreshed.
     /// </summary>
@@ -703,41 +872,288 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             if (svgPicture is null || svgPicture.Elements.Count == 0) return;
 
             var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
+            var handlerCache = EnsureHandlerCache();
 
-            // Create a component with ImportedSvg type through the plugin system
-            using var doc = JsonDocument.Parse($$"""
+            // Convert each SVG element to an IVectorComponent
+            var individualComponents = new List<IVectorComponent>();
+            for (int i = 0; i < svgPicture.Elements.Count; i++)
+            {
+                var component = ConvertElementToComponent(svgPicture.Elements[i], i, handlerCache);
+                if (component is not null)
                 {
-                    "TypeName": "ImportedSvg",
-                    "Id": "{{Guid.NewGuid()}}",
-                    "Name": "{{fileName}}",
-                    "Index": {{Components.Count + 1}},
-                    "FromPlugin": "{{Render.Plugin.InternalPluginBase.InternalPluginBaseID}}"
+                    individualComponents.Add(component);
                 }
-                """);
+            }
 
-            var plugin = Render.Plugin.PluginManager.LoadedPlugins.GetValueOrDefault(
-                Render.Plugin.InternalPluginBase.InternalPluginBaseID);
-            if (plugin is null) return;
+            if (individualComponents.Count == 0) return;
 
-            var component = plugin.VectComponentCreator(doc.RootElement);
-            if (component is null) return;
+            // Wrap all components in a group for unified movement / scaling / rotation
+            var group = WrapComponentsInGroup(individualComponents, fileName);
+            if (group is null) return;
 
-            _editingComponents.Add(component);
+            _editingComponents.Add(group);
 
-            var item = new VectorComponentItem(component, this)
+            var item = new VectorComponentItem(group, this)
             {
                 EditorSourceFilePath = filePath,
-                EditorCachedElements = svgPicture.Elements.ToList(),
             };
             Components.Add(item);
             SelectedComponent = item;
 
+            RebuildComponentClips();
             _ = RefreshInteractivePreviewsAsync();
         }
         catch (Exception ex)
         {
             Log(ex, $"Failed to import SVG from '{filePath}'", this);
         }
+    }
+
+    /// <summary>
+    /// Converts a single SVG <see cref="VectorCanvasElement"/> to an <see cref="IVectorComponent"/>
+    /// by inspecting the drawn segments and dispatching to the matching component type.
+    /// </summary>
+    private IVectorComponent? ConvertElementToComponent(
+        VectorCanvasElement element, int index,
+        Dictionary<string, IVectorComponentHandler> handlerCache)
+    {
+        var segments = element.Draw();
+        if (segments is null || segments.Length == 0) return null;
+
+        // Multi-segment elements are rare; we create one component per segment.
+        // For the common case (single segment), this loop runs once.
+        // If multiple segments exist, we only process the first one — the caller
+        // should iterate elements, not individual segments within an element.
+        var seg = segments[0];
+        var visualProps = ExtractVisualProperties(seg);
+
+        string typeName;
+        Dictionary<string, object> shapeParams;
+
+        switch (seg)
+        {
+            case RoundedRectangleVectorSegment rr:
+                typeName = "RoundedRectangle";
+                shapeParams = new Dictionary<string, object>(visualProps)
+                {
+                    ["RelativeX"] = element.RelativeX + rr.X,
+                    ["RelativeY"] = element.RelativeY + rr.Y,
+                    ["Width"] = rr.Width,
+                    ["Height"] = rr.Height,
+                    ["CornerRadius"] = rr.CornerRadius,
+                };
+                break;
+
+            case RectangleVectorSegment r:
+                typeName = "Rectangle";
+                shapeParams = new Dictionary<string, object>(visualProps)
+                {
+                    ["RelativeX"] = element.RelativeX + r.X,
+                    ["RelativeY"] = element.RelativeY + r.Y,
+                    ["Width"] = r.Width,
+                    ["Height"] = r.Height,
+                };
+                break;
+
+            case EllipseVectorSegment e:
+                typeName = "Ellipse";
+                shapeParams = new Dictionary<string, object>(visualProps)
+                {
+                    ["RelativeX"] = element.RelativeX + e.X,
+                    ["RelativeY"] = element.RelativeY + e.Y,
+                    ["RadiusX"] = e.RadiusX,
+                    ["RadiusY"] = e.RadiusY,
+                };
+                break;
+
+            case StraightLineVectorSegment l:
+                typeName = "Line";
+                {
+                    float lcx = (l.X1 + l.X2) / 2f;
+                    float lcy = (l.Y1 + l.Y2) / 2f;
+                    shapeParams = new Dictionary<string, object>(visualProps)
+                    {
+                        ["RelativeX"] = element.RelativeX + lcx,
+                        ["RelativeY"] = element.RelativeY + lcy,
+                        ["X1"] = l.X1 - lcx,
+                        ["Y1"] = l.Y1 - lcy,
+                        ["X2"] = l.X2 - lcx,
+                        ["Y2"] = l.Y2 - lcy,
+                    };
+                }
+                break;
+
+            case CubicBezierVectorSegment b:
+                typeName = "CubicBezier";
+                {
+                    float bcx = (b.X1 + b.X2 + b.X3 + b.X4) / 4f;
+                    float bcy = (b.Y1 + b.Y2 + b.Y3 + b.Y4) / 4f;
+                    shapeParams = new Dictionary<string, object>(visualProps)
+                    {
+                        ["RelativeX"] = element.RelativeX + bcx,
+                        ["RelativeY"] = element.RelativeY + bcy,
+                        ["X1"] = b.X1 - bcx,
+                        ["Y1"] = b.Y1 - bcy,
+                        ["X2"] = b.X2 - bcx,
+                        ["Y2"] = b.Y2 - bcy,
+                        ["X3"] = b.X3 - bcx,
+                        ["Y3"] = b.Y3 - bcy,
+                        ["X4"] = b.X4 - bcx,
+                        ["Y4"] = b.Y4 - bcy,
+                    };
+                }
+                break;
+
+            case QuadraticBezierVectorSegment q:
+                typeName = "QuadraticBezier";
+                {
+                    float qcx = (q.X1 + q.X2 + q.X3) / 3f;
+                    float qcy = (q.Y1 + q.Y2 + q.Y3) / 3f;
+                    shapeParams = new Dictionary<string, object>(visualProps)
+                    {
+                        ["RelativeX"] = element.RelativeX + qcx,
+                        ["RelativeY"] = element.RelativeY + qcy,
+                        ["X1"] = q.X1 - qcx,
+                        ["Y1"] = q.Y1 - qcy,
+                        ["X2"] = q.X2 - qcx,
+                        ["Y2"] = q.Y2 - qcy,
+                        ["X3"] = q.X3 - qcx,
+                        ["Y3"] = q.Y3 - qcy,
+                    };
+                }
+                break;
+
+            case ArcVectorSegment a:
+                typeName = "Arc";
+                shapeParams = new Dictionary<string, object>(visualProps)
+                {
+                    ["RelativeX"] = element.RelativeX + a.X,
+                    ["RelativeY"] = element.RelativeY + a.Y,
+                    ["CenterX"] = 0f,
+                    ["CenterY"] = 0f,
+                    ["RadiusX"] = a.RadiusX,
+                    ["RadiusY"] = a.RadiusY,
+                    ["StartAngle"] = a.StartAngle,
+                    ["SweepAngle"] = a.SweepAngle,
+                };
+                break;
+
+            case PolygonVectorSegment p:
+                typeName = "Polygon";
+                {
+                    var pts = p.Points;
+                    float px = 0f, py = 0f;
+                    if (pts is { Length: > 0 })
+                    {
+                        foreach (var pt in pts) { px += pt.X; py += pt.Y; }
+                        px /= pts.Length;
+                        py /= pts.Length;
+                    }
+                    shapeParams = new Dictionary<string, object>(visualProps)
+                    {
+                        ["RelativeX"] = element.RelativeX + px,
+                        ["RelativeY"] = element.RelativeY + py,
+                        ["Points"] = pts.Select(pt => new Point(pt.X - px, pt.Y - py)).ToList(),
+                    };
+                }
+                break;
+
+            case PolylineVectorSegment pl:
+                typeName = "Polyline";
+                {
+                    var pts = pl.Points;
+                    float px = 0f, py = 0f;
+                    if (pts is { Length: > 0 })
+                    {
+                        foreach (var pt in pts) { px += pt.X; py += pt.Y; }
+                        px /= pts.Length;
+                        py /= pts.Length;
+                    }
+                    shapeParams = new Dictionary<string, object>(visualProps)
+                    {
+                        ["RelativeX"] = element.RelativeX + px,
+                        ["RelativeY"] = element.RelativeY + py,
+                        ["Points"] = pts.Select(pt => new Point(pt.X - px, pt.Y - py)).ToList(),
+                    };
+                }
+                break;
+
+            default:
+                Log(null, $"Unknown SVG segment type '{seg.GetType().Name}' — skipping element.", this);
+                return null;
+        }
+
+        // Apply element-level rotation and layer
+        shapeParams["Rotation"] = element.Rotation;
+        shapeParams["LayerIndex"] = element.LayerIndex;
+
+        if (!handlerCache.TryGetValue(typeName, out var handler))
+        {
+            Log(null, $"No handler found for component type '{typeName}'.", this);
+            return null;
+        }
+
+        var component = handler.Create(shapeParams);
+        component.Name = $"{handler.DisplayName} {index + 1}";
+        return component;
+    }
+
+    /// <summary>
+    /// Extracts stroke, fill, and thickness values from a <see cref="VectorSegment"/>
+    /// into a parameter dictionary suitable for <see cref="IVectorComponentHandler.Create"/>.
+    /// </summary>
+    private static Dictionary<string, object> ExtractVisualProperties(VectorSegment seg)
+    {
+        return new Dictionary<string, object>
+        {
+            ["StrokeR"] = (float)seg.StrokeR,
+            ["StrokeG"] = (float)seg.StrokeG,
+            ["StrokeB"] = (float)seg.StrokeB,
+            ["StrokeA"] = seg.StrokeA,
+            ["FillR"] = (float)seg.FillR,
+            ["FillG"] = (float)seg.FillG,
+            ["FillB"] = (float)seg.FillB,
+            ["FillA"] = seg.FillA,
+            ["Thickness"] = seg.Thickness,
+        };
+    }
+
+    /// <summary>
+    /// Wraps a list of <see cref="IVectorComponent"/>s into a <see cref="ComponentGroup"/>
+    /// that provides unified movement, scaling, and rotation.
+    /// Follows the same pattern as <see cref="GroupComponents"/>.
+    /// </summary>
+    private ComponentGroup? WrapComponentsInGroup(
+        List<IVectorComponent> components, string groupName)
+    {
+        if (components.Count == 0) return null;
+
+        // Compute the union bounds of all components.
+        var bounds = ComputeComponentBounds(components);
+        if (!bounds.IsValid)
+        {
+            // Fallback to a small default centered on the first component.
+            bounds = (components[0].Parameters.GetFloat("RelativeX", 0.5f),
+                      components[0].Parameters.GetFloat("RelativeY", 0.5f),
+                      0.1f, 0.1f, true);
+        }
+
+        float groupCenterX = bounds.relX + bounds.width / 2f;
+        float groupCenterY = bounds.relY + bounds.height / 2f;
+
+        var group = new ComponentGroup
+        {
+            Name = groupName,
+            Index = components.Min(c => c.Index),
+        };
+        group.Parameters["RelativeX"] = groupCenterX;
+        group.Parameters["RelativeY"] = groupCenterY;
+        group.Parameters["Width"] = bounds.width;
+        group.Parameters["Height"] = bounds.height;
+        group.SetInitialBounds(groupCenterX, groupCenterY, bounds.width, bounds.height);
+        group.SetChildren(components);
+
+        return group;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -828,9 +1244,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             float progress = duration <= 1
                 ? 0f
                 : Math.Clamp(currentFrame / (float)(duration - 1), 0f, 1f);
-            var elem = comp.Compute(progress);
-            if (elem is not null)
-                elements.Add(elem);
+            elements.AddRange(comp.ComputeAll(progress));
         }
 
         return elements;
@@ -1126,21 +1540,38 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                     continue;
                 }
 
-                previews[i] = new DynamicPreview.PreparedPreview(
-                    cc.Id,
-                    () =>
-                    {
-                        return DynamicPreview.BuildViewportVectorPreviewView(
+                // ── Rasterization fallback for large ComponentGroups ────────────────
+                // When a ComponentGroup contains many child components, converting every
+                // segment to a MAUI Path object can overload the GPU renderer or exceed
+                // platform path-count limits.  Instead we rasterise the whole set of
+                // elements to a single bitmap and display an Image view.
+                bool shouldRasterize = cc.Component is ComponentGroup group &&
+                    group.Children.Count >= DynamicPreview.GroupRasterizationChildThreshold;
+
+                if (shouldRasterize)
+                {
+                    previews[i] = new DynamicPreview.PreparedPreview(
+                        cc.Id,
+                        () => DynamicPreview.BuildRasterizedGroupPreviewView(
                             elements,
-                            canvasW,
-                            canvasH,
-                            viewportX,
-                            viewportY,
-                            viewportW,
-                            viewportH);
-                    },
-                    errorMessage: null,
-                    source: cc);
+                            canvasW, canvasH,
+                            viewportX, viewportY,
+                            viewportW, viewportH),
+                        errorMessage: null,
+                        source: cc);
+                }
+                else
+                {
+                    previews[i] = new DynamicPreview.PreparedPreview(
+                        cc.Id,
+                        () => DynamicPreview.BuildViewportVectorPreviewView(
+                            elements,
+                            canvasW, canvasH,
+                            viewportX, viewportY,
+                            viewportW, viewportH),
+                        errorMessage: null,
+                        source: cc);
+                }
             }
 
             await InteractiveEditor.UpdateClips(
@@ -1444,6 +1875,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         out float scaleX,
         out float scaleY)
     {
+        originX = originY = 0f;
+        scaleX = scaleY = 1f;
+
+        // Groups do not have a single element transform for shape handles.
+        if (component.Source is ComponentGroup)
+        {
+            return false;
+        }
+
         float canvasW = Math.Max(1, PreviewWidth);
         float canvasH = Math.Max(1, PreviewHeight);
         uint frame = GetCurrentFrameNumber();
@@ -1455,8 +1895,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var element = component.Source.Compute(progress);
         if (element is null)
         {
-            originX = originY = 0f;
-            scaleX = scaleY = 1f;
             return false;
         }
 
@@ -1527,10 +1965,18 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var component = SelectedComponent;
         if (component is null || !component.IsShapeEditable) return;
 
-        var handler = GetHandlerForType(component.TypeName);
-        if (handler is null) return;
+        PropertyPanelBuilder builder;
+        if (component.Source is ComponentGroup group)
+        {
+            builder = CreateGroupPropertyPanelBuilder(group);
+        }
+        else
+        {
+            var handler = GetHandlerForType(component.TypeName);
+            if (handler is null) return;
+            builder = handler.CreatePropertyUI(component.Source);
+        }
 
-        var builder = handler.CreatePropertyUI(component.Source);
         _currentPropertyBuilder = builder;
         builder.PropertyChanged += OnPropertyPanelChanged;
 
@@ -1543,6 +1989,25 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         });
     }
 
+    private static PropertyPanelBuilder CreateGroupPropertyPanelBuilder(ComponentGroup group)
+    {
+        var builder = new PropertyPanelBuilder();
+        builder.AddCollapsibleSection("组属性", b =>
+        {
+            b.AddSlider("RelativeX", "X:", 0.0, 1.0, group.Parameters.GetFloat("RelativeX", 0.5f),
+                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+            b.AddSlider("RelativeY", "Y:", 0.0, 1.0, group.Parameters.GetFloat("RelativeY", 0.5f),
+                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+            b.AddSlider("Width", "宽度:", 0.0, 2.0, group.Parameters.GetFloat("Width", 0.3f),
+                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+            b.AddSlider("Height", "高度:", 0.0, 2.0, group.Parameters.GetFloat("Height", 0.3f),
+                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+            b.AddSlider("Rotation", "旋转:", -3.1416, 3.1416, group.Parameters.GetFloat("Rotation", 0.0f),
+                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+        }, defaultExpanded: true);
+        return builder;
+    }
+
     /// <summary>
     /// Handles property changes from the dynamic property panel.
     /// Delegates to the handler's <see cref="IVectorComponentHandler.HandlePropertyChange"/>
@@ -1553,10 +2018,17 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var component = SelectedComponent;
         if (component is null) return;
 
-        var handler = GetHandlerForType(component.TypeName);
-        if (handler is null) return;
+        if (component.Source is ComponentGroup group)
+        {
+            group.Parameters[args.Id] = args.Value ?? 0f;
+        }
+        else
+        {
+            var handler = GetHandlerForType(component.TypeName);
+            if (handler is null) return;
+            handler.HandlePropertyChange(component.Source, args);
+        }
 
-        handler.HandlePropertyChange(component.Source, args);
         RequestPreviewRefresh();
         RequestComponentClipsRebuild();
     }

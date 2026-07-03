@@ -145,6 +145,16 @@ public sealed class DynamicPreview : IDisposable
     public static bool DisableVectorPreviewPaths { get; set; } = false;
 
     /// <summary>
+    /// When a <see cref="Render.VectorContent.Components.ComponentGroup"/> has more child components
+    /// than this threshold, its preview is rasterized to a bitmap instead of being split into
+    /// individual MAUI Path objects. This prevents GPU overload or platform path-count limits
+    /// when a group contains a very large number of sub-components (e.g. an imported SVG with
+    /// hundreds of paths). Set to <c>int.MaxValue</c> to disable early rasterization entirely.
+    /// Default is 50.
+    /// </summary>
+    public static int GroupRasterizationChildThreshold { get; set; } = 128;
+
+    /// <summary>
     /// Divisor for preview resolution. 1 = full resolution, 2 = half, etc.
     /// Reduces rendering load by scaling down canvas dimensions.
     /// </summary>
@@ -2506,6 +2516,175 @@ public sealed class DynamicPreview : IDisposable
     }
 
     #endregion
+
+    // ═══════════════════════════════════════════════════════════
+    // Rasterization fallback for large ComponentGroup previews
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Rasterises a set of <see cref="VectorCanvasElement"/>s to a bitmap and crops to the
+    /// specified viewport rectangle.  Used as a drop-in replacement for
+    /// <see cref="BuildViewportVectorPreviewView"/> when a <see cref="Render.VectorContent.Components.ComponentGroup"/>
+    /// contains more children than <see cref="GroupRasterizationChildThreshold"/>.
+    /// The resulting <see cref="Image"/> view carries a single bitmap rather than N individual
+    /// Path objects, avoiding GPU / platform path-count limits.
+    /// </summary>
+    internal static View BuildRasterizedGroupPreviewView(
+        IReadOnlyList<VectorCanvasElement> elements,
+        int canvasWidth, int canvasHeight,
+        int viewportX, int viewportY,
+        int viewportWidth, int viewportHeight)
+    {
+        int safeW = Math.Max(1, canvasWidth);
+        int safeH = Math.Max(1, canvasHeight);
+
+        var vectorPicture = new VectorPicture { Elements = elements.ToList() };
+
+        IPicture? fullRaster = null;
+        try
+        {
+            fullRaster = IVectorContentClip.GlobalDefaultRasterizer.Convert(
+                vectorPicture, safeW, safeH, false,
+                IVectorContentClip.GlobalDefaultAntiAliasMode);
+
+            if (fullRaster is null || fullRaster.Disposed)
+            {
+                return CreateEmptyGroupPreviewView(viewportWidth, viewportHeight);
+            }
+
+            // Crop to viewport region.  If the viewport is within canvas bounds we
+            // can extract a sub-region; otherwise fall back to a scaled preview.
+            int vpX = Math.Clamp(viewportX, 0, safeW - 1);
+            int vpY = Math.Clamp(viewportY, 0, safeH - 1);
+            int vpW = Math.Min(viewportWidth, safeW - vpX);
+            int vpH = Math.Min(viewportHeight, safeH - vpY);
+
+            if (vpW <= 0 || vpH <= 0)
+            {
+                return CreateEmptyGroupPreviewView(viewportWidth, viewportHeight);
+            }
+
+            var cropped = CropPictureRegion(fullRaster, vpX, vpY, viewportWidth, viewportHeight);
+
+            return new Image
+            {
+                Source = cropped.ToImageSource(),
+                WidthRequest = Math.Max(1, viewportWidth),
+                HeightRequest = Math.Max(1, viewportHeight),
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Start,
+                Aspect = Aspect.Fill,
+                InputTransparent = true,
+            };
+        }
+        catch (Exception ex)
+        {
+            Log($"Rasterized group preview failed (elements={elements.Count}, " +
+                $"viewport={viewportWidth}×{viewportHeight}): {ex.Message}");
+            return CreateEmptyGroupPreviewView(viewportWidth, viewportHeight);
+        }
+        finally
+        {
+            if (fullRaster is not null && !fullRaster.Disposed)
+            {
+                fullRaster.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns a transparent placeholder Image for the group preview when
+    /// rasterization fails or produces no visible content.
+    /// </summary>
+    private static View CreateEmptyGroupPreviewView(int width, int height)
+    {
+        return new Image
+        {
+            WidthRequest = Math.Max(1, width),
+            HeightRequest = Math.Max(1, height),
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start,
+            InputTransparent = true,
+        };
+    }
+
+    /// <summary>
+    /// Extracts a rectangular region from <paramref name="source"/> and returns it as a new
+    /// <see cref="Picture8bpp"/> of the requested <paramref name="w"/> × <paramref name="h"/> size.
+    /// The crop rectangle is clamped to the source bounds; pixels outside the source become
+    /// transparent (zero alpha).  If the source uses 16bpp it is first down-converted to 8bpp.
+    /// </summary>
+    private static IPicture CropPictureRegion(IPicture source, int x, int y, int w, int h)
+    {
+        var src8 = (Picture8bpp)source.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+
+        int srcW = src8.Width;
+        int srcH = src8.Height;
+
+        // Clamp crop rectangle to source bounds
+        int cropX = Math.Clamp(x, 0, Math.Max(0, srcW - 1));
+        int cropY = Math.Clamp(y, 0, Math.Max(0, srcH - 1));
+        int cropW = Math.Min(w, srcW - cropX);
+        int cropH = Math.Min(h, srcH - cropY);
+
+        var result = new Picture8bpp(Math.Max(1, w), Math.Max(1, h))
+        {
+            HasAlphaChannel = src8.HasAlphaChannel,
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "CropPictureRegion",
+                    Operator = typeof(DynamicPreview),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        ["SourceWidth"] = srcW,
+                        ["SourceHeight"] = srcH,
+                        ["CropX"] = cropX,
+                        ["CropY"] = cropY,
+                        ["CropWidth"] = cropW,
+                        ["CropHeight"] = cropH,
+                        ["TargetWidth"] = w,
+                        ["TargetHeight"] = h,
+                    },
+                }
+            }
+        };
+
+        if (cropW <= 0 || cropH <= 0)
+            return result; // fully transparent placeholder
+
+        var srcR = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Red);
+        var srcG = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Green);
+        var srcB = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Blue);
+
+        // Fast row-by-row copy for the overlapping region
+        for (int row = 0; row < cropH; row++)
+        {
+            int srcBase = (cropY + row) * srcW + cropX;
+            int dstBase = row * w;
+            Array.Copy(srcR, srcBase, result.r, dstBase, cropW);
+            Array.Copy(srcG, srcBase, result.g, dstBase, cropW);
+            Array.Copy(srcB, srcBase, result.b, dstBase, cropW);
+        }
+
+        if (src8.HasAlphaChannel)
+        {
+            result.a = new float[result.Pixels];
+            var srcA = (float[])src8.GetSpecificChannel(IPicture.ChannelId.Alpha);
+            for (int row = 0; row < cropH; row++)
+            {
+                int srcBase = (cropY + row) * srcW + cropX;
+                int dstBase = row * w;
+                Array.Copy(srcA, srcBase, result.a, dstBase, cropW);
+            }
+
+            // Pixels outside the crop region remain zero alpha (transparent) already.
+        }
+
+        return result;
+    }
 
     public sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 

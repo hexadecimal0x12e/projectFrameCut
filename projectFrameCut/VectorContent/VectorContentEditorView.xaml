@@ -47,9 +47,11 @@
                 <Label Text="Components" FontSize="14" FontAttributes="Bold"
                        TextColor="#D1D5DB" Margin="0,6,0,0" />
 
-                <CollectionView ItemsSource="{Binding Components}"
+                <CollectionView x:Name="ComponentsListView"
+                                ItemsSource="{Binding Components}"
                                 SelectedItem="{Binding SelectedComponent, Mode=TwoWay}"
-                                SelectionMode="Single"
+                                SelectionMode="Multiple"
+                                SelectionChanged="OnComponentsSelectionChanged"
                                 HeightRequest="200">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="local:VectorComponentItem">
@@ -105,6 +107,16 @@
                 <HorizontalStackLayout Spacing="8">
                     <Button Text="Import SVG" Command="{Binding ImportSvgCommand}"
                             BackgroundColor="#2A3A4A" TextColor="#93C5FD"
+                            FontSize="12" Padding="10,4"
+                            CornerRadius="4" />
+                    <Button Text="Group" Command="{Binding GroupComponentsCommand}"
+                            IsEnabled="{Binding CanGroupComponents}"
+                            BackgroundColor="#2A4A3A" TextColor="#86EFAC"
+                            FontSize="12" Padding="10,4"
+                            CornerRadius="4" />
+                    <Button Text="Ungroup" Command="{Binding UngroupComponentCommand}"
+                            IsEnabled="{Binding CanUngroupComponent}"
+                            BackgroundColor="#3A4A2A" TextColor="#D9F99D"
                             FontSize="12" Padding="10,4"
                             CornerRadius="4" />
                     <Button Text="Remove" Command="{Binding RemoveComponentCommand}"

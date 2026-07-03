@@ -1,4 +1,4 @@
-namespace projectFrameCut.InteractableEditor;
+﻿namespace projectFrameCut.InteractableEditor;
 
 /// <summary>
 /// Describes one interactive handle to be drawn on top of a clip overlay.
@@ -6,6 +6,21 @@ namespace projectFrameCut.InteractableEditor;
 /// </summary>
 public readonly struct ShapeHandleDescriptor
 {
+    public ShapeHandleDescriptor(string id, float normalizedX, float normalizedY, Color fillColor, double size) : this()
+    {
+        Id = id;
+        NormalizedX = normalizedX;
+        NormalizedY = normalizedY;
+        FillColor = fillColor;
+        Size = size;
+        HandleGetter = null;
+    }
+
+    public ShapeHandleDescriptor(string id, float normalizedX, float normalizedY, Color fillColor, double size, Func<View>? handleGetter) : this(id, normalizedX, normalizedY, fillColor, size)
+    {
+        HandleGetter = handleGetter;
+    }
+
     /// <summary>Unique identifier within the clip (e.g. "p1", "cp2", "corner-r").</summary>
     public string Id { get; init; }
 
@@ -20,6 +35,11 @@ public readonly struct ShapeHandleDescriptor
 
     /// <summary>Display-pixel size of the handle (default 12).</summary>
     public double Size { get; init; }
+
+    /// <summary>
+    /// Optional: if provided, this function is called to get a custom view to display for the handle.
+    /// </summary>
+    public Func<View>? HandleGetter { get; init; } 
 }
 
 /// <summary>

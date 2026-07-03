@@ -45,7 +45,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         private static readonly AsyncLocal<RenderWorkerState?> _workerState = new();
 
         /// <summary>
-        /// Gets or sets the current worker's rendering state.
+        /// Gets the current worker's rendering state.
         /// This value is per execution context (flows with async/await),
         /// so each worker can report its own status without interfering with others.
         /// Returns null when called outside of a worker thread.
@@ -54,14 +54,28 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         public static RenderWorkerState? WorkerState
         {
             get => _workerState.Value;
-            set => _workerState.Value = value;
+            internal set => _workerState.Value = value;
+        }
+
+        private static readonly AsyncLocal<IPicture?> _frameBuffer = new();
+
+        /// <summary>
+        /// Get the current frame buffer for the rendering operation. This property is used to store the intermediate or final rendered frame as an IPicture object. It is thread-local, meaning each thread has its own value, allowing for safe concurrent rendering operations.
+        /// </summary>
+        /// <remarks>
+        /// Note that while Render by layer is enabled, this value maybe not represent the final frame, but rather the current layer's output. Consumers should be aware of this when accessing the frame buffer during rendering.
+        /// </remarks>
+        public static IPicture? CurrentFrameBuffer
+        {
+            get => _frameBuffer.Value;
+            internal set => _frameBuffer.Value = value;
         }
 
         /// <summary>
         /// Convenience helper: sets the per-thread worker state in one call.
         /// Returns the same state instance so it can be used in an expression.
         /// </summary>
-        public static RenderWorkerState SetWorkerState(uint frame, RenderWorkerStage stage, string? workerName = null, IClip? clip = null)
+        internal static RenderWorkerState SetWorkerState(uint frame, RenderWorkerStage stage, string? workerName = null, IClip? clip = null)
         {
             var state = _workerState.Value;
             if (state is null)
@@ -79,7 +93,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         /// <summary>
         /// Clears the current thread's worker state.
         /// </summary>
-        public static void ClearWorkerState()
+        internal static void ClearWorkerState()
         {
             _workerState.Value = null;
         }

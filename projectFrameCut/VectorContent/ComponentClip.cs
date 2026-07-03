@@ -4,6 +4,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
@@ -262,6 +263,12 @@ public partial class VectorComponentWrapperClip : IClip
         double canvasW = Math.Max(1, ParentCanvasWidth);
         double canvasH = Math.Max(1, ParentCanvasHeight);
 
+        if (Component is ComponentGroup group)
+        {
+            SyncGroupToDefinition(group, canvasW, canvasH);
+            return;
+        }
+
         if (!TryComputePrimaryElementLocalBounds(this, out var localBounds))
         {
             double centerX = TargetX + TargetWidth / 2.0;
@@ -301,6 +308,32 @@ public partial class VectorComponentWrapperClip : IClip
     /// <summary>
     /// Syncs the component's layer index from the clip's <see cref="LayerIndex"/>.
     /// </summary>
+    /// <summary>
+    /// Writes the editor's <see cref="TargetX"/> / <see cref="TargetY"/> / <see cref="TargetWidth"/> / <see cref="TargetHeight"/>
+    /// back to a <see cref="ComponentGroup"/>'s RelativeX/Y/Width/Height parameters.
+    ///
+    /// Width / Height are stored directly as fractions of the canvas so that
+    /// <see cref="SyncFromDefinition"/>'s <see cref="ComponentGroup.ComputeAll"/> produces
+    /// pixel bounds that exactly match the editor's clip rect.  This eliminates the
+    /// feedback loop that occurred when averaging scaleX and scaleY into a single
+    /// uniform scale (which caused the clip to shrink toward the initial size with
+    /// each commit cycle — the "jitter" bug).
+    /// </summary>
+    private void SyncGroupToDefinition(ComponentGroup group, double canvasW, double canvasH)
+    {
+        double centerX = TargetX + TargetWidth / 2.0;
+        double centerY = TargetY + TargetHeight / 2.0;
+
+        // Store the actual pixel rect directly as canvas fractions.
+        // ComponentGroup.ComputeAll uses "Width / InitialWidth" as scaleX, so storing
+        // the direct fraction makes SyncFromDefinition's pixel bounds exactly match
+        // TargetX/TargetY/TargetWidth/TargetHeight — no drift, no feedback loop.
+        group.Parameters["RelativeX"] = (float)Math.Clamp(centerX / canvasW, -4f, 4f);
+        group.Parameters["RelativeY"] = (float)Math.Clamp(centerY / canvasH, -4f, 4f);
+        group.Parameters["Width"] = (float)Math.Max(0.0001d, TargetWidth / canvasW);
+        group.Parameters["Height"] = (float)Math.Max(0.0001d, TargetHeight / canvasH);
+    }
+
     public void SyncLayerToDefinition()
     {
         Component.Index = (int)LayerIndex;
@@ -427,6 +460,11 @@ public partial class VectorComponentWrapperClip : IClip
     /// </summary>
     public static List<VectorCanvasElement> BuildElements(IVectorComponent component, List<VectorCanvasElement>? cachedSvgElements)
     {
+        if (component is ComponentGroup group)
+        {
+            return group.ComputeAll(0f).ToList();
+        }
+
         if (cachedSvgElements is { Count: > 0 })
         {
             return cachedSvgElements.Select(e => e is ShapeCanvasElement shape ? shape.Clone() : e).ToList();
@@ -447,6 +485,11 @@ public partial class VectorComponentWrapperClip : IClip
         VectorComponentWrapperClip clip, uint frame, uint duration)
     {
         float progress = duration <= 1 ? 0f : Math.Clamp(frame / (float)(duration - 1), 0f, 1f);
+
+        if (clip.Component is ComponentGroup group)
+        {
+            return group.ComputeAll(progress).ToList();
+        }
 
         if (clip.CachedSvgElements is { Count: > 0 })
         {

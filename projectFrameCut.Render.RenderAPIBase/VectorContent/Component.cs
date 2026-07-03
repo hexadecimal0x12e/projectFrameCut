@@ -55,5 +55,20 @@ namespace projectFrameCut.Render.RenderAPIBase.VectorContent
         /// </summary>
         /// <returns>The computed <see cref="VectorCanvasElement"/>.</returns>
         public VectorCanvasElement Compute(float index);
+
+        /// <summary>
+        /// Compute all target <see cref="VectorCanvasElement"/>s for this component.
+        /// For simple components this returns a single element; for group components it returns the flattened children.
+        /// </summary>
+        /// <param name="index">Normalized progress [0…1].</param>
+        /// <returns>The computed elements.</returns>
+        public IEnumerable<VectorCanvasElement> ComputeAll(float index)
+        {
+            var element = Compute(index);
+            if (element is not null)
+            {
+                yield return element;
+            }
+        }
     }
 }

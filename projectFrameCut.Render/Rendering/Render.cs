@@ -159,7 +159,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if (IsFrameInClipRange(item, idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
+                    if (item.ContainsFrame(idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
                         clipsForFrame.Add(item);
                     }
@@ -932,7 +932,7 @@ namespace projectFrameCut.Render.Rendering
             if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clipsNeed) || clipsNeed.Length == 0)
             {
                 var sw = Stopwatch.StartNew();
-                var rendered = RenderAFrameInternal(targetFrame, [], null, token);
+                var rendered = RenderAFrameInternal(targetFrame, [], token);
                 if (rendered is not null) SubmitAndFinishFrame(targetFrame, rendered, sw);
                 return;
             }
@@ -1319,7 +1319,7 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 var sw1 = Stopwatch.StartNew();
-                SubmitAndFinishFrame(targetFrame, RenderAFrameInternal(targetFrame, [], null, token), sw1);
+                SubmitAndFinishFrame(targetFrame, RenderAFrameInternal(targetFrame, [], token), sw1);
                 return;
             }
             // 二次检查：在 Remove 成功之后、开始合成之前，确认帧没有被 RenderSpecificFrame 预写入
@@ -1358,7 +1358,6 @@ namespace projectFrameCut.Render.Rendering
             var rendered = RenderAFrameInternal(
                 targetFrame,
                 framesToRender,
-                null,
                 token);
 
             if (rendered is null) // cancelled
@@ -1397,7 +1396,7 @@ namespace projectFrameCut.Render.Rendering
             var clipsNeed = new List<IClip>();
             foreach (var item in Clips ?? [])
             {
-                if (IsFrameInClipRange(item, targetFrame))
+                if (item.ContainsFrame(targetFrame) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                 {
                     clipsNeed.Add(item);
                 }
@@ -1407,7 +1406,6 @@ namespace projectFrameCut.Render.Rendering
                                  .ThenByDescending(x => x.SubLayerIndex)
                                  .ToList();
 
-            var usedFrames = new List<IPicture>();
             var framesToRender = new List<ClipFrameTuple>(clipsNeed.Count);
             var syncPpb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             foreach (var clip in clipsNeed)
@@ -1434,18 +1432,11 @@ namespace projectFrameCut.Render.Rendering
             FramePrepareElapsed[targetFrame] = prep.Elapsed;
 
             var renderSw = Stopwatch.StartNew();
-            var rendered = RenderAFrameInternal(
-                targetFrame,
-                framesToRender,
-                usedFrames: usedFrames,
-                token);
+            var rendered = RenderAFrameInternal(targetFrame, framesToRender, token);
 
             if (rendered is not null)
-                SubmitAndFinishFrame(targetFrame, rendered, renderSw);
-
-            foreach (var pic in usedFrames)
             {
-                try { pic?.Dispose(); } catch { }
+                SubmitAndFinishFrame(targetFrame, rendered, renderSw);
             }
         }
 
@@ -1599,7 +1590,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             // 合成帧（直接复用 RenderAFrameInternal 的合成逻辑）
-            return RenderAFrameInternal(frameIndex, framesToRender, null, token);
+            return RenderAFrameInternal(frameIndex, framesToRender, token);
         }
 
         #endregion
@@ -1703,7 +1694,6 @@ namespace projectFrameCut.Render.Rendering
             int layoutRelativeWidth,
             int layoutRelativeHeight,
             Dictionary<string, object> frameLocalCache,
-            List<IPicture>? usedFrames,
             CancellationToken token)
         {
             if (token.IsCancellationRequested) return null;
@@ -1717,6 +1707,7 @@ namespace projectFrameCut.Render.Rendering
                 _ws.CurrentFrame = targetFrame;
                 _ws.Stage = RenderWorkerStage.ProcessingEffects;
             }
+
 
             try
             {
@@ -1748,6 +1739,7 @@ namespace projectFrameCut.Render.Rendering
 
                         var item = effects[_effectIdx];
                         var computer = PluginManager.CreateComputer(item.NeedComputer);
+                        IRenderContext.CurrentFrameBuffer = frame;
 
                         try
                         {
@@ -1812,6 +1804,7 @@ namespace projectFrameCut.Render.Rendering
                                 case EffectType.SpeedVarianceProvider:
                                 case EffectType.TextEffect:
                                 case EffectType.ContinuousTextEffect:
+                                case EffectType.SourceReplacement:
                                     continue; //they've processed somewhere else
                                 default:
                                     goto notdefined;
@@ -1888,7 +1881,7 @@ namespace projectFrameCut.Render.Rendering
                                 targetPos = new(x, y, w, h, false);
                             }
                         }
-                        else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect)
+                        else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or ISourceReplacementEffect)
                         {
                             //skip here, they've processed somewhere else
                             continue;
@@ -1956,8 +1949,6 @@ namespace projectFrameCut.Render.Rendering
                         var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
                         var computer = PluginManager.CreateComputer(mixer.NeedComputer);
                         var mixResult = mixer.Mix(BlankFrame, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
-                        if (usedFrames is null)
-                            try { frame.Dispose(); } catch { }
                         return mixResult;
                     }
                 }
@@ -1967,8 +1958,6 @@ namespace projectFrameCut.Render.Rendering
                     var computer = PluginManager.CreateComputer(mixer.NeedComputer);
                     var temp = mixer.Mix(currentResult, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
                     currentResult.Dispose();
-                    if (usedFrames is null)
-                        try { frame.Dispose(); } catch { }
                     return temp;
                 }
             }
@@ -1992,7 +1981,6 @@ namespace projectFrameCut.Render.Rendering
         private IPicture? RenderAFrameInternal(
             uint targetFrame,
             List<ClipFrameTuple> clipsNeed,
-            List<IPicture>? usedFrames,
             CancellationToken token)
         {
             IPicture? result = null;
@@ -2009,9 +1997,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (frame == null) continue;
 
-                    usedFrames?.Add(frame);
-
-                    result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, usedFrames, token);
+                    result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, token);
                     if (result is null) return null; // cancelled
                 }
 
@@ -2292,10 +2278,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return result;
                     if (framePic == null) continue;
 
-                    result = ProcessAndCompositeClip(clip, framePic, result, frame,
-                        layoutRelativeWidth, layoutRelativeHeight, frameLocalCache,
-                        usedFrames: null, // layer rendering always disposes frames immediately
-                        token);
+                    result = ProcessAndCompositeClip(clip, framePic, result, frame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, token);
                     if (result is null) return null; // cancelled
                 }
 
@@ -2413,9 +2396,6 @@ namespace projectFrameCut.Render.Rendering
         #endregion
 
         #region misc
-
-        private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
-            => clip.ContainsFrame(targetFrame);
 
         private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
         {

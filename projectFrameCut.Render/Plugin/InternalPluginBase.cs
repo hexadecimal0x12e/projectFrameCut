@@ -275,6 +275,7 @@ public class InternalPluginBase : IPluginBase
             "Arc" => element.Deserialize<ArcComponent>(options)!,
             "Polygon" => element.Deserialize<PolygonComponent>(options)!,
             "Polyline" => element.Deserialize<PolylineComponent>(options)!,
+            "ComponentGroup" => element.Deserialize<ComponentGroup>(options)!,
             _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
     }

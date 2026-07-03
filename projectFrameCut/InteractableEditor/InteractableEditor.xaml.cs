@@ -272,7 +272,7 @@ namespace projectFrameCut.InteractableEditor
             public Guid ClipId { get; init; }
 
             // Dynamic custom shape handles
-            private readonly List<(BoxView View, PanGestureRecognizer Pan, string HandleId, double StartX, double StartY)> _customHandles = new();
+            private readonly List<(View View, PanGestureRecognizer Pan, string HandleId, double StartX, double StartY)> _customHandles = new();
 
             public ClipOverlayState(InteractableEditor owner, Guid clipId, string? displayName = null)
             {
@@ -524,13 +524,16 @@ namespace projectFrameCut.InteractableEditor
                     {
                         var existing = _customHandles[i];
                         AbsoluteLayout.SetLayoutBounds(existing.View, new Rect(hx, hy, size, size));
-                        existing.View.Color = desc.FillColor;
+                        if (desc.HandleGetter is null && existing.View is BoxView boxView)
+                        {
+                            boxView.Color = desc.FillColor;
+                        }
                         existing.View.IsVisible = true;
                         _customHandles[i] = (existing.View, existing.Pan, desc.Id, hx, hy);
                     }
                     else
                     {
-                        var handle = new BoxView
+                        var handle = desc.HandleGetter?.Invoke() ?? new BoxView
                         {
                             WidthRequest = size,
                             HeightRequest = size,
@@ -547,10 +550,21 @@ namespace projectFrameCut.InteractableEditor
                         pan.PanUpdated += (_, e) =>
                         {
                             // Visual tracking: move the handle with the finger
-                            if (e.StatusType == GestureStatus.Running)
+                            switch (e.StatusType)
                             {
-                                AbsoluteLayout.SetLayoutBounds(handle, new Rect(
-                                    startHx + e.TotalX, startHy + e.TotalY, size, size));
+                                case GestureStatus.Started:
+                                    startHx = handle.TranslationX;
+                                    startHy = handle.TranslationY;
+                                    break;
+                                case GestureStatus.Running:
+                                    handle.TranslationX = startHx + e.TotalX;
+                                    handle.TranslationY = startHy + e.TotalY;
+                                    break;
+                                case GestureStatus.Completed:
+                                case GestureStatus.Canceled:
+                                    handle.TranslationX = 0;
+                                    handle.TranslationY = 0;
+                                    break;
                             }
                             dragCallback?.Invoke(handleId, e);
                         };

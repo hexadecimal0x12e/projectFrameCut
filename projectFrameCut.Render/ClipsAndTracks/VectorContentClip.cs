@@ -88,7 +88,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             float progress = CalculateProgress(frameIndex);
             foreach (var component in Components)
             {
-                result.Elements.Add(component.Compute(progress));
+                result.Elements.AddRange(component.ComputeAll(progress));
             }
 
             return result;

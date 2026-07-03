@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
+using projectFrameCut.Render.VectorContent.Components;
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.DraftStuff;
@@ -411,15 +412,20 @@ public class VectorComponentItem : INotifyPropertyChanged
     {
         get
         {
+            if (_source is ComponentGroup group)
+                return group.Children.Count;
             if (IsFromSvg)
                 return EditorCachedElements?.Count ?? 0;
             return 1;
         }
     }
 
-    public string ElementCountText => IsFromSvg
-        ? $"{ElementCount} elements"
-        : "1 shape";
+    public string ElementCountText => _source switch
+    {
+        ComponentGroup group => $"{group.Children.Count} items",
+        _ when IsFromSvg => $"{ElementCount} elements",
+        _ => "1 shape",
+    };
 
     // ── SVG-specific properties ──────────────────────────────
 

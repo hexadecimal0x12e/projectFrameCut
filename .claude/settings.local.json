@@ -31,7 +31,9 @@
       "WebSearch",
       "Bash(git clone *)",
       "PowerShell(git clone *)",
-      "Bash(xgrep -l \"*\" --include=\"*.cs\")"
+      "Bash(xgrep -l \"*\" --include=\"*.cs\")",
+      "Bash(xargs grep -l *)",
+      "PowerShell(xargs grep -l *)"
     ],
     "deny": [
       "Bash(Select-*)",

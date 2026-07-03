@@ -76,6 +76,10 @@ namespace projectFrameCut.Render.Rendering
                             }
                         }
                     }
+                    else if(clip.AlternativeSource is ISourceReplacementEffect sre)
+                    {
+                        frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
+                    }
                     else
                     {
                         frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
