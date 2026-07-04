@@ -1,12 +1,11 @@
-#if ANDROID
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using projectFrameCut.Shared;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
-namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     /// <summary>
     /// OpenGL ES 3.1 compute-shader vector rasterizer.
@@ -19,7 +18,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         private const int WorkGroupSize = 256;
 
         /// <summary>Render primitives using OpenGL ES compute shader.</summary>
-        public static IPicture Render(List<GpuPrimitive> primitives, int width, int height, bool transparentBg)
+        public static IPicture Render(List<GpuPrimitive> primitives, List<float> polygonEdges, int width, int height, bool transparentBg)
         {
             int pc = primitives.Count;
             int pixelCount = width * height;
@@ -72,12 +71,17 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
             var tileOffsetsFloat = ToFloatArray(bins.TileOffsets);
             var tileIndicesFloat = ToFloatArray(bins.TileIndices);
 
+            // Edge buffer for PolygonFill primitives (4 floats per edge).
+            var edgesFloat = polygonEdges.Count > 0 ? polygonEdges.ToArray() : new float[4];
+
             // All SSBOs must have the same element count for GLComputeView.
             // Pad to accommodate the largest buffer (packed output: pixelCount * 4).
             int glPad = Math.Max(packedOutputLen,
-                Math.Max(primInfoLen, Math.Max(primDataLen, Math.Max(tileOffsetsFloat.Length, tileIndicesFloat.Length))));
+                Math.Max(primInfoLen, Math.Max(primDataLen,
+                Math.Max(edgesFloat.Length, Math.Max(tileOffsetsFloat.Length, tileIndicesFloat.Length)))));
             var padInfo = PadArray(primInfoFloat, glPad);
             var padData = PadArray(primDataFloat, glPad);
+            var padEdges = PadArray(edgesFloat, glPad);
             var padTileOffsets = PadArray(tileOffsetsFloat, glPad);
             var padTileIndices = PadArray(tileIndicesFloat, glPad);
 
@@ -99,7 +103,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                         NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                         {
                             ShaderSource = shader,
-                            Inputs = new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices },
+                            Inputs = new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices, padEdges },
                             WidthRequest = 50,
                             HeightRequest = 50,
                             JobID = "OpenGLVectorRasterizer",
@@ -203,6 +207,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 layout(std430, binding = 2) buffer PrimDataBuf { float primData[]; };
                 layout(std430, binding = 3) buffer TileOffsetsBuf { float tileOffsets[]; };
                 layout(std430, binding = 4) buffer TileIndicesBuf { float tileIndices[]; };
+                layout(std430, binding = 5) buffer EdgesBuf { float edges[]; };
                 layout(std430, binding = 6) buffer OutBuf { float outPacked[]; };
 
                 void main()
@@ -216,12 +221,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                     float cx = float(x) + 0.5;
                     float cy = float(y) + 0.5;
 
-                    float pr, pg, pb, pa;
-                    {{'#'}}if {{transparentBg}}
-                        pr = 0.0; pg = 0.0; pb = 0.0; pa = 0.0;
-                    {{'#'}}else
-                        pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
-                    {{'#'}}endif
+                    // Accumulated premultiplied colour + coverage.
+                    float accR = 0.0, accG = 0.0, accB = 0.0, accA = 0.0;
 
                     // Only test primitives that overlap this pixel's tile
                     // instead of every primitive in the scene.
@@ -231,7 +232,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                     int tileStart = int(tileOffsets[tileIdx]);
                     int tileEnd = int(tileOffsets[tileIdx + 1]);
 
-                    for (int ti = tileStart; ti < tileEnd; ti++)
+                    // Front-to-back traversal (tile lists are painter's-algorithm
+                    // ordered, so walk in reverse) with "under" compositing.
+                    for (int ti = tileEnd - 1; ti >= tileStart; ti--)
                     {
                         int p = int(tileIndices[ti]);
                         int type = int(primInfo[p * 2]);
@@ -253,7 +256,40 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
 
                         bool covered = false;
 
-                        if (type == 0)
+                        if (type == 2)
+                        {
+                            // Polygon fill — non-zero winding over the edge buffer.
+                            int edgeStart = int(primData[dataBase + 4]);
+                            int edgeCount = int(primData[dataBase + 5]);
+                            int winding = 0;
+                            for (int e = 0; e < edgeCount; e++)
+                            {
+                                int eb = (edgeStart + e) * 4;
+                                float ex0 = edges[eb + 0];
+                                float ey0 = edges[eb + 1];
+                                float ex1 = edges[eb + 2];
+                                float ey1 = edges[eb + 3];
+
+                                if (ey0 < ey1)
+                                {
+                                    if (cy >= ey0 && cy < ey1)
+                                    {
+                                        float xInt = ex0 + (cy - ey0) * (ex1 - ex0) / (ey1 - ey0);
+                                        if (cx >= xInt) winding += 1;
+                                    }
+                                }
+                                else if (ey0 > ey1)
+                                {
+                                    if (cy >= ey1 && cy < ey0)
+                                    {
+                                        float xInt = ex1 + (cy - ey1) * (ex0 - ex1) / (ey0 - ey1);
+                                        if (cx >= xInt) winding -= 1;
+                                    }
+                                }
+                            }
+                            covered = winding != 0;
+                        }
+                        else if (type == 0)
                         {
                             float v0x = primData[dataBase + 4];
                             float v0y = primData[dataBase + 5];
@@ -304,18 +340,37 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                         if (!covered)
                             continue;
 
-                        float blendA = pa + sa * (1.0 - pa);
-                        if (blendA > 1e-6)
-                        {
-                            pr = (sr * sa + pr * pa * (1.0 - sa)) / blendA;
-                            pg = (sg * sa + pg * pa * (1.0 - sa)) / blendA;
-                            pb = (sb * sa + pb * pa * (1.0 - sa)) / blendA;
-                        }
-                        pa = blendA;
+                        // "Under" compositing: this primitive is behind
+                        // everything accumulated so far.
+                        float contrib = sa * (1.0 - accA);
+                        accR += sr * contrib;
+                        accG += sg * contrib;
+                        accB += sb * contrib;
+                        accA += contrib;
 
-                        if (pa >= 1.0 - 1e-6)
+                        // Coverage saturated — nothing below can contribute.
+                        if (accA >= 1.0 - 1e-6)
                             break;
                     }
+
+                    float pr, pg, pb, pa;
+                    {{'#'}}if {{transparentBg}}
+                        if (accA > 1e-6)
+                        {
+                            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+                        }
+                        else
+                        {
+                            pr = 0.0; pg = 0.0; pb = 0.0;
+                        }
+                        pa = accA;
+                    {{'#'}}else
+                        float rem = 1.0 - accA;
+                        pr = accR + 65535.0 * rem;
+                        pg = accG + 65535.0 * rem;
+                        pb = accB + 65535.0 * rem;
+                        pa = 1.0;
+                    {{'#'}}endif
 
                     outPacked[i] = pr;
                     outPacked[i + {{pixelCount}}] = pg;
@@ -349,4 +404,3 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         }
     }
 }
-#endif

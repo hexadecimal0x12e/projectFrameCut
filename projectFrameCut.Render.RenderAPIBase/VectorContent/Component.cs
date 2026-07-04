@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.VectorContent
 {
@@ -20,7 +21,8 @@ namespace projectFrameCut.Render.RenderAPIBase.VectorContent
         /// <summary>
         /// Indicates all animatable fields of this component, with their current values and animation tracks.
         /// </summary>
-        public IReadOnlyDictionary<string, IAnimatableField> AnimatableFields { get; }
+        [JsonIgnore]
+        public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
         /// <summary>
         /// Name of this component. Most for display purpose.

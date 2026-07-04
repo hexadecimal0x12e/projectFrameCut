@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
@@ -115,10 +115,10 @@ public partial class CreatePage : ContentPage
 
         if (Path.GetInvalidPathChars().Any(projectName.Contains)
             || Path.GetInvalidFileNameChars().Any(projectName.Contains)
-            || projectDir.Length > 65535)
+            || projectDir.Length > HomePage.GetMaxPathLength())
         {
             await DisplayAlertAsync(Localized._Error,
-                Localized.HomePage_CreateAProject_InvalidName,
+                HomePage.GetInvalidFileNameWarn(),
                 Localized._OK);
             return;
         }
@@ -138,7 +138,7 @@ public partial class CreatePage : ContentPage
         catch (Exception ex)
         {
             await DisplayAlertAsync(Localized._Error,
-                Localized.HomePage_CreateAProject_InvalidName,
+                HomePage.GetInvalidFileNameWarn(),
                 Localized._OK);
             return;
         }

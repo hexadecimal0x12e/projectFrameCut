@@ -21,12 +21,13 @@ namespace projectFrameCut.InteractableEditor
     {
         #region types
 
-        private enum ResizeHandle
+        public enum ResizeHandle
         {
             TopLeft,
             TopRight,
             BottomLeft,
-            BottomRight
+            BottomRight,
+            ClipPan
         }
 
         public enum ReferenceLineOrientation
@@ -98,7 +99,7 @@ namespace projectFrameCut.InteractableEditor
         private Func<Guid, Task>? _overlayClipDoubleTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
         private Func<Task>? _referenceLinesChangedCallback;
-        private Action<string, uint, ClipPositionTuple>? _keyframeCandidateCapturedCallback;
+        private Action<string, uint, ClipPositionTuple, ResizeHandle>? _keyframeCandidateCapturedCallback;
         private Func<ClipElementUI, IClip?>? _getClipInstanceCallback;
         private bool _suppressReferenceLinesChangedNotify;
         private readonly Dictionary<string, ReferenceLine> _referenceLines = new(StringComparer.Ordinal);
@@ -198,6 +199,21 @@ namespace projectFrameCut.InteractableEditor
                 UpdateVisuals();
             }
         } = true;
+        public bool ShowAllBorders
+        {
+            get;
+            set
+            {
+                if (field == value)
+                {
+                    return;
+                }
+
+                field = value;
+                OnPropertyChanged();
+                UpdateVisuals();
+            }
+        } = false;
 
         public Color DefaultReferenceLineColor
         {
@@ -453,10 +469,10 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
-                ClipVisual.IsVisible = showClipVisual;
-                if (showClipVisual)
+                ClipVisual.IsVisible = _owner.ShowAllBorders || showClipVisual;
+                if (ClipVisual.IsVisible)
                 {
-                    ClipVisual.Stroke = _owner.Clips[ClipId].ShowDefaultBorder ? (clipStroke ?? Colors.Yellow) : Colors.Transparent;
+                    ClipVisual.Stroke = (_owner.Clips[ClipId].ShowDefaultBorder || _owner.ShowAllBorders) ? (clipStroke ?? Colors.Yellow) : Colors.Transparent;
                 }
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
                 UpdateRootInputTransparency();
@@ -826,7 +842,7 @@ namespace projectFrameCut.InteractableEditor
             return this;
         }
 
-        public InteractableEditor ConfigureKeyframeCandidateCaptured(Action<string, uint, ClipPositionTuple>? callback)
+        public InteractableEditor ConfigureKeyframeCandidateCaptured(Action<string, uint, ClipPositionTuple, ResizeHandle>? callback)
         {
             _keyframeCandidateCapturedCallback = callback;
             return this;
@@ -1118,7 +1134,7 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
-        private void NotifyKeyframeCandidateCaptured(double x, double y, double w, double h)
+        private void NotifyKeyframeCandidateCaptured(double x, double y, double w, double h, ResizeHandle handle)
         {
             if (!EnableKeyframeRecording || _currentClip is null)
             {
@@ -1138,7 +1154,7 @@ namespace projectFrameCut.InteractableEditor
                 Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
                 false);
 
-            callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition);
+            callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition, handle);
         }
 
         private void SetActiveState(ClipOverlayState? state)
@@ -2425,7 +2441,10 @@ namespace projectFrameCut.InteractableEditor
                     _lastPanUpdateTicks = 0; // process first Running event immediately
                     _stateOrigX = _activeState.Root.TranslationX;
                     _stateOrigY = _activeState.Root.TranslationY;
-                    GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
+                    // For vector clips, include position providers so drag starts from
+                    // the exact on-screen rect currently rendered.
+                    bool ignorePositionProviderOnStart = _currentClip?.ClipType != ClipMode.VectorCanvasClip;
+                    GetCurrentRect(ignorePositionProviderOnStart, out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
 
@@ -2464,9 +2483,15 @@ namespace projectFrameCut.InteractableEditor
                     if (_panPreviewRect.HasValue)
                     {
                         var r = _panPreviewRect.Value;
-                        UpdateClipRenderRect(r.X, r.Y, r.Width, r.Height, updateTextStyle: false, isInRatio: false);
+                        // Move gestures must not mutate size. Keep width/height from the
+                        // current clip definition and only commit the translated position.
+                        // This avoids subtle size drift when provider-derived preview rects
+                        // differ by rounding from stored TargetWidth/TargetHeight.
+                        double committedW = _currentClip?.TargetWidth > 0 ? _currentClip.TargetWidth : r.Width;
+                        double committedH = _currentClip?.TargetHeight > 0 ? _currentClip.TargetHeight : r.Height;
+                        UpdateClipRenderRect(r.X, r.Y, committedW, committedH, updateTextStyle: false, isInRatio: false);
                         GetCurrentRect(true, out finalX, out finalY, out finalW, out finalH);
-                        NotifyKeyframeCandidateCaptured(finalX, finalY, finalW, finalH);
+                        NotifyKeyframeCandidateCaptured(finalX, finalY, finalW, finalH, ResizeHandle.ClipPan);
                         UpdateVisuals(true);
                     }
                     // Reset translation after committing the drag position to TargetX/Y
@@ -2519,7 +2544,10 @@ namespace projectFrameCut.InteractableEditor
                     _panTimer.Restart();
                     _lastPanUpdateTicks = 0;
                     _isHandleResizeInProgress = true;
-                    GetCurrentRect(true, out _startX, out _startY, out _startW, out _startH);
+                    // For vector clips, include position providers so resize starts from
+                    // the exact on-screen rect currently rendered.
+                    bool ignorePositionProviderOnStart = _currentClip?.ClipType != ClipMode.VectorCanvasClip;
+                    GetCurrentRect(ignorePositionProviderOnStart, out _startX, out _startY, out _startW, out _startH);
                     _stateOrigX = _activeState.Root.TranslationX;
                     _stateOrigY = _activeState.Root.TranslationY;
                     _stateOrigScaleX = _activeState.Root.ScaleX;
@@ -2657,7 +2685,7 @@ namespace projectFrameCut.InteractableEditor
                         UpdateClipRenderRect(r.X, r.Y, r.Width, r.Height, updateTextStyle: true, isInRatio: !allowFreeScale);
                         _panPreviewRect = null;
                         GetCurrentRect(true, out finalX, out finalY, out finalW, out finalH);
-                        NotifyKeyframeCandidateCaptured(finalX, finalY, finalW, finalH);
+                        NotifyKeyframeCandidateCaptured(finalX, finalY, finalW, finalH, handle);
                     }
                     LogDiagnostic($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1}), elapsed:{_panTimer.Elapsed}");
                     UpdateVisuals(true);
@@ -2844,10 +2872,31 @@ namespace projectFrameCut.InteractableEditor
                 if (!IsClipVisibleInCurrentFrame(clip))
                     continue;
 
-                var cx = clip.TargetX;
-                var cy = clip.TargetY;
-                var cw = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
-                var ch = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+                double cx = clip.TargetX;
+                double cy = clip.TargetY;
+                double cw = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
+                double ch = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+
+                var clipInstance = GetClipInstance(clip);
+                if (clip.Effects?.Count > 0 && clipInstance is not null)
+                {
+                    ApplyPositionProvidersToRect(
+                        clip.Effects.Values,
+                        clipSource: clipInstance,
+                        _currentFrame,
+                        (int)Math.Round(_videoWidth),
+                        (int)Math.Round(_videoHeight),
+                        ref cx, ref cy, ref cw, ref ch);
+                }
+
+                // Keep snapping targets in the same clamped video-space used by live drag.
+                cw = Math.Clamp(cw, MinSize, _videoWidth);
+                ch = Math.Clamp(ch, MinSize, _videoHeight);
+                if (!AllowClipOutOfBounds)
+                {
+                    cx = Math.Clamp(cx, 0, _videoWidth - cw);
+                    cy = Math.Clamp(cy, 0, _videoHeight - ch);
+                }
 
                 hTargets.Add(cx);
                 hTargets.Add(cx + cw);

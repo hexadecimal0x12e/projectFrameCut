@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -615,22 +616,37 @@ namespace projectFrameCut.Render.Effect
             var sw = Stopwatch.StartNew();
             float maxVal = source.BitPerPixel == 8 ? 255f : 65535f;
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-            var resultArr = computer.Compute([
-                r, g, b, a,
-                Brightness, Contrast, Saturation, Hue, Gamma,
-                Vibrance, Temperature, Invert ? 1f : 0f, Grayscale, Opacity, maxVal
-            ]);
 
-            if (resultArr.Length != 4 ||
-                resultArr[0] is not float[] rOut ||
-                resultArr[1] is not float[] gOut ||
-                resultArr[2] is not float[] bOut ||
-                resultArr[3] is not float[] aOut)
+            FourChannelResult computeResult;
+            if (computer is IColorAdjustmentComputer cac)
             {
-                throw new InvalidOperationException("ColorAdjustmentComputer did not return expected channel buffers.");
+                computeResult = cac.ComputeColorAdjustment(
+                    r, g, b, a, source.Width, source.Height,
+                    Brightness, Contrast, Saturation, Hue, Gamma,
+                    Vibrance, Temperature, Invert, Grayscale, Opacity, maxVal);
+            }
+            else
+            {
+                var resultArr = computer.Compute([
+                    r, g, b, a,
+                    Brightness, Contrast, Saturation, Hue, Gamma,
+                    Vibrance, Temperature, Invert ? 1f : 0f, Grayscale, Opacity, maxVal
+                ]);
+
+                if (resultArr.Length != 4 ||
+                    resultArr[0] is not float[] rOut ||
+                    resultArr[1] is not float[] gOut ||
+                    resultArr[2] is not float[] bOut ||
+                    resultArr[3] is not float[] aOut)
+                {
+                    throw new InvalidOperationException("ColorAdjustmentComputer did not return expected channel buffers.");
+                }
+
+                computeResult = new FourChannelResult(rOut, gOut, bOut, aOut);
             }
 
-            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, rOut, gOut, bOut, aOut, sourceHasAlpha);
+            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height,
+                computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
             sw.Stop();
             result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
             {

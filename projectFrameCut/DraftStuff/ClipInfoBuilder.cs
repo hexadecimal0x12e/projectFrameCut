@@ -22,6 +22,7 @@ using projectFrameCut.Converters;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -49,6 +50,7 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
+
 
 
 
@@ -636,8 +638,18 @@ namespace projectFrameCut.DraftStuff
                 c =>
                 {
                     string currentVectorAaLabel = PPLocalizedResources.General_VectorClip_AAMode_None;
-                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr)
+                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj))
                     {
+                        string aaStr = "None";
+                        if (aaObj is JsonElement aaJsonElem)
+                        {
+                            aaStr = aaJsonElem.GetString() ?? "None";
+                        }
+                        else if(aaObj is string s)
+                        {
+                            aaStr = s;
+                        }
+
                         currentVectorAaLabel = aaStr switch
                         {
                             "None" => PPLocalizedResources.General_VectorClip_AAMode_None,
@@ -661,11 +673,6 @@ namespace projectFrameCut.DraftStuff
                             page.SetStateFail("Target clip is invalid.");
                             return;
                         }
-                        // Ensure the clip is initialised (SourcePicture may be null
-                        // in composition-only mode, which is valid).
-                        if (vecClip.SourcePicture is null && vecClip.Components.Count == 0 && vecClip.FilePath is not null)
-                            vecClip.ReInit(default);
-
                         var editor = new VectorContentEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
                         var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
                         {
@@ -2395,8 +2402,7 @@ namespace projectFrameCut.DraftStuff
                     clip.ExtraData["TextEntries"] = updatedEntries.ToList();
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
                 }
-            }
-            ;
+            };
             providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
 
             return providerHost.BuildWithScrollView();

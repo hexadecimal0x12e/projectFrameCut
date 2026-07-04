@@ -56,7 +56,6 @@ using CommunityToolkit.Maui.Extensions;
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
-using ILGPU.Runtime;
 
 #endif
 
@@ -292,10 +291,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region options
-#if WINDOWS
-    public Accelerator? AcceleratorToUse { get; set; }
-#endif
-
     public string ProjectName { get; set; } = "Unknown project";
     public bool ShowShadow { get; set; } = true;
     public bool LogUIMessageToLogger { get; set; } = false;
@@ -416,7 +411,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
         ClipEditor.ConfigureManageReferenceLinesRequested(() =>
         {
-            _ = ShowManageReferenceLinesPopup();
+            ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
         });
         ClipEditor.ConfigureDefaultColorPickerRequested((currentColor) =>
         {
@@ -513,7 +508,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStatusText(Localized.DraftPage_MenuBar_View_ReferenceLines_AddHint);
         });
         ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
-        ManageReferenceLinesCommand = new Command(() => _ = ShowManageReferenceLinesPopup());
+        ManageReferenceLinesCommand = new Command(() => { ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup())); });
         SetTimelineScrollLockCommand = new Command(() => SetTimelineScrollEnabled(!IsTimelineScrollEnabled));
         TimelineScrollCommand = new Command<string>(async (i) =>
         {
@@ -644,8 +639,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 #elif iDevices
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
-        if (AcceleratorToUse is null) throw new InvalidDataException($"Please specific a accelerator.");
-        projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [AcceleratorToUse];
+        // AcceleratorsManager was initialized during plugin load.
+        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+            throw new InvalidDataException("No valid ILGPU accelerator found.");
 #endif
 
         await Dispatcher.DispatchAsync(() =>
@@ -6434,32 +6430,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task ShowReferenceLineColorPicker(Color currentColor)
-    {
-        var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = currentColor };
-        picker.SelectedColorChanged += (_, color) =>
-        {
-            ClipEditor.DefaultReferenceLineColor = color;
-        };
-
-        var popupView = new VerticalStackLayout
-        {
-            Spacing = 10,
-            Padding = new Thickness(10, 0),
-            Children =
-            {
-                new Button
-                {
-                    Text = Localized._Hide,
-                    Command = new Command(async () => await HidePopup(true))
-                },
-                picker,
-            }
-        };
-        await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
-    }
-
-    private async Task ShowManageReferenceLinesPopup()
+    public static void ShowManageReferenceLinesPopup(InteractableEditor.InteractableEditor ClipEditor, Action<View> ShowPopupCallback, Action ClosePopupCallback)
     {
         var panel = new VerticalStackLayout { Spacing = 6, Padding = new Thickness(10) };
 
@@ -6486,7 +6457,29 @@ public partial class DraftPage : ContentPage, IDraftPage
             VerticalOptions = LayoutOptions.Center
         };
         var defaultColorTap = new TapGestureRecognizer();
-        defaultColorTap.Tapped += async (_, _) => await ShowReferenceLineColorPicker(ClipEditor.DefaultReferenceLineColor);
+        defaultColorTap.Tapped += async (_, _) =>
+        {
+            var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = ClipEditor.DefaultReferenceLineColor };
+            picker.SelectedColorChanged += (_, color) =>
+            {
+                ClipEditor.DefaultReferenceLineColor = color;
+            };
+
+            var popupView = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(10, 0),
+                Children =
+            {
+                new Button
+                {
+                    Text = Localized._Hide,
+                    Command = new Command(ClosePopupCallback)
+                },
+                picker,
+            }
+            };
+        };
         defaultColorSwatch.GestureRecognizers.Add(defaultColorTap);
 
         var defaultThicknessEntry = new Entry
@@ -6583,12 +6576,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                             new Button
                             {
                                 Text = Localized._Hide,
-                                Command = new Command(async () => await HidePopup(true))
+                                Command = new Command(ClosePopupCallback)
                             },
                             linePicker,
                         }
                     };
-                    await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+                    ShowPopupCallback(popupView);
                 };
                 lineColorSwatch.GestureRecognizers.Add(lineColorTap);
 
@@ -6638,7 +6631,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     ClipEditor.RemoveReferenceLine(capturedId);
                     linesList.Children.Remove(row);
-                    _ = ShowManageReferenceLinesPopup();
+                    ShowPopupCallback(panel);
                 };
 
                 row.Children.Add(lineColorSwatch);
@@ -6654,11 +6647,36 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Text = Localized._Hide,
             Margin = new Thickness(0, 8, 0, 0),
-            Command = new Command(async () => await HidePopup(true))
+            Command = new Command(ClosePopupCallback)
         };
         panel.Children.Add(closeButton);
 
-        await ShowAPopup(new ScrollView { Content = panel }, mode: "dialog");
+        ShowPopupCallback(panel);
+    }
+
+    private async Task ShowReferenceLineColorPicker(Color currentColor)
+    {
+        var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = currentColor };
+        picker.SelectedColorChanged += (_, color) =>
+        {
+            ClipEditor.DefaultReferenceLineColor = color;
+        };
+
+        var popupView = new VerticalStackLayout
+        {
+            Spacing = 10,
+            Padding = new Thickness(10, 0),
+            Children =
+            {
+                new Button
+                {
+                    Text = Localized._Hide,
+                    Command = new Command(async () => await HidePopup(true))
+                },
+                picker,
+            }
+        };
+        await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
     }
 
     #endregion
@@ -6669,7 +6687,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
-    private void OnClipEditorKeyframeCandidateCaptured(string clipId, uint frame, ClipPositionTuple position)
+    private void OnClipEditorKeyframeCandidateCaptured(string clipId, uint frame, ClipPositionTuple position, InteractableEditor.InteractableEditor.ResizeHandle handle)
     {
         if (ClipEditor is null || !ClipEditor.EnableKeyframeRecording)
         {

@@ -1,5 +1,7 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -103,8 +105,11 @@ namespace projectFrameCut.StandaloneRender
         {
             try
             {
-                var ctx = Context.Create(builder => builder.EnableAlgorithms());
+                var ctx = Context.Create(builder => builder.Default().EnableAlgorithms());
                 accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
+                AcceleratorsManager.InitializeAccelerators();
+                AcceleratorsManager.IsRendering = true;
+                AcceleratorsManager.AcceleratorsForRendering = accelerators;
             }
             catch (Exception ex)
             {

@@ -34,19 +34,13 @@ using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
 
 
-
-
-
-
-
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
-#endif
+#elif WINDOWS
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 
-#if WINDOWS
-using ILGPU;
 #endif
 
 namespace projectFrameCut;
@@ -69,7 +63,6 @@ public partial class RenderPage : ContentPage
     public bool running;
 
 
-    // ��־������
     private readonly StringBuilder _logBuffer = new StringBuilder();
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
     private System.Timers.Timer? _logUpdateTimer;
@@ -174,7 +167,6 @@ public partial class RenderPage : ContentPage
             ExportProjectJSONButton.IsVisible = true;
             PerformPostRenderActionNowTestButton.IsVisible = true;
         }
-        if (!SettingsManager.IsSettingExists("accel_enableMultiAccel")) SettingsManager.WriteSetting("accel_enableMultiAccel", "true");
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
@@ -748,33 +740,10 @@ public partial class RenderPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-            Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
-            var devices = context.Devices.ToList();
-            if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
-            {
-                var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
-                if (accels == "all")
-                {
-                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
-                }
-                else
-                {
-                    var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                .Select(s => int.TryParse(s, out var id) ? id : -1)
-                                .Where(id => id >= 0)
-                                .ToList();
-                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
-                }
-
-            }
-            else
-            {
-                var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
-            }
-
-            if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
-
+            // AcceleratorsManager was initialized during plugin load.
+            // The configured accelerators (from accels.json) are ready to use.
+            AcceleratorsManager.IsRendering = true;
+            if (!AcceleratorsManager.Accelerators.Any()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 #endif
             var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
@@ -1520,17 +1489,15 @@ public partial class RenderPage : ContentPage
         }
 
 #if WINDOWS
-        string accelId = "";
-        args.Add($"-multiAccelerator={SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel")}");
+        args.Add($"-multiAccelerator={AcceleratorsManager.IsMultiAccelEnabled}");
 
-        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        if (AcceleratorsManager.IsMultiAccelEnabled && AcceleratorsManager.AcceleratorsForRendering.Length > 0)
         {
-            args.Add($"-acceleratorDeviceIds={SettingsManager.GetSetting("accel_MultiDeviceID", "all")}");
-
+            args.Add($"-acceleratorDeviceNames={string.Join(",", AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name))}");
         }
-        else
+        else if (AcceleratorsManager.DefaultAccelerator is not null)
         {
-            args.Add($"-acceleratorDeviceId={SettingsManager.GetSetting("accel_DeviceId", "")}");
+            args.Add($"-acceleratorDeviceName={AcceleratorsManager.DefaultAccelerator.Name}");
         }
 
 #endif

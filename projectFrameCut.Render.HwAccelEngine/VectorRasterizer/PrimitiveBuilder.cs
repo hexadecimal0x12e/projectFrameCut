@@ -14,6 +14,10 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         TriangleFill = 0,
         /// <summary>Stroked line segment (x0,y0,x1,y1,thickness in Data[0..4]).</summary>
         StrokeLine = 1,
+        /// <summary>Filled polygon (edgeStart, edgeCount in Data[0..1]) rasterized
+        /// with the non-zero winding rule over a shared edge buffer. Holes are
+        /// expressed as additional contours in the same edge range.</summary>
+        PolygonFill = 2,
     }
 
     /// <summary>
@@ -30,12 +34,17 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         float BBoxMinX, float BBoxMinY, float BBoxMaxX, float BBoxMaxY
     );
 
+    /// <summary>Result of primitive building: the flat primitive list plus the
+    /// shared polygon edge buffer (4 floats per edge: x0,y0,x1,y1).</summary>
+    internal readonly record struct PrimitiveBuildResult(List<GpuPrimitive> Primitives, List<float> Edges);
+
     /// <summary>Builds a flat primitive list from a <see cref="VectorPicture"/>.</summary>
     internal static class PrimitiveBuilder
     {
-        public static List<GpuPrimitive> Build(VectorPicture canvas, int renderWidth, int renderHeight)
+        public static PrimitiveBuildResult Build(VectorPicture canvas, int renderWidth, int renderHeight)
         {
             var primitives = new List<GpuPrimitive>();
+            var edges = new List<float>();
             float scaleX = renderWidth;
             float scaleY = renderHeight;
 
@@ -67,19 +76,19 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 foreach (var seg in segments)
                 {
                     var rotated = RotateSegment(seg, cosA, sinA);
-                    DispatchSegment(primitives, rotated, ox, oy, sx, sy, element.LayerIndex, seq++);
+                    DispatchSegment(primitives, edges, rotated, ox, oy, sx, sy, element.LayerIndex, seq++);
                     //Shared.Logger.LogDiagnostic($"Drawing finished {seq / total:p2} (segment {seq} of {total})");
                 }
             }
 
-            return primitives;
+            return new PrimitiveBuildResult(primitives, edges);
         }
 
         // ---------------------------------------------------------------
         // Segment dispatch (RoundedRectangle MUST come before Rectangle)
         // ---------------------------------------------------------------
 
-        private static void DispatchSegment(List<GpuPrimitive> primitives, VectorSegment seg,
+        private static void DispatchSegment(List<GpuPrimitive> primitives, List<float> edges, VectorSegment seg,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
             switch (seg)
@@ -88,13 +97,13 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     AddLineStroke(primitives, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case RoundedRectangleVectorSegment s:
-                    AddRoundedRect(primitives, s, ox, oy, sx, sy, layer, seq);
+                    AddRoundedRect(primitives, edges, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case RectangleVectorSegment s:
-                    AddRect(primitives, s, ox, oy, sx, sy, layer, seq);
+                    AddRect(primitives, edges, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case EllipseVectorSegment s:
-                    AddEllipse(primitives, s, ox, oy, sx, sy, layer, seq);
+                    AddEllipse(primitives, edges, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case CubicBezierVectorSegment s:
                     AddCubicBezier(primitives, s, ox, oy, sx, sy, layer, seq);
@@ -106,7 +115,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     AddArc(primitives, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case PolygonVectorSegment s:
-                    AddPolygon(primitives, s, ox, oy, sx, sy, layer, seq);
+                    AddPolygon(primitives, edges, s, ox, oy, sx, sy, layer, seq);
                     break;
                 case PolylineVectorSegment s:
                     AddPolyline(primitives, s, ox, oy, sx, sy, layer, seq);
@@ -122,57 +131,45 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static float CY(float segY, float oy, float sy) => oy + segY * sy;
 
         // ---------------------------------------------------------------
-        // Fill: add triangle fan from vertices
+        // Fill: single polygon primitive over a shared edge buffer
+        // (non-zero winding; holes = extra contours in the same edge range)
         // ---------------------------------------------------------------
 
-        private static void AddFillTriangles(List<GpuPrimitive> primitives,
+        /// <summary>Appends one closed contour's edges (4 floats each) and grows the bbox.</summary>
+        private static void AppendContourEdges(List<float> edges,
+            ReadOnlySpan<(float x, float y)> pts,
+            ref float bbMinX, ref float bbMinY, ref float bbMaxX, ref float bbMaxY)
+        {
+            int n = pts.Length;
+            for (int i = 0; i < n; i++)
+            {
+                var (x0, y0) = pts[i];
+                var (x1, y1) = pts[(i + 1) % n];
+                edges.Add(x0); edges.Add(y0); edges.Add(x1); edges.Add(y1);
+                bbMinX = MathF.Min(bbMinX, MathF.Min(x0, x1));
+                bbMaxX = MathF.Max(bbMaxX, MathF.Max(x0, x1));
+                bbMinY = MathF.Min(bbMinY, MathF.Min(y0, y1));
+                bbMaxY = MathF.Max(bbMaxY, MathF.Max(y0, y1));
+            }
+        }
+
+        /// <summary>Adds a PolygonFill primitive for a single contour (no holes).</summary>
+        private static void AddPolygonFill(List<GpuPrimitive> primitives, List<float> edges,
             ReadOnlySpan<(float x, float y)> pts,
             ushort r, ushort g, ushort b, float a, int layer)
         {
             if (pts.Length < 3 || a <= 0f) return;
 
-            float ax = pts[0].x, ay = pts[0].y;
-            for (int i = 1; i < pts.Length - 1; i++)
-            {
-                float v0x = ax, v0y = ay;
-                float v1x = pts[i].x, v1y = pts[i].y;
-                float v2x = pts[i + 1].x, v2y = pts[i + 1].y;
-                AppendTriangle(primitives, r, g, b, a, layer,
-                    v0x, v0y, v1x, v1y, v2x, v2y);
-            }
-        }
+            int edgeStart = edges.Count / 4;
+            float bbMinX = float.MaxValue, bbMinY = float.MaxValue;
+            float bbMaxX = float.MinValue, bbMaxY = float.MinValue;
+            AppendContourEdges(edges, pts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
+            int edgeCount = edges.Count / 4 - edgeStart;
 
-        private static void AddFillTriangles(List<GpuPrimitive> primitives,
-            ReadOnlySpan<Point> pts,
-            ushort r, ushort g, ushort b, float a, int layer)
-        {
-            if (pts.Length < 3 || a <= 0f) return;
-
-            float ax = pts[0].X, ay = pts[0].Y;
-            for (int i = 1; i < pts.Length - 1; i++)
-            {
-                float v0x = ax, v0y = ay;
-                float v1x = pts[i].X, v1y = pts[i].Y;
-                float v2x = pts[i + 1].X, v2y = pts[i + 1].Y;
-                AppendTriangle(primitives, r, g, b, a, layer,
-                    v0x, v0y, v1x, v1y, v2x, v2y);
-            }
-        }
-
-        private static void AppendTriangle(List<GpuPrimitive> primitives,
-            ushort r, ushort g, ushort b, float a, int layer,
-            float v0x, float v0y,
-            float v1x, float v1y,
-            float v2x, float v2y)
-        {
-            float bbMinX = MathF.Min(v0x, MathF.Min(v1x, v2x));
-            float bbMaxX = MathF.Max(v0x, MathF.Max(v1x, v2x));
-            float bbMinY = MathF.Min(v0y, MathF.Min(v1y, v2y));
-            float bbMaxY = MathF.Max(v0y, MathF.Max(v1y, v2y));
             primitives.Add(new GpuPrimitive(
-                (int)GpuPrimType.TriangleFill, layer,
+                (int)GpuPrimType.PolygonFill, layer,
                 r, g, b, a,
-                v0x, v0y, v1x, v1y, v2x, v2y,
+                edgeStart, edgeCount, 0, 0, 0, 0,
                 bbMinX, bbMinY, bbMaxX, bbMaxY));
         }
 
@@ -214,7 +211,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
         }
 
-        private static void AddRect(List<GpuPrimitive> primitives, RectangleVectorSegment s,
+        private static void AddRect(List<GpuPrimitive> primitives, List<float> edges, RectangleVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
             float rx = CX(s.X, ox, sx);
@@ -229,7 +226,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 {
                     (x0, y0), (x1, y0), (x1, y1), (x0, y1)
                 };
-                AddFillTriangles(primitives, verts, s.FillR, s.FillG, s.FillB, s.FillA, layer);
+                AddPolygonFill(primitives, edges, verts, s.FillR, s.FillG, s.FillB, s.FillA, layer);
             }
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
@@ -242,7 +239,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
         }
 
-        private static void AddRoundedRect(List<GpuPrimitive> primitives, RoundedRectangleVectorSegment s,
+        private static void AddRoundedRect(List<GpuPrimitive> primitives, List<float> edges, RoundedRectangleVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
             float rx = CX(s.X, ox, sx);
@@ -271,7 +268,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     StrokeB = s.StrokeB,
                     StrokeA = s.StrokeA,
                 };
-                AddRect(primitives, plain, ox, oy, sx, sy, layer, seq);
+                AddRect(primitives, edges, plain, ox, oy, sx, sy, layer, seq);
                 return;
             }
 
@@ -296,7 +293,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             { float a = MathF.PI + MathF.PI * 0.5f * i / cornerSegs; pts[idx++] = (cx1 + radius * MathF.Cos(a), cy1 + radius * MathF.Sin(a)); }
 
             if (s.FillA > 0f)
-                AddFillTriangles(primitives, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
+                AddPolygonFill(primitives, edges, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
             {
@@ -310,7 +307,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
         }
 
-        private static void AddEllipse(List<GpuPrimitive> primitives, EllipseVectorSegment s,
+        private static void AddEllipse(List<GpuPrimitive> primitives, List<float> edges, EllipseVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
             float cx = CX(s.X, ox, sx);
@@ -330,7 +327,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     float a = MathF.PI * 2f * i / segs;
                     pts[i] = (cx + rx * MathF.Cos(a), cy + ry * MathF.Sin(a));
                 }
-                AddFillTriangles(primitives, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
+                AddPolygonFill(primitives, edges, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
             }
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
@@ -481,7 +478,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
         }
 
-        private static void AddPolygon(List<GpuPrimitive> primitives, PolygonVectorSegment s,
+        private static void AddPolygon(List<GpuPrimitive> primitives, List<float> edges, PolygonVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
             var pts = s.Points;
@@ -496,9 +493,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.FillA > 0f)
             {
-                AddFillTriangles(primitives, canvasPts, s.FillR, s.FillG, s.FillB, s.FillA, layer);
+                // Single PolygonFill primitive: outer contour + hole contours
+                // in one edge range; the non-zero winding rule in the kernel
+                // carves the holes out (same rule as the CPU scanline filler).
+                int edgeStart = edges.Count / 4;
+                float bbMinX = float.MaxValue, bbMinY = float.MaxValue;
+                float bbMaxX = float.MinValue, bbMaxY = float.MinValue;
+                AppendContourEdges(edges, canvasPts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
 
-                // Holes: punch through with transparent triangles
                 if (s.Holes is { Length: > 0 })
                 {
                     foreach (var hole in s.Holes!)
@@ -509,9 +511,16 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                             : new (float, float)[hole.Length];
                         for (int i = 0; i < hole.Length; i++)
                             holePts[i] = (CX(hole[i].X, ox, sx), CY(hole[i].Y, oy, sy));
-                        AddFillTriangles(primitives, holePts, 0, 0, 0, 0f, layer);
+                        AppendContourEdges(edges, holePts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
                     }
                 }
+
+                int edgeCount = edges.Count / 4 - edgeStart;
+                primitives.Add(new GpuPrimitive(
+                    (int)GpuPrimType.PolygonFill, layer,
+                    s.FillR, s.FillG, s.FillB, s.FillA,
+                    edgeStart, edgeCount, 0, 0, 0, 0,
+                    bbMinX, bbMinY, bbMaxX, bbMaxY));
             }
 
             if (s.Thickness > 0f && s.StrokeA > 0f)
@@ -547,7 +556,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         // Rotation
         // ---------------------------------------------------------------
 
-        private static VectorSegment RotateSegment(VectorSegment seg, float cosA, float sinA)
+        internal static VectorSegment RotateSegment(VectorSegment seg, float cosA, float sinA)
         {
             return seg switch
             {

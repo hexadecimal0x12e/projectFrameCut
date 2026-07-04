@@ -62,6 +62,7 @@ namespace projectFrameCut.ApplicationPluginBase
             ["Arc"] = () => new ArcHandler(),
             ["Polygon"] = () => new PolygonHandler(),
             ["Polyline"] = () => new PolylineHandler(),
+            ["Text"] = () => new TextComponentHandler(),
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

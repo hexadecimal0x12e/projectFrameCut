@@ -20,28 +20,23 @@
             FalseObject="#5A5A3A" />
     </ContentView.Resources>
 
-    <Grid RowDefinitions="*,Auto" ColumnDefinitions="280,2,*,2,300">
+    <Grid RowDefinitions="*,Auto">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="LeftPanelColumn" Width="280" />
+            <ColumnDefinition x:Name="LeftSplitterColumn" Width="16" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition x:Name="RightSplitterColumn" Width="16" />
+            <ColumnDefinition x:Name="RightPanelColumn" Width="300" />
+        </Grid.ColumnDefinitions>
 
         <!-- ═══ LEFT PANEL: Component list + shape gallery ═══ -->
-        <ScrollView Grid.Column="0">
+        <ScrollView x:Name="LeftPanel" Grid.Column="0">
             <VerticalStackLayout Spacing="10" Padding="10">
 
                 <!-- Header -->
                 <Label Text="{Binding ClipName}"
                        FontSize="18" FontAttributes="Bold"
                        TextColor="#E5E7EB" />
-
-                <!-- Mode indicator -->
-                <Border Padding="6,3" StrokeShape="RoundRectangle 4"
-                        StrokeThickness="0">
-                    <Border.Resources>
-                        <toolkit:BoolToObjectConverter x:Key="ModeTextConverter"
-                            TrueObject="Composition Mode (no SVG)"
-                            FalseObject="SVG + Composition Mode" />
-                    </Border.Resources>
-                    <Label FontSize="11" TextColor="#9CA3AF"
-                           Text="{Binding IsCompositionMode, Converter={StaticResource ModeTextConverter}}" />
-                </Border>
 
                 <!-- ── Component List ── -->
                 <Label Text="Components" FontSize="14" FontAttributes="Bold"
@@ -50,7 +45,7 @@
                 <CollectionView x:Name="ComponentsListView"
                                 ItemsSource="{Binding Components}"
                                 SelectedItem="{Binding SelectedComponent, Mode=TwoWay}"
-                                SelectionMode="Multiple"
+                                SelectionMode="Single"
                                 SelectionChanged="OnComponentsSelectionChanged"
                                 HeightRequest="200">
                     <CollectionView.ItemTemplate>
@@ -213,10 +208,23 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- ═══ DIVIDER ═══ -->
-        <BoxView Grid.Column="1" WidthRequest="2"
-                 BackgroundColor="#333333"
-                 VerticalOptions="Fill" />
+        <!-- ═══ LEFT SPLITTER ═══ -->
+        <Grid Grid.Column="1" BackgroundColor="#333333">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnLeftSplitterPanUpdated" />
+            </Grid.GestureRecognizers>
+            <Button x:Name="ToggleLeftPanelButton"
+                    Text="◀"
+                    WidthRequest="32" HeightRequest="32"
+                    HorizontalOptions="Center" VerticalOptions="Center"
+                    BackgroundColor="#444444" TextColor="#CCCCCC"
+                    FontSize="10" CornerRadius="4" Padding="0"
+                    Clicked="OnToggleLeftPanelClicked">
+                <Button.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnLeftSplitterPanUpdated" />
+                </Button.GestureRecognizers>
+            </Button>
+        </Grid>
 
         <!-- ═══ CENTER: InteractableEditor (interactive clip positioning) + Timeline ═══ -->
         <Grid Grid.Column="2" RowDefinitions="*,Auto">
@@ -229,51 +237,59 @@
                 <!-- Timeline canvas -->
                 <GraphicsView x:Name="TimelineCanvas"
                               HeightRequest="180"
-                              BackgroundColor="#1a1a1a">
+                              BackgroundColor="#1a1a1a"
+                              Margin="0,0,0,0">
                     <GraphicsView.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnTimelineTapped" />
                     </GraphicsView.GestureRecognizers>
                 </GraphicsView>
 
                 <!-- Transport controls -->
-                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
-                      ColumnSpacing="8">
-                    <Button Text="▶" Command="{Binding PlayPauseCommand}"
-                            FontSize="14" Padding="8,4"
-                            TextColor="#93C5FD"
-                            CornerRadius="4"
-                            Grid.Column="0" />
-                    <Button Text="■" Command="{Binding StopCommand}"
-                            FontSize="14" Padding="8,4"
-                            TextColor="#FCA5A5"
-                            CornerRadius="4"
-                            Grid.Column="1" />
+                <Grid>
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="▶" 
+                                Command="{Binding PlayPauseCommand}"
+                                FontSize="14" 
+                                Padding="8,4"
+                                TextColor="#93C5FD"
+                                CornerRadius="4"  />
+                        <Label Text="{Binding CurrentProgress, StringFormat='{0:P0}'}"
+                               FontSize="11" 
+                               TextColor="#9CA3AF"
+                               Margin="4,0,0,0"
+                               VerticalOptions="Center"
+                               WidthRequest="28" 
+                               LineBreakMode="NoWrap" />
+                    </HorizontalStackLayout>
                     <Slider Value="{Binding CurrentProgress, Mode=TwoWay}"
                             Minimum="0" Maximum="1"
-                            Grid.Column="2"
+                            Margin="82,0,4,0"
                             VerticalOptions="Center" />
-                    <Label Text="{Binding CurrentProgress, StringFormat='{0:P0}'}"
-                           FontSize="11" TextColor="#9CA3AF"
-                           VerticalOptions="Center"
-                           Grid.Column="3" WidthRequest="44" />
-                    <Button Text="+KF"
-                            Command="{Binding AddKeyFrameAtCurrentTimeCommand}"
-                            IsEnabled="{Binding CanAddKeyFrame}"
-                            FontSize="11" Padding="6,4"
-                            TextColor="#FDE68A"
-                            CornerRadius="4"
-                            Grid.Column="4" />
+
                 </Grid>
             </VerticalStackLayout>
         </Grid>
 
-        <!-- ═══ DIVIDER ═══ -->
-        <BoxView Grid.Column="3" WidthRequest="2"
-                 BackgroundColor="#333333"
-                 VerticalOptions="Fill" />
+        <!-- ═══ RIGHT SPLITTER ═══ -->
+        <Grid Grid.Column="3" BackgroundColor="#333333">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnRightSplitterPanUpdated" />
+            </Grid.GestureRecognizers>
+            <Button x:Name="ToggleRightPanelButton"
+                    Text="▶"
+                    WidthRequest="32" HeightRequest="32"
+                    HorizontalOptions="Center" VerticalOptions="Center"
+                    BackgroundColor="#444444" TextColor="#CCCCCC"
+                    FontSize="10" CornerRadius="4" Padding="0"
+                    Clicked="OnToggleRightPanelClicked">
+                <Button.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnRightSplitterPanUpdated" />
+                </Button.GestureRecognizers>
+            </Button>
+        </Grid>
 
         <!-- ═══ RIGHT PANEL: Property editor ═══ -->
-        <ScrollView Grid.Column="4">
+        <ScrollView x:Name="RightPanel" Grid.Column="4">
             <VerticalStackLayout Spacing="8" Padding="10">
 
                 <Label Text="Properties" FontSize="14" FontAttributes="Bold"
@@ -441,21 +457,27 @@
 
         <!-- ═══ BOTTOM: Apply/Cancel buttons ═══ -->
         <Grid Grid.Row="1" Grid.ColumnSpan="5"
-              ColumnDefinitions="*,Auto,Auto"
+              ColumnDefinitions="*,Auto,Auto,Auto"
               ColumnSpacing="10" Padding="12,8"
               BackgroundColor="#222222">
+            <Button Text="Export JSON"
+                    Command="{Binding ExportJsonCommand}"
+                    TextColor="#C4B5FD"
+                    FontSize="14" FontAttributes="Bold"
+                    Padding="20,8" CornerRadius="6"
+                    Grid.Column="1" />
             <Button Text="Apply Changes"
                     Command="{Binding ApplyChangesCommand}"
                     TextColor="#86EFAC"
                     FontSize="14" FontAttributes="Bold"
                     Padding="20,8" CornerRadius="6"
-                    Grid.Column="1" />
+                    Grid.Column="2" />
             <Button Text="Cancel"
                     Command="{Binding CancelCommand}"
                     TextColor="#FCA5A5"
                     FontSize="14"
                     Padding="20,8" CornerRadius="6"
-                    Grid.Column="2" />
+                    Grid.Column="3" />
         </Grid>
 
     </Grid>

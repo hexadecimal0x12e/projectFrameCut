@@ -6,17 +6,10 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.VectorContent
 {
-    public interface IAnimatableField
-    {
-        public string Id { get; init; }
-        public string DisplayName { get; init; }
-        public string Description { get; init; }
-        public float MinimumValue { get; init; }
-        public float MaximumValue { get; init; }
-        public (string Name, string Description) GetLocalizedDescription(string localeId);
-    }
-
-    public class AnimatableField : IAnimatableField
+    /// <summary>
+    /// A class representing a field of a vector component that can be animated over time, with properties for its identifier, display name, description, and value range.
+    /// </summary>
+    public class AnimatableField
     {
         /// <summary>
         /// A unique identifier for this animatable field, used for serialization and referencing in animation tracks.

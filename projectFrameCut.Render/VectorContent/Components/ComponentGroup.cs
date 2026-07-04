@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -35,31 +36,19 @@ public class ComponentGroup : IVectorComponent
 
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public Dictionary<string, object> Parameters { get; } = new();
+    public Dictionary<string, object> Parameters { get; set; } = new();
 
     public int Index { get; set; }
 
     public List<VectorAnimationKeyFrame> AnimationFrames { get; set; } = new();
 
-    public IReadOnlyDictionary<string, IAnimatableField> AnimatableFields { get; }
+    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
     public ComponentGroup()
     {
-        Parameters["RelativeX"] = 0.5f;
-        Parameters["RelativeY"] = 0.5f;
-        Parameters["Width"] = 0.3f;
-        Parameters["Height"] = 0.3f;
-        Parameters["Rotation"] = 0f;
-        Parameters["BaseX"] = 0f;
-        Parameters["BaseY"] = 0f;
-        Parameters["LayerIndex"] = 0;
-        Parameters[InitialRelativeXKey] = 0.5f;
-        Parameters[InitialRelativeYKey] = 0.5f;
-        Parameters[InitialWidthKey] = 0.3f;
-        Parameters[InitialHeightKey] = 0.3f;
-        Parameters[ChildrenKey] = "[]";
+        EnsureDefaultParameters();
 
-        AnimatableFields = new Dictionary<string, IAnimatableField>
+        AnimatableFields = new Dictionary<string, AnimatableField>
         {
             ["RelativeX"] = AnimatableFieldMap.CommonFields["RelativeX"],
             ["RelativeY"] = AnimatableFieldMap.CommonFields["RelativeY"],
@@ -78,6 +67,7 @@ public class ComponentGroup : IVectorComponent
     {
         get
         {
+            EnsureDefaultParameters();
             if (_cachedChildren is null)
             {
                 _cachedChildren = DeserializeChildren();
@@ -91,6 +81,7 @@ public class ComponentGroup : IVectorComponent
     /// </summary>
     public void SetChildren(IEnumerable<IVectorComponent> children)
     {
+        EnsureDefaultParameters();
         _cachedChildren = children.ToList();
         Parameters[ChildrenKey] = JsonSerializer.Serialize(_cachedChildren, typeof(List<IVectorComponent>), s_serializerOptions);
     }
@@ -100,6 +91,7 @@ public class ComponentGroup : IVectorComponent
     /// </summary>
     public void SetInitialBounds(float relativeX, float relativeY, float width, float height)
     {
+        EnsureDefaultParameters();
         Parameters[InitialRelativeXKey] = relativeX;
         Parameters[InitialRelativeYKey] = relativeY;
         Parameters[InitialWidthKey] = width;
@@ -261,69 +253,37 @@ public class ComponentGroup : IVectorComponent
 
     private float EvaluateField(string fieldId, float progress, float defaultValue)
     {
-        var frames = AnimationFrames
-            .Where(kf => kf.TargetFieldId == fieldId)
-            .OrderBy(kf => kf.Time)
-            .ToList();
-
-        if (frames.Count == 0)
-        {
-            return GetFloatParam(fieldId, defaultValue);
-        }
-
-        if (frames.Count == 1 || progress <= frames[0].Time)
-        {
-            return frames[0].Value;
-        }
-
-        var last = frames[^1];
-        if (progress >= last.Time)
-        {
-            return last.Value;
-        }
-
-        for (int i = 1; i < frames.Count; i++)
-        {
-            var prev = frames[i - 1];
-            var next = frames[i];
-
-            if (progress >= next.Time)
-            {
-                continue;
-            }
-
-            float span = next.Time - prev.Time;
-            if (span <= 0f)
-            {
-                return next.Value;
-            }
-
-            float t = (progress - prev.Time) / span;
-            float eased = EasingFunctions.Apply(prev.Easing, t);
-            return prev.Value + (next.Value - prev.Value) * eased;
-        }
-
-        return last.Value;
+        return AnimationFrames.EvaluateField(fieldId, progress, GetFloatParam(fieldId, defaultValue));
     }
 
     private float GetFloatParam(string key, float defaultValue)
     {
-        if (Parameters.TryGetValue(key, out var val))
+        EnsureDefaultParameters();
+
+        if (!Parameters.TryGetValue(key, out var val) || val is null)
         {
-            return val switch
-            {
-                float f => f,
-                double d => (float)d,
-                int i => i,
-                uint u => u,
-                _ => defaultValue,
-            };
+            return defaultValue;
         }
-        return defaultValue;
+
+        return val switch
+        {
+            float f => f,
+            double d => (float)d,
+            int i => i,
+            uint u => u,
+            long l => l,
+            ushort us => us,
+            decimal m => (float)m,
+            JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+            JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
+            _ => defaultValue,
+        };
     }
 
     private List<IVectorComponent> DeserializeChildren()
     {
+        EnsureDefaultParameters();
+
         var result = new List<IVectorComponent>();
 
         if (!Parameters.TryGetValue(ChildrenKey, out var raw))
@@ -366,11 +326,31 @@ public class ComponentGroup : IVectorComponent
                 result.Add(plugin.VectComponentCreator(element));
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore deserialization errors and return an empty list.
+            // Log the error to aid debugging while falling back to an empty children list.
+            Logger.Log(ex, $"ComponentGroup.DeserializeChildren for '{Name}' ({Id})", this);
         }
 
         return result;
+    }
+
+    private void EnsureDefaultParameters()
+    {
+        Parameters ??= new();
+
+        Parameters.TryAdd("RelativeX", 0.5f);
+        Parameters.TryAdd("RelativeY", 0.5f);
+        Parameters.TryAdd("Width", 0.3f);
+        Parameters.TryAdd("Height", 0.3f);
+        Parameters.TryAdd("Rotation", 0f);
+        Parameters.TryAdd("BaseX", 0f);
+        Parameters.TryAdd("BaseY", 0f);
+        Parameters.TryAdd("LayerIndex", 0);
+        Parameters.TryAdd(InitialRelativeXKey, 0.5f);
+        Parameters.TryAdd(InitialRelativeYKey, 0.5f);
+        Parameters.TryAdd(InitialWidthKey, 0.3f);
+        Parameters.TryAdd(InitialHeightKey, 0.3f);
+        Parameters.TryAdd(ChildrenKey, "[]");
     }
 }

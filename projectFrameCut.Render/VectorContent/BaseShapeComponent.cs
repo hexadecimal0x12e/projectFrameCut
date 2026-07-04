@@ -10,10 +10,10 @@ public abstract class BaseShapeComponent : IVectorComponent
     public abstract string TypeName { get; }
     public string Name { get; set; } = string.Empty;
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Dictionary<string, object> Parameters { get; } = new();
+    public Dictionary<string, object> Parameters { get; set; } = new();
     public int Index { get; set; }
     public List<VectorAnimationKeyFrame> AnimationFrames { get; set; } = new();
-    public IReadOnlyDictionary<string, IAnimatableField> AnimatableFields { get; }
+    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
     protected abstract string[] ShapeFieldIds { get; }
     protected abstract Dictionary<string, object> GetDefaultParameters();
@@ -21,28 +21,9 @@ public abstract class BaseShapeComponent : IVectorComponent
 
     protected BaseShapeComponent()
     {
-        foreach (var (key, value) in GetDefaultParameters())
-        {
-            Parameters[key] = value;
-        }
+        EnsureDefaultParameters();
 
-        if (!Parameters.ContainsKey("RelativeX")) Parameters["RelativeX"] = 0.5f;
-        if (!Parameters.ContainsKey("RelativeY")) Parameters["RelativeY"] = 0.5f;
-        if (!Parameters.ContainsKey("Rotation")) Parameters["Rotation"] = 0f;
-        if (!Parameters.ContainsKey("BaseX")) Parameters["BaseX"] = 0f;
-        if (!Parameters.ContainsKey("BaseY")) Parameters["BaseY"] = 0f;
-        if (!Parameters.ContainsKey("LayerIndex")) Parameters["LayerIndex"] = 0;
-        if (!Parameters.ContainsKey("StrokeR")) Parameters["StrokeR"] = (float)ushort.MaxValue;
-        if (!Parameters.ContainsKey("StrokeG")) Parameters["StrokeG"] = (float)ushort.MaxValue;
-        if (!Parameters.ContainsKey("StrokeB")) Parameters["StrokeB"] = (float)ushort.MaxValue;
-        if (!Parameters.ContainsKey("StrokeA")) Parameters["StrokeA"] = 1f;
-        if (!Parameters.ContainsKey("FillR")) Parameters["FillR"] = 0f;
-        if (!Parameters.ContainsKey("FillG")) Parameters["FillG"] = 0f;
-        if (!Parameters.ContainsKey("FillB")) Parameters["FillB"] = 0f;
-        if (!Parameters.ContainsKey("FillA")) Parameters["FillA"] = 1f;
-        if (!Parameters.ContainsKey("Thickness")) Parameters["Thickness"] = 0.01f;
-
-        var map = new Dictionary<string, IAnimatableField>(AnimatableFieldMap.CommonFields);
+        var map = new Dictionary<string, AnimatableField>(AnimatableFieldMap.CommonFields);
         foreach (var fieldId in ShapeFieldIds)
         {
             if (AnimatableFieldMap.ShapeFields.TryGetValue(fieldId, out var field))
@@ -53,8 +34,36 @@ public abstract class BaseShapeComponent : IVectorComponent
         AnimatableFields = map;
     }
 
+    private void EnsureDefaultParameters()
+    {
+        Parameters ??= new();
+
+        foreach (var (key, value) in GetDefaultParameters())
+        {
+            Parameters.TryAdd(key, value);
+        }
+
+        Parameters.TryAdd("RelativeX", 0.5f);
+        Parameters.TryAdd("RelativeY", 0.5f);
+        Parameters.TryAdd("Rotation", 0f);
+        Parameters.TryAdd("BaseX", 0f);
+        Parameters.TryAdd("BaseY", 0f);
+        Parameters.TryAdd("LayerIndex", 0);
+        Parameters.TryAdd("StrokeR", (float)ushort.MaxValue);
+        Parameters.TryAdd("StrokeG", (float)ushort.MaxValue);
+        Parameters.TryAdd("StrokeB", (float)ushort.MaxValue);
+        Parameters.TryAdd("StrokeA", 1f);
+        Parameters.TryAdd("FillR", 0f);
+        Parameters.TryAdd("FillG", 0f);
+        Parameters.TryAdd("FillB", 0f);
+        Parameters.TryAdd("FillA", 1f);
+        Parameters.TryAdd("Thickness", 0.01f);
+    }
+
     public VectorCanvasElement Compute(float normalizedProgress)
     {
+        EnsureDefaultParameters();
+
         var shape = BuildBaseShape();
         shape = ApplyVisualProperties(shape);
         shape = ApplyAnimation(shape, normalizedProgress);
@@ -99,52 +108,11 @@ public abstract class BaseShapeComponent : IVectorComponent
 
         foreach (var group in groups)
         {
-            var ordered = group.OrderBy(k => k.Time).ToList();
-            if (ordered.Count == 0)
-            {
-                continue;
-            }
-
-            float value;
-            if (ordered.Count == 1 || progress <= ordered[0].Time)
-            {
-                value = ordered[0].Value;
-            }
-            else if (progress >= ordered[^1].Time)
-            {
-                value = ordered[^1].Value;
-            }
-            else
-            {
-                value = ordered[^1].Value;
-                for (int i = 1; i < ordered.Count; i++)
-                {
-                    var prev = ordered[i - 1];
-                    var next = ordered[i];
-                    if (progress > next.Time)
-                    {
-                        continue;
-                    }
-
-                    var span = next.Time - prev.Time;
-                    if (span <= 0f)
-                    {
-                        value = next.Value;
-                    }
-                    else
-                    {
-                        var t = (progress - prev.Time) / span;
-                        var eased = EasingFunctions.Apply(prev.Easing, t);
-                        value = prev.Value + (next.Value - prev.Value) * eased;
-                    }
-                    break;
-                }
-            }
-
-            AnimationApplier.ApplyFieldValue(cloned, group.Key, value);
+            var fieldId = group.Key;
+            var value = AnimationFrames.EvaluateField(fieldId, progress, 0f);
+            AnimationApplier.ApplyFieldValue(cloned, fieldId, value);
         }
 
         return cloned;
     }
 }
-

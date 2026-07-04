@@ -10,15 +10,31 @@ public record VectorAnimationKeyFrame
 {
     /// <summary>
     /// The target field that this keyframe animates.
+    /// Runtime-only reference; not serialised.
     /// </summary>
     [JsonIgnore]
-    public AnimatableField TargetField { get; set; }
+    public AnimatableField? TargetField
+    {
+        get => _targetField;
+        set
+        {
+            _targetField = value;
+            if (value is not null)
+                _targetFieldId = value.Id;
+        }
+    }
+    private AnimatableField? _targetField;
 
     /// <summary>
     /// The ID of the target field that this keyframe animates.
-    /// Used in serialization to reference the field without serializing the entire object.
+    /// Persisted during serialization so that tracks/groups survive save/reload.
     /// </summary>
-    public string TargetFieldId => TargetField?.Id ?? string.Empty;
+    public string TargetFieldId
+    {
+        get => _targetFieldId;
+        set => _targetFieldId = value;
+    }
+    private string _targetFieldId = string.Empty;
 
     /// <summary>
     /// Normalised time [0…1] within the track's parent duration.

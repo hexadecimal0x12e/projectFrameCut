@@ -17,6 +17,7 @@ using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Transform;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -276,6 +277,7 @@ public class InternalPluginBase : IPluginBase
             "Polygon" => element.Deserialize<PolygonComponent>(options)!,
             "Polyline" => element.Deserialize<PolylineComponent>(options)!,
             "ComponentGroup" => element.Deserialize<ComponentGroup>(options)!,
+            "Text" => element.Deserialize<TextComponent>(options)!,
             _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
     }

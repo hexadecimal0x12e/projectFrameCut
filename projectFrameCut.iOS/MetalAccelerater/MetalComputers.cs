@@ -1,5 +1,6 @@
 using Metal;
 using Foundation;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;

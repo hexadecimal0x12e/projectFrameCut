@@ -29,9 +29,10 @@ using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
 using projectFrameCut.Render.EncodeAndDecode;
 using FFmpeg.AutoGen.Native;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Render.ClipsAndTracks.Text;
+
 
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
@@ -43,6 +44,7 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 #endif
 
@@ -658,6 +660,7 @@ namespace projectFrameCut
             try
             {
                 PluginManager.InitGlobalGetter();
+                GlobalPluginHelper.PluginsDataRootPath = Path.Combine(BasicDataPath, "Plugins");
                 var internalBase = new InternalApplicationPluginBase();
                 internalBase.locateId = SettingsManager.GetSetting("locate", "default");
                 (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();

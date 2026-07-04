@@ -8,8 +8,10 @@ using System.Text.Json;
 
 
 
+
 #if WINDOWS
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 using ILGPU;
 using ILGPU.Runtime;
 #elif ANDROID
@@ -22,6 +24,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 {
     public class HwAccelEnginePlugin : IPluginBase
     {
+        public static string dataRootPath { get; private set; } = null!;
 
         string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine";
 
@@ -50,38 +53,39 @@ namespace projectFrameCut.Render.HwAccelEngine
         };
 
 #if WINDOWS
-        public static Accelerator[] accelerators = Array.Empty<Accelerator>();
         static bool? forceSync = null;
+        static bool disableWin2DRasterizer = false;
 
         Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
             new Dictionary<string, Func<IComputer>>
             {
-                {"OverlayComputer", new(() => new OverlayComputer(accelerators,forceSync)) },
-                {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer(accelerators,forceSync)) },
-                {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,forceSync)) },
-                {"ResizeComputer", new(() => new ResizeComputer(accelerators,forceSync)) },
-                {"CropComputer", new(() => new CropComputer(accelerators,forceSync)) },
-                {"PlaceComputer", new(() => new PlaceComputer(accelerators,forceSync)) },
-                {"AddComputer", new(() => new BlendAddComputer(accelerators,forceSync)) },
-                {"SubtractComputer", new(() => new BlendSubtractComputer(accelerators,forceSync)) },
-                {"MultiplyComputer", new(() => new BlendMultiplyComputer(accelerators,forceSync)) },
-                {"ScreenComputer", new(() => new BlendScreenComputer(accelerators,forceSync)) },
-                {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(accelerators,forceSync)) },
-                {"DarkenComputer", new(() => new BlendDarkenComputer(accelerators,forceSync)) },
-                {"LightenComputer", new(() => new BlendLightenComputer(accelerators,forceSync)) },
-                {"DifferenceComputer", new(() => new BlendDifferenceComputer(accelerators,forceSync)) },
-                {"OpacityComputer", new(() => new OpacityComputer(accelerators,forceSync)) },
-                {"VignetteComputer", new(() => new VignetteComputer(accelerators,forceSync)) },
-                {"FlipComputer", new(() => new FlipComputer(accelerators,forceSync)) },
-                {"SharpenComputer", new(() => new SharpenComputer(accelerators,forceSync)) },
-                {"RotationComputer", new(() => new RotationComputer(accelerators,forceSync)) },
-                {"BlurComputer", new(() => new BlurComputer(accelerators,forceSync)) },
-                {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer(accelerators,forceSync)) }
+                {"OverlayComputer", new(() => new OverlayComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"RemoveColorComputer", new(() => new RemoveColorComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"ResizeComputer", new(() => new ResizeComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"CropComputer", new(() => new CropComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"PlaceComputer", new(() => new PlaceComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"AddComputer", new(() => new BlendAddComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"SubtractComputer", new(() => new BlendSubtractComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"MultiplyComputer", new(() => new BlendMultiplyComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"ScreenComputer", new(() => new BlendScreenComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"DarkenComputer", new(() => new BlendDarkenComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"LightenComputer", new(() => new BlendLightenComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"DifferenceComputer", new(() => new BlendDifferenceComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"OpacityComputer", new(() => new OpacityComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"VignetteComputer", new(() => new VignetteComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"FlipComputer", new(() => new FlipComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"SharpenComputer", new(() => new SharpenComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"RotationComputer", new(() => new RotationComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"BlurComputer", new(() => new BlurComputer(AcceleratorsManager.Accelerators,forceSync)) },
+                {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer(AcceleratorsManager.Accelerators,forceSync)) }
             };
 
         private readonly Dictionary<string, string> _configuration = new()
         {
             ["forceSync"] = "Disable",
+            ["disableWin2DRasterizer"] = "False",
         };
 
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new()
@@ -89,10 +93,12 @@ namespace projectFrameCut.Render.HwAccelEngine
             ["en-US"] = new Dictionary<string, string>
             {
                 ["forceSync"] = "override synchronization configuration to True/False (True/False, or Disable to keep default behavior)",
+                ["disableWin2DRasterizer"] = "Disable Win2D Rasterizer, use ILGPU Rasterizer (True/False)",
             },
             ["zh-CN"] = new Dictionary<string, string>
             {
                 ["forceSync"] = "覆盖同步配置 (True/False, 或 Disable 以保持默认行为)",
+                ["disableWin2DRasterizer"] = "使用 ILGPU 光栅化器，而不是平台API Win2D 光栅化器 (True/False)",
             }
         };
 #elif ANDROID
@@ -234,16 +240,8 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
-            try
-            {
-                var ctx = Context.Create(builder => builder.EnableAlgorithms());
-                accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to initialize default ILGPU accelerators: {ex.Message}");
-                accelerators = Array.Empty<Accelerator>();
-            }
+            dataRootPath = this.GetPluginDataRoot();
+            AcceleratorsManager.InitializeAccelerators();
             forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
             FailedReason = "";
             return true;
@@ -255,6 +253,8 @@ namespace projectFrameCut.Render.HwAccelEngine
 #elif ANDROID
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
+            dataRootPath = this.GetPluginDataRoot();
+
             Configuration["computeBackend"] = DefaultComputeBackend;
             ApplyConfiguration();
             FailedReason = string.Empty;

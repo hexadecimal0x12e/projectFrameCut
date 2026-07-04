@@ -1,8 +1,8 @@
-using projectFrameCut.ApplicationAPIBase.Text;
+﻿using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Text.Entry;
-using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Shared;
 using System;

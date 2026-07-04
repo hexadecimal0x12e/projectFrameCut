@@ -13,6 +13,7 @@ using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Shared;
+using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 using Point = projectFrameCut.Drawing.Vector.Point;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,6 +23,12 @@ using System.Windows.Input;
 using Color = Microsoft.Maui.Graphics.Color;
 using IDispatcher = Microsoft.Maui.Dispatching.IDispatcher;
 using System.Diagnostics;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Storage;
+using CommunityToolkit.Maui.Extensions;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using CommunityToolkit.Maui;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -36,7 +43,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     // ═══════════════════════════════════════════════════════════
 
     private readonly VectorCanvasClip _clip;
-    private VectorPicture? _sourcePicture;
     private readonly IDispatcher _dispatcher;
     private readonly Func<Task<string?>>? _pickSvgFile;
 
@@ -87,7 +93,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public VectorContentEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight) : this()
     {
         _clip = clip ?? throw new ArgumentNullException(nameof(clip));
-        _sourcePicture = clip.SourcePicture;
         _dispatcher = Dispatcher;
         _pickSvgFile = OpenSvgFilePickerAsync;
 
@@ -133,11 +138,59 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         // when UpdateVisuals fires its first handle query.
         RebuildComponentClips();
 
+        Action? ReferenceLinesHandler =
+            () => DraftPage.ShowManageReferenceLinesPopup(
+                InteractiveEditor,
+                async (v) =>
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        try
+                        {
+                            await (Window?.Page?.ShowPopupAsync(v, new PopupOptions { Shape = new RoundRectangle { CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()), Background = Colors.Transparent } }) ?? Task.CompletedTask);
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                if (Parent is MultiWindowItem mvi)
+                                {
+                                    await mvi.ShowPopupAsync(new MultiWindowItemPopup { Content = v });
+                                }
+                            }
+                            catch { }
+                        }
+                    });
+                },
+                async () =>
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        try
+                        {
+                            await (Window?.Page?.ClosePopupAsync() ?? Task.CompletedTask);
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                if (Parent is MultiWindowItem mvi)
+                                {
+                                    await mvi.HidePopupAsync();
+                                }
+                            }
+                            catch { }
+                        }
+                    });
+                });
+
         InteractiveEditor.ConfigureOverlayClipTap(OnComponentClipTapped)
                          .ConfigureBlankAreaTap(OnBlankAreaTapped)
                          .ConfigurePreviewRefresh(OnPreviewRefreshRequested)
                          .ConfigureGetClipInstanceCallback(GetClipInstanceForEditor)
                          .ConfigureCustomHandles(ProvideHandlesViaHandler, OnHandlerDrag)
+                         .ConfigureManageReferenceLinesRequested(ReferenceLinesHandler)
+                         .ConfigureKeyframeCandidateCaptured(OnComponentKeyframeCandidateCaptured)
                          .UpdateCanvasSize(canvasW, canvasH);
 
         InteractiveEditor.EditorCanvasBackground = Colors.Transparent;
@@ -360,6 +413,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 OnPropertyChanged(nameof(CanGroupComponents));
                 OnPropertyChanged(nameof(CanUngroupComponent));
                 _timelineInvalidateAction?.Invoke();
+                RebuildAvailableFieldIds();
             }
         }
     }
@@ -372,15 +426,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public bool CanGroupComponents => SelectedComponents.Count >= 2 && SelectedComponents.All(c => c.Source is not ComponentGroup);
 
     public bool CanUngroupComponent => SelectedComponents.Count == 1 && SelectedComponent?.Source is ComponentGroup;
-
-    /// <summary>Whether there is an SVG source picture with elements.</summary>
-    public bool HasSvgSource => _sourcePicture is { Elements.Count: > 0 };
-
-    /// <summary>Whether this is a composition-only clip (no SVG file).</summary>
-    public bool IsCompositionMode => _sourcePicture is null;
-
-    /// <summary>Whether legacy SVG source elements exist.</summary>
-    public bool HasLegacySvgSource => _sourcePicture is { Elements.Count: > 0 } && !IsCompositionMode;
 
     // ── Shape gallery ──
 
@@ -413,6 +458,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public ICommand UngroupComponentCommand { get; private set; } = null!;
     public ICommand ImportSvgCommand { get; private set; } = null!;
     public ICommand DeleteKeyFrameCommand { get; private set; } = null!;
+    public ICommand ExportJsonCommand { get; private set; } = null!;
 
     private void RegisterCommands()
     {
@@ -429,6 +475,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         UngroupComponentCommand = new Command(UngroupComponent, () => CanUngroupComponent);
         ImportSvgCommand = new Command(async () => await ImportSvg());
         DeleteKeyFrameCommand = new Command(DeleteKeyFrame);
+        ExportJsonCommand = new Command(async () => await ExportToJsonAsync());
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -451,34 +498,12 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             });
         }
 
-        // Build SVG element list (read-only reference)
-        if (_sourcePicture is not null)
-        {
-            for (int i = 0; i < _sourcePicture.Elements.Count; i++)
-            {
-                var elem = _sourcePicture.Elements[i];
-                bool animatable = elem is ShapeCanvasElement;
-                var item = new ElementItem
-                {
-                    Index = i,
-                    DisplayName = $"SVG Element {i}",
-                    TypeName = elem.GetType().Name,
-                    IsAnimatable = animatable,
-                };
-                Elements.Add(item);
-                ElementNames.Add(item.DisplayName);
-            }
-        }
-
         // Build component items from editing copies
         foreach (var component in _editingComponents)
         {
             var item = new VectorComponentItem(component, this);
             Components.Add(item);
         }
-
-        // Build available field IDs from component animatable fields
-        BuildAvailableFieldIds();
 
         // Auto-select first component or first SVG element
         if (Components.Count > 0)
@@ -491,24 +516,20 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     }
 
     /// <summary>
-    /// Builds the list of available animatable field IDs for the track picker.
-    /// Aggregates fields from all components and the global AnimatableFieldMap.
+    /// Rebuilds the available field IDs for the track picker from the
+    /// currently selected component's <see cref="IVectorComponent.AnimatableFields"/>.
+    /// Called whenever <see cref="SelectedComponent"/> changes.
     /// </summary>
-    private void BuildAvailableFieldIds()
+    private void RebuildAvailableFieldIds()
     {
-        var seen = new HashSet<string>();
-        foreach (var field in AnimatableFieldMap.CommonFields.Values)
+        AvailableFieldIds.Clear();
+        if (SelectedComponent?.Source.AnimatableFields is { } fields)
         {
-            if (seen.Add(field.Id))
-                AvailableFieldIds.Add(field.Id);
+            foreach (var key in fields.Keys)
+                AvailableFieldIds.Add(key);
         }
-        foreach (var field in AnimatableFieldMap.ShapeFields.Values)
-        {
-            if (seen.Add(field.Id))
-                AvailableFieldIds.Add(field.Id);
-        }
-        if (AvailableFieldIds.Count > 0)
-            SelectedFieldIdForNewTrack = AvailableFieldIds[0];
+        OnPropertyChanged(nameof(AvailableFieldIds));
+        SelectedFieldIdForNewTrack = AvailableFieldIds.Count > 0 ? AvailableFieldIds[0] : "";
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -543,6 +564,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         float value = SelectedTrack.GetValue(CurrentProgress);
         SelectedTrack.AddKeyFrame(CurrentProgress, value);
         SelectedKeyFrame = null;
+        InvalidateTimeline();
     }
 
     private void DeleteKeyFrame()
@@ -634,6 +656,69 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         if (IsPlaying) Stop();
         _clip.Components = _componentsBackup.ToList();
         ChangesCancelled?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Export to JSON
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 将当前的 Components 导出为原始 JSON 文件，方便调试、备份或迁移。
+    /// 序列化结果与 <see cref="VectorCanvasClip.SerializeComponents"/> 内部格式一致，
+    /// 并经过美化排版（缩进），保存为 .json 文件。
+    /// </summary>
+    private async Task ExportToJsonAsync()
+    {
+        try
+        {
+            var components = _editingComponents;
+            if (components.Count == 0)
+            {
+                //await Toast.Make("没有可导出的组件。", ToastDuration.Short).Show();
+                return;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = null,
+            };
+
+            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(components, options);
+            using var stream = new MemoryStream(jsonBytes);
+
+            var safeName = SanitizeFileName(_clip.Name ?? "VectorComponents");
+            var fileName = $"{safeName}.json";
+
+            var result = await FileSaver.Default.SaveAsync(fileName, stream);
+
+            if (result.IsSuccessful)
+            {
+                //await Toast.Make($"已导出到 {result.FilePath}", ToastDuration.Long).Show();
+            }
+            else
+            {
+                //await Toast.Make("导出已取消或失败。", ToastDuration.Short).Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "export Components JSON", this);
+            //await Toast.Make($"导出失败: {ex.Message}", ToastDuration.Long).Show();
+        }
+    }
+
+    /// <summary>将非法文件名字符替换为下划线。</summary>
+    private static string SanitizeFileName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "VectorComponents";
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sb = new System.Text.StringBuilder(name.Length);
+        foreach (var ch in name)
+            sb.Append(invalid.Contains(ch) ? '_' : ch);
+        var result = sb.ToString().Trim();
+        return result.Length > 0 ? result : "VectorComponents";
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -780,6 +865,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         uint duration = Math.Max(1, _clip.Duration);
         uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(0, duration - 1));
         float progress = duration <= 1 ? 0f : Math.Clamp(currentFrame / (float)(duration - 1), 0f, 1f);
+        float canvasW = Math.Max(1f, PreviewWidth);
+        float canvasH = Math.Max(1f, PreviewHeight);
 
         float minX = float.MaxValue, minY = float.MaxValue;
         float maxX = float.MinValue, maxY = float.MinValue;
@@ -798,10 +885,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                     var points = GetSegmentPoints(segment);
                     foreach (var pt in points)
                     {
-                        minX = Math.Min(minX, pt.X);
-                        minY = Math.Min(minY, pt.Y);
-                        maxX = Math.Max(maxX, pt.X);
-                        maxY = Math.Max(maxY, pt.Y);
+                        var (x, y) = MapElementLocalPointToCanvasNormalized(element, pt, canvasW, canvasH);
+                        minX = Math.Min(minX, x);
+                        minY = Math.Min(minY, y);
+                        maxX = Math.Max(maxX, x);
+                        maxY = Math.Max(maxY, y);
                         found = true;
                     }
                 }
@@ -828,6 +916,25 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             PolylineVectorSegment p => p.Points,
             _ => Array.Empty<Point>(),
         };
+    }
+
+    private static (float x, float y) MapElementLocalPointToCanvasNormalized(
+        VectorCanvasElement element,
+        Point localPoint,
+        float canvasW,
+        float canvasH)
+    {
+        if (element.UseUniformScale)
+        {
+            float uniform = MathF.Min(canvasW, canvasH);
+            float canvasX = element.BaseX * canvasW + element.RelativeX * uniform + localPoint.X * uniform;
+            float canvasY = element.BaseY * canvasH + element.RelativeY * uniform + localPoint.Y * uniform;
+            return (canvasX / canvasW, canvasY / canvasH);
+        }
+
+        float x = element.RelativeX + localPoint.X;
+        float y = element.RelativeY + localPoint.Y;
+        return (x, y);
     }
 
     /// <summary>
@@ -1223,6 +1330,108 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         RequestPreviewRefresh();
     }
 
+    // ── Keyframe recording from InteractableEditor drag ─────
+
+    /// <summary>
+    /// Callback fired by <see cref="InteractableEditor.NotifyKeyframeCandidateCaptured"/>
+    /// when the user completes a clip drag/resize while <see cref="InteractableEditor.EnableKeyframeRecording"/>
+    /// is enabled.  Records keyframes on the relevant axes (RelativeX, RelativeY,
+    /// and for ComponentGroup also Width/Height) at the current timeline position.
+    /// </summary>
+    private void OnComponentKeyframeCandidateCaptured(string clipIdStr, uint frame, ClipPositionTuple position, InteractableEditor.InteractableEditor.ResizeHandle handle)
+    {
+        if (!Guid.TryParse(clipIdStr, out var clipId))
+            return;
+
+        var component = Components.FirstOrDefault(c => c.Id == clipId);
+        if (component is null)
+            return;
+
+        uint duration = Math.Max(1, _clip.Duration);
+        float progress = duration <= 1 ? 0f : Math.Clamp(frame / (float)(duration - 1), 0f, 1f);
+
+        float centerX = position.TargetX + position.TargetWidth / 2f;
+        float centerY = position.TargetY + position.TargetHeight / 2f;
+        float normalizedX = Math.Clamp(centerX / Math.Max(1, PreviewWidth), 0f, 1f);
+        float normalizedY = Math.Clamp(centerY / Math.Max(1, PreviewHeight), 0f, 1f);
+        float normW = Math.Clamp(position.TargetWidth / (float)Math.Max(1, PreviewWidth), 0.001f, 4f);
+        float normH = Math.Clamp(position.TargetHeight / (float)Math.Max(1, PreviewHeight), 0.001f, 4f);
+        switch (handle)
+        {
+            case InteractableEditor.InteractableEditor.ResizeHandle.TopLeft:
+            case InteractableEditor.InteractableEditor.ResizeHandle.TopRight:
+            case InteractableEditor.InteractableEditor.ResizeHandle.BottomLeft:
+            case InteractableEditor.InteractableEditor.ResizeHandle.BottomRight:
+                RecordOrUpdateKeyframe(component, "RelativeX", progress, normalizedX);
+                RecordOrUpdateKeyframe(component, "RelativeY", progress, normalizedY);
+                break;
+            case InteractableEditor.InteractableEditor.ResizeHandle.ClipPan:
+                if (component.Source is ComponentGroup)
+                {
+                    RecordOrUpdateKeyframe(component, "Width", progress, normW);
+                    RecordOrUpdateKeyframe(component, "Height", progress, normH);
+                }
+                else
+                {
+                    RecordOrUpdateKeyframe(component, "BaseX", progress, normW);
+                    RecordOrUpdateKeyframe(component, "BaseY", progress, normH);
+                }
+                break;
+        }
+
+        RequestPreviewRefresh();
+        InvalidateTimeline();
+    }
+
+    private const float KeyframeSearchTolerance = 0.015f;
+
+    /// <summary>
+    /// Ensures a keyframe for <paramref name="fieldId"/> exists at the given
+    /// <paramref name="progress"/> with the given <paramref name="value"/>.
+    /// If the component already has a track for this field the keyframe is added
+    /// or updated in-place.  If no track exists a new one is auto-created with
+    /// start/end keyframes pinned to the current parameter value so the component
+    /// animates from its original position to the dragged position and back.
+    /// </summary>
+    private void RecordOrUpdateKeyframe(VectorComponentItem component, string fieldId, float progress, float value)
+    {
+        var track = component.Tracks.FirstOrDefault(t => t.TargetFieldId == fieldId);
+        if (track is null)
+        {
+            // ── Auto-create a track ──────────────────────
+            // AddTrack creates two keyframes (time=0, time=1) with the field's
+            // midpoint default.  Overwrite them with the current parameter value
+            // (the "pre-drag" position) so the animation starts/ends from where
+            // the component was before the user dragged it.
+            component.AddTrack(fieldId);
+            track = component.Tracks.FirstOrDefault(t => t.TargetFieldId == fieldId);
+            if (track is null) return;
+
+            float oldValue = component.Source.Parameters.GetFloat(fieldId, 0.5f);
+            if (track.KeyFrames.Count >= 2)
+            {
+                track.KeyFrames[0].Value = oldValue;
+                track.KeyFrames[^1].Value = oldValue;
+            }
+
+            track.AddKeyFrame(progress, value);
+        }
+        else
+        {
+            // ── Track already exists — update or insert ──
+            var existingKf = track.KeyFrames
+                .FirstOrDefault(kf => MathF.Abs(kf.Time - progress) <= KeyframeSearchTolerance);
+            if (existingKf is not null)
+            {
+                existingKf.Value = value;
+            }
+            else
+            {
+                track.AddKeyFrame(progress, value);
+            }
+        }
+    }
+
     /// <summary>
     /// Builds the full list of animated elements for the current frame.
     /// </summary>
@@ -1231,12 +1440,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var elements = new List<VectorCanvasElement>();
         uint duration = Math.Max(1, _clip.Duration);
         uint currentFrame = (uint)Math.Round(CurrentProgress * Math.Max(0, duration - 1));
-
-        var sourcePic = _sourcePicture;
-        if (sourcePic is not null)
-        {
-            elements.AddRange(sourcePic.Elements);
-        }
 
         foreach (var compItem in Components)
         {
@@ -1329,6 +1532,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         float value = SelectedTrack.GetValue(time);
         SelectedTrack.AddKeyFrame(time, value);
         SelectedKeyFrame = null;
+        InvalidateTimeline();
     }
 
     private ObservableCollection<AnimationTrackItem> GetActiveTracksForHitTest()
@@ -1389,6 +1593,13 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             {
                 ui.IsHorizontalResizable = false;
                 ui.IsVerticalResizable = false;
+            }
+            else if (handler is TextComponentHandler textHandler
+                     && component.Source is TextComponent textComp)
+            {
+                var (h, v) = TextComponentHandler.GetResizability(textComp);
+                ui.IsHorizontalResizable = h;
+                ui.IsVerticalResizable = v;
             }
         }
 
@@ -1688,6 +1899,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 NormalizedY = Math.Clamp(clipY, 0f, 1f),
                 FillColor = HandleColors.GetValueOrDefault(apiHandle.PositionType, HandleColors[ShapeHandlePositionType.Anchor]),
                 Size = HandleSizes.GetValueOrDefault(apiHandle.PositionType, 12),
+                HandleGetter = apiHandle.CustomHandleFactory
             });
         }
         return result;
@@ -2074,5 +2286,121 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             return new ComponentHandleIdentifier(value.clipId, value.handleId);
         }
     }
-}
 
+    // ═══════════════════════════════════════════════════════════
+    // Panel splitter management (resize + collapse/expand)
+    // ═══════════════════════════════════════════════════════════
+
+    private const double LeftPanelMinWidth = 160;
+    private const double LeftPanelMaxWidth = 500;
+    private const double RightPanelMinWidth = 230;
+    private const double RightPanelMaxWidth = 600;
+
+    private double _leftPanelStartWidth;
+    private double _rightPanelStartWidth;
+    private double _leftPanelWidthBeforeCollapse = 280;
+    private double _rightPanelWidthBeforeCollapse = 300;
+
+    public bool LeftPanelCollapsed { get; private set; }
+    public bool RightPanelCollapsed { get; private set; }
+
+    private void OnLeftSplitterPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _leftPanelStartWidth = LeftPanelColumn.Width.Value;
+                if (LeftPanelCollapsed)
+                {
+                    LeftPanelCollapsed = false;
+                    LeftPanel.IsVisible = true;
+                    OnPropertyChanged(nameof(LeftPanelCollapsed));
+                }
+                break;
+            case GestureStatus.Running:
+                double newWidth = Math.Clamp(_leftPanelStartWidth + e.TotalX, LeftPanelMinWidth, LeftPanelMaxWidth);
+                LeftPanelColumn.Width = new GridLength(newWidth, GridUnitType.Absolute);
+                _leftPanelWidthBeforeCollapse = newWidth;
+                break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                UpdateLeftPanelToggleText();
+                break;
+        }
+    }
+
+    private void OnRightSplitterPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _rightPanelStartWidth = RightPanelColumn.Width.Value;
+                if (RightPanelCollapsed)
+                {
+                    RightPanelCollapsed = false;
+                    RightPanel.IsVisible = true;
+                    OnPropertyChanged(nameof(RightPanelCollapsed));
+                }
+                break;
+            case GestureStatus.Running:
+                double newWidth = Math.Clamp(_rightPanelStartWidth - e.TotalX, RightPanelMinWidth, RightPanelMaxWidth);
+                RightPanelColumn.Width = new GridLength(newWidth, GridUnitType.Absolute);
+                _rightPanelWidthBeforeCollapse = newWidth;
+                break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                UpdateRightPanelToggleText();
+                break;
+        }
+    }
+
+    private void OnToggleLeftPanelClicked(object? sender, EventArgs e)
+    {
+        if (LeftPanelCollapsed)
+        {
+            double restoredWidth = Math.Clamp(_leftPanelWidthBeforeCollapse, LeftPanelMinWidth, LeftPanelMaxWidth);
+            LeftPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
+            LeftPanel.IsVisible = true;
+            LeftPanelCollapsed = false;
+        }
+        else
+        {
+            _leftPanelWidthBeforeCollapse = Math.Clamp(LeftPanelColumn.Width.Value, LeftPanelMinWidth, LeftPanelMaxWidth);
+            LeftPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
+            LeftPanel.IsVisible = false;
+            LeftPanelCollapsed = true;
+        }
+        OnPropertyChanged(nameof(LeftPanelCollapsed));
+        UpdateLeftPanelToggleText();
+    }
+
+    private void OnToggleRightPanelClicked(object? sender, EventArgs e)
+    {
+        if (RightPanelCollapsed)
+        {
+            double restoredWidth = Math.Clamp(_rightPanelWidthBeforeCollapse, RightPanelMinWidth, RightPanelMaxWidth);
+            RightPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
+            RightPanel.IsVisible = true;
+            RightPanelCollapsed = false;
+        }
+        else
+        {
+            _rightPanelWidthBeforeCollapse = Math.Clamp(RightPanelColumn.Width.Value, RightPanelMinWidth, RightPanelMaxWidth);
+            RightPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
+            RightPanel.IsVisible = false;
+            RightPanelCollapsed = true;
+        }
+        OnPropertyChanged(nameof(RightPanelCollapsed));
+        UpdateRightPanelToggleText();
+    }
+
+    private void UpdateLeftPanelToggleText()
+    {
+        ToggleLeftPanelButton.Text = LeftPanelCollapsed ? "▶" : "◀";
+    }
+
+    private void UpdateRightPanelToggleText()
+    {
+        ToggleRightPanelButton.Text = RightPanelCollapsed ? "◀" : "▶";
+    }
+}

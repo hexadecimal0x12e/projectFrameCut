@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -475,17 +476,43 @@ namespace projectFrameCut.Render.Compose
 
                 if (mixedCount > 0)
                 {
-                    object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 8, mixedCount]);
-                    object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 8, mixedCount]);
-                    object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                    byte[] rOutArr, gOutArr, bOutArr;
+                    float[] aOutArr;
+
+                    if (computer is IOverlayComputer ovc8)
+                    {
+                        var rResult = ovc8.Overlay8(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = ovc8.Overlay8(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = ovc8.Overlay8(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else if (computer is IApproximateOverlayComputer aoc8)
+                    {
+                        var rResult = aoc8.ApproximateOverlay8(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = aoc8.ApproximateOverlay8(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = aoc8.ApproximateOverlay8(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else
+                    {
+                        object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        rOutArr = (byte[])outRResult[0];
+                        gOutArr = (byte[])outGResult[0];
+                        bOutArr = (byte[])outBResult[0];
+                        aOutArr = (float[])outRResult[1];
+                    }
 
                     for (int i = 0; i < mixedCount; i++)
                     {
                         int idx = mixedIndices![i];
-                        outR[idx] = ((byte[])outRResult[0])[i];
-                        outG[idx] = ((byte[])outGResult[0])[i];
-                        outB[idx] = ((byte[])outBResult[0])[i];
-                        outA[idx] = ReadAlpha01(outRResult[1], i);
+                        outR[idx] = rOutArr[i];
+                        outG[idx] = gOutArr[i];
+                        outB[idx] = bOutArr[i];
+                        outA[idx] = aOutArr[i];
                     }
                 }
             }
@@ -663,25 +690,61 @@ namespace projectFrameCut.Render.Compose
 
                 if (mixedCount > 0)
                 {
-                    object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                    object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                    object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                    ushort[] rOutArr, gOutArr, bOutArr;
+                    float[] aOutArr;
+
+                    if (computer is IOverlayComputer ovc16)
+                    {
+                        var rResult = ovc16.Overlay16(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = ovc16.Overlay16(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = ovc16.Overlay16(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else if (computer is IApproximateOverlayComputer aoc16)
+                    {
+                        var rResult = aoc16.ApproximateOverlay16(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = aoc16.ApproximateOverlay16(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = aoc16.ApproximateOverlay16(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else
+                    {
+                        object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        rOutArr = (ushort[])outRResult[0];
+                        gOutArr = (ushort[])outGResult[0];
+                        bOutArr = (ushort[])outBResult[0];
+                        aOutArr = (float[])outRResult[1];
+                    }
 
                     for (int i = 0; i < mixedCount; i++)
                     {
                         int idx = mixedIndices![i];
-                        outR[idx] = ((ushort[])outRResult[0])[i];
-                        outG[idx] = ((ushort[])outGResult[0])[i];
-                        outB[idx] = ((ushort[])outBResult[0])[i];
-                        outA[idx] = ReadAlpha01(outRResult[1], i);
+                        outR[idx] = rOutArr[i];
+                        outG[idx] = gOutArr[i];
+                        outB[idx] = bOutArr[i];
+                        outA[idx] = aOutArr[i];
                     }
 
                     if (outBrightness != null)
                     {
-                        object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                        float[] brightnessAlpha;
+                        if (computer is IOverlayComputer ovcHdr)
+                        {
+                            var hdrResult = ovcHdr.OverlayHdr(mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, mixedCount);
+                            brightnessAlpha = hdrResult.Alpha;
+                        }
+                        else
+                        {
+                            object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                            brightnessAlpha = (float[])brightnessResult[0];
+                        }
                         for (int i = 0; i < mixedCount; i++)
                         {
-                            outBrightness[mixedIndices![i]] = ReadAlpha01(brightnessResult[0], i);
+                            outBrightness[mixedIndices![i]] = brightnessAlpha[i];
                         }
                     }
                 }
@@ -825,17 +888,43 @@ namespace projectFrameCut.Render.Compose
 
                 if (mixedCount > 0)
                 {
-                    object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 8, mixedCount]);
-                    object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 8, mixedCount]);
-                    object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                    byte[] rOutArr, gOutArr, bOutArr;
+                    float[] aOutArr;
+
+                    if (computer is IOverlayComputer ovc8)
+                    {
+                        var rResult = ovc8.Overlay8(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = ovc8.Overlay8(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = ovc8.Overlay8(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else if (computer is IApproximateOverlayComputer aoc8)
+                    {
+                        var rResult = aoc8.ApproximateOverlay8(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = aoc8.ApproximateOverlay8(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = aoc8.ApproximateOverlay8(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else
+                    {
+                        object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 8, mixedCount]);
+                        rOutArr = (byte[])outRResult[0];
+                        gOutArr = (byte[])outGResult[0];
+                        bOutArr = (byte[])outBResult[0];
+                        aOutArr = (float[])outRResult[1];
+                    }
 
                     for (int i = 0; i < mixedCount; i++)
                     {
                         int idx = mixedIndices![i];
-                        outR[idx] = ((byte[])outRResult[0])[i];
-                        outG[idx] = ((byte[])outGResult[0])[i];
-                        outB[idx] = ((byte[])outBResult[0])[i];
-                        outA[idx] = ReadAlpha01(outRResult[1], i);
+                        outR[idx] = rOutArr[i];
+                        outG[idx] = gOutArr[i];
+                        outB[idx] = bOutArr[i];
+                        outA[idx] = aOutArr[i];
                     }
                 }
             }
@@ -1011,25 +1100,61 @@ namespace projectFrameCut.Render.Compose
 
                 if (mixedCount > 0)
                 {
-                    object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                    object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                    object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                    ushort[] rOutArr, gOutArr, bOutArr;
+                    float[] aOutArr;
+
+                    if (computer is IOverlayComputer ovc16)
+                    {
+                        var rResult = ovc16.Overlay16(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = ovc16.Overlay16(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = ovc16.Overlay16(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else if (computer is IApproximateOverlayComputer aoc16)
+                    {
+                        var rResult = aoc16.ApproximateOverlay16(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = aoc16.ApproximateOverlay16(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = aoc16.ApproximateOverlay16(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
+                    }
+                    else
+                    {
+                        object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        rOutArr = (ushort[])outRResult[0];
+                        gOutArr = (ushort[])outGResult[0];
+                        bOutArr = (ushort[])outBResult[0];
+                        aOutArr = (float[])outRResult[1];
+                    }
 
                     for (int i = 0; i < mixedCount; i++)
                     {
                         int idx = mixedIndices![i];
-                        outR[idx] = ((ushort[])outRResult[0])[i];
-                        outG[idx] = ((ushort[])outGResult[0])[i];
-                        outB[idx] = ((ushort[])outBResult[0])[i];
-                        outA[idx] = ReadAlpha01(outRResult[1], i);
+                        outR[idx] = rOutArr[i];
+                        outG[idx] = gOutArr[i];
+                        outB[idx] = bOutArr[i];
+                        outA[idx] = aOutArr[i];
                     }
 
                     if (outBrightness != null)
                     {
-                        object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                        float[] brightnessAlpha;
+                        if (computer is IOverlayComputer ovcHdr)
+                        {
+                            var hdrResult = ovcHdr.OverlayHdr(mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, mixedCount);
+                            brightnessAlpha = hdrResult.Alpha;
+                        }
+                        else
+                        {
+                            object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                            brightnessAlpha = (float[])brightnessResult[0];
+                        }
                         for (int i = 0; i < mixedCount; i++)
                         {
-                            outBrightness[mixedIndices![i]] = ReadAlpha01(brightnessResult[0], i);
+                            outBrightness[mixedIndices![i]] = brightnessAlpha[i];
                         }
                     }
                 }

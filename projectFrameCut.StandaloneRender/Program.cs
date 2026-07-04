@@ -24,6 +24,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
 
 
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
@@ -426,6 +428,8 @@ namespace projectFrameCut.StandaloneRender
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
                 ILGPUPlugin.accelerators = accelerators;
+                AcceleratorsManager.AcceleratorsForRendering = accelerators;
+                AcceleratorsManager.IsRendering = true;
 
                 if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.HwAccelPictureResizer();
                 return 0;

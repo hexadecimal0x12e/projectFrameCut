@@ -488,19 +488,24 @@ public partial class TemplateCreatePage : ContentView
             }
             if (string.IsNullOrWhiteSpace(projectName))
             {
-                await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
                 return;
             }
 
             if (Path.GetInvalidPathChars().Any(projectName.Contains) || Path.GetInvalidFileNameChars().Any(projectName.Contains))
             {
-                await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
                 return;
             }
 
             var draftRoot = Path.Combine(MauiProgram.DataPath, "My Drafts");
             Directory.CreateDirectory(draftRoot);
             var projectDir = Path.Combine(draftRoot, projectName + ".pjfc");
+            if(projectDir.Length > HomePage.GetMaxPathLength())
+            {
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
+                return;
+            }
             if (Directory.Exists(projectDir))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);

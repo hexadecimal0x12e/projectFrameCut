@@ -63,14 +63,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         // ── Vector-specific state ──────────────────────────
 
-        [JsonIgnore]
-        public List<IVectorComponent> Components { get; set; } = new();
-
         /// <summary>
-        /// Source SVG vector picture for legacy compatibility.
+        /// The list of vector components that make up the vector canvas. Each component can have its own animation and properties.
         /// </summary>
         [JsonIgnore]
-        public VectorPicture? SourcePicture { get; set; }
+        public List<IVectorComponent> Components { get; set; } = new();
 
         public ISourceReplacementEffect? AlternativeSource { get; set; }
 

@@ -2,6 +2,7 @@
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using Device = ILGPU.Runtime.Device;
 
 namespace projectFrameCut.Render.WindowsRender
 {
-    public class OverlayComputer : IComputer
+    public class OverlayComputer : IComputer, IOverlayComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Overlay";
@@ -195,19 +196,105 @@ namespace projectFrameCut.Render.WindowsRender
 
         private int accelIdx = 0;
 
-        public object[] Compute(object[] args)
+        private Accelerator PickAccelerator()
         {
-            Accelerator accelerator;
             if (accelerators.Length > 1)
             {
                 if (accelIdx >= accelerators.Length) accelIdx = 0;
-                accelerator = accelerators[accelIdx++];
+                return accelerators[accelIdx++];
+            }
+            return accelerators[0];
+        }
+
+        public BlendResult8 Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccelerator();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelByte(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
             }
             else
             {
-                accelerator = accelerators[0];
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
             }
 
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResult8(result, alphaResult);
+        }
+
+        public BlendResult16 Overlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccelerator();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelUShort(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+            }
+
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResult16(result, alphaResult);
+        }
+
+        public BlendResultHdr OverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccelerator();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelFloat(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+            }
+
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResultHdr(result, alphaResult);
+        }
+
+        public object[] Compute(object[] args)
+        {
             var A = args[0] as float[] ?? throw new InvalidDataException("Invalid argument for A");
             var B = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for B");
             var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
@@ -217,93 +304,25 @@ namespace projectFrameCut.Render.WindowsRender
             aAlpha ??= GetOnes(pixelCount);
             bAlpha ??= GetOnes(pixelCount);
 
-            using var a = accelerator.Allocate1D(A.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(B.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(aAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bAlpha.Take(pixelCount).ToArray());
-
             if (outputBpp == 8)
             {
-                var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelByte(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = Overlay8(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
             else if (outputBpp == 16)
             {
-                var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelUShort(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = Overlay16(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
             else
             {
-                var outBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelFloat(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = OverlayHdr(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
         }
     }
 
-    public class ApproximateOverlayComputer : IComputer
+    public class ApproximateOverlayComputer : IComputer, IApproximateOverlayComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "OverlayApproximate";
@@ -317,6 +336,7 @@ namespace projectFrameCut.Render.WindowsRender
 
         public required Accelerator[] accelerators { get; init; }
         public bool Sync { get; set; } = false;
+        private int accelIdx = 0;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, float[]> OnesCache = new();
         private static float[] GetOnes(int length)
@@ -435,21 +455,105 @@ namespace projectFrameCut.Render.WindowsRender
             });
         }
 
-        public object[] Compute(object[] args)
+        private Accelerator PickAccel()
         {
-            int accelIdx = 0;
-            Accelerator accelerator;
-
             if (accelerators.Length > 1)
             {
                 if (accelIdx >= accelerators.Length) accelIdx = 0;
-                accelerator = accelerators[accelIdx++];
+                return accelerators[accelIdx++];
+            }
+            return accelerators[0];
+        }
+
+        public BlendResult8 ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccel();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelByte(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
             }
             else
             {
-                accelerator = accelerators[0];
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
             }
 
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResult8(result, alphaResult);
+        }
+
+        public BlendResult16 ApproximateOverlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccel();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelUShort(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+            }
+
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResult16(result, alphaResult);
+        }
+
+        public BlendResultHdr ApproximateOverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var accelerator = PickAccel();
+            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            var outBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
+            var krnl = GetKernelFloat(accelerator);
+
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+            }
+
+            var result = outBuffer.GetAsArray1D(); outBuffer.Dispose();
+            var alphaResult = outAlphaBuffer.GetAsArray1D(); outAlphaBuffer.Dispose();
+            return new BlendResultHdr(result, alphaResult);
+        }
+
+        public object[] Compute(object[] args)
+        {
             var A = args[0] as float[] ?? throw new InvalidDataException("Invalid argument for A");
             var B = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for B");
             var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
@@ -459,93 +563,25 @@ namespace projectFrameCut.Render.WindowsRender
             aAlpha ??= GetOnes(pixelCount);
             bAlpha ??= GetOnes(pixelCount);
 
-            using var a = accelerator.Allocate1D(A.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(B.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(aAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bAlpha.Take(pixelCount).ToArray());
-
             if (outputBpp == 8)
             {
-                var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelByte(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = ApproximateOverlay8(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
             else if (outputBpp == 16)
             {
-                var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelUShort(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = ApproximateOverlay16(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
             else
             {
-                var outBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
-                var krnl = GetKernelFloat(accelerator);
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                }
-
-                var result = outBuffer.GetAsArray1D();
-                outBuffer.Dispose();
-                var alphaResult = outAlphaBuffer.GetAsArray1D();
-                outAlphaBuffer.Dispose();
-
-                return [result, alphaResult];
+                var r = ApproximateOverlayHdr(A, B, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
         }
     }
 
-    public class RemoveColorComputer : IComputer
+    public class RemoveColorComputer : IComputer, IRemoveColorComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "RemoveColor";
@@ -585,7 +621,8 @@ namespace projectFrameCut.Render.WindowsRender
             });
         }
 
-        public object[] Compute(object[] args)
+        public float[] ComputeRemoveColor(float[] r, float[] g, float[] b, float[] a,
+            float targetR, float targetG, float targetB, float range, int pixels)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1)
@@ -598,37 +635,14 @@ namespace projectFrameCut.Render.WindowsRender
                 accelerator = accelerators[0];
             }
 
-            var Nullable_aR = args[0];
-            var Nullable_aG = args[1];
-            var Nullable_aB = args[2];
-            var Nullable_sourceA = args[3];
-            var toRemoveR = Convert.ToSingle(args[4]);
-            var toRemoveG = Convert.ToSingle(args[5]);
-            var toRemoveB = Convert.ToSingle(args[6]);
-            var range = Convert.ToSingle(args[7]);
+            int size = pixels > 0 ? Math.Min(pixels, r.Length) : r.Length;
 
-            float[] aR, aG, aB, sourceA;
-
-            if (Nullable_aR is float[] arrR && Nullable_aG is float[] arrG && Nullable_aB is float[] arrB && Nullable_sourceA is float[] arrA)
-            {
-                aR = arrR;
-                aG = arrG;
-                aB = arrB;
-                sourceA = arrA;
-            }
-            else
-            {
-                throw new ArgumentNullException("Input color channels cannot be null.");
-            }
-
-            var size = args.Length > 8 ? Convert.ToInt32(args[8]) : aR.Length;
-
-            float lowR = toRemoveR - range;
-            float lowG = toRemoveG - range;
-            float lowB = toRemoveB - range;
-            float highR = toRemoveR + range;
-            float highG = toRemoveG + range;
-            float highB = toRemoveB + range;
+            float lowR = targetR - range;
+            float lowG = targetG - range;
+            float lowB = targetB - range;
+            float highR = targetR + range;
+            float highG = targetG + range;
+            float highB = targetB + range;
 
             if (lowR < 0) lowR = 0;
             if (lowG < 0) lowG = 0;
@@ -644,15 +658,29 @@ namespace projectFrameCut.Render.WindowsRender
             using var aBuf = accelerator.Allocate1D<float>(size);
             using var outABuf = accelerator.Allocate1D<float>(size);
 
-            rBuf.CopyFromCPU(aR.Take(size).ToArray());
-            gBuf.CopyFromCPU(aG.Take(size).ToArray());
-            bBuf.CopyFromCPU(aB.Take(size).ToArray());
-            aBuf.CopyFromCPU(sourceA.Take(size).ToArray());
+            rBuf.CopyFromCPU(r.Take(size).ToArray());
+            gBuf.CopyFromCPU(g.Take(size).ToArray());
+            bBuf.CopyFromCPU(b.Take(size).ToArray());
+            aBuf.CopyFromCPU(a.Take(size).ToArray());
 
             LockRun(() => kernel(size, rBuf.View, gBuf.View, bBuf.View, aBuf.View, lowR, highR, lowG, highG, lowB, highB, outABuf.View));
             if (ForceSync) accelerator.Synchronize();
 
-            var alpha = outABuf.GetAsArray1D();
+            return outABuf.GetAsArray1D();
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var aR = args[0] as float[] ?? throw new ArgumentNullException("Input color channels cannot be null.");
+            var aG = args[1] as float[] ?? throw new ArgumentNullException("Input color channels cannot be null.");
+            var aB = args[2] as float[] ?? throw new ArgumentNullException("Input color channels cannot be null.");
+            var sourceA = args[3] as float[] ?? throw new ArgumentNullException("Input color channels cannot be null.");
+            var toRemoveR = Convert.ToSingle(args[4]);
+            var toRemoveG = Convert.ToSingle(args[5]);
+            var toRemoveB = Convert.ToSingle(args[6]);
+            var range = Convert.ToSingle(args[7]);
+            var size = args.Length > 8 ? Convert.ToInt32(args[8]) : aR.Length;
+            var alpha = ComputeRemoveColor(aR, aG, aB, sourceA, toRemoveR, toRemoveG, toRemoveB, range, size);
             return [alpha];
         }
 
@@ -673,7 +701,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class ResizeComputer : IComputer
+    public class ResizeComputer : IComputer, IResizeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Resize";
@@ -690,211 +718,150 @@ namespace projectFrameCut.Render.WindowsRender
 
         private int accelIdx = 0;
 
-        public object[] Compute(object[] args)
+        private Accelerator PickAccel()
         {
-            Accelerator accelerator;
             if (accelerators.Length > 1)
             {
                 if (accelIdx >= accelerators.Length) accelIdx = 0;
-                accelerator = accelerators[accelIdx++];
+                return accelerators[accelIdx++];
             }
-            else
-            {
-                accelerator = accelerators[0];
-            }
+            return accelerators[0];
+        }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            float srcW = (float)args[4];
-            float srcH = (float)args[5];
-            float dstW = (float)args[6];
-            float dstH = (float)args[7];
+        public FourChannelResult ComputeResizeFloat(float[] r, float[] g, float[] b, float[] a,
+            float srcW, float srcH, float dstW, float dstH)
+        {
+            var accelerator = PickAccel();
+            int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
+            if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult([], [], [], []);
+            int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+            float rX = srcW / dstW, rY = srcH / dstH;
 
-            // Optional pixel type hint (args[8]): 8=byte, 16=ushort, omit=float (backward compat)
-            bool wantByte = args.Length > 8 && args[8] is int pixelType && pixelType == 8;
-            bool wantUShort = args.Length > 8 && args[8] is int pixelType2 && pixelType2 == 16;
-
-            int iDstW = (int)dstW;
-            int iDstH = (int)dstH;
-            int iSrcW = (int)srcW;
-            int iSrcH = (int)srcH;
-
-            // Handle 0 size to avoid crash
-            if (iDstW <= 0 || iDstH <= 0) return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
-
-            int dstLength = iDstW * iDstH;
-            int srcLength = iSrcW * iSrcH;
-
-            // Allocate input buffers
-            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
-
-            float rX = (float)srcW / dstW;
-            float rY = (float)srcH / dstH;
-
-            // --- 8-bit output path ---
-            if (wantByte)
-            {
-                using var rBufOut = accelerator.Allocate1D<byte>(dstLength);
-                using var gBufOut = accelerator.Allocate1D<byte>(dstLength);
-                using var bBufOut = accelerator.Allocate1D<byte>(dstLength);
-                using var aBufOut = accelerator.Allocate1D<float>(dstLength);
-
-                var kernel = accelerator.LoadAutoGroupedStreamKernel((
-                    Index1D i,
-                    ArrayView<byte> rOut, ArrayView<byte> gOut, ArrayView<byte> bOut, ArrayView<float> aOut,
-                    ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
-                    int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
-                {
-                    int x = i % dstW;
-                    int y = i / dstW;
-                    int srcX = (int)(x * ratioX);
-                    int srcY = (int)(y * ratioY);
-                    if (srcX >= srcW) srcX = srcW - 1;
-                    if (srcY >= srcH) srcY = srcH - 1;
-                    if (srcX < 0) srcX = 0;
-                    if (srcY < 0) srcY = 0;
-                    int srcIdx = srcY * srcW + srcX;
-                    float v = rIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
-                    rOut[i] = (byte)v;
-                    v = gIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
-                    gOut[i] = (byte)v;
-                    v = bIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 255f) v = 255f;
-                    bOut[i] = (byte)v;
-                    aOut[i] = aIn[srcIdx];
-                });
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                               rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                               iDstW, iSrcW, iSrcH, rX, rY);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                           rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                           iDstW, iSrcW, iSrcH, rX, rY);
-                }
-
-                return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
-            }
-
-            // --- 16-bit output path ---
-            if (wantUShort)
-            {
-                using var rBufOut = accelerator.Allocate1D<ushort>(dstLength);
-                using var gBufOut = accelerator.Allocate1D<ushort>(dstLength);
-                using var bBufOut = accelerator.Allocate1D<ushort>(dstLength);
-                using var aBufOut = accelerator.Allocate1D<float>(dstLength);
-
-                var kernel = accelerator.LoadAutoGroupedStreamKernel((
-                    Index1D i,
-                    ArrayView<ushort> rOut, ArrayView<ushort> gOut, ArrayView<ushort> bOut, ArrayView<float> aOut,
-                    ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
-                    int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
-                {
-                    int x = i % dstW;
-                    int y = i / dstW;
-                    int srcX = (int)(x * ratioX);
-                    int srcY = (int)(y * ratioY);
-                    if (srcX >= srcW) srcX = srcW - 1;
-                    if (srcY >= srcH) srcY = srcH - 1;
-                    if (srcX < 0) srcX = 0;
-                    if (srcY < 0) srcY = 0;
-                    int srcIdx = srcY * srcW + srcX;
-                    float v = rIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
-                    rOut[i] = (ushort)v;
-                    v = gIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
-                    gOut[i] = (ushort)v;
-                    v = bIn[srcIdx];
-                    if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f;
-                    bOut[i] = (ushort)v;
-                    aOut[i] = aIn[srcIdx];
-                });
-
-                if (Sync)
-                {
-                    using (ILGPUComputerHelper.locker.EnterScope())
-                    {
-                        kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                               rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                               iDstW, iSrcW, iSrcH, rX, rY);
-                        accelerator.Synchronize();
-                    }
-                }
-                else
-                {
-                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
-                           rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                           iDstW, iSrcW, iSrcH, rX, rY);
-                }
-
-                return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
-            }
-
-            // --- Default float output path (backward compatible) ---
-            using var rBufOutF = accelerator.Allocate1D<float>(dstLength);
-            using var gBufOutF = accelerator.Allocate1D<float>(dstLength);
-            using var bBufOutF = accelerator.Allocate1D<float>(dstLength);
-            using var aBufOutF = accelerator.Allocate1D<float>(dstLength);
-
-            var kernelF = accelerator.LoadAutoGroupedStreamKernel((
-                Index1D i,
+            var kernel = accelerator.LoadAutoGroupedStreamKernel((Index1D i,
                 ArrayView<float> rOut, ArrayView<float> gOut, ArrayView<float> bOut, ArrayView<float> aOut,
                 ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
                 int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
             {
-                int x = i % dstW;
-                int y = i / dstW;
-                int srcX = (int)(x * ratioX);
-                int srcY = (int)(y * ratioY);
-                if (srcX >= srcW) srcX = srcW - 1;
-                if (srcY >= srcH) srcY = srcH - 1;
-                if (srcX < 0) srcX = 0;
-                if (srcY < 0) srcY = 0;
+                int x = i % dstW, y = i / dstW;
+                int srcX = (int)(x * ratioX), srcY = (int)(y * ratioY);
+                if (srcX >= srcW) srcX = srcW - 1; if (srcY >= srcH) srcY = srcH - 1;
+                if (srcX < 0) srcX = 0; if (srcY < 0) srcY = 0;
                 int srcIdx = srcY * srcW + srcX;
-                rOut[i] = rIn[srcIdx];
-                gOut[i] = gIn[srcIdx];
-                bOut[i] = bIn[srcIdx];
+                rOut[i] = rIn[srcIdx]; gOut[i] = gIn[srcIdx]; bOut[i] = bIn[srcIdx]; aOut[i] = aIn[srcIdx];
+            });
+            if (Sync) { using var _ = ILGPUComputerHelper.locker.EnterScope(); kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY); accelerator.Synchronize(); }
+            else kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY);
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public FourChannelResult8 ComputeResizeByte(float[] r, float[] g, float[] b, float[] a,
+            float srcW, float srcH, float dstW, float dstH)
+        {
+            var accelerator = PickAccel();
+            int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
+            if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult8([], [], [], []);
+            int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufOut = accelerator.Allocate1D<byte>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<byte>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<byte>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+            float rX = srcW / dstW, rY = srcH / dstH;
+
+            var kernel = accelerator.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<byte> rOut, ArrayView<byte> gOut, ArrayView<byte> bOut, ArrayView<float> aOut,
+                ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
+                int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
+            {
+                int x = i % dstW, y = i / dstW;
+                int srcX = (int)(x * ratioX), srcY = (int)(y * ratioY);
+                if (srcX >= srcW) srcX = srcW - 1; if (srcY >= srcH) srcY = srcH - 1;
+                if (srcX < 0) srcX = 0; if (srcY < 0) srcY = 0;
+                int srcIdx = srcY * srcW + srcX;
+                float v = rIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 255f) v = 255f; rOut[i] = (byte)v;
+                v = gIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 255f) v = 255f; gOut[i] = (byte)v;
+                v = bIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 255f) v = 255f; bOut[i] = (byte)v;
                 aOut[i] = aIn[srcIdx];
             });
+            if (Sync) { using var _ = ILGPUComputerHelper.locker.EnterScope(); kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY); accelerator.Synchronize(); }
+            else kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY);
+            return new FourChannelResult8(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
 
-            if (Sync)
-            {
-                using (ILGPUComputerHelper.locker.EnterScope())
-                {
-                    kernelF(dstLength, rBufOutF.View, gBufOutF.View, bBufOutF.View, aBufOutF.View,
-                            rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                            iDstW, iSrcW, iSrcH, rX, rY);
-                    accelerator.Synchronize();
-                }
-            }
-            else
-            {
-                kernelF(dstLength, rBufOutF.View, gBufOutF.View, bBufOutF.View, aBufOutF.View,
-                        rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                        iDstW, iSrcW, iSrcH, rX, rY);
-            }
+        public FourChannelResult16 ComputeResizeUshort(float[] r, float[] g, float[] b, float[] a,
+            float srcW, float srcH, float dstW, float dstH)
+        {
+            var accelerator = PickAccel();
+            int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
+            if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult16([], [], [], []);
+            int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufOut = accelerator.Allocate1D<ushort>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<ushort>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<ushort>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+            float rX = srcW / dstW, rY = srcH / dstH;
 
-            return [rBufOutF.GetAsArray1D(), gBufOutF.GetAsArray1D(), bBufOutF.GetAsArray1D(), aBufOutF.GetAsArray1D()];
+            var kernel = accelerator.LoadAutoGroupedStreamKernel((Index1D i,
+                ArrayView<ushort> rOut, ArrayView<ushort> gOut, ArrayView<ushort> bOut, ArrayView<float> aOut,
+                ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
+                int dstW, int srcW, int srcH, float ratioX, float ratioY) =>
+            {
+                int x = i % dstW, y = i / dstW;
+                int srcX = (int)(x * ratioX), srcY = (int)(y * ratioY);
+                if (srcX >= srcW) srcX = srcW - 1; if (srcY >= srcH) srcY = srcH - 1;
+                if (srcX < 0) srcX = 0; if (srcY < 0) srcY = 0;
+                int srcIdx = srcY * srcW + srcX;
+                float v = rIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f; rOut[i] = (ushort)v;
+                v = gIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f; gOut[i] = (ushort)v;
+                v = bIn[srcIdx]; if (v < 0f) v = 0f; else if (v > 65535f) v = 65535f; bOut[i] = (ushort)v;
+                aOut[i] = aIn[srcIdx];
+            });
+            if (Sync) { using var _ = ILGPUComputerHelper.locker.EnterScope(); kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY); accelerator.Synchronize(); }
+            else kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, iDstW, iSrcW, iSrcH, rX, rY);
+            return new FourChannelResult16(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            float srcW = (float)args[4], srcH = (float)args[5], dstW = (float)args[6], dstH = (float)args[7];
+            bool wantByte = args.Length > 8 && args[8] is int pixelType && pixelType == 8;
+            bool wantUShort = args.Length > 8 && args[8] is int pixelType2 && pixelType2 == 16;
+
+            if (wantByte)
+            {
+                var r = ComputeResizeByte(rIn, gIn, bIn, aIn, srcW, srcH, dstW, dstH);
+                return [r.R, r.G, r.B, r.A];
+            }
+            if (wantUShort)
+            {
+                var r = ComputeResizeUshort(rIn, gIn, bIn, aIn, srcW, srcH, dstW, dstH);
+                return [r.R, r.G, r.B, r.A];
+            }
+            var rf = ComputeResizeFloat(rIn, gIn, bIn, aIn, srcW, srcH, dstW, dstH);
+            return [rf.R, rf.G, rf.B, rf.A];
         }
     }
 
-    public class CropComputer : IComputer
+    public class CropComputer : IComputer, ICropComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Crop";
@@ -962,44 +929,30 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        private Accelerator PickAccel()
         {
-            Accelerator accelerator;
             if (accelerators.Length > 1)
             {
                 if (accelIdx >= accelerators.Length) accelIdx = 0;
-                accelerator = accelerators[accelIdx++];
+                return accelerators[accelIdx++];
             }
-            else
-            {
-                accelerator = accelerators[0];
-            }
+            return accelerators[0];
+        }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-
-            int srcW = Convert.ToInt32(args[4]);
-            int srcH = Convert.ToInt32(args[5]);
-            int startX = Convert.ToInt32(args[6]);
-            int startY = Convert.ToInt32(args[7]);
-            int cropW = Convert.ToInt32(args[8]);
-            int cropH = Convert.ToInt32(args[9]);
-
+        public FourChannelResult ComputeCrop(float[] r, float[] g, float[] b, float[] a,
+            int srcW, int srcH, int startX, int startY, int cropW, int cropH)
+        {
+            var accelerator = PickAccel();
             if (srcW <= 0 || srcH <= 0 || cropW <= 0 || cropH <= 0)
-            {
-                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
-            }
+                return new FourChannelResult([], [], [], []);
 
             int srcLength = checked(srcW * srcH);
             int dstLength = checked(cropW * cropH);
 
-            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
-
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
@@ -1010,8 +963,7 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
-                    kernel(dstLength,
-                        rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
                         rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
                         cropW, srcW, srcH, startX, startY);
                     accelerator.Synchronize();
@@ -1019,21 +971,29 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else
             {
-                kernel(dstLength,
-                    rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
                     rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
                     cropW, srcW, srcH, startX, startY);
             }
 
-            var rRes = rBufOut.GetAsArray1D();
-            var gRes = gBufOut.GetAsArray1D();
-            var bRes = bBufOut.GetAsArray1D();
-            var aRes = aBufOut.GetAsArray1D();
-            return [rRes, gRes, bRes, aRes];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int srcW = Convert.ToInt32(args[4]), srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]), startY = Convert.ToInt32(args[7]);
+            int cropW = Convert.ToInt32(args[8]), cropH = Convert.ToInt32(args[9]);
+            var result = ComputeCrop(rIn, gIn, bIn, aIn, srcW, srcH, startX, startY, cropW, cropH);
+            return [result.R, result.G, result.B, result.A];
         }
     }
 
-    public class PlaceComputer : IComputer
+    public class PlaceComputer : IComputer, IPlaceComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Place";
@@ -1101,44 +1061,30 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        private Accelerator PickAccel()
         {
-            Accelerator accelerator;
             if (accelerators.Length > 1)
             {
                 if (accelIdx >= accelerators.Length) accelIdx = 0;
-                accelerator = accelerators[accelIdx++];
+                return accelerators[accelIdx++];
             }
-            else
-            {
-                accelerator = accelerators[0];
-            }
+            return accelerators[0];
+        }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-
-            int srcW = Convert.ToInt32(args[4]);
-            int srcH = Convert.ToInt32(args[5]);
-            int startX = Convert.ToInt32(args[6]);
-            int startY = Convert.ToInt32(args[7]);
-            int dstW = Convert.ToInt32(args[8]);
-            int dstH = Convert.ToInt32(args[9]);
-
-            if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0)
-            {
-                return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
-            }
+        public FourChannelResult ComputePlace(float[] r, float[] g, float[] b, float[] a,
+            int srcW, int srcH, int startX, int startY, int targetW, int targetH)
+        {
+            var accelerator = PickAccel();
+            if (srcW <= 0 || srcH <= 0 || targetW <= 0 || targetH <= 0)
+                return new FourChannelResult([], [], [], []);
 
             int srcLength = checked(srcW * srcH);
-            int dstLength = checked(dstW * dstH);
+            int dstLength = checked(targetW * targetH);
 
-            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
-
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
@@ -1149,30 +1095,37 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
-                    kernel(dstLength,
-                        rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                    kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
                         rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                        dstW, srcW, srcH, startX, startY);
+                        targetW, srcW, srcH, startX, startY);
                     accelerator.Synchronize();
                 }
             }
             else
             {
-                kernel(dstLength,
-                    rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
+                kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View,
                     rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View,
-                    dstW, srcW, srcH, startX, startY);
+                    targetW, srcW, srcH, startX, startY);
             }
 
-            var rRes = rBufOut.GetAsArray1D();
-            var gRes = gBufOut.GetAsArray1D();
-            var bRes = bBufOut.GetAsArray1D();
-            var aRes = aBufOut.GetAsArray1D();
-            return [rRes, gRes, bRes, aRes];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int srcW = Convert.ToInt32(args[4]), srcH = Convert.ToInt32(args[5]);
+            int startX = Convert.ToInt32(args[6]), startY = Convert.ToInt32(args[7]);
+            int targetW = Convert.ToInt32(args[8]), targetH = Convert.ToInt32(args[9]);
+            var result = ComputePlace(rIn, gIn, bIn, aIn, srcW, srcH, startX, startY, targetW, targetH);
+            return [result.R, result.G, result.B, result.A];
         }
     }
 
-    public class BlendAddComputer : IComputer
+    public class BlendAddComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "AddComputer";
@@ -1211,10 +1164,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendSubtractComputer : IComputer
+    public class BlendSubtractComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "SubtractComputer";
@@ -1253,10 +1209,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendMultiplyComputer : IComputer
+    public class BlendMultiplyComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "MultiplyComputer";
@@ -1294,10 +1253,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendScreenComputer : IComputer
+    public class BlendScreenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "ScreenComputer";
@@ -1335,10 +1297,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendOverlayBlendComputer : IComputer
+    public class BlendOverlayBlendComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "OverlayBlendComputer";
@@ -1380,10 +1345,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendDarkenComputer : IComputer
+    public class BlendDarkenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "DarkenComputer";
@@ -1421,10 +1389,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendLightenComputer : IComputer
+    public class BlendLightenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "LightenComputer";
@@ -1462,10 +1433,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class BlendDifferenceComputer : IComputer
+    public class BlendDifferenceComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "DifferenceComputer";
@@ -1504,10 +1478,13 @@ namespace projectFrameCut.Render.WindowsRender
             }));
         }
 
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+            => BlendModeILGPUHelper.BlendModeCompute16(accelerators, ref accelIdx, Sync, GetKernel, top, bottom, topAlpha, bottomAlpha, pixelCount);
+
         public object[] Compute(object[] args) => BlendModeILGPUHelper.BlendModeCompute(accelerators, ref accelIdx, Sync, GetKernel, args);
     }
 
-    public class OpacityComputer : IComputer, ISessionComputer
+    public class OpacityComputer : IComputer, ISessionComputer, IOpacityComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "FadeOpacity";
@@ -1548,24 +1525,18 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeOpacity(float[] r, float[] g, float[] b, float[] a, float opacity)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            float opacity = Convert.ToSingle(args[4]);
+            int length = r.Length;
 
-            int length = rIn.Length;
-
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var rBufOut = accelerator.Allocate1D<float>(length);
             using var gBufOut = accelerator.Allocate1D<float>(length);
             using var bBufOut = accelerator.Allocate1D<float>(length);
@@ -1578,7 +1549,18 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, opacity); }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            float opacity = Convert.ToSingle(args[4]);
+            var result = ComputeOpacity(rIn, gIn, bIn, aIn, opacity);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -1603,7 +1585,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class VignetteComputer : IComputer, ISessionComputer
+    public class VignetteComputer : IComputer, ISessionComputer, IVignetteComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Vignette";
@@ -1657,27 +1639,18 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeVignette(float[] r, float[] g, float[] b, float[] a, int w, int h, float strength, float radius)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            int w = Convert.ToInt32(args[4]);
-            int h = Convert.ToInt32(args[5]);
-            float strength = Convert.ToSingle(args[6]);
-            float radius = Convert.ToSingle(args[7]);
+            int length = r.Length;
 
-            int length = rIn.Length;
-
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var rBufOut = accelerator.Allocate1D<float>(length);
             using var gBufOut = accelerator.Allocate1D<float>(length);
             using var bBufOut = accelerator.Allocate1D<float>(length);
@@ -1690,7 +1663,21 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, strength, radius); }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int w = Convert.ToInt32(args[4]);
+            int h = Convert.ToInt32(args[5]);
+            float strength = Convert.ToSingle(args[6]);
+            float radius = Convert.ToSingle(args[7]);
+            var result = ComputeVignette(rIn, gIn, bIn, aIn, w, h, strength, radius);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -1718,7 +1705,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class FlipComputer : IComputer, ISessionComputer
+    public class FlipComputer : IComputer, ISessionComputer, IFlipComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Flip";
@@ -1764,27 +1751,20 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeFlip(float[] r, float[] g, float[] b, float[] a, int w, int h, bool horizontal, bool vertical)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            int w = Convert.ToInt32(args[4]);
-            int h = Convert.ToInt32(args[5]);
-            int horizontal = Convert.ToBoolean(args[6]) ? 1 : 0;
-            int vertical = Convert.ToBoolean(args[7]) ? 1 : 0;
+            int length = r.Length;
+            int hInt = horizontal ? 1 : 0;
+            int vInt = vertical ? 1 : 0;
 
-            int length = rIn.Length;
-
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var rBufOut = accelerator.Allocate1D<float>(length);
             using var gBufOut = accelerator.Allocate1D<float>(length);
             using var bBufOut = accelerator.Allocate1D<float>(length);
@@ -1793,11 +1773,26 @@ namespace projectFrameCut.Render.WindowsRender
             var kernel = GetKernel(accelerator);
             if (Sync)
             {
-                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, horizontal, vertical); accelerator.Synchronize(); }
+                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, hInt, vInt); accelerator.Synchronize(); }
             }
-            else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, horizontal, vertical); }
+            else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, hInt, vInt); }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int w = Convert.ToInt32(args[4]);
+            int h = Convert.ToInt32(args[5]);
+            bool horizontal = Convert.ToBoolean(args[6]);
+            bool vertical = Convert.ToBoolean(args[7]);
+
+            var result = ComputeFlip(rIn, gIn, bIn, aIn, w, h, horizontal, vertical);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -1825,7 +1820,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class SharpenComputer : IComputer, ISessionComputer
+    public class SharpenComputer : IComputer, ISessionComputer, ISharpenComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Sharpen";
@@ -1882,25 +1877,18 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeSharpen(float[] r, float[] g, float[] b, float[] a, int w, float amount)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            int w = Convert.ToInt32(args[4]);
-            float amount = Convert.ToSingle(args[5]);
+            int length = r.Length;
 
-            int length = rIn.Length;
-
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var rBufOut = accelerator.Allocate1D<float>(length);
             using var gBufOut = accelerator.Allocate1D<float>(length);
             using var bBufOut = accelerator.Allocate1D<float>(length);
@@ -1913,7 +1901,20 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, amount); }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int w = Convert.ToInt32(args[4]);
+            float amount = Convert.ToSingle(args[5]);
+
+            var result = ComputeSharpen(rIn, gIn, bIn, aIn, w, amount);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -1939,7 +1940,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class RotationComputer : IComputer, ISessionComputer
+    public class RotationComputer : IComputer, ISessionComputer, IRotationComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Rotation";
@@ -2015,12 +2016,36 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeRotation(float[] r, float[] g, float[] b, float[] a, int srcW, int srcH, int dstW, int dstH, float angleDeg)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
+            int srcLength = checked(srcW * srcH);
+            int dstLength = checked(dstW * dstH);
+
+            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
+            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
+
+            var kernel = GetKernel(accelerator);
+            if (Sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, angleDeg); accelerator.Synchronize(); }
+            }
+            else { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, angleDeg); }
+
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
             var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
             var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
             var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
@@ -2031,26 +2056,8 @@ namespace projectFrameCut.Render.WindowsRender
             int outH = Convert.ToInt32(args[7]);
             float angleDeg = Convert.ToSingle(args[8]);
 
-            int srcLength = checked(srcW * srcH);
-            int dstLength = checked(outW * outH);
-
-            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
-            using var rBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var gBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var bBufOut = accelerator.Allocate1D<float>(dstLength);
-            using var aBufOut = accelerator.Allocate1D<float>(dstLength);
-
-            var kernel = GetKernel(accelerator);
-            if (Sync)
-            {
-                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, outW, outH, angleDeg); accelerator.Synchronize(); }
-            }
-            else { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, outW, outH, angleDeg); }
-
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            var result = ComputeRotation(rIn, gIn, bIn, aIn, srcW, srcH, outW, outH, angleDeg);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -2078,7 +2085,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class BlurComputer : IComputer, ISessionComputer
+    public class BlurComputer : IComputer, ISessionComputer, IBlurComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "Blur";
@@ -2163,28 +2170,21 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeBlur(float[] r, float[] g, float[] b, float[] a, int w, float sigma)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            int w = Convert.ToInt32(args[4]);
-            float sigma = Convert.ToSingle(args[5]);
-
             int radius = (int)MathF.Ceiling(sigma);
             if (radius <= 0) radius = 1;
-            int length = rIn.Length;
+            int length = r.Length;
             int h = length / w;
 
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var rBufTmp = accelerator.Allocate1D<float>(length);
             using var gBufTmp = accelerator.Allocate1D<float>(length);
             using var bBufTmp = accelerator.Allocate1D<float>(length);
@@ -2217,7 +2217,20 @@ namespace projectFrameCut.Render.WindowsRender
                 kernelV(length, bBufOut.View, aBufOut.View, bBufTmp.View, aBufTmp.View, w, h, radius);
             }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            int w = Convert.ToInt32(args[4]);
+            float sigma = Convert.ToSingle(args[5]);
+
+            var result = ComputeBlur(rIn, gIn, bIn, aIn, w, sigma);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -2254,7 +2267,7 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class ColorAdjustmentComputer : IComputer, ISessionComputer
+    public class ColorAdjustmentComputer : IComputer, ISessionComputer, IColorAdjustmentComputer
     {
         public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
         public string SupportedEffectOrMixture => "ColorAdjustment";
@@ -2400,35 +2413,25 @@ namespace projectFrameCut.Render.WindowsRender
                 }));
         }
 
-        public object[] Compute(object[] args)
+        public FourChannelResult ComputeColorAdjustment(
+            float[] r, float[] g, float[] b, float[] a,
+            int width, int height,
+            float brightness, float contrast, float saturation, float hue,
+            float gamma, float vibrance, float temperature, bool invert,
+            float grayscale, float opacity, float maxVal)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1) { if (accelIdx >= accelerators.Length) accelIdx = 0; accelerator = accelerators[accelIdx++]; }
             else { accelerator = accelerators[0]; }
 
-            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
-            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
-            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
-            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
-            float brightness = Convert.ToSingle(args[4]);
-            float contrast = Convert.ToSingle(args[5]);
-            float saturation = Convert.ToSingle(args[6]);
-            float hue = Convert.ToSingle(args[7]);
-            float gamma = Convert.ToSingle(args[8]);
-            float vibrance = Convert.ToSingle(args[9]);
-            float temperature = Convert.ToSingle(args[10]);
-            float invertF = Convert.ToSingle(args[11]);
-            float grayscale = Convert.ToSingle(args[12]);
-            float opacity = Convert.ToSingle(args[13]);
-            float maxV = Convert.ToSingle(args[14]);
+            int length = r.Length;
+            float invertF = invert ? 1f : 0f;
+            float[] paramArr = [brightness, contrast, saturation, hue, gamma, vibrance, temperature, invertF, grayscale, opacity, maxVal];
 
-            int length = rIn.Length;
-            float[] paramArr = [brightness, contrast, saturation, hue, gamma, vibrance, temperature, invertF, grayscale, opacity, maxV];
-
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(r);
+            using var gBufIn = accelerator.Allocate1D(g);
+            using var bBufIn = accelerator.Allocate1D(b);
+            using var aBufIn = accelerator.Allocate1D(a);
             using var paramBuf = accelerator.Allocate1D(paramArr);
             using var rBufOut = accelerator.Allocate1D<float>(length);
             using var gBufOut = accelerator.Allocate1D<float>(length);
@@ -2451,7 +2454,29 @@ namespace projectFrameCut.Render.WindowsRender
                     rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, paramBuf.View);
             }
 
-            return [rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D()];
+            return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
+        }
+
+        public object[] Compute(object[] args)
+        {
+            var rIn = args[0] as float[] ?? throw new ArgumentException("Invalid argument for R");
+            var gIn = args[1] as float[] ?? throw new ArgumentException("Invalid argument for G");
+            var bIn = args[2] as float[] ?? throw new ArgumentException("Invalid argument for B");
+            var aIn = args[3] as float[] ?? throw new ArgumentException("Invalid argument for A");
+            float brightness = Convert.ToSingle(args[4]);
+            float contrast = Convert.ToSingle(args[5]);
+            float saturation = Convert.ToSingle(args[6]);
+            float hue = Convert.ToSingle(args[7]);
+            float gamma = Convert.ToSingle(args[8]);
+            float vibrance = Convert.ToSingle(args[9]);
+            float temperature = Convert.ToSingle(args[10]);
+            bool invert = Convert.ToSingle(args[11]) > 0.5f;
+            float grayscale = Convert.ToSingle(args[12]);
+            float opacity = Convert.ToSingle(args[13]);
+            float maxVal = Convert.ToSingle(args[14]);
+
+            var result = ComputeColorAdjustment(rIn, gIn, bIn, aIn, 0, 0, brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, opacity, maxVal);
+            return [result.R, result.G, result.B, result.A];
         }
 
         bool ISessionComputer.SupportsBatching => !Sync;
@@ -2492,6 +2517,61 @@ namespace projectFrameCut.Render.WindowsRender
 
     internal static class BlendModeILGPUHelper
     {
+        /// <summary>
+        /// 强类型 16bpp 混合计算 — 无装箱/拆箱开销。
+        /// </summary>
+        internal static BlendResult16 BlendModeCompute16(
+            Accelerator[] accelerators, ref int accelIdx, bool sync,
+            Func<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> getKernel,
+            float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
+            using var topBuf = accelerator.Allocate1D(top);
+            using var bottomBuf = accelerator.Allocate1D(bottom);
+            using var topAlphaBuf = accelerator.Allocate1D(topAlpha);
+            using var bottomAlphaBuf = accelerator.Allocate1D(bottomAlpha);
+            using var outCBuf = accelerator.Allocate1D<float>(pixelCount);
+            using var outABuf = accelerator.Allocate1D<float>(pixelCount);
+
+            var kernel = getKernel(accelerator);
+
+            if (sync)
+            {
+                using (ILGPUComputerHelper.locker.EnterScope())
+                {
+                    kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+                    accelerator.Synchronize();
+                }
+            }
+            else
+            {
+                kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+            }
+
+            var outC = outCBuf.GetAsArray1D();
+            var outA = outABuf.GetAsArray1D();
+
+            var ushortOut = new ushort[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float v = outC[i];
+                if (v < 0f) v = 0f;
+                if (v > 65535f) v = 65535f;
+                ushortOut[i] = (ushort)v;
+            }
+            return new BlendResult16(ushortOut, outA);
+        }
+
         internal static object[] BlendModeCompute(
             Accelerator[] accelerators, ref int accelIdx, bool sync,
             Func<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> getKernel,
@@ -2526,58 +2606,33 @@ namespace projectFrameCut.Render.WindowsRender
                 Array.Fill(bottomAlpha, 1f);
             }
 
-            using var topBuf = accelerator.Allocate1D(top);
-            using var bottomBuf = accelerator.Allocate1D(bottom);
-            using var topAlphaBuf = accelerator.Allocate1D(topAlpha);
-            using var bottomAlphaBuf = accelerator.Allocate1D(bottomAlpha);
-            using var outCBuf = accelerator.Allocate1D<float>(pixelCount);
-            using var outABuf = accelerator.Allocate1D<float>(pixelCount);
-
-            var kernel = getKernel(accelerator);
-
-            if (sync)
-            {
-                using (ILGPUComputerHelper.locker.EnterScope())
-                {
-                    kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
-                    accelerator.Synchronize();
-                }
-            }
-            else
-            {
-                kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
-            }
-
-            var outC = outCBuf.GetAsArray1D();
-            var outA = outABuf.GetAsArray1D();
+            // 使用强类型方法执行 GPU 计算
+            var typedResult = BlendModeCompute16(accelerators, ref accelIdx, sync, getKernel,
+                top, bottom, topAlpha, bottomAlpha, pixelCount);
 
             if (outputBpp == 8)
             {
                 var byteOut = new byte[pixelCount];
                 for (int i = 0; i < pixelCount; i++)
                 {
-                    float v = outC[i] / 257f;
+                    float v = typedResult.Color[i] / 257f;
                     if (v < 0f) v = 0f;
                     if (v > 255f) v = 255f;
                     byteOut[i] = (byte)v;
                 }
-                return [byteOut, outA];
+                return [byteOut, typedResult.Alpha];
             }
             else if (outputBpp == 16)
             {
-                var ushortOut = new ushort[pixelCount];
-                for (int i = 0; i < pixelCount; i++)
-                {
-                    float v = outC[i];
-                    if (v < 0f) v = 0f;
-                    if (v > 65535f) v = 65535f;
-                    ushortOut[i] = (ushort)v;
-                }
-                return [ushortOut, outA];
+                return [typedResult.Color, typedResult.Alpha];
             }
             else
             {
-                return [outC, outA];
+                // float 输出 — 将 ushort 转回 float
+                var floatOut = new float[pixelCount];
+                for (int i = 0; i < pixelCount; i++)
+                    floatOut[i] = typedResult.Color[i];
+                return [floatOut, typedResult.Alpha];
             }
         }
     }

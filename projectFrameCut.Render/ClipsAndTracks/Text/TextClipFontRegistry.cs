@@ -1,8 +1,10 @@
-using projectFrameCut.Drawing.Text.FontHelper;
+﻿using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Text.ImportExport;
+using projectFrameCut.Drawing.Vector.ImportExport;
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace projectFrameCut.Render.ClipsAndTracks;
+namespace projectFrameCut.Render.ClipsAndTracks.Text;
 
 /// <summary>
 /// 字体注册表 —— 启动时仅扫描字体文件并缓存其名称元数据，
@@ -33,10 +35,11 @@ public static class TextClipFontRegistry
     /// 待加载字体的轻量元信息 —— 仅包含能将字体完整加载所需的文件路径
     /// 和用于模糊查找的家族名，不持有 <see cref="FontFace"/> 对象。
     /// </summary>
-    private readonly struct PendingFontInfo(string filePath, string familyName)
+    private readonly struct PendingFontInfo(string filePath, string familyName, Dictionary<string, string> localizedNames)
     {
         public readonly string FilePath = filePath;
         public readonly string FamilyName = familyName;
+        public readonly Dictionary<string, string> LocalizedNames = localizedNames;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -96,6 +99,16 @@ public static class TextClipFontRegistry
 
             _scanned = true;
         }
+        SVGToVectorElement.TextImportHandler = SvgTextImport.CreateHandler(name =>
+        {
+            if (TryGetFont(name, out var f)) return f;
+            if (LoadedFonts.FirstOrDefault(c => c.Value.LocalizedNames.Any(n => n.Value == name), new KeyValuePair<string, FontFace>(null!, null!)).Value is FontFace font) return font;
+            if (PendingFonts.FirstOrDefault(c => c.Value.LocalizedNames.Any(n => n.Value == name), new KeyValuePair<string, PendingFontInfo>(null!, new(null!, null!, null!))).Value is PendingFontInfo info && !string.IsNullOrWhiteSpace(info.FilePath))
+            {
+                return LoadPendingFont(info.FilePath);
+            }
+            return FallbackFonts.FirstOrDefault() ?? null;
+        });
     }
 
     /// <summary>
@@ -242,7 +255,7 @@ public static class TextClipFontRegistry
             // 如果已通过其他途径加载过同名字体，跳过
             if (LoadedFonts.ContainsKey(fontKey)) return;
 
-            PendingFonts.TryAdd(fontKey, new PendingFontInfo(path, familyName ?? string.Empty));
+            PendingFonts.TryAdd(fontKey, new PendingFontInfo(path, familyName ?? string.Empty, GetLocalizedFontNames(path)));
 
             // 记录后备字体家族名（与旧版 RegisterFont 逻辑一致但无需加载）
             if (_fallbackFamilyName is null)
@@ -389,6 +402,217 @@ public static class TextClipFontRegistry
         familyName ??= string.Empty;
         subfamilyName ??= string.Empty;
     }
+
+
+    public static Dictionary<string, string> GetLocalizedFontNames(string fontPath)
+    {
+        if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
+        {
+            string fallbackName = Path.GetFileNameWithoutExtension(fontPath ?? "");
+            return new Dictionary<string, string> { { "en-US", fallbackName } };
+        }
+
+        try
+        {
+            using var fs = File.OpenRead(fontPath);
+            using var reader = new BinaryReader(fs, Encoding.UTF8, leaveOpen: false);
+
+            // ── 0. 解析文件头，处理 TTC 集合（取第一个字体）──────────────
+            uint sfVersion = ReadUInt32BE(reader);
+            if (sfVersion == 0x74746366u) // 'ttcf' = TrueType Collection
+            {
+                // TTC 头：TTCTag(4) + Version(4) + numFonts(4) + OffsetTable[0](4...)
+                // 已读走 TTCTag(4 字节)，还需跳过 Version(4) + numFonts(4) = 8 字节，
+                // 然后读 OffsetTable[0] 得到第一个字体的 sfnt 头偏移。
+                reader.BaseStream.Seek(12, SeekOrigin.Begin);  // 跳过 TTCTag+Version+numFonts
+                uint firstOffset = ReadUInt32BE(reader);
+                reader.BaseStream.Seek(firstOffset, SeekOrigin.Begin);
+                sfVersion = ReadUInt32BE(reader);
+            }
+
+            ushort numTables = ReadUInt16BE(reader);
+            reader.BaseStream.Seek(6, SeekOrigin.Current);     // searchRange / entrySelector / rangeShift
+
+            // ── 1. 读取表目录 ─────────────────────────────────────────────
+            var tables = new Dictionary<string, (uint offset, uint length)>(StringComparer.Ordinal);
+            for (int i = 0; i < numTables; i++)
+            {
+                string tag = new string(reader.ReadChars(4));
+                reader.BaseStream.Seek(4, SeekOrigin.Current); // checkSum
+                uint tblOffset = ReadUInt32BE(reader);
+                uint tblLength = ReadUInt32BE(reader);
+                tables[tag] = (tblOffset, tblLength);
+            }
+
+            // ── 2. 解析 name 表（多语言显示名称）───────────────────────────
+            var localizedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var nameLangIds = new HashSet<ushort>();
+            if (tables.TryGetValue("name", out var nameTable))
+            {
+                reader.BaseStream.Seek(nameTable.offset, SeekOrigin.Begin);
+                ReadUInt16BE(reader);                          // format（0 或 1）
+                ushort nameCount = ReadUInt16BE(reader);
+                ushort stringOffset = ReadUInt16BE(reader);
+                long strBase = nameTable.offset + stringOffset;
+
+                var nameRecords = new List<(ushort plat, ushort enc, ushort lang, ushort nid, ushort len, ushort off)>();
+                for (int i = 0; i < nameCount; i++)
+                {
+                    ushort plat = ReadUInt16BE(reader);
+                    ushort enc = ReadUInt16BE(reader);
+                    ushort lang = ReadUInt16BE(reader);
+                    ushort nid = ReadUInt16BE(reader);
+                    ushort len = ReadUInt16BE(reader);
+                    ushort off = ReadUInt16BE(reader);
+                    nameRecords.Add((plat, enc, lang, nid, len, off));
+                }
+
+                // nameID 优先级：16（Preferred Family）> 1（Family）> 4（Full Name）
+                bool gotPreferred = false;
+                foreach (ushort targetId in new ushort[] { 16, 1, 4 })
+                {
+                    if (targetId == 1 && gotPreferred) break;
+                    bool anyThisRound = false;
+                    foreach (var rec in nameRecords)
+                    {
+                        if (rec.nid != targetId) continue;
+                        if (rec.plat != 3 && rec.plat != 1) continue; // Platform 3=Windows, 1=Mac
+
+                        string? name = ReadNameString(reader, strBase, rec.off, rec.len, rec.plat, rec.enc);
+                        if (string.IsNullOrWhiteSpace(name)) continue;
+
+                        string localeTag = WindowsLangIdToBcp47(rec.lang, rec.plat);
+                        if (!localizedNames.ContainsKey(localeTag))
+                        {
+                            localizedNames[localeTag] = name;
+                            anyThisRound = true;
+                        }
+                        if (rec.plat == 3)
+                            nameLangIds.Add(rec.lang);
+                    }
+                    if (anyThisRound && targetId == 16) gotPreferred = true;
+                }
+            }
+
+            return localizedNames;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"parsing font '{fontPath}'");
+            string fallbackName = Path.GetFileNameWithoutExtension(fontPath ?? "");
+            return new Dictionary<string, string> { { "en-US", fallbackName } };
+        }
+    }
+
+    // ── 辅助：按 platformId/encodingId 解码 name 表字符串 ──────────────
+    private static string? ReadNameString(BinaryReader reader, long strBase, ushort strOff, ushort strLen, ushort platformId, ushort encodingId)
+    {
+        long pos = strBase + strOff;
+        if (pos < 0 || pos + strLen > reader.BaseStream.Length) return null;
+        reader.BaseStream.Seek(pos, SeekOrigin.Begin);
+        byte[] bytes = reader.ReadBytes(strLen);
+        try
+        {
+            return (platformId, encodingId) switch
+            {
+                (3, 1) => Encoding.BigEndianUnicode.GetString(bytes), // Windows Unicode BMP (UTF-16 BE)
+                (3, _) => Encoding.BigEndianUnicode.GetString(bytes),
+                (0, _) => Encoding.BigEndianUnicode.GetString(bytes), // Unicode platform
+                (1, 0) => Encoding.Latin1.GetString(bytes), // actually Mac Roman doesn't exist
+                _ => Encoding.BigEndianUnicode.GetString(bytes),
+            };
+        }
+        catch
+        {
+            return Encoding.Latin1.GetString(bytes);
+        }
+    }
+
+    // ── 辅助：OpenType Platform 3 languageID → BCP-47 语言标签 ──────
+    private static string WindowsLangIdToBcp47(ushort langId, ushort platformId)
+    {
+        if (platformId == 1) return "en"; // Mac platform 简单归 en
+        return langId switch
+        {
+            0x0404 => "zh-TW",
+            0x0804 => "zh-CN",
+            0x0C04 => "zh-HK",
+            0x1404 => "zh-MO",
+            0x1004 => "zh-SG",
+            0x0411 => "ja",
+            0x0412 => "ko",
+            0x0419 => "ru",
+            0x041E => "th",
+            0x0401 => "ar-SA",
+            0x0801 => "ar-IQ",
+            0x0C01 => "ar-EG",
+            0x0409 => "en-US",
+            0x0809 => "en-GB",
+            0x0C09 => "en-AU",
+            0x0407 => "de",
+            0x040C => "fr",
+            0x0C0A => "es",
+            0x0410 => "it",
+            0x0416 => "pt-BR",
+            0x0816 => "pt-PT",
+            _ => $"x-lcid-{langId:X4}",
+        };
+    }
+
+    // ── 辅助：从 name 表出现的 Windows languageID 集合推断字体主语言 ─
+    private static TextLanguage InferLangFromNameLangIds(IEnumerable<ushort> langIds, TextLanguage os2Fallback)
+    {
+        bool hasJa = false, hasKo = false, hasZh = false;
+        bool hasRu = false, hasTh = false, hasAr = false, hasEn = false;
+        foreach (ushort id in langIds)
+        {
+            switch (id)
+            {
+                case 0x0411: hasJa = true; break;
+                case 0x0412: hasKo = true; break;
+                case 0x0404:
+                case 0x0804:
+                case 0x0C04:
+                case 0x1004:
+                case 0x1404: hasZh = true; break;
+                case 0x0419: hasRu = true; break;
+                case 0x041E: hasTh = true; break;
+            }
+            // Arabic LCID 系列：低字节 0x01
+            if (!hasAr && (id & 0xFF) == 0x01 && id >= 0x0401 && id <= 0x1C01) hasAr = true;
+            // 英文 LCID 系列：0x0409(en-US) 0x0809(en-GB) 0x0C09(en-AU) 等，低字节 0x09
+            if (!hasEn && (id & 0xFF) == 0x09) hasEn = true;
+        }
+        if (hasJa) return TextLanguage.Japanese;
+        if (hasKo) return TextLanguage.Korean;
+        if (hasZh) return TextLanguage.Chinese;
+        if (hasRu) return TextLanguage.Russian;
+        if (hasTh) return TextLanguage.Thai;
+        if (hasAr) return TextLanguage.Arabic;
+        // name 表中只有英文条目时，应返回 English，
+        // 而不是因 OS/2 附带 Cyrillic 支持就误判为 Russian
+        if (hasEn) return TextLanguage.English;
+        return os2Fallback;
+    }
+
+    // ── 辅助：从 localizedNames 按偏好语言选名称 ─────────────────────
+    private static string PickBestFontName(Dictionary<string, string> names, string preferredLocale)
+    {
+        if (names.Count == 0) return string.Empty;
+        if (names.TryGetValue(preferredLocale, out var exact)) return exact;
+        string primary = preferredLocale.Split('-')[0];
+        var partial = names.FirstOrDefault(kv => kv.Key.StartsWith(primary, StringComparison.OrdinalIgnoreCase));
+        if (partial.Value is not null) return partial.Value;
+        if (names.TryGetValue("en-US", out var enUs)) return enUs;
+        var enAny = names.FirstOrDefault(kv => kv.Key.StartsWith("en", StringComparison.OrdinalIgnoreCase));
+        if (enAny.Value is not null) return enAny.Value;
+        return names.Values.First();
+    }
+
+    // ── 辅助：大端序读取 ──────────────────────────────────────────────
+    private static uint ReadUInt32BE(BinaryReader r) { var b = r.ReadBytes(4); return (uint)(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]); }
+    private static ushort ReadUInt16BE(BinaryReader r) { var b = r.ReadBytes(2); return (ushort)(b[0] << 8 | b[1]); }
+
 
     // ── 大端读取辅助 ───────────────────────────────────────────────
 

@@ -1,11 +1,11 @@
-using projectFrameCut.Render.RenderAPIBase.VectorContent;
+﻿using projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 namespace projectFrameCut.Render.VectorContent;
 
 public static class AnimatableFieldMap
 {
-    public static readonly IReadOnlyDictionary<string, IAnimatableField> CommonFields =
-        new Dictionary<string, IAnimatableField>
+    public static readonly IReadOnlyDictionary<string, AnimatableField> CommonFields =
+        new Dictionary<string, AnimatableField>
         {
             ["RelativeX"] = Create("RelativeX", "Relative X", 0f, 1f),
             ["RelativeY"] = Create("RelativeY", "Relative Y", 0f, 1f),
@@ -24,8 +24,8 @@ public static class AnimatableFieldMap
             ["Thickness"] = Create("Thickness", "Thickness", 0f, 0.1f),
         };
 
-    public static readonly IReadOnlyDictionary<string, IAnimatableField> ShapeFields =
-        new Dictionary<string, IAnimatableField>
+    public static readonly IReadOnlyDictionary<string, AnimatableField> ShapeFields =
+        new Dictionary<string, AnimatableField>
         {
             ["Width"] = Create("Width", "Width", 0.001f, 1f),
             ["Height"] = Create("Height", "Height", 0.001f, 1f),
@@ -44,9 +44,13 @@ public static class AnimatableFieldMap
             ["Y3"] = Create("Y3", "Y3", 0f, 1f),
             ["X4"] = Create("X4", "X4", 0f, 1f),
             ["Y4"] = Create("Y4", "Y4", 0f, 1f),
+
+            ["FontSize"] = Create("FontSize", "Font Size", 8f, 500f),
+            ["CharacterSpacing"] = Create("CharacterSpacing", "Char Spacing", -20f, 100f),
+            ["LineSpacing"] = Create("LineSpacing", "Line Spacing", 0f, 2f),
         };
 
-    private static IAnimatableField Create(string id, string name, float min, float max) =>
+    private static AnimatableField Create(string id, string name, float min, float max) =>
         new AnimatableField
         {
             Id = id,

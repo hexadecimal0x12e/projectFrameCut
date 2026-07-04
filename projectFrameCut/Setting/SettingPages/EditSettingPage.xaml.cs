@@ -50,16 +50,9 @@ public partial class EditSettingPage : ContentPage
         {
             if (!IsBoolSettingTrue("Edit_NoLoadTextTemplatePreview"))
             {
-                ILGPU.Context context = ILGPU.Context.CreateDefault();
-                var devices = context.Devices.ToList();
-                if(!devices.Any(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU))
-                {
-                    LoadTextPreview = false;
-                    return;
-                }
-                var accelDevice = devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices[0]);
-                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
-                LoadTextPreview = true;
+                // AcceleratorsManager was initialized during plugin load.
+                // Any available non-CPU accelerator is sufficient for text preview.
+                LoadTextPreview = projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is not null;
             }
         }
         catch { LoadTextPreview = false; }

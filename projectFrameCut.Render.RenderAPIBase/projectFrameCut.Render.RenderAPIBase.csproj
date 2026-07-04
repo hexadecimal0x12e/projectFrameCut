@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <Using Include="projectFrameCut.Shared" />
+		<InternalsVisibleTo Include="projectFrameCut" />
 		<InternalsVisibleTo Include="projectFrameCut.Render" />
   </ItemGroup>
 

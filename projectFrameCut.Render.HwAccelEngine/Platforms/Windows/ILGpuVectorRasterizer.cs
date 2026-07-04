@@ -1,8 +1,8 @@
-#if WINDOWS
-using ILGPU;
+﻿using ILGPU;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System.Diagnostics;
@@ -23,7 +23,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         private const int FloatsPerPrimitive = 14;
 
         /// <summary>Render primitives using the first available ILGPU accelerator.</summary>
-        public static IPicture Render(List<GpuPrimitive> primitives, int width, int height, bool transparentBg)
+        public static IPicture Render(List<GpuPrimitive> primitives, List<float> polygonEdges, int width, int height, bool transparentBg)
         {
             Logger.LogDiagnostic($"Ready to start GPU rasterization with {primitives.Count} primitives at {width}x{height} resolution.");
             var sw = Stopwatch.StartNew();
@@ -67,9 +67,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             // kernel into roughly O(pixels * primitivesPerTile). ---
             var bins = TileBinner.Build(primitives, width, height);
 
+            // Edge buffer for PolygonFill primitives (4 floats per edge).
+            // Never allocate a zero-length GPU buffer.
+            var edgeArray = polygonEdges.Count > 0 ? polygonEdges.ToArray() : new float[4];
+
             // --- Allocate GPU buffers ---
             using var dPrimInfo = accel.Allocate1D(primInfo);
             using var dPrimData = accel.Allocate1D(primData);
+            using var dEdges = accel.Allocate1D(edgeArray);
             using var dTileOffsets = accel.Allocate1D(bins.TileOffsets);
             using var dTileIndices = accel.Allocate1D(bins.TileIndices);
 
@@ -87,7 +92,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
-                    kernel(pixels, dPrimInfo.View, dPrimData.View, pc,
+                    kernel(pixels, dPrimInfo.View, dPrimData.View, dEdges.View,
                            width, height, transparent,
                            dTileOffsets.View, dTileIndices.View, bins.TilesX, bins.TileSize,
                            dOutR.View, dOutG.View, dOutB.View, dOutA.View);
@@ -96,7 +101,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             }
             else
             {
-                kernel(pixels, dPrimInfo.View, dPrimData.View, pc,
+                kernel(pixels, dPrimInfo.View, dPrimData.View, dEdges.View,
                        width, height, transparent,
                        dTileOffsets.View, dTileIndices.View, bins.TilesX, bins.TileSize,
                        dOutR.View, dOutG.View, dOutB.View, dOutA.View);
@@ -144,22 +149,24 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         // ---------------------------------------------------------------
 
         /// <summary>
-        /// Once a pixel accumulates this much opacity we stop processing
-        /// further primitives for it. Anything drawn on top of an opaque
-        /// pixel contributes nothing, so the work is wasted.
+        /// Once a pixel's accumulated coverage reaches full opacity we stop
+        /// processing further primitives for it. The traversal is
+        /// front-to-back (top layer first) with "under" compositing, so this
+        /// early-out is exact: primitives below a fully opaque pixel cannot
+        /// contribute anything.
         /// </summary>
         private const float AlphaSaturatedEpsilon = 1e-6f;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator,
             Action<Index1D,
-                ArrayView<int>, ArrayView<float>, int,
+                ArrayView<int>, ArrayView<float>, ArrayView<float>,
                 int, int, int,
                 ArrayView<int>, ArrayView<int>, int, int,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>>
             KernelCache = new();
 
         private static Action<Index1D,
-            ArrayView<int>, ArrayView<float>, int,
+            ArrayView<int>, ArrayView<float>, ArrayView<float>,
             int, int, int,
             ArrayView<int>, ArrayView<int>, int, int,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>
@@ -170,7 +177,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     Index1D i,
                     ArrayView<int> primInfo,   // 2 ints per primitive: type, layer
                     ArrayView<float> primData, // 14 floats per primitive: r,g,b,a, d0..d5, bbox
-                    int primCount,
+                    ArrayView<float> edges,    // 4 floats per polygon edge: x0,y0,x1,y1
                     int w, int h,
                     int transparentBg,
                     ArrayView<int> tileOffsets, // CSR offsets, length tilesX*tilesY + 1
@@ -187,16 +194,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     float cx = x + 0.5f;
                     float cy = y + 0.5f;
 
-                    // Initialize background
-                    float pr, pg, pb, pa;
-                    if (transparentBg != 0)
-                    {
-                        pr = 0f; pg = 0f; pb = 0f; pa = 0f;
-                    }
-                    else
-                    {
-                        pr = 65535f; pg = 65535f; pb = 65535f; pa = 1f;
-                    }
+                    // Accumulated premultiplied colour + coverage.
+                    float accR = 0f, accG = 0f, accB = 0f, accA = 0f;
 
                     // Only test primitives that overlap this pixel's tile
                     // instead of every primitive in the scene.
@@ -206,7 +205,12 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     int tileStart = tileOffsets[tileIdx];
                     int tileEnd = tileOffsets[tileIdx + 1];
 
-                    for (int ti = tileStart; ti < tileEnd; ti++)
+                    // Traverse FRONT-TO-BACK (tile lists are stored in
+                    // painter's-algorithm order, so walk them in reverse) and
+                    // composite with the "under" operator. Most pixels only
+                    // need to test the topmost covering primitive before the
+                    // coverage saturates and the loop exits.
+                    for (int ti = tileEnd - 1; ti >= tileStart; ti--)
                     {
                         int p = tileIndices[ti];
                         int type = primInfo[p * 2 + 0];
@@ -234,7 +238,43 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
 
                         bool covered = false;
 
-                        if (type == 0)
+                        if (type == 2)
+                        {
+                            // ---- Polygon fill (non-zero winding) ----
+                            int edgeStart = (int)primData[dataBase + 4];
+                            int edgeCount = (int)primData[dataBase + 5];
+                            int winding = 0;
+                            for (int e = 0; e < edgeCount; e++)
+                            {
+                                int eb = (edgeStart + e) * 4;
+                                float ex0 = edges[eb + 0];
+                                float ey0 = edges[eb + 1];
+                                float ex1 = edges[eb + 2];
+                                float ey1 = edges[eb + 3];
+
+                                // Half-open span [yMin, yMax) matches the CPU
+                                // scanline filler and avoids double-counting
+                                // at shared vertices.
+                                if (ey0 < ey1)
+                                {
+                                    if (cy >= ey0 && cy < ey1)
+                                    {
+                                        float xInt = ex0 + (cy - ey0) * (ex1 - ex0) / (ey1 - ey0);
+                                        if (cx >= xInt) winding += 1;
+                                    }
+                                }
+                                else if (ey0 > ey1)
+                                {
+                                    if (cy >= ey1 && cy < ey0)
+                                    {
+                                        float xInt = ex1 + (cy - ey1) * (ex0 - ex1) / (ey0 - ey1);
+                                        if (cx >= xInt) winding -= 1;
+                                    }
+                                }
+                            }
+                            covered = winding != 0;
+                        }
+                        else if (type == 0)
                         {
                             // ---- Triangle fill ----
                             float v0x = primData[dataBase + 4];
@@ -291,19 +331,42 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
 
                         if (!covered) continue;
 
-                        // Alpha blend (over operator)
-                        float blendA = pa + sa * (1f - pa);
-                        if (blendA > 1e-6f)
-                        {
-                            pr = (sr * sa + pr * pa * (1f - sa)) / blendA;
-                            pg = (sg * sa + pg * pa * (1f - sa)) / blendA;
-                            pb = (sb * sa + pb * pa * (1f - sa)) / blendA;
-                        }
-                        pa = blendA;
+                        // "Under" compositing: this primitive is behind
+                        // everything accumulated so far, so it only fills the
+                        // remaining transparent coverage.
+                        float contrib = sa * (1f - accA);
+                        accR += sr * contrib;
+                        accG += sg * contrib;
+                        accB += sb * contrib;
+                        accA += contrib;
 
-                        // Early-out: once a pixel is fully opaque, no
-                        // primitive drawn afterwards can change its colour.
-                        if (pa >= 1f - AlphaSaturatedEpsilon) break;
+                        // Early-out: coverage saturated — primitives below
+                        // this one cannot contribute anything.
+                        if (accA >= 1f - AlphaSaturatedEpsilon) break;
+                    }
+
+                    float pr, pg, pb, pa;
+                    if (transparentBg != 0)
+                    {
+                        // Un-premultiply to straight alpha.
+                        if (accA > 1e-6f)
+                        {
+                            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+                        }
+                        else
+                        {
+                            pr = 0f; pg = 0f; pb = 0f;
+                        }
+                        pa = accA;
+                    }
+                    else
+                    {
+                        // Composite over the opaque white background.
+                        float rem = 1f - accA;
+                        pr = accR + 65535f * rem;
+                        pg = accG + 65535f * rem;
+                        pb = accB + 65535f * rem;
+                        pa = 1f;
                     }
 
                     outR[i] = pr;
@@ -320,7 +383,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         /// <summary>Pick a non-CPU accelerator, preferring CUDA over others.</summary>
         private static Accelerator? PickAccelerator()
         {
-            var all = HwAccelEnginePlugin.accelerators;
+            var all = AcceleratorsManager.Accelerators;
             if (all == null || all.Length == 0) return null;
 
             // Prefer CUDA, fall back to any non-CPU accelerator
@@ -343,4 +406,3 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         }
     }
 }
-#endif

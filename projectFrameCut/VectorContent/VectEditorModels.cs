@@ -26,6 +26,7 @@ public static class ShapeGalleryProvider
         new() { TypeName = "Arc",               DisplayName = "Arc",              Icon = "⌒" },
         new() { TypeName = "Polygon",           DisplayName = "Polygon",          Icon = "⬣" },
         new() { TypeName = "Polyline",          DisplayName = "Polyline",         Icon = "⦚" },
+        new() { TypeName = "Text",              DisplayName = "Text",             Icon = "T" },
     };
 
     public static string GetIcon(string typeName) =>
@@ -249,17 +250,7 @@ public class AnimationTrackItem : INotifyPropertyChanged
     public void SortKeyFrames()
     {
         _keyFrames.Sort((a, b) => a.Time.CompareTo(b.Time));
-
-        var sorted = KeyFrames.OrderBy(vm => vm.Time).ToList();
-        for (int i = 0; i < sorted.Count; i++)
-        {
-            int oldIndex = KeyFrames.IndexOf(sorted[i]);
-            if (oldIndex != i)
-                KeyFrames.Move(oldIndex, i);
-            sorted[i].IsLast = i == sorted.Count - 1;
-        }
-
-        OnPropertyChanged(nameof(KeyFrameCount));
+        RebuildKeyFrameItems();
     }
 
     public void MoveKeyFrame(int index, float newTime)

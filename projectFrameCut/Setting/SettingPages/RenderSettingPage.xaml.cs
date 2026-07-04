@@ -1,5 +1,4 @@
-﻿
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -11,6 +10,11 @@ using System.IO.Pipelines;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+#if WINDOWS
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
+#endif
+
 namespace projectFrameCut.Setting.SettingPages;
 
 using static SettingManager.SettingsManager;
@@ -18,10 +22,12 @@ using static SettingManager.SettingsManager;
 public partial class RenderSettingPage : ContentPage
 {
     PropertyPanelBuilder rootPPB;
-    AcceleratorInfo[] AcceleratorInfos = Array.Empty<AcceleratorInfo>();
     bool showMoreOpts = false;
     Dictionary<int, string> GCOptionMapping = new();
     ConcurrentDictionary<string, EffectImplementType> effectImplementTypes = new();
+#if WINDOWS
+    AcceleratorDeviceInfo[] AcceleratorDevices = Array.Empty<AcceleratorDeviceInfo>();
+#endif
 
     Dictionary<EffectImplementType, string> LocalizedImplementTypes = new Dictionary<EffectImplementType, string>
     {
@@ -104,11 +110,11 @@ public partial class RenderSettingPage : ContentPage
         base.OnAppearing();
 
 #if WINDOWS
-        if (AcceleratorInfos.Length == 0)
+        if (AcceleratorDevices.Length == 0)
         {
             Task t = new(() =>
             {
-                AcceleratorInfos = GetAccelInfo();
+                AcceleratorDevices = AcceleratorsManager.DiscoverDevices();
             });
             t.Start();
             t.ContinueWith((_) => Dispatcher.Dispatch(BuildPPB));
@@ -154,48 +160,49 @@ public partial class RenderSettingPage : ContentPage
             .AddSeparator();
 
 #if WINDOWS
-        string[] accels = ["Unknown"];
-        try
-        {
-            accels = AcceleratorInfos?.Select(a => $"#{a.index}: {a.name} ({a.Type})").ToArray() ?? ["Unknown"];
-        }
-        catch (Exception ex) { Log(ex); }
-        var multiAccel = IsBoolSettingTrue("accel_enableMultiAccel");
+        var devices = AcceleratorDevices;
+        string[] accelDisplayNames = devices.Length > 0
+            ? devices.Select(a => $"{a.Name} ({a.Type})").ToArray()
+            : ["No accelerator found"];
+        var multiAccel = AcceleratorsManager.IsMultiAccelEnabled;
+        var currentMainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
+        var renderingNames = AcceleratorsManager.AcceleratorsForRendering
+            .Select(a => a.Name).ToHashSet();
 
-        if (!int.TryParse(GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(AcceleratorInfos?.Any(c => c.index == result) ?? false))
-        {
-            var bestAccel = AcceleratorInfos?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
-            WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
-            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
-        }
+        // Find which display string matches the current main accelerator
+        var selectedDisplay = devices.FirstOrDefault(d => d.Name == currentMainName) is { } match
+            ? $"{match.Name} ({match.Type})"
+            : accelDisplayNames.FirstOrDefault() ?? "";
 
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
-            .AppendWhen(AcceleratorInfos?.Count() < 1, (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
-            .AddCheckbox("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
-            .AppendWhen(AcceleratorInfos?.Count(c => c.Type != "CPU") < 2, (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
-            .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out result) ? accels[result] : "", null);
+            .AppendWhen(devices.Length < 1 || !devices.Any(c => c.Type != "CPU"),
+                (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
+            .AddCheckbox("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel,
+                (s) => s.IsEnabled = devices.Count(c => c.Type != "CPU") >= 2)
+            .AppendWhen(devices.Count(c => c.Type != "CPU") < 2,
+                (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
+            .AddPicker("accel_DeviceId",
+                multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel,
+                accelDisplayNames, selectedDisplay, null);
 
-
-        try
+        if (multiAccel && devices.Length > 0)
         {
-            if (multiAccel && AcceleratorInfos?.Length > 0)
-            {
-                rootPPB
-                    .AddSeparator()
-                    .AddText(SettingLocalizedResources.Render_SelectAccel_MultiAccel, fontSize: 16)
-                    .AddCheckbox("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
+            rootPPB
+                .AddSeparator()
+                .AddText(SettingLocalizedResources.Render_SelectAccel_MultiAccel, fontSize: 16)
+                .AddCheckbox("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll,
+                    renderingNames.Count == devices.Count(d => d.Type != "CPU"), null);
 
-                for (int i = 0; i < AcceleratorInfos.Length; i++) //nobody wants to use CPU accel
-                {
-                    var key = $"accel_multi_{i + 1}";
-                    var def = bool.TryParse(GetSetting(key, "false"), out var v) ? v : false;
-                    rootPPB.AddCheckbox(key, $"{AcceleratorInfos[i].Type}: {AcceleratorInfos[i].name}", def, null);
-                }
+            for (int i = 0; i < devices.Length; i++)
+            {
+                var d = devices[i];
+                if (d.Type == "CPU") continue;
+                var key = $"accel_device_{i}";
+                var isChecked = renderingNames.Contains(d.Name);
+                rootPPB.AddCheckbox(key, $"{d.Type}: {d.Name}", isChecked, null);
             }
         }
-        catch (Exception ex) { Log(ex); }
-        finally { rootPPB.AddSeparator(); }
 #elif ANDROID
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
@@ -227,31 +234,6 @@ public partial class RenderSettingPage : ContentPage
 
         Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
     }
-#if WINDOWS
-    public static AcceleratorInfo[] GetAccelInfo()
-    {
-        try
-        {
-            ILGPU.Context context = ILGPU.Context.CreateDefault();
-            var devices = context.Devices.Where(C => C.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).ToList();
-            List<AcceleratorInfo> listAccels = new();
-            for (uint i = 0; i < devices.Count; i++)
-            {
-                var item = devices[(int)i];
-                listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
-            }
-
-            return listAccels.Any() ? listAccels.ToArray() : [new AcceleratorInfo(0, "No support accelerator found on this device.", "CPU")];
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "get accel info");
-        }
-        return Array.Empty<AcceleratorInfo>();
-
-    }
-#endif
-
 
 
     public async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
@@ -260,108 +242,105 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
+#if WINDOWS
                 case "accel_DeviceId":
-                    if (args.Value is string str)
+                    if (args.Value is string str && AcceleratorDevices.Length > 0)
                     {
-                        var idxStr = str.Substring(str.IndexOf('#') + 1, str.IndexOf(':') - str.IndexOf('#') - 1);
-                        if (uint.TryParse(idxStr, out var result))
+                        // str is in format "Name (Type)" — extract the name part
+                        var name = str;
+                        var parenIdx = str.LastIndexOf(" (", StringComparison.Ordinal);
+                        if (parenIdx > 0) name = str.Substring(0, parenIdx);
+
+                        if (AcceleratorDevices.Any(d => d.Name == name))
                         {
-                            WriteSetting("accel_DeviceId", (result + 1).ToString());
+                            var dev = AcceleratorDevices.First(d => d.Name == name);
+                            // Save single-accelerator config (disable multi-accel)
+                            AcceleratorsManager.SetDefaultAccelerator(dev.Name);
                         }
                     }
                     return;
+                case "accel_enableMultiAccel":
+                    if (args.Value is bool en)
+                    {
+                        var mainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
+                        if (en)
+                        {
+                            // Enable multi-accel: include all non-CPU devices
+                            var allNames = AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray();
+                            AcceleratorsManager.ApplyConfiguration(
+                                mainName, allNames, true);
+                        }
+                        else
+                        {
+                            // Disable multi-accel: use just the main accelerator
+                            AcceleratorsManager.ApplyConfiguration(
+                                mainName, [mainName], false);
+                        }
+                    }
+                    BuildPPB();
+                    return;
+                case var _ when args.Id != null && args.Id.StartsWith("accel_device_"):
+                    // Individual per-accelerator checkbox changed
+                    try
+                    {
+                        if (!int.TryParse(args.Id.AsSpan("accel_device_".Length), out var devIdx)) return;
+                        if (devIdx < 0 || devIdx >= AcceleratorDevices.Length) return;
+
+                        // Collect all currently-checked device names from UI state
+                        var checkedNames = new List<string>();
+                        for (int i = 0; i < AcceleratorDevices.Length; i++)
+                        {
+                            if (AcceleratorDevices[i].Type == "CPU") continue;
+                            var key = $"accel_device_{i}";
+                            // The panel component holds the live toggle state
+                            if (rootPPB?.Components?[key] is Microsoft.Maui.Controls.Switch sw && sw.IsToggled)
+                                checkedNames.Add(AcceleratorDevices[i].Name);
+                        }
+                        if (checkedNames.Count == 0) checkedNames.Add(AcceleratorDevices[devIdx].Name); // keep at least one
+
+                        var mainName = AcceleratorDevices.First().Name;
+                        AcceleratorsManager.ApplyConfiguration(
+                            mainName, checkedNames.ToArray(), true);
+
+                        // Sync select-all checkbox
+                        var nonCpuCount = AcceleratorDevices.Count(d => d.Type != "CPU");
+                        Dispatcher.Dispatch(() =>
+                        {
+                            if (rootPPB?.Components?["selectAllAccels"] is Microsoft.Maui.Controls.Switch selectAll)
+                                selectAll.IsToggled = checkedNames.Count >= nonCpuCount;
+                        });
+                    }
+                    catch (Exception ex) { Log(ex); }
+                    return;
+                case "selectAllAccels":
+                    try
+                    {
+                        var mainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
+                        if ((bool)args.Value)
+                        {
+                            // Select all non-CPU
+                            var allNames = AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray();
+                            AcceleratorsManager.ApplyConfiguration(
+                                mainName, allNames, true);
+                        }
+                        else
+                        {
+                            // Deselect all but the first non-CPU (keep at least one)
+                            var first = AcceleratorDevices.FirstOrDefault(d => d.Type != "CPU");
+                            if (first is not null)
+                                AcceleratorsManager.ApplyConfiguration(
+                                    first.Name, [first.Name], true);
+                        }
+                    }
+                    catch (Exception ex) { Log(ex); }
+                    return;
+#endif
                 case "showMoreOpts":
                     {
                         showMoreOpts = true;
                         BuildPPB();
                         return;
                     }
-                case "accel_enableMultiAccel":
-                    if (args.Value is bool en)
-                    {
-                        WriteSetting("accel_enableMultiAccel", en.ToString());
-                        if (en)
-                        {
-                            try
-                            {
-                                var saved = GetSetting("accel_MultiDeviceID", "");
-                                if (!string.IsNullOrWhiteSpace(saved) && AcceleratorInfos != null)
-                                {
-                                    if (saved == "all")
-                                    {
-                                        for (int i = 0; i < AcceleratorInfos.Length; i++) WriteSetting($"accel_multi_{i}", "true");
-                                    }
-                                    else
-                                    {
-                                        var parts = saved.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => int.TryParse(s, out var id) ? id : -1).Where(x => x >= 0).ToHashSet();
-                                        for (int i = 0; i < AcceleratorInfos.Length; i++) WriteSetting($"accel_multi_{i}", parts.Contains(i) ? "true" : "false");
-                                    }
-                                }
-                            }
-                            catch (Exception ex) { Log(ex); }
-                        }
-                    }
-                    BuildPPB();
-                    return;
-                case var _ when args.Id != null && args.Id.StartsWith("accel_multi_"):
-                    // Individual per-accelerator switch changed: persist it and update aggregated accel_MultiDeviceID
-                    try
-                    {
-                        // write this individual switch
-                        WriteSetting(args.Id, args.Value?.ToString() ?? "false");
-                        var selected = new List<int>();
-
-                        if (AcceleratorInfos != null && AcceleratorInfos.Length > 0)
-                        {
-                            for (int i = 0; i < AcceleratorInfos.Length; i++)
-                            {
-                                if (bool.TryParse(GetSetting($"accel_multi_{i}", "false"), out var v) && v) selected.Add(i);
-                            }
-                            if (selected.Count == 0) WriteSetting("accel_MultiDeviceID", "");
-                            else if (selected.Count == AcceleratorInfos.Length) WriteSetting("accel_MultiDeviceID", "all");
-                            else WriteSetting("accel_MultiDeviceID", string.Join(',', selected));
-                        }
-
-                        Dispatcher.Dispatch(() =>
-                        {
-                            if (rootPPB?.Components?["selectAllAccels"] is Microsoft.Maui.Controls.Switch selectAllSwitch)
-                            {
-                                selectAllSwitch.IsToggled = selected.Count == AcceleratorInfos?.Length;
-                            }
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex);
-                    }
-
-                    return;
-                case "selectAllAccels":
-                    try
-                    {
-                        if ((bool)args.Value)
-                        {
-                            WriteSetting("accel_enableMultiAccel", "true");
-                            WriteSetting($"accel_multi_0", "false");
-                            if (AcceleratorInfos is not null)
-                            {
-                                for (int i = 1; i < AcceleratorInfos.Length; i++)
-                                {
-                                    WriteSetting($"accel_multi_{i}", "true");
-                                }
-                            }
-                            WriteSetting("accel_MultiDeviceID", "all");
-                        }
-                        else if (!(bool)args.Value)
-                        {
-                            WriteSetting("accel_MultiDeviceID", string.Join(",", Enumerable.Range(1, AcceleratorInfos.Length - 1).Select(c => c.ToString())));
-
-                        }
-
-                    }
-                    catch (Exception ex) { Log(ex); }
-                    //BuildPPB();
-                    return;
                 case "render_GCOption":
                     {
                         var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new(0, "letCLRDoCollection"));

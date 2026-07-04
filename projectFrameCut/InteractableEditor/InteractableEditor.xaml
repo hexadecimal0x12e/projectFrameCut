@@ -75,6 +75,10 @@
                         <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
                         <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
                     </HorizontalStackLayout>
+                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ShowAllBorders}">
+                        <CheckBox IsChecked="{Binding ShowAllBorders}"  />
+                        <Label Text="&#xe1e6;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     <HorizontalStackLayout Margin="4,0">
                         <CheckBox IsChecked="{Binding EnableKeyframeRecording}" />
                         <Label Text="{l:Localized Key=InteractableEditor_KeyFrame}" Margin="-16,0,0,0" VerticalOptions="Center" FontSize="11" />

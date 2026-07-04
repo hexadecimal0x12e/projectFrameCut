@@ -10,6 +10,7 @@ using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using Point = projectFrameCut.Drawing.Vector.Point;
@@ -96,13 +97,19 @@ public partial class VectorComponentWrapperClip : IClip
 
     private float GetFloatParam(string key, float defaultValue)
     {
-        if (Component.Parameters.TryGetValue(key, out var val))
+        if (Component.Parameters.TryGetValue(key, out var val) && val is not null)
         {
             return val switch
             {
                 float f => f,
                 double d => (float)d,
                 int i => i,
+                uint u => u,
+                long l => l,
+                ushort us => us,
+                decimal m => (float)m,
+                JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+                JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
                 _ => defaultValue,
             };
         }
@@ -456,7 +463,11 @@ public partial class VectorComponentWrapperClip : IClip
     /// <summary>
     /// Build elements from an <see cref="IVectorComponent"/>.
     /// For SVG-style components (when <paramref name="cachedSvgElements"/> is set),
-    /// returns deep-cloned cached elements. Otherwise uses <c>Compute(0)</c>.
+    /// returns deep-cloned cached elements. For <see cref="ComponentGroup"/>s returns
+    /// the flattened children. Otherwise uses <see cref="IVectorComponent.ComputeAll"/>
+    /// so components whose <c>Compute</c> returns only a representative element
+    /// (e.g. <see cref="TextComponent"/>) still produce all visual elements for
+    /// bounds and preview.
     /// </summary>
     public static List<VectorCanvasElement> BuildElements(IVectorComponent component, List<VectorCanvasElement>? cachedSvgElements)
     {
@@ -470,16 +481,15 @@ public partial class VectorComponentWrapperClip : IClip
             return cachedSvgElements.Select(e => e is ShapeCanvasElement shape ? shape.Clone() : e).ToList();
         }
 
-        var element = component.Compute(0f);
-        if (element is not null)
-            return new() { element };
-        return new();
+        return component.ComputeAll(0f).ToList();
     }
 
     /// <summary>
     /// Computes animated elements for the given frame.
     /// For SVG components uses cached elements with per-element progress.
-    /// For others uses <c>Component.Compute(progress)</c>.
+    /// For <see cref="ComponentGroup"/>s returns flattened children.
+    /// Otherwise uses <see cref="IVectorComponent.ComputeAll"/> so components
+    /// such as <see cref="TextComponent"/> produce every glyph for the preview.
     /// </summary>
     public static List<VectorCanvasElement> ComputeAnimatedElements(
         VectorComponentWrapperClip clip, uint frame, uint duration)
@@ -517,10 +527,7 @@ public partial class VectorComponentWrapperClip : IClip
             return clip.CachedSvgElements.ToList();
         }
 
-        var element = clip.Component.Compute(progress);
-        if (element is not null)
-            return new() { element };
-        return new();
+        return clip.Component.ComputeAll(progress).ToList();
     }
 
     private static float EvaluateKeyframes(List<VectorAnimationKeyFrame> keyframes, float progress)
@@ -554,13 +561,19 @@ public partial class VectorComponentWrapperClip : IClip
 
     private static float GetParam(Dictionary<string, object> parameters, string key, float defaultValue)
     {
-        if (parameters.TryGetValue(key, out var val))
+        if (parameters.TryGetValue(key, out var val) && val is not null)
         {
             return val switch
             {
                 float f => f,
                 double d => (float)d,
                 int i => i,
+                uint u => u,
+                long l => l,
+                ushort us => us,
+                decimal m => (float)m,
+                JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+                JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
                 _ => defaultValue,
             };
         }
@@ -612,6 +625,11 @@ public partial class VectorComponentWrapperClip : IClip
                 ScaleCoordinateParam(parameters, "CenterX", localBounds.MinX, scaleX);
                 ScaleCoordinateParam(parameters, "CenterY", localBounds.MinY, scaleY);
                 break;
+            case "Text":
+                ScaleShapeParam(parameters, "FontSize", Math.Min(scaleX, scaleY));
+                ScaleShapeParam(parameters, "StrokeThickness", Math.Min(scaleX, scaleY));
+                ScaleShapeParam(parameters, "CharacterSpacing", Math.Min(scaleX, scaleY));
+                break;
             case "Polygon":
             case "Polyline":
                 // Polygon/polyline vertices stored via EditorPoints — handled by the editor
@@ -627,6 +645,12 @@ public partial class VectorComponentWrapperClip : IClip
             float f => f,
             double d => (float)d,
             int i => i,
+            uint u => u,
+            long l => l,
+            ushort us => us,
+            decimal m => (float)m,
+            JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+            JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
             _ => 0f,
         };
         parameters[key] = (float)Math.Max(0.0001d, value * scale);
@@ -640,6 +664,12 @@ public partial class VectorComponentWrapperClip : IClip
             float f => f,
             double d => (float)d,
             int i => i,
+            uint u => u,
+            long l => l,
+            ushort us => us,
+            decimal m => (float)m,
+            JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+            JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
             _ => 0f,
         };
         parameters[key] = (float)ScaleCoordinate(value, min, scale);
@@ -658,13 +688,37 @@ public partial class VectorComponentWrapperClip : IClip
         {
             if (parameters.TryGetValue(xKey, out var rawX))
             {
-                float x = rawX switch { float f => f, double d => (float)d, int i => i, _ => 0f };
+                float x = rawX switch
+                {
+                    float f => f,
+                    double d => (float)d,
+                    int i => i,
+                    uint u => u,
+                    long l => l,
+                    ushort us => us,
+                    decimal m => (float)m,
+                    JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+                    JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
+                    _ => 0f,
+                };
                 parameters[xKey] = (float)ScaleCoordinate(x, localBounds.MinX, scaleX);
             }
 
             if (parameters.TryGetValue(yKey, out var rawY))
             {
-                float y = rawY switch { float f => f, double d => (float)d, int i => i, _ => 0f };
+                float y = rawY switch
+                {
+                    float f => f,
+                    double d => (float)d,
+                    int i => i,
+                    uint u => u,
+                    long l => l,
+                    ushort us => us,
+                    decimal m => (float)m,
+                    JsonElement { ValueKind: JsonValueKind.Number } je => je.GetSingle(),
+                    JsonElement { ValueKind: JsonValueKind.String } je when float.TryParse(je.GetString(), out var parsed) => parsed,
+                    _ => 0f,
+                };
                 parameters[yKey] = (float)ScaleCoordinate(y, localBounds.MinY, scaleY);
             }
         }

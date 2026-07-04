@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -585,10 +585,10 @@ public partial class DiagnosticSettingPage : ContentPage
 
             try
             {
-                var accelsInfo = RenderSettingPage.GetAccelInfo();
+                var accelsInfo = ILGPU.Context.CreateDefault().Devices;
                 try
                 {
-                    accels = accelsInfo?.Select(a => $"- Accelerator #{a.index}: {a.name} ({a.Type})\r\n").ToArray() ?? ["Unknown"];
+                    accels = accelsInfo.Index().Select(a => $"- Accelerator #{a.Index}: {a.Item.Name} ({a.Item.AcceleratorType})\r\n").ToArray() ?? ["Unknown"];
                 }
                 catch (Exception ex) { Log(ex); }
             }

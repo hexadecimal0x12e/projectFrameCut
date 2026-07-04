@@ -41,17 +41,7 @@ using DatePicker = Microsoft.Maui.Controls.DatePicker;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
-
-
-
-
-
-
-
-
-
-
-
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 
 #if ANDROID
@@ -79,24 +69,11 @@ public partial class TestPage : ContentPage
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
 
-        ILGPU.Context context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        List<AcceleratorInfo> listAccels = new();
-        for (uint i = 0; i < devices.Count; i++)
+        // AcceleratorsManager was initialized during plugin load.
+        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
         {
-            var item = devices[(int)i];
-            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+            Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated operations will fall back to software.");
         }
-        if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
-        {
-            var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
-            SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
-            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
-        }
-        var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
-                                .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-        HwAccelEnginePlugin.accelerators = [accelDevice.CreateAccelerator(context)];
 
 #endif
         TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
@@ -972,32 +949,11 @@ public partial class TestPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-        var context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
-        {
-            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
-            if (accels == "all")
-            {
-                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
-            }
-            else
-            {
-                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                            .Select(s => int.TryParse(s, out var id) ? id : -1)
-                            .Where(id => id >= 0)
-                            .ToList();
-                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
-            }
-
-        }
-        else
-        {
-            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
-        }
-
-        if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+        // AcceleratorsManager was initialized during plugin load.
+        // Switch to rendering mode so all configured accelerators are used for benchmarking.
+        projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.IsRendering = true;
+        if (!projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.Accelerators.Any())
+            throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
         await Benchmarker.Start((d, etr) =>

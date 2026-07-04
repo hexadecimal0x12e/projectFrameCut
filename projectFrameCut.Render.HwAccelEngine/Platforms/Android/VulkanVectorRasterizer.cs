@@ -1,12 +1,11 @@
-#if ANDROID
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using projectFrameCut.Shared;
 using Silk.NET.Shaderc;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
-namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Android
+namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     /// <summary>
     /// Vulkan compute-shader vector rasterizer.
@@ -19,7 +18,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
         private const int WorkGroupSize = 256;
 
         /// <summary>Render primitives using Vulkan compute pipeline.</summary>
-        public static IPicture Render(List<GpuPrimitive> primitives, int width, int height, bool transparentBg)
+        public static IPicture Render(List<GpuPrimitive> primitives, List<float> polygonEdges, int width, int height, bool transparentBg)
         {
             int pc = primitives.Count;
             int pixelCount = width * height;
@@ -73,13 +72,18 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
             int tileOffsetsLen = tileOffsetsFloat.Length;
             int tileIndicesLen = tileIndicesFloat.Length;
 
+            // Edge buffer for PolygonFill primitives (4 floats per edge).
+            var edgesFloat = polygonEdges.Count > 0 ? polygonEdges.ToArray() : new float[4];
+
             // VulkanComputeView validates all inputs have the same length.
             // Pad to the maximum needed size to avoid the constraint.
             int vkPad = Math.Max(packedOutputLen,
-                Math.Max(primInfoLen, Math.Max(primDataLen, Math.Max(tileOffsetsLen, tileIndicesLen))));
+                Math.Max(primInfoLen, Math.Max(primDataLen,
+                Math.Max(edgesFloat.Length, Math.Max(tileOffsetsLen, tileIndicesLen)))));
             var dummyFirst = new float[vkPad];
             var padInfo = PadArray(primInfoFloat, vkPad);
             var padData = PadArray(primDataFloat, vkPad);
+            var padEdges = PadArray(edgesFloat, vkPad);
             var padTileOffsets = PadArray(tileOffsetsFloat, vkPad);
             var padTileIndices = PadArray(tileIndicesFloat, vkPad);
 
@@ -93,7 +97,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Platforms.Androi
                 {
                     var (accelerator, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(
                         shader,
-                        new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices },
+                        new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices, padEdges },
                         GLComputeView.OutputElementType.Float32);
 
                     var raw = (float[])await vkView.RunComputeAsync();
@@ -148,7 +152,8 @@ layout(set = 0, binding = 1, std430) buffer PrimInfoBuf { float primInfo[]; };
 layout(set = 0, binding = 2, std430) buffer PrimDataBuf { float primData[]; };
 layout(set = 0, binding = 3, std430) buffer TileOffsetsBuf { float tileOffsets[]; };
 layout(set = 0, binding = 4, std430) buffer TileIndicesBuf { float tileIndices[]; };
-layout(set = 0, binding = 5, std430) buffer OutBuf { float outPacked[]; };
+layout(set = 0, binding = 5, std430) buffer EdgesBuf { float edges[]; };
+layout(set = 0, binding = 6, std430) buffer OutBuf { float outPacked[]; };
 
 void main()
 {
@@ -161,12 +166,8 @@ void main()
     float cx = float(x) + 0.5;
     float cy = float(y) + 0.5;
 
-    float pr, pg, pb, pa;
-    {{'#'}}if {{transparentBg}}
-        pr = 0.0; pg = 0.0; pb = 0.0; pa = 0.0;
-    {{'#'}}else
-        pr = 65535.0; pg = 65535.0; pb = 65535.0; pa = 1.0;
-    {{'#'}}endif
+    // Accumulated premultiplied colour + coverage.
+    float accR = 0.0, accG = 0.0, accB = 0.0, accA = 0.0;
 
     // Only test primitives that overlap this pixel's tile instead of every
     // primitive in the scene.
@@ -176,7 +177,9 @@ void main()
     int tileStart = int(tileOffsets[tileIdx]);
     int tileEnd = int(tileOffsets[tileIdx + 1]);
 
-    for (int ti = tileStart; ti < tileEnd; ti++)
+    // Front-to-back traversal (tile lists are painter's-algorithm ordered,
+    // so walk in reverse) with "under" compositing.
+    for (int ti = tileEnd - 1; ti >= tileStart; ti--)
     {
         int p = int(tileIndices[ti]);
         int type = int(primInfo[p * 2]);
@@ -198,7 +201,40 @@ void main()
 
         bool covered = false;
 
-        if (type == 0)
+        if (type == 2)
+        {
+            // Polygon fill — non-zero winding over the edge buffer.
+            int edgeStart = int(primData[dataBase + 4]);
+            int edgeCount = int(primData[dataBase + 5]);
+            int winding = 0;
+            for (int e = 0; e < edgeCount; e++)
+            {
+                int eb = (edgeStart + e) * 4;
+                float ex0 = edges[eb + 0];
+                float ey0 = edges[eb + 1];
+                float ex1 = edges[eb + 2];
+                float ey1 = edges[eb + 3];
+
+                if (ey0 < ey1)
+                {
+                    if (cy >= ey0 && cy < ey1)
+                    {
+                        float xInt = ex0 + (cy - ey0) * (ex1 - ex0) / (ey1 - ey0);
+                        if (cx >= xInt) winding += 1;
+                    }
+                }
+                else if (ey0 > ey1)
+                {
+                    if (cy >= ey1 && cy < ey0)
+                    {
+                        float xInt = ex1 + (cy - ey1) * (ex0 - ex1) / (ey0 - ey1);
+                        if (cx >= xInt) winding -= 1;
+                    }
+                }
+            }
+            covered = winding != 0;
+        }
+        else if (type == 0)
         {
             float v0x = primData[dataBase + 4];
             float v0y = primData[dataBase + 5];
@@ -249,18 +285,37 @@ void main()
         if (!covered)
             continue;
 
-        float blendA = pa + sa * (1.0 - pa);
-        if (blendA > 1e-6)
-        {
-            pr = (sr * sa + pr * pa * (1.0 - sa)) / blendA;
-            pg = (sg * sa + pg * pa * (1.0 - sa)) / blendA;
-            pb = (sb * sa + pb * pa * (1.0 - sa)) / blendA;
-        }
-        pa = blendA;
+        // "Under" compositing: this primitive is behind everything
+        // accumulated so far.
+        float contrib = sa * (1.0 - accA);
+        accR += sr * contrib;
+        accG += sg * contrib;
+        accB += sb * contrib;
+        accA += contrib;
 
-        if (pa >= 1.0 - 1e-6)
+        // Coverage saturated — nothing below can contribute.
+        if (accA >= 1.0 - 1e-6)
             break;
     }
+
+    float pr, pg, pb, pa;
+    {{'#'}}if {{transparentBg}}
+        if (accA > 1e-6)
+        {
+            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+        }
+        else
+        {
+            pr = 0.0; pg = 0.0; pb = 0.0;
+        }
+        pa = accA;
+    {{'#'}}else
+        float rem = 1.0 - accA;
+        pr = accR + 65535.0 * rem;
+        pg = accG + 65535.0 * rem;
+        pb = accB + 65535.0 * rem;
+        pa = 1.0;
+    {{'#'}}endif
 
     outPacked[i] = pr;
     outPacked[i + {{pixelCount}}] = pg;
@@ -294,4 +349,3 @@ void main()
         }
     }
 }
-#endif

@@ -503,7 +503,7 @@ public class TimelineDrawable : IDrawable
     public VectorContentEditorView? View { get; set; }
 
     // Layout constants
-    public const float LeftMargin = 56f;
+    public const float LeftMargin = 92f;
     public const float RightMargin = 12f;
     public const float RulerHeight = 22f;
     public const float TrackRowHeight = 30f;

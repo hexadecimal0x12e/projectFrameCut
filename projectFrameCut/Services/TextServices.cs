@@ -4,7 +4,6 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Text.FontHelper;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
@@ -25,6 +24,7 @@ using TinyPinyin;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 namespace projectFrameCut.Services
 {

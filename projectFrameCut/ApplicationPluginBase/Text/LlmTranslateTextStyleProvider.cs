@@ -1,4 +1,4 @@
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Text;
@@ -15,7 +15,6 @@ using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
