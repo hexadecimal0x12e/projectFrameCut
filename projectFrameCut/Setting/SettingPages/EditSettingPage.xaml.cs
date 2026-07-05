@@ -1,4 +1,4 @@
-namespace projectFrameCut.Setting.SettingPages;
+﻿namespace projectFrameCut.Setting.SettingPages;
 
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
@@ -290,7 +290,7 @@ public partial class EditSettingPage : ContentPage
 #pragma warning disable CS0618 // 类型或成员已过时
                         TextClip t = new TextClip
                         {
-                            Id = Guid.Parse(s.StyleId),
+                            Id = Guid.Empty,
                             Name = s.StyleId,
                             TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
                             {

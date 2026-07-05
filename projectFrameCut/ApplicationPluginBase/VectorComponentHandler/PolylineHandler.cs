@@ -11,7 +11,7 @@ public class PolylineHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Polyline";
     public override string DisplayName => "折线";
-    public override string Icon => "⦚";
+    public override string Icon => "\uebbb";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new PolylineComponent();
 

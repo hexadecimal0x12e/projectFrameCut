@@ -376,6 +376,94 @@
         "ArgsComment": [],
         "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
         "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u9009\u62E9\u5206\u5C4F\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u9009\u62E9\u6B64\u533A\u57DF\u8981\u663E\u793A\u7684\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u7559\u7A7A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u6CA1\u6709\u5176\u4ED6\u53EF\u7528\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u5DE6 + \u53F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u5DE6 1/3 + \u53F3 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u5DE6 2/3 + \u53F3 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u4E0A + \u4E0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u56DB\u8C61\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u4E09\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -1153,6 +1241,94 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Choose a snap layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Cancel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Select content for this area",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Leave empty",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "No other windows available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "Left + Right",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Left 1/3 + Right 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Left 2/3 + Right 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Top + Bottom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "4 Quadrants",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "3 Columns",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],

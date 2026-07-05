@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using projectFrameCut.Drawing.Vector;
@@ -17,20 +17,22 @@ public static class ShapeGalleryProvider
 {
     public static readonly IReadOnlyList<ShapeGalleryItem> Items = new List<ShapeGalleryItem>
     {
-        new() { TypeName = "Rectangle",         DisplayName = "Rectangle",        Icon = "▭" },
-        new() { TypeName = "RoundedRectangle",  DisplayName = "Rounded Rect",     Icon = "▢" },
-        new() { TypeName = "Ellipse",           DisplayName = "Ellipse",          Icon = "⬭" },
-        new() { TypeName = "Line",              DisplayName = "Line",             Icon = "╱" },
-        new() { TypeName = "CubicBezier",       DisplayName = "Cubic Bezier",     Icon = "∿" },
-        new() { TypeName = "QuadraticBezier",   DisplayName = "Quad Bezier",      Icon = "⌈" },
-        new() { TypeName = "Arc",               DisplayName = "Arc",              Icon = "⌒" },
-        new() { TypeName = "Polygon",           DisplayName = "Polygon",          Icon = "⬣" },
-        new() { TypeName = "Polyline",          DisplayName = "Polyline",         Icon = "⦚" },
-        new() { TypeName = "Text",              DisplayName = "Text",             Icon = "T" },
+        new() { TypeName = "Rectangle",         DisplayName = "Rectangle",        Icon = "\ueb54" },
+        new() { TypeName = "RoundedRectangle",  DisplayName = "Rounded Rect",     Icon = "\ue3c6" },
+        new() { TypeName = "Ellipse",           DisplayName = "Ellipse",          Icon = "\ue836" },
+        new() { TypeName = "Line",              DisplayName = "Line",             Icon = "\uf108" },
+        new() { TypeName = "CubicBezier",       DisplayName = "Cubic Bezier",     Icon = "\ue6e1" },
+        new() { TypeName = "QuadraticBezier",   DisplayName = "Quad Bezier",      Icon = "\ue922" },
+        new() { TypeName = "Arc",               DisplayName = "Arc",              Icon = "\ue155" },
+        new() { TypeName = "Polygon",           DisplayName = "Polygon",          Icon = "\ueb39" },
+        new() { TypeName = "Polyline",          DisplayName = "Polyline",         Icon = "\uebbb" },
+        new() { TypeName = "Text",              DisplayName = "Text",             Icon = "\ue262" },
+        new() { TypeName = "ComponentGroup",    DisplayName = "Group",            Icon = "\uf500", ExcludeInNewComponent = true },
+        new() { TypeName = "SVGImage",          DisplayName = "SVG",              Icon = "\ue3f4", ExcludeInNewComponent = true },
     };
 
     public static string GetIcon(string typeName) =>
-        Items.FirstOrDefault(i => i.TypeName == typeName)?.Icon ?? "□";
+        Items.FirstOrDefault(i => i.TypeName == typeName)?.Icon ?? "\ue575";
 
     public static string GetDisplayName(string typeName) =>
         Items.FirstOrDefault(i => i.TypeName == typeName)?.DisplayName ?? typeName;
@@ -43,6 +45,7 @@ public class ShapeGalleryItem
     public string DisplayName { get; init; } = "";
     public string Icon { get; init; } = "";
     public string Description { get; init; } = "";
+    public bool ExcludeInNewComponent { get; init; } = false;
 }
 
 /// <summary>Read-only element descriptor for the legacy SVG element picker.</summary>
@@ -364,6 +367,37 @@ public class VectorComponentItem : INotifyPropertyChanged
     /// <summary>SVG import: source file path.</summary>
     public string? EditorSourceFilePath { get; set; }
 
+    private bool _isChecked;
+    /// <summary>选中状态（用于多选 Group 操作）。</summary>
+    public bool IsChecked
+    {
+        get => _isChecked;
+        set
+        {
+            if (_isChecked != value)
+            {
+                _isChecked = value;
+                OnPropertyChanged();
+                _owner.OnComponentCheckedChanged(this, value);
+            }
+        }
+    }
+
+    private bool _isSelected;
+    /// <summary>列表高亮状态 — 当前被选中的组件在列表中视觉高亮。</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     /// <summary>Polygon/Polyline vertices.</summary>
     public List<Point> EditorPoints { get; set; } = new();
 
@@ -393,11 +427,11 @@ public class VectorComponentItem : INotifyPropertyChanged
         }
     }
 
-    public string TypeName => _source.TypeName;
+    public string TypeName => ((_source as ComponentGroup)?.IsSVG is true) ? "SVGImage" : _source.TypeName;
     public string ShapeIcon => ShapeGalleryProvider.GetIcon(TypeName);
 
-    public bool IsFromSvg => TypeName == "ImportedSvg";
-    public bool IsShapeEditable => !IsFromSvg;
+    public bool IsGrouped => _source is ComponentGroup;
+    public bool IsShapeEditable => !IsGrouped;
 
     public int ElementCount
     {
@@ -405,7 +439,7 @@ public class VectorComponentItem : INotifyPropertyChanged
         {
             if (_source is ComponentGroup group)
                 return group.Children.Count;
-            if (IsFromSvg)
+            if (IsGrouped)
                 return EditorCachedElements?.Count ?? 0;
             return 1;
         }
@@ -413,29 +447,13 @@ public class VectorComponentItem : INotifyPropertyChanged
 
     public string ElementCountText => _source switch
     {
+        ComponentGroup group when group.IsSVG || group.IsImportedGroup => Path.GetFileName(group.SourceFile) ?? "file",
         ComponentGroup group => $"{group.Children.Count} items",
-        _ when IsFromSvg => $"{ElementCount} elements",
-        _ => "1 shape",
+        _ when IsGrouped => $"{ElementCount} elements",
+        _ => TypeName,
     };
 
-    // ── SVG-specific properties ──────────────────────────────
-
-    public string? SourceFilePath
-    {
-        get => EditorSourceFilePath;
-        set
-        {
-            if (EditorSourceFilePath != value)
-            {
-                EditorSourceFilePath = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public string ShapeTypeDisplayName => IsFromSvg
-        ? System.IO.Path.GetFileName(SourceFilePath ?? "SVG")
-        : ShapeGalleryProvider.GetDisplayName(TypeName);
+    public string ShapeTypeDisplayName => ShapeGalleryProvider.GetDisplayName(TypeName);
 
     // ── Parameter helpers (generic shape access — used by handlers) ──
 
@@ -518,6 +536,13 @@ public class VectorComponentItem : INotifyPropertyChanged
         }
     }
 
+    public string ImportedDataType => (_source as ComponentGroup) switch
+    {
+        var t when t?.IsSVG == true => "SVG",
+        var t1 when t1?.IsImportedGroup == true => "Shape File",
+        _ => "Shapes"
+    };
+
     public string DurationText => $"{DurationInFrames} frames";
 
     // ── Tracks ──────────────────────────────────────────────
@@ -592,5 +617,17 @@ public class VectorComponentItem : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    protected bool SetProperty<T>(ref T field, T newValue, [CallerMemberName] string propertyName = null)
+    {
+        if (!Equals(field, newValue))
+        {
+            field = newValue;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return true;
+        }
+
+        return false;
     }
 }

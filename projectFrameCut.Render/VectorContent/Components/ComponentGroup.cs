@@ -44,6 +44,34 @@ public class ComponentGroup : IVectorComponent
 
     public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
+    /// <summary>
+    /// Whether this group was imported from an SVG file.
+    /// Stored in <see cref="Parameters"/> because <see cref="IVectorComponent"/>
+    /// is an interface — in .NET 7+ System.Text.Json uses the declared type
+    /// for serialisation, so properties unique to <see cref="ComponentGroup"/>
+    /// would be lost during the round-trip.  The Parameters dictionary, being
+    /// declared on IVectorComponent itself, survives serialisation correctly.
+    /// </summary>
+    public bool IsSVG
+    {
+        get => GetBoolParam("IsSVG", false);
+        set => Parameters["IsSVG"] = value ? "True" : "False";
+    }
+
+    /// <inheritdoc cref="IsSVG"/>
+    public bool IsImportedGroup
+    {
+        get => GetBoolParam("IsImportedGroup", false);
+        set => Parameters["IsImportedGroup"] = value ? "True" : "False";
+    }
+
+    /// <inheritdoc cref="IsSVG"/>
+    public string SourceFile
+    {
+        get => GetStringParam("SourceFile", "imported.svg");
+        set => Parameters["SourceFile"] = value ?? "imported.svg";
+    }
+
     public ComponentGroup()
     {
         EnsureDefaultParameters();
@@ -280,6 +308,40 @@ public class ComponentGroup : IVectorComponent
         };
     }
 
+    private bool GetBoolParam(string key, bool defaultValue)
+    {
+        EnsureDefaultParameters();
+
+        if (!Parameters.TryGetValue(key, out var val) || val is null)
+            return defaultValue;
+
+        return val switch
+        {
+            bool b => b,
+            string s when bool.TryParse(s, out var parsed) => parsed,
+            JsonElement { ValueKind: JsonValueKind.True } => true,
+            JsonElement { ValueKind: JsonValueKind.False } => false,
+            JsonElement { ValueKind: JsonValueKind.String } je
+                when bool.TryParse(je.GetString(), out var parsed) => parsed,
+            _ => defaultValue,
+        };
+    }
+
+    private string GetStringParam(string key, string defaultValue)
+    {
+        EnsureDefaultParameters();
+
+        if (!Parameters.TryGetValue(key, out var val) || val is null)
+            return defaultValue;
+
+        return val switch
+        {
+            string s => s,
+            JsonElement { ValueKind: JsonValueKind.String } je => je.GetString() ?? defaultValue,
+            _ => defaultValue,
+        };
+    }
+
     private List<IVectorComponent> DeserializeChildren()
     {
         EnsureDefaultParameters();
@@ -347,6 +409,9 @@ public class ComponentGroup : IVectorComponent
         Parameters.TryAdd("BaseX", 0f);
         Parameters.TryAdd("BaseY", 0f);
         Parameters.TryAdd("LayerIndex", 0);
+        Parameters.TryAdd("IsSVG", "False");
+        Parameters.TryAdd("IsImportedGroup", "False");
+        Parameters.TryAdd("SourceFile", "imported.svg");
         Parameters.TryAdd(InitialRelativeXKey, 0.5f);
         Parameters.TryAdd(InitialRelativeYKey, 0.5f);
         Parameters.TryAdd(InitialWidthKey, 0.3f);

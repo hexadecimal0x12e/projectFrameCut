@@ -2,7 +2,8 @@
 <Grid xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
       x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowView"
-      BackgroundColor="#2D2D30">
+      BackgroundColor="#2D2D30"
+      IsClippedToBounds="False">
 
     <Grid.RowDefinitions>
         <RowDefinition Height="*"/>
@@ -22,6 +23,103 @@
             BackgroundColor="#3F7FB5FF"
             StrokeShape="RoundRectangle 8"
             Margin="0" />
+
+    <!-- Layout Picker Overlay — appears when dragging a window to the top-center of the MDI area -->
+    <Grid x:Name="LayoutPickerOverlay"
+          Grid.Row="0"
+          IsVisible="False"
+          InputTransparent="False"
+          ZIndex="20000"
+          BackgroundColor="#80000000">
+
+        <!-- Centered panel with layout options -->
+        <Border x:Name="LayoutPickerPanel"
+                BackgroundColor="#2D2D30"
+                Stroke="#3E3E42"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 12"
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                Padding="20"
+                WidthRequest="340">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,8" Radius="24" Opacity="0.6"/>
+            </Border.Shadow>
+
+            <Grid RowDefinitions="Auto, Auto, Auto" RowSpacing="16">
+
+                <!-- Title -->
+                <Label Grid.Row="0"
+                       x:Name="LayoutPickerTitle"
+                       Text="Select a snap layout"
+                       TextColor="White"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"/>
+
+                <!-- Layout option grid: 3 columns x 1 row (populated in code-behind) -->
+                <Grid x:Name="LayoutPickerGrid"
+                      Grid.Row="1"
+                      ColumnDefinitions="*, *, *"
+                      RowDefinitions="Auto"
+                      ColumnSpacing="10"/>
+
+                <!-- Cancel button -->
+                <Button x:Name="LayoutPickerCancelBtn"
+                        Grid.Row="2"
+                        Text="Cancel"
+                        BackgroundColor="#454545"
+                        TextColor="White"
+                        CornerRadius="6"
+                        HeightRequest="34"
+                        HorizontalOptions="Fill"
+                        Clicked="OnLayoutPickerCancelClicked"/>
+            </Grid>
+        </Border>
+    </Grid>
+
+    <!-- Content Chooser Overlay — appears in the empty area after a snap operation -->
+    <Border x:Name="ContentChooserOverlay"
+            Grid.Row="0"
+            IsVisible="False"
+            InputTransparent="False"
+            ZIndex="15000"
+            BackgroundColor="#CC2D2D30"
+            Stroke="#3E3E42"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 8"
+            HorizontalOptions="Start"
+            VerticalOptions="Start">
+
+        <Grid RowDefinitions="Auto, *, Auto" RowSpacing="8" Padding="12">
+
+            <Label Grid.Row="0"
+                   x:Name="ContentChooserTitle"
+                   Text="Select content for this area"
+                   TextColor="White"
+                   FontSize="13"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+
+            <ScrollView Grid.Row="1"
+                        MaximumHeightRequest="240"
+                        VerticalScrollBarVisibility="Default">
+                <VerticalStackLayout x:Name="ContentChooserList"
+                                    Spacing="4"/>
+            </ScrollView>
+
+            <Button x:Name="ContentChooserDismissBtn"
+                    Grid.Row="2"
+                    Text="Leave empty"
+                    BackgroundColor="#454545"
+                    TextColor="White"
+                    FontSize="12"
+                    CornerRadius="4"
+                    HeightRequest="28"
+                    HorizontalOptions="Fill"
+                    Clicked="OnContentChooserDismissClicked"/>
+        </Grid>
+    </Border>
 
     <!-- Taskbar -->
     <Border x:Name="Taskbar"

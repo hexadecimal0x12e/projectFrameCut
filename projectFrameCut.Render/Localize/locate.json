@@ -2000,6 +2000,32 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorCanvas_EditorTitle",
+        "Value": "\u914D\u7F6E\u300C{name}\u300D\u7684\u5185\u5BB9",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VectorCanvas_OpenEditor",
+        "Value": "\u6253\u5F00\u7F16\u8F91\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

@@ -20,7 +20,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Text";
     public override string DisplayName => "文本";
-    public override string Icon => "T";
+    public override string Icon => "\ue262";
     public override bool HasDefaultHandles => true;
 
     /// <summary>

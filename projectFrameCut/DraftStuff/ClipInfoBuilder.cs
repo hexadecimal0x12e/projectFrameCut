@@ -51,12 +51,6 @@ using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
 
-
-
-
-
-
-
 #if WINDOWS
 using Microsoft.UI.Xaml;
 
@@ -645,7 +639,7 @@ namespace projectFrameCut.DraftStuff
                         {
                             aaStr = aaJsonElem.GetString() ?? "None";
                         }
-                        else if(aaObj is string s)
+                        else if (aaObj is string s)
                         {
                             aaStr = s;
                         }
@@ -666,7 +660,7 @@ namespace projectFrameCut.DraftStuff
             .AppendWhen(clip.ClipType == ClipMode.VectorCanvasClip,
                 c =>
                 {
-                    c.AddButton("Open Vector Editor", async (s, e) =>
+                    c.AddButton(PPLocalizedResources.General_VectorCanvas_OpenEditor, async (s, e) =>
                     {
                         if (TargetInstance is not VectorCanvasClip vecClip)
                         {
@@ -674,23 +668,64 @@ namespace projectFrameCut.DraftStuff
                             return;
                         }
                         var editor = new VectorContentEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
-                        var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                        var editorPage = new ContentPage { Content = editor, Title = "" };
+                        Shell.SetNavBarIsVisible(editorPage, false);
+
+                        if (DeviceInfo.Idiom == DeviceIdiom.Desktop)
                         {
-                            Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
-                            Content = editor,
-                            IsPopOutVisible = true
-                        };
-                        editor.ChangesApplied += (d) =>
+                            var window = new Microsoft.Maui.Controls.Window(editorPage)
+                            {
+                                Title = PPLocalizedResources.General_VectorCanvas_EditorTitle(clip.DisplayName),
+                            };
+                            window.Destroying += (s, e) =>
+                            {
+                                try
+                                {
+                                    foreach (var item in editor.MainMultiWindowView.Windows.ToList().Where(c => c.IsInStandaloneWindowMode))
+                                    {
+                                        item.Close(true);
+                                    }
+                                }
+                                catch { }
+                            };
+                            editor.ChangesApplied += (d) =>
+                            {
+                                clip.ExtraData = d;
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
+                                Microsoft.Maui.Controls.Application.Current?.CloseWindow(window);
+                            };
+                            editor.ChangesCancelled += (s, e) =>
+                            {
+                                Microsoft.Maui.Controls.Application.Current?.CloseWindow(window);
+                            };
+#if WINDOWS
+                            window.HandlerChanged += (s, e) =>
+                            {
+                                var platformView = window.Handler?.PlatformView;
+                                if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
+                                {
+                                    nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+                                }
+                            };
+#endif
+                            Microsoft.Maui.Controls.Application.Current?.OpenWindow(window);
+                        }
+                        else
                         {
-                            clip.ExtraData = d;
-                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
-                            page.MainMultiWindowView.CloseWindow(v);
-                        };
-                        editor.ChangesCancelled += (s, e) =>
-                        {
-                            page.MainMultiWindowView.CloseWindow(v);
-                        };
-                        page.MainMultiWindowView.AddWindow(v);
+                            editor.ChangesApplied += async (d) =>
+                            {
+                                clip.ExtraData = d;
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
+                                await page.Navigation.PopModalAsync();
+                            };
+                            editor.ChangesCancelled += async (s, e) =>
+                            {
+                                await page.Navigation.PopModalAsync();
+                            };
+                            await page.Navigation.PushModalAsync(editorPage);
+                        }
+
+
                     });
                 });
 
@@ -2402,7 +2437,8 @@ namespace projectFrameCut.DraftStuff
                     clip.ExtraData["TextEntries"] = updatedEntries.ToList();
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
                 }
-            };
+            }
+            ;
             providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
 
             return providerHost.BuildWithScrollView();

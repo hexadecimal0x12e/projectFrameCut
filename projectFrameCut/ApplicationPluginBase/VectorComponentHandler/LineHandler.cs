@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
@@ -9,7 +9,7 @@ public class LineHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Line";
     public override string DisplayName => "线段";
-    public override string Icon => "╱";
+    public override string Icon => "\uf108";
     public override bool HasDefaultHandles => true;
     protected override IVectorComponent CreateComponent() => new LineComponent();
 

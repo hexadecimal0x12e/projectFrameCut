@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
@@ -9,7 +9,7 @@ public class CubicBezierHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "CubicBezier";
     public override string DisplayName => "三次贝塞尔";
-    public override string Icon => "∿";
+    public override string Icon => "\ue6e1";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new CubicBezierComponent();
 

@@ -11,7 +11,7 @@ public class PolygonHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Polygon";
     public override string DisplayName => "多边形";
-    public override string Icon => "⬣";
+    public override string Icon => "\ueb39";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new PolygonComponent();
 

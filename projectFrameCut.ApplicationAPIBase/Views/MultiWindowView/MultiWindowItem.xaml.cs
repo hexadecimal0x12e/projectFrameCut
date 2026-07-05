@@ -41,6 +41,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public static readonly BindableProperty IsTitleBarVisibleProperty =
             BindableProperty.Create(nameof(IsTitleBarVisible), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnTitleBarVisibilityChanged);
 
+        public static readonly BindableProperty IsInStandaloneWindowModeProperty =
+            BindableProperty.Create(nameof(IsInStandaloneWindowMode), typeof(bool), typeof(MultiWindowItem), false, BindingMode.OneWay);
+
         public string Title
         {
             get => (string)GetValue(TitleProperty);
@@ -128,6 +131,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(IsMinimizedPropertyKey, value);
         }
 
+        public bool IsInStandaloneWindowMode => _isInWindowMode;
+
 #pragma warning disable CS0618
         [Obsolete("Go forward is an unusual design for stack-based navigation (you can't put back a disappeared things back). Consider using navigation within the window content instead.", false)] // I don't know why I did this hah
         public bool AllowGoForward
@@ -174,6 +179,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private double _preMaxWidth, _preMaxHeight, _preMaxX, _preMaxY;
         private int _preCol, _preRow, _preColSpan, _preRowSpan;
         private bool _isMaximized = false;
+
+        /// <summary>
+        /// Offset from the window's top-left to the mouse pointer at drag start.
+        /// Captured by PointerGestureRecognizer on the title bar; used to compute
+        /// the absolute pointer position during drag for pointer-driven snap detection.
+        /// </summary>
+        private Point _grabPointerOffset;
+
+        /// <summary>
+        /// When set, the window will restore to these bounds on the next drag start.
+        /// Used by MultiWindowView to save pre-snap bounds so the window can be
+        /// restored to a floating size when the user starts dragging a snapped window.
+        /// </summary>
+        internal Rect? PreSnapBounds { get; set; }
 
         private double _preMinHeight;
 
@@ -259,6 +278,31 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 var panGesture = new PanGestureRecognizer();
                 panGesture.PanUpdated += OnTitleBarPanUpdated;
                 _titleBarGrid.GestureRecognizers.Add(panGesture);
+
+                // Track the pointer position on the title bar so we know the grab offset
+                // at drag start. This enables pointer-position-driven snap detection.
+                var pointerGesture = new PointerGestureRecognizer();
+                pointerGesture.PointerMoved += (s, pe) =>
+                {
+                    var pos = pe.GetPosition(this);
+                    if (pos.HasValue)
+                    {
+                        _grabPointerOffset = pos.Value;
+                    }
+                };
+                _titleBarGrid.GestureRecognizers.Add(pointerGesture);
+
+                var tapGesture = new TapGestureRecognizer
+                {
+                    NumberOfTapsRequired = 2
+                };
+                tapGesture.Tapped += (s, e) =>
+                {
+                    Maximize();
+                };
+
+                _titleBarGrid.GestureRecognizers.Add(tapGesture);
+
             }
 
             if (_visualRoot != null)
@@ -361,7 +405,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _titleBarGrid.GestureRecognizers.Add(gesture);
 
             }
-
         }
 
         private void SetupResizeHandle(string name, EventHandler<PanUpdatedEventArgs> handler)
@@ -1102,7 +1145,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (_isInWindowMode && _hostWindow != null)
             {
-                PerformDock(true);
+                if (force)
+                {
+                    Application.Current?.CloseWindow(_hostWindow);
+                }
+                else
+                {
+                    PerformDock(true);
+                }
             }
 
             if (Parent is Layout layout)
@@ -1118,8 +1168,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="CloseWindowOnNativeCloseButtonClicked">
         /// when this argument is true, when you click on the 'close' button on the new native window, the window'll be closed and <see cref="CloseClicked"/> will be invoked.
         /// </param>
-        public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = true)
+        public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = true, bool preserveBindingContext = true, object? newBindingContext = null)
         {
+            if (preserveBindingContext && newBindingContext is not null) throw new InvalidOperationException("Cannot set newBindingContext while using preserveBindingContext");
             if (ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized is not ApplicationAPIBaseLocalizerBase b) b = ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
             if (DeviceInfo.Idiom == DeviceIdiom.Phone)
             {
@@ -1245,7 +1296,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var parentContainer = new ContentPage
             {
                 Content = this,
-                Title = ""
+                Title = "",
+                BindingContext = preserveBindingContext ? (_originalParent as View).BindingContext : newBindingContext
             };
             NavigationPage.SetHasNavigationBar(parentContainer, false); // Hide default MAUI Navigation Bar
             var hostingPage = new NavigationPage(parentContainer);
@@ -1287,7 +1339,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     },
                     this
                 },
-                Title = this.Title ?? "Window"
+                Title = this.Title ?? "Window",
+                BindingContext = preserveBindingContext ? this.BindingContext : newBindingContext
             };
 #endif
             NavigationPage.SetHasNavigationBar(hostingPage, false); // Hide default MAUI Navigation Bar
@@ -1464,34 +1517,53 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             double width = Width > 0 ? Width : Math.Max(0, WidthRequest);
             double height = Height > 0 ? Height : Math.Max(0, HeightRequest);
-            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height);
+
+            // Compute absolute pointer position relative to the parent container.
+            // During drag, the pointer stays at a constant offset from the window's
+            // top-left (the grab offset captured at pan start).
+            var pointerX = TranslationX + _grabPointerOffset.X;
+            var pointerY = TranslationY + _grabPointerOffset.Y;
+
+            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height, pointerX, pointerY);
         }
 
         private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
         {
-            if (_isMaximized || !IsDraggable) return;
-
+            if (!IsDraggable) return;
             if (Parent is not VisualElement parent) return;
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    // Restore from maximized state before capturing drag position
+                    if (_isMaximized)
+                        Maximize();
+
+                    // Restore from snapped state before capturing drag position
+                    if (PreSnapBounds.HasValue)
+                    {
+                        this.TranslationX = PreSnapBounds.Value.X;
+                        this.TranslationY = PreSnapBounds.Value.Y;
+                        this.WidthRequest = PreSnapBounds.Value.Width;
+                        this.HeightRequest = PreSnapBounds.Value.Height;
+                        PreSnapBounds = null;
+                    }
+
+                    // If PointerGestureRecognizer hasn't fired yet (rare edge case),
+                    // approximate the grab offset at the window's top-center.
+                    if (_grabPointerOffset == default)
+                    {
+                        var w = Width > 0 ? Width : Math.Max(0, WidthRequest);
+                        _grabPointerOffset = new Point(w / 2, 0);
+                    }
+
                     _startX = this.TranslationX;
                     _startY = this.TranslationY;
                     DragStarted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Running:
-                    double proposedX = _startX + e.TotalX;
-                    double proposedY = _startY + e.TotalY;
-
-                    // Calculate bounds
-                    // Assuming the element is aligned Top/Left (LayoutOptions.Start),
-                    // Translation corresponds to the position relative to the parent's generic Top/Left.
-                    double maxX = Math.Max(0, parent.Width - this.Width);
-                    double maxY = Math.Max(0, parent.Height - this.Height);
-
-                    this.TranslationX = Math.Clamp(proposedX, 0, maxX);
-                    this.TranslationY = Math.Clamp(proposedY, 0, maxY);
+                    this.TranslationX = _startX + e.TotalX;
+                    this.TranslationY = _startY + e.TotalY;
                     Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Completed:
@@ -1672,17 +1744,38 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
     public sealed class WindowBoundsChangedEventArgs : EventArgs
     {
-        public WindowBoundsChangedEventArgs(double x, double y, double width, double height)
+        public WindowBoundsChangedEventArgs(double x, double y, double width, double height, double pointerX = 0, double pointerY = 0)
         {
             X = x;
             Y = y;
             Width = width;
             Height = height;
+            PointerX = pointerX;
+            PointerY = pointerY;
         }
 
+        /// <summary>Window top-left X (TranslationX).</summary>
         public double X { get; }
+
+        /// <summary>Window top-left Y (TranslationY).</summary>
         public double Y { get; }
+
+        /// <summary>Window width.</summary>
         public double Width { get; }
+
+        /// <summary>Window height.</summary>
         public double Height { get; }
+
+        /// <summary>
+        /// Mouse pointer X relative to the parent container.
+        /// Used for pointer-position-driven snap detection (modern OS behavior).
+        /// </summary>
+        public double PointerX { get; }
+
+        /// <summary>
+        /// Mouse pointer Y relative to the parent container.
+        /// Used for pointer-position-driven snap detection (modern OS behavior).
+        /// </summary>
+        public double PointerY { get; }
     }
 }

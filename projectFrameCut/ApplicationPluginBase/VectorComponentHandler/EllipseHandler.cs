@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
@@ -9,7 +9,7 @@ public class EllipseHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Ellipse";
     public override string DisplayName => "椭圆";
-    public override string Icon => "⬭";
+    public override string Icon => "\ue836";
     public override bool HasDefaultHandles => true;
     protected override IVectorComponent CreateComponent() => new EllipseComponent();
 

@@ -1,9 +1,13 @@
-﻿using projectFrameCut.ApplicationAPIBase.Helpers;
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Storage;
+using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using IVectorComponentHandler = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.IVectorComponentHandler;
-using ShapeHandlePositionType = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.ShapeHandlePositionType;
+using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 using projectFrameCut.Drawing.Base;
-using projectFrameCut.Services;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.InteractableEditor;
@@ -12,23 +16,19 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
-using Point = projectFrameCut.Drawing.Vector.Point;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows.Input;
 using Color = Microsoft.Maui.Graphics.Color;
 using IDispatcher = Microsoft.Maui.Dispatching.IDispatcher;
-using System.Diagnostics;
-using CommunityToolkit.Maui.Core;
-using CommunityToolkit.Maui.Storage;
-using CommunityToolkit.Maui.Extensions;
-using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-using CommunityToolkit.Maui;
-using Microsoft.Maui.Controls.Shapes;
+using IVectorComponentHandler = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.IVectorComponentHandler;
+using Point = projectFrameCut.Drawing.Vector.Point;
+using ShapeHandlePositionType = projectFrameCut.ApplicationAPIBase.VectorComponentHandler.ShapeHandlePositionType;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -44,7 +44,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private readonly VectorCanvasClip _clip;
     private readonly IDispatcher _dispatcher;
-    private readonly Func<Task<string?>>? _pickSvgFile;
 
     private List<IVectorComponent> _editingComponents = new();
     private List<IVectorComponent> _componentsBackup = new();
@@ -90,11 +89,12 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     /// Create the editor for the given <paramref name="clip"/>.
     /// Works for both SVG-backed and composition-only clips.
     /// </summary>
-    public VectorContentEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight) : this()
+    public VectorContentEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight)
     {
+        InitializeComponent();
+
         _clip = clip ?? throw new ArgumentNullException(nameof(clip));
         _dispatcher = Dispatcher;
-        _pickSvgFile = OpenSvgFilePickerAsync;
 
         int previewProjectWidth = Math.Max(1, projectWidth);
         int previewProjectHeight = Math.Max(1, projectHeight);
@@ -222,8 +222,22 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         // ── Initialize state ──
         InitializeState();
 
+        // ── Apply the default MDI layout once the MultiWindowView has a real size ──
+        MainMultiWindowView.SizeChanged += OnMainMultiWindowViewSizeChanged;
+
         // ── Complete view setup ──
         BindingContext = this;
+
+        if (Parent is MultiWindowItem mvi)
+        {
+            mvi.IsPopOutVisible = false;
+        }
+    }
+
+    private void OnMainMultiWindowViewSizeChanged(object? sender, EventArgs e)
+    {
+        if (_defaultLayoutApplied) return;
+        ApplyDefaultMultiWindowLayout();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -239,19 +253,34 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void OnChangesCancelledForward(object? sender, EventArgs e) =>
         ChangesCancelled?.Invoke(this, EventArgs.Empty);
 
-    private void OnComponentsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    /// <summary>点击组件行将其设为当前选中组件（用于右侧属性面板）。</summary>
+    private void OnComponentItemTapped(object? sender, TappedEventArgs e)
     {
-        SelectedComponents.Clear();
-        if (sender is CollectionView cv && cv.SelectedItems is not null)
+        if (sender is VisualElement ve && ve.BindingContext is VectorComponentItem item)
         {
-            foreach (var item in cv.SelectedItems.OfType<VectorComponentItem>())
+            SelectedComponent = item;
+        }
+        OnPropertyChanged(nameof(CanGroupComponents));
+        OnPropertyChanged(nameof(CanUngroupComponent));
+        OnPropertyChanged(nameof(CanGroupOrUngroup));
+    }
+
+    /// <summary>由 VectorComponentItem.IsChecked 通知，更新多选集合。 </summary>
+    public void OnComponentCheckedChanged(VectorComponentItem item, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!SelectedComponents.Contains(item))
                 SelectedComponents.Add(item);
+        }
+        else
+        {
+            SelectedComponents.Remove(item);
         }
 
         OnPropertyChanged(nameof(CanGroupComponents));
         OnPropertyChanged(nameof(CanUngroupComponent));
-        if (GroupComponentsCommand is Command groupCmd) groupCmd.ChangeCanExecute();
-        if (UngroupComponentCommand is Command ungroupCmd) ungroupCmd.ChangeCanExecute();
+        OnPropertyChanged(nameof(CanGroupOrUngroup));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -351,8 +380,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         set { if (field != value) { field = value; OnPropertyChanged(); } }
     } = "";
 
+    private List<string> _availableFieldIds = new();
     /// <summary>All available field IDs for the track property picker.</summary>
-    public List<string> AvailableFieldIds { get; } = new();
+    public List<string> AvailableFieldIds => _availableFieldIds;
 
     /// <summary>All available easing modes for the keyframe easing Picker.</summary>
     public List<EasingMode> AllEasingModes { get; } =
@@ -401,10 +431,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         {
             if (field != value)
             {
+                // 清除旧选项的高亮
+                if (field is not null)
+                    field.IsSelected = false;
+
                 field = value;
+
+                // 标记新选项为高亮
+                if (field is not null)
+                    field.IsSelected = true;
+
                 SelectedTrack = value?.Tracks.FirstOrDefault();
                 SelectedKeyFrame = null;
+                RebuildAvailableFieldIds();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedComponent));
                 OnPropertyChanged(nameof(HasSelectedComponent));
                 OnPropertyChanged(nameof(CanAddTrack));
                 OnPropertyChanged(nameof(CanRemoveTrack));
@@ -412,8 +453,14 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 OnPropertyChanged(nameof(Tracks));
                 OnPropertyChanged(nameof(CanGroupComponents));
                 OnPropertyChanged(nameof(CanUngroupComponent));
+                OnPropertyChanged(nameof(CanGroupOrUngroup));
+                OnPropertyChanged(nameof(AvailableFieldIds));
+                // Also notify Command.CanExecute so the button re-evaluates its enabled state.
+                // The CheckBox-based OnComponentCheckedChanged may not always fire at the right
+                // time when SelectedComponent changes, so we explicitly notify here.
+                if (GroupComponentsCommand is Command groupCmd) groupCmd.ChangeCanExecute();
+                SelectedFieldIdForNewTrack = AvailableFieldIds.Count > 0 ? AvailableFieldIds[0] : "";
                 _timelineInvalidateAction?.Invoke();
-                RebuildAvailableFieldIds();
             }
         }
     }
@@ -426,6 +473,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public bool CanGroupComponents => SelectedComponents.Count >= 2 && SelectedComponents.All(c => c.Source is not ComponentGroup);
 
     public bool CanUngroupComponent => SelectedComponents.Count == 1 && SelectedComponent?.Source is ComponentGroup;
+
+    public bool CanGroupOrUngroup
+    {
+        get
+        {
+            if (SelectedComponents.Count >= 2)
+            {
+                return !SelectedComponents.Any(c => c.Source is ComponentGroup);
+            }
+            else
+            {
+                return SelectedComponent?.Source is ComponentGroup g && !g.IsSVG;
+            }
+        }
+    }
 
     // ── Shape gallery ──
 
@@ -455,10 +517,10 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public ICommand AddComponentCommand { get; private set; } = null!;
     public ICommand RemoveComponentCommand { get; private set; } = null!;
     public ICommand GroupComponentsCommand { get; private set; } = null!;
-    public ICommand UngroupComponentCommand { get; private set; } = null!;
     public ICommand ImportSvgCommand { get; private set; } = null!;
     public ICommand DeleteKeyFrameCommand { get; private set; } = null!;
     public ICommand ExportJsonCommand { get; private set; } = null!;
+    public ICommand SelectComponentCommand { get; private set; } = null!;
 
     private void RegisterCommands()
     {
@@ -471,11 +533,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         CancelCommand = new Command(Cancel);
         AddComponentCommand = new Command<string>(AddComponent);
         RemoveComponentCommand = new Command(RemoveComponent);
-        GroupComponentsCommand = new Command(GroupComponents, () => CanGroupComponents);
-        UngroupComponentCommand = new Command(UngroupComponent, () => CanUngroupComponent);
+        GroupComponentsCommand = new Command(GroupUngroupComponents);
         ImportSvgCommand = new Command(async () => await ImportSvg());
         DeleteKeyFrameCommand = new Command(DeleteKeyFrame);
         ExportJsonCommand = new Command(async () => await ExportToJsonAsync());
+        SelectComponentCommand = new Command<VectorComponentItem>(item => SelectedComponent = item);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -487,7 +549,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         RegisterCommands();
 
         // Build shape gallery items from ShapeGalleryProvider
-        foreach (var item in ShapeGalleryProvider.Items)
+        foreach (var item in ShapeGalleryProvider.Items.Where(c => !c.ExcludeInNewComponent))
         {
             ShapeGalleryItems.Add(new ShapeGalleryItem
             {
@@ -519,17 +581,19 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     /// Rebuilds the available field IDs for the track picker from the
     /// currently selected component's <see cref="IVectorComponent.AnimatableFields"/>.
     /// Called whenever <see cref="SelectedComponent"/> changes.
+    /// Creates a new <see cref="List{T}"/> so the reference changes, ensuring
+    /// MAUI's binding engine propagates the update to the Picker (a same-reference
+    /// in-place <c>Clear</c>+<c>Add</c> would be treated as "unchanged" and skipped).
     /// </summary>
     private void RebuildAvailableFieldIds()
     {
-        AvailableFieldIds.Clear();
+        var ids = new List<string>();
         if (SelectedComponent?.Source.AnimatableFields is { } fields)
         {
             foreach (var key in fields.Keys)
-                AvailableFieldIds.Add(key);
+                ids.Add(key);
         }
-        OnPropertyChanged(nameof(AvailableFieldIds));
-        SelectedFieldIdForNewTrack = AvailableFieldIds.Count > 0 ? AvailableFieldIds[0] : "";
+        _availableFieldIds = ids;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -671,8 +735,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     {
         try
         {
-            var components = _editingComponents;
-            if (components.Count == 0)
+            if (_editingComponents.Count == 0)
             {
                 //await Toast.Make("没有可导出的组件。", ToastDuration.Short).Show();
                 return;
@@ -685,11 +748,21 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 PropertyNamingPolicy = null,
             };
 
-            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(components, options);
+            var group = new ComponentGroup
+            {
+                Id = Guid.NewGuid(),
+                Name = "Exported shapes",
+                IsImportedGroup = true,
+                IsSVG = false,
+            };
+
+            group.SetChildren(_editingComponents);
+
+            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(group, options);
             using var stream = new MemoryStream(jsonBytes);
 
             var safeName = SanitizeFileName(_clip.Name ?? "VectorComponents");
-            var fileName = $"{safeName}.json";
+            var fileName = $"{safeName}.shapes";
 
             var result = await FileSaver.Default.SaveAsync(fileName, stream);
 
@@ -771,9 +844,22 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var item = SelectedComponent;
         _editingComponents.Remove(item.Source);
         Components.Remove(item);
+        SelectedComponents.Remove(item);
 
         SelectedComponent = Components.FirstOrDefault();
         _ = RefreshInteractivePreviewsAsync();
+    }
+
+    public void GroupUngroupComponents()
+    {
+        if (SelectedComponents.Count < 2 || SelectedComponent is ComponentGroup)
+        {
+            UngroupComponent();
+        }
+        else
+        {
+            GroupComponents();
+        }
     }
 
     /// <summary>
@@ -823,8 +909,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         var groupItem = new VectorComponentItem(group, this);
         Components.Add(groupItem);
 
+        // 清除所有组件的 CheckBox 状态
+        foreach (var c in Components) c.IsChecked = false;
         SelectedComponents.Clear();
-        ComponentsListView.SelectedItems?.Clear();
         SelectedComponent = groupItem;
 
         RebuildComponentClips();
@@ -850,8 +937,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             Components.Add(new VectorComponentItem(child, this));
         }
 
+        // 清除所有组件的 CheckBox 状态
+        foreach (var c in Components) c.IsChecked = false;
         SelectedComponents.Clear();
-        ComponentsListView.SelectedItems?.Clear();
         SelectedComponent = Components.FirstOrDefault(c => children.Contains(c.Source));
 
         RebuildComponentClips();
@@ -961,10 +1049,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private async Task ImportSvg()
     {
-        if (_pickSvgFile is null) return;
 
         string? filePath;
-        try { filePath = await _pickSvgFile(); }
+        try { filePath = await OpenSvgFilePickerAsync(); }
         catch (Exception ex)
         {
             Log(ex, "SVG file picker failed", this);
@@ -975,27 +1062,46 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
         try
         {
-            var svgPicture = SVGToVectorElement.ImportFromFile(filePath);
-            if (svgPicture is null || svgPicture.Elements.Count == 0) return;
-
-            var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
-            var handlerCache = EnsureHandlerCache();
-
-            // Convert each SVG element to an IVectorComponent
             var individualComponents = new List<IVectorComponent>();
-            for (int i = 0; i < svgPicture.Elements.Count; i++)
+            var fileName = System.IO.Path.GetFileNameWithoutExtension(filePath);
+            switch (System.IO.Path.GetExtension(filePath).ToLower())
             {
-                var component = ConvertElementToComponent(svgPicture.Elements[i], i, handlerCache);
-                if (component is not null)
-                {
-                    individualComponents.Add(component);
-                }
+                case ".svg":
+                case ".xml":
+                    var svgPicture = SVGToVectorElement.ImportFromFile(filePath);
+                    if (svgPicture is null || svgPicture.Elements.Count == 0) return;
+
+                    var handlerCache = EnsureHandlerCache();
+
+                    // Convert each SVG element to an IVectorComponent
+                    for (int i = 0; i < svgPicture.Elements.Count; i++)
+                    {
+                        var component = ConvertElementToComponent(svgPicture.Elements[i], i, handlerCache);
+                        if (component is not null)
+                        {
+                            individualComponents.Add(component);
+                        }
+                    }
+
+                    if (individualComponents.Count == 0) return;
+                    break;
+                case ".shapes":
+                case ".json":
+                    try
+                    {
+                        var comp = JsonSerializer.Deserialize<ComponentGroup>(File.ReadAllText(filePath));
+                        individualComponents = comp?.Children ?? throw new InvalidDataException("Invalid .shapes file.");
+                    }
+                    catch { }
+
+                    break;
+                default:
+                    //await Toast.Make($"不支持的文件类型: {filePath}", ToastDuration.Short).Show();
+                    return;
             }
 
-            if (individualComponents.Count == 0) return;
-
             // Wrap all components in a group for unified movement / scaling / rotation
-            var group = WrapComponentsInGroup(individualComponents, fileName);
+            var group = WrapComponentsInGroup(individualComponents, fileName, isSVG: true, isImportedGroup: true, srcFileName: filePath);
             if (group is null) return;
 
             _editingComponents.Add(group);
@@ -1230,8 +1336,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     /// that provides unified movement, scaling, and rotation.
     /// Follows the same pattern as <see cref="GroupComponents"/>.
     /// </summary>
-    private ComponentGroup? WrapComponentsInGroup(
-        List<IVectorComponent> components, string groupName)
+    private ComponentGroup? WrapComponentsInGroup(List<IVectorComponent> components, string groupName, bool isSVG = false, bool isImportedGroup = false, string? srcFileName = null)
     {
         if (components.Count == 0) return null;
 
@@ -1252,6 +1357,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         {
             Name = groupName,
             Index = components.Min(c => c.Index),
+            IsSVG = isSVG,
+            IsImportedGroup = isImportedGroup,
+            SourceFile = srcFileName ?? "",
         };
         group.Parameters["RelativeX"] = groupCenterX;
         group.Parameters["RelativeY"] = groupCenterY;
@@ -1362,10 +1470,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             case InteractableEditor.InteractableEditor.ResizeHandle.TopRight:
             case InteractableEditor.InteractableEditor.ResizeHandle.BottomLeft:
             case InteractableEditor.InteractableEditor.ResizeHandle.BottomRight:
-                RecordOrUpdateKeyframe(component, "RelativeX", progress, normalizedX);
-                RecordOrUpdateKeyframe(component, "RelativeY", progress, normalizedY);
-                break;
-            case InteractableEditor.InteractableEditor.ResizeHandle.ClipPan:
                 if (component.Source is ComponentGroup)
                 {
                     RecordOrUpdateKeyframe(component, "Width", progress, normW);
@@ -1376,6 +1480,10 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                     RecordOrUpdateKeyframe(component, "BaseX", progress, normW);
                     RecordOrUpdateKeyframe(component, "BaseY", progress, normH);
                 }
+                break;
+            case InteractableEditor.InteractableEditor.ResizeHandle.ClipPan:
+                RecordOrUpdateKeyframe(component, "RelativeX", progress, normalizedX);
+                RecordOrUpdateKeyframe(component, "RelativeY", progress, normalizedY);
                 break;
         }
 
@@ -1464,10 +1572,10 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             var customFileType = new FilePickerFileType(
                 new Dictionary<DevicePlatform, IEnumerable<string>>
                 {
-                    { DevicePlatform.WinUI, new[] { ".svg" } },
-                    { DevicePlatform.Android, new[] { "image/svg+xml" } },
-                    { DevicePlatform.iOS, new[] { "public.svg-image" } },
-                    { DevicePlatform.macOS, new[] { "public.svg-image" } },
+                    { DevicePlatform.WinUI, new[] { ".svg", ".shapes" } },
+                    { DevicePlatform.Android, new[] { "image/svg+xml", "text/json", "application/json", "application/shapes" } },
+                    { DevicePlatform.iOS, new[] { "public.svg-image", "public.json", "public.shapes" } },
+                    { DevicePlatform.macOS, new[] { "public.svg-image", "public.json", "public.shapes" } },
                 });
 
             var result = await FilePicker.PickAsync(new PickOptions
@@ -2251,27 +2359,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // Static helpers — cloning
-    // ═══════════════════════════════════════════════════════════
-
-    private static List<IVectorComponent> CloneComponents(List<IVectorComponent> original)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(original);
-            return JsonSerializer.Deserialize<List<IVectorComponent>>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        }
-        catch
-        {
-            return new();
-        }
     }
 
     internal record struct ComponentHandleIdentifier(Guid clipId, string handleId)
@@ -2288,119 +2378,86 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     }
 
     // ═══════════════════════════════════════════════════════════
-    // Panel splitter management (resize + collapse/expand)
+    // Default MDI layout (matches the drawn boxes in the design)
     // ═══════════════════════════════════════════════════════════
 
-    private const double LeftPanelMinWidth = 160;
-    private const double LeftPanelMaxWidth = 500;
-    private const double RightPanelMinWidth = 230;
-    private const double RightPanelMaxWidth = 600;
+    private bool _defaultLayoutApplied;
 
-    private double _leftPanelStartWidth;
-    private double _rightPanelStartWidth;
-    private double _leftPanelWidthBeforeCollapse = 280;
-    private double _rightPanelWidthBeforeCollapse = 300;
-
-    public bool LeftPanelCollapsed { get; private set; }
-    public bool RightPanelCollapsed { get; private set; }
-
-    private void OnLeftSplitterPanUpdated(object? sender, PanUpdatedEventArgs e)
+    /// <summary>
+    /// Snap each <see cref="MultiWindowItem"/> into the layout shown by the design
+    /// mockup: Components on the left, Editor on the upper middle, Timeline on the
+    /// lower middle, Properties on the upper right, Animation Tracks on the lower
+    /// right.  Applied once after the <see cref="MainMultiWindowView"/> has a
+    /// non-zero size so the windows land in the same positions on every launch.
+    /// </summary>
+    private void ApplyDefaultMultiWindowLayout()
     {
-        switch (e.StatusType)
+        if (_defaultLayoutApplied) return;
+        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0) return;
+        if (!MainMultiWindowView.Children.Contains(ComponentsWindow) ||
+            !MainMultiWindowView.Children.Contains(EditorWindow) ||
+            !MainMultiWindowView.Children.Contains(TimelineWindow) ||
+            !MainMultiWindowView.Children.Contains(PropertiesWindow) ||
+            !MainMultiWindowView.Children.Contains(AnimationTracksWindow))
         {
-            case GestureStatus.Started:
-                _leftPanelStartWidth = LeftPanelColumn.Width.Value;
-                if (LeftPanelCollapsed)
-                {
-                    LeftPanelCollapsed = false;
-                    LeftPanel.IsVisible = true;
-                    OnPropertyChanged(nameof(LeftPanelCollapsed));
-                }
-                break;
-            case GestureStatus.Running:
-                double newWidth = Math.Clamp(_leftPanelStartWidth + e.TotalX, LeftPanelMinWidth, LeftPanelMaxWidth);
-                LeftPanelColumn.Width = new GridLength(newWidth, GridUnitType.Absolute);
-                _leftPanelWidthBeforeCollapse = newWidth;
-                break;
-            case GestureStatus.Completed:
-            case GestureStatus.Canceled:
-                UpdateLeftPanelToggleText();
-                break;
+            return;
         }
+
+        const double Gap = 4;
+        const double EditorRatio = 0.62;   // Editor takes ~62% of vertical space
+        const double LeftRatio = 0.20;     // Left rail takes ~20% of width
+        const double RightRatio = 0.24;    // Right rail takes ~24% of width
+
+        double totalW = MainMultiWindowView.Width;
+        double totalH = MainMultiWindowView.Height;
+
+        double leftW = Math.Max(220, Math.Round(totalW * LeftRatio));
+        double rightW = Math.Max(260, Math.Round(totalW * RightRatio));
+        double centerW = Math.Max(200, totalW - leftW - rightW - Gap * 2);
+
+        double editorH = Math.Max(160, Math.Round(totalH * EditorRatio) - Gap);
+        double timelineH = Math.Max(180, totalH - editorH - Gap);
+        double rightH = Math.Max(160, Math.Round((totalH - Gap) / 2.0));
+
+        // Red box — left rail (full height)
+        SetWindowBounds(ComponentsWindow, 0, 0, leftW, totalH);
+
+        // Center top — editor
+        SetWindowBounds(EditorWindow,
+            leftW + Gap, 0,
+            centerW, editorH);
+
+        // Yellow box — timeline (center bottom)
+        SetWindowBounds(TimelineWindow,
+            leftW + Gap, editorH + Gap,
+            centerW, timelineH);
+
+        // Green box — properties (right top)
+        SetWindowBounds(PropertiesWindow,
+            leftW + Gap + centerW + Gap, 0,
+            rightW, rightH);
+
+        // Blue box — animation tracks (right bottom)
+        SetWindowBounds(AnimationTracksWindow,
+            leftW + Gap + centerW + Gap, rightH + Gap,
+            rightW, Math.Max(160, totalH - rightH - Gap));
+
+        // Lift Properties on top so the user sees the property editor first.
+        MainMultiWindowView.BringToFront(PropertiesWindow);
+
+        _defaultLayoutApplied = true;
     }
 
-    private void OnRightSplitterPanUpdated(object? sender, PanUpdatedEventArgs e)
+    private static void SetWindowBounds(MultiWindowItem item, double x, double y, double width, double height)
     {
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                _rightPanelStartWidth = RightPanelColumn.Width.Value;
-                if (RightPanelCollapsed)
-                {
-                    RightPanelCollapsed = false;
-                    RightPanel.IsVisible = true;
-                    OnPropertyChanged(nameof(RightPanelCollapsed));
-                }
-                break;
-            case GestureStatus.Running:
-                double newWidth = Math.Clamp(_rightPanelStartWidth - e.TotalX, RightPanelMinWidth, RightPanelMaxWidth);
-                RightPanelColumn.Width = new GridLength(newWidth, GridUnitType.Absolute);
-                _rightPanelWidthBeforeCollapse = newWidth;
-                break;
-            case GestureStatus.Completed:
-            case GestureStatus.Canceled:
-                UpdateRightPanelToggleText();
-                break;
-        }
-    }
+        if (item is null) return;
 
-    private void OnToggleLeftPanelClicked(object? sender, EventArgs e)
-    {
-        if (LeftPanelCollapsed)
-        {
-            double restoredWidth = Math.Clamp(_leftPanelWidthBeforeCollapse, LeftPanelMinWidth, LeftPanelMaxWidth);
-            LeftPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
-            LeftPanel.IsVisible = true;
-            LeftPanelCollapsed = false;
-        }
-        else
-        {
-            _leftPanelWidthBeforeCollapse = Math.Clamp(LeftPanelColumn.Width.Value, LeftPanelMinWidth, LeftPanelMaxWidth);
-            LeftPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
-            LeftPanel.IsVisible = false;
-            LeftPanelCollapsed = true;
-        }
-        OnPropertyChanged(nameof(LeftPanelCollapsed));
-        UpdateLeftPanelToggleText();
-    }
-
-    private void OnToggleRightPanelClicked(object? sender, EventArgs e)
-    {
-        if (RightPanelCollapsed)
-        {
-            double restoredWidth = Math.Clamp(_rightPanelWidthBeforeCollapse, RightPanelMinWidth, RightPanelMaxWidth);
-            RightPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
-            RightPanel.IsVisible = true;
-            RightPanelCollapsed = false;
-        }
-        else
-        {
-            _rightPanelWidthBeforeCollapse = Math.Clamp(RightPanelColumn.Width.Value, RightPanelMinWidth, RightPanelMaxWidth);
-            RightPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
-            RightPanel.IsVisible = false;
-            RightPanelCollapsed = true;
-        }
-        OnPropertyChanged(nameof(RightPanelCollapsed));
-        UpdateRightPanelToggleText();
-    }
-
-    private void UpdateLeftPanelToggleText()
-    {
-        ToggleLeftPanelButton.Text = LeftPanelCollapsed ? "▶" : "◀";
-    }
-
-    private void UpdateRightPanelToggleText()
-    {
-        ToggleRightPanelButton.Text = RightPanelCollapsed ? "◀" : "▶";
+        item.HorizontalOptions = LayoutOptions.Start;
+        item.VerticalOptions = LayoutOptions.Start;
+        item.Margin = new Thickness(0);
+        item.TranslationX = x;
+        item.TranslationY = y;
+        item.WidthRequest = Math.Max(160, width);
+        item.HeightRequest = Math.Max(120, height);
     }
 }

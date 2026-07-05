@@ -17,7 +17,47 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         TopRightQuarter,
         BottomLeftQuarter,
         BottomRightQuarter,
-        Full
+        Full,
+        TopCenter
+    }
+
+    /// <summary>
+    /// Describes the type of a snap layout used in the layout picker.
+    /// </summary>
+    public enum SnapLayoutType
+    {
+        LeftRight,
+        LeftThirdRightTwoThirds,
+        LeftTwoThirdsRightThird,
+        TopBottom,
+        FourQuadrant,
+        ThreeColumns
+    }
+
+    /// <summary>
+    /// Represents one option in the snap layout picker.
+    /// </summary>
+    public class SnapLayoutOption
+    {
+        public SnapLayoutType Type { get; init; }
+        public string DisplayName { get; init; }
+
+        /// <summary>
+        /// Ordered list of zones. The dragged window occupies zone[0];
+        /// remaining zones are offered to the content chooser.
+        /// </summary>
+        public List<WindowSnapZone> Zones { get; init; }
+
+        /// <summary>
+        /// Relative widths of columns (e.g., [0.5, 0.5] for 2-column equal split).
+        /// Used to render miniature preview icons in the picker.
+        /// </summary>
+        public double[] ColumnRatios { get; init; }
+
+        /// <summary>
+        /// Number of rows (1 for row-based splits, 2 for quadrants, etc.).
+        /// </summary>
+        public int Rows { get; init; }
     }
 
     public enum WindowArrangeMode
@@ -77,6 +117,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public static readonly BindableProperty TaskbarHeightProperty =
             BindableProperty.Create(nameof(TaskbarHeight), typeof(double), typeof(MultiWindowView), 40d, propertyChanged: OnTaskbarLayoutChanged);
+
+        public static readonly BindableProperty IsLayoutPickerEnabledProperty =
+            BindableProperty.Create(nameof(IsLayoutPickerEnabled), typeof(bool), typeof(MultiWindowView), true);
+
+        public static readonly BindableProperty IsContentChooserEnabledProperty =
+            BindableProperty.Create(nameof(IsContentChooserEnabled), typeof(bool), typeof(MultiWindowView), true);
 
         /// <summary>
         /// Enable or disable edge/corner snapping while dragging windows.
@@ -155,6 +201,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             set => SetValue(TaskbarHeightProperty, value);
         }
 
+        /// <summary>
+        /// Enable or disable the snap layout picker that appears when dragging a window to the top-center of the MDI area.
+        /// </summary>
+        public bool IsLayoutPickerEnabled
+        {
+            get => (bool)GetValue(IsLayoutPickerEnabledProperty);
+            set => SetValue(IsLayoutPickerEnabledProperty, value);
+        }
+
+        /// <summary>
+        /// Enable or disable the content chooser overlay that appears in the remaining area after a snap operation.
+        /// </summary>
+        public bool IsContentChooserEnabled
+        {
+            get => (bool)GetValue(IsContentChooserEnabledProperty);
+            set => SetValue(IsContentChooserEnabledProperty, value);
+        }
+
         private MultiWindowItem? _activeWindow;
 
         /// <summary>
@@ -212,6 +276,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private WindowSnapZone _pendingSnapZone = WindowSnapZone.None;
         private Border? _taskbar;
         private HorizontalStackLayout? _taskbarItemsContainer;
+
+        // Layout picker state
+        private bool _isLayoutPickerShowing;
+        private MultiWindowItem? _layoutPickerTargetItem;
+        private SnapLayoutOption? _lastSelectedLayoutOption;
+
+        // Content chooser state
+        private bool _isContentChooserShowing;
+        private MultiWindowItem? _contentChooserSnappedItem;
+        private List<WindowSnapZone>? _contentChooserEmptyZones;
 
         public MultiWindowView()
         {
@@ -299,6 +373,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _pendingSnapZone = WindowSnapZone.None;
             }
             HideSnapPreview();
+
+            // Dismiss any showing overlays when a new drag starts
+            if (_isLayoutPickerShowing)
+                HideLayoutPicker();
+            if (_isContentChooserShowing)
+                DismissContentChooser();
         }
 
         private void OnItemDragging(object? sender, WindowBoundsChangedEventArgs e)
@@ -327,6 +407,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _pendingSnapZone = WindowSnapZone.None;
             HideSnapPreview();
 
+            // TopCenter → show the layout picker instead of snapping directly
+            if (zone == WindowSnapZone.TopCenter)
+            {
+                ShowLayoutPicker(item);
+                return;
+            }
+
             if (!IsWindowSnappingEnabled || zone == WindowSnapZone.None)
             {
                 if (IsAutoArrangeEnabled && ShouldAutoArrange(item))
@@ -338,7 +425,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             ApplySnap(item, zone, rememberState: true, bringToFront: true);
 
-            if (IsAutoArrangeEnabled)
+            // Show content chooser in the complementary space when there are windows to choose from
+            if (IsContentChooserEnabled && HasComplementaryWindowCandidates(item))
+            {
+                ShowContentChooserAfterSnap(item, zone);
+            }
+            else if (IsAutoArrangeEnabled)
             {
                 AutoArrangeRemainingWindows(item, zone);
             }
@@ -712,19 +804,49 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             return false;
         }
 
+        /// <summary>
+        /// Returns true when the dragged window's horizontal center falls within the center band
+        /// of the MDI area (default: 30% of width, i.e. 15% on each side).
+        /// </summary>
+        private bool IsNearHorizontalCenter(WindowBoundsChangedEventArgs e)
+        {
+            var mdiCenterX = Width / 2;
+            var centerThreshold = Width * 0.15; // 15% of width in each direction = 30% band
+            return Math.Abs(e.PointerX - mdiCenterX) <= centerThreshold;
+        }
+
         private WindowSnapZone DetectSnapZone(WindowBoundsChangedEventArgs e)
         {
             var threshold = Math.Max(8, SnapThreshold);
             var mdiHeight = GetEffectiveMdiHeight();
-            var nearLeft = e.X <= threshold;
-            var nearRight = e.X + e.Width >= Width - threshold;
-            var nearTop = e.Y <= threshold;
-            var nearBottom = e.Y + e.Height >= mdiHeight - threshold;
 
+            // Only snap when the pointer is close to or within the container.
+            // This prevents false snap triggers when the window is dragged far outside
+            // the MDI area (now possible with the removal of drag bounds clamping).
+            if (e.PointerX > Width + threshold || e.PointerX < -threshold ||
+                e.PointerY > mdiHeight + threshold || e.PointerY < -threshold)
+                return WindowSnapZone.None;
+
+            // Snap zones are determined by the pointer position (modern OS behavior),
+            // NOT by the window edges. This means: drag the window so the mouse cursor
+            // approaches an edge of the MDI container, and snap triggers — regardless of
+            // where the window's own edges are.
+            var nearLeft = e.PointerX <= threshold;
+            var nearRight = e.PointerX >= Width - threshold;
+            var nearTop = e.PointerY <= threshold;
+            var nearBottom = e.PointerY >= mdiHeight - threshold;
+
+            // Corner checks are most specific — they take priority
             if (nearTop && nearLeft) return WindowSnapZone.TopLeftQuarter;
             if (nearTop && nearRight) return WindowSnapZone.TopRightQuarter;
             if (nearBottom && nearLeft) return WindowSnapZone.BottomLeftQuarter;
             if (nearBottom && nearRight) return WindowSnapZone.BottomRightQuarter;
+
+            // Top-Center check — shows the layout picker instead of Full snap
+            if (nearTop && IsNearHorizontalCenter(e) && IsLayoutPickerEnabled)
+                return WindowSnapZone.TopCenter;
+
+            // Edge checks
             if (nearTop) return WindowSnapZone.Full;
             if (nearLeft) return WindowSnapZone.LeftHalf;
             if (nearRight) return WindowSnapZone.RightHalf;
@@ -801,6 +923,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var bounds = GetSnapBounds(zone);
             if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
+            // Save pre-snap bounds so the window can be restored to a floating
+            // size when the user starts dragging it. Only save once — if the
+            // window is re-snapped (e.g. content chooser), keep the original pre-snap.
+            if (!item.PreSnapBounds.HasValue)
+            {
+                var w = item.WidthRequest > 0 ? item.WidthRequest : Math.Max(400, bounds.Width * 0.6);
+                var h = item.HeightRequest > 0 ? item.HeightRequest : Math.Max(300, bounds.Height * 0.6);
+                item.PreSnapBounds = new Rect(item.TranslationX, item.TranslationY, w, h);
+            }
+
             SetWindowBounds(item, bounds, clearSnapState: false);
 
             if (rememberState)
@@ -824,6 +956,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 return;
             }
 
+            // TopCenter shows a compact peel indicator at the top-center edge
+            if (zone == WindowSnapZone.TopCenter)
+            {
+                ShowTopCenterPeelIndicator();
+                return;
+            }
+
             var bounds = GetSnapBounds(zone);
             if (bounds.Width <= 0 || bounds.Height <= 0)
             {
@@ -839,6 +978,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             SnapPreviewOverlay.IsVisible = true;
         }
 
+        /// <summary>
+        /// Shows a compact peel indicator at the top-center of the MDI area
+        /// to hint that the layout picker is available.
+        /// </summary>
+        private void ShowTopCenterPeelIndicator()
+        {
+            var barWidth = Math.Min(240, Width * 0.3);
+            var barHeight = 48;
+            var x = (Width - barWidth) / 2;
+
+            SnapPreviewOverlay.WidthRequest = barWidth;
+            SnapPreviewOverlay.HeightRequest = barHeight;
+            SnapPreviewOverlay.TranslationX = x;
+            SnapPreviewOverlay.TranslationY = 0;
+            SnapPreviewOverlay.ZIndex = Windows.Select(w => w.ZIndex).DefaultIfEmpty(0).Max() + 1;
+            SnapPreviewOverlay.IsVisible = true;
+        }
+
         private void HideSnapPreview()
         {
             if (SnapPreviewOverlay == null) return;
@@ -848,6 +1005,431 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             SnapPreviewOverlay.HeightRequest = 0;
             SnapPreviewOverlay.TranslationX = 0;
             SnapPreviewOverlay.TranslationY = 0;
+        }
+
+        /// <summary>
+        /// Returns true when there are visible windows (other than the snapped one) that
+        /// could be placed in the complementary space after a snap.
+        /// </summary>
+        private bool HasComplementaryWindowCandidates(MultiWindowItem snappedItem)
+        {
+            return Windows.Any(w => !MultiWindowItem.ReferenceEquals(w, snappedItem) && w.IsVisible);
+        }
+
+        // ========================================================================
+        //  Layout Picker
+        // ========================================================================
+
+        private void ShowLayoutPicker(MultiWindowItem snappedItem)
+        {
+            if (_isLayoutPickerShowing) return;
+            _isLayoutPickerShowing = true;
+            _layoutPickerTargetItem = snappedItem;
+            _lastSelectedLayoutOption = null;
+
+            BuildLayoutPickerOptions();
+
+            LayoutPickerOverlay.IsVisible = true;
+            LayoutPickerOverlay.Opacity = 0;
+            _ = LayoutPickerOverlay.FadeToAsync(1, 200, Easing.CubicOut);
+        }
+
+        private void BuildLayoutPickerOptions()
+        {
+            LayoutPickerGrid.Children.Clear();
+
+            var options = new[]
+            {
+                new SnapLayoutOption
+                {
+                    Type = SnapLayoutType.LeftRight,
+                    DisplayName = "Left + Right",
+                    Zones = new List<WindowSnapZone> { WindowSnapZone.LeftHalf, WindowSnapZone.RightHalf },
+                    ColumnRatios = new[] { 0.5, 0.5 },
+                    Rows = 1
+                },
+                new SnapLayoutOption
+                {
+                    Type = SnapLayoutType.TopBottom,
+                    DisplayName = "Top + Bottom",
+                    Zones = new List<WindowSnapZone> { WindowSnapZone.TopHalf, WindowSnapZone.BottomHalf },
+                    ColumnRatios = new[] { 1.0 },
+                    Rows = 2
+                },
+                new SnapLayoutOption
+                {
+                    Type = SnapLayoutType.FourQuadrant,
+                    DisplayName = "4 Quadrants",
+                    Zones = new List<WindowSnapZone>
+                    {
+                        WindowSnapZone.TopLeftQuarter,
+                        WindowSnapZone.TopRightQuarter,
+                        WindowSnapZone.BottomLeftQuarter,
+                        WindowSnapZone.BottomRightQuarter
+                    },
+                    ColumnRatios = new[] { 0.5, 0.5 },
+                    Rows = 2
+                }
+            };
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                var option = options[i];
+                var row = i / 3;
+                var col = i % 3;
+
+                var btn = CreateLayoutOptionButton(option);
+                Grid.SetRow(btn, row);
+                Grid.SetColumn(btn, col);
+                LayoutPickerGrid.Children.Add(btn);
+            }
+        }
+
+        private Border CreateLayoutOptionButton(SnapLayoutOption option)
+        {
+            // Miniature preview canvas (60x40)
+            var preview = new Grid
+            {
+                WidthRequest = 60,
+                HeightRequest = 40,
+                BackgroundColor = Color.FromArgb("#1E1E1E"),
+            };
+
+            // Draw cell divisions as colored boxes
+            for (int c = 0; c < option.ColumnRatios.Length; c++)
+            {
+                var colStart = option.ColumnRatios.Take(c).Sum() * 60;
+                var colWidth = option.ColumnRatios[c] * 60;
+                var cellHeight = 40.0 / option.Rows;
+
+                for (int r = 0; r < option.Rows; r++)
+                {
+                    var cell = new BoxView
+                    {
+                        Color = Color.FromArgb("#3F7FB5FF"),
+                        WidthRequest = Math.Max(2, colWidth - 2),
+                        HeightRequest = Math.Max(2, cellHeight - 2),
+                        HorizontalOptions = LayoutOptions.Start,
+                        VerticalOptions = LayoutOptions.Start,
+                    };
+
+                    var container = new AbsoluteLayout();
+                    container.Children.Add(cell);
+                    AbsoluteLayout.SetLayoutBounds(cell, new Rect(colStart + 1, r * cellHeight + 1, colWidth - 2, cellHeight - 2));
+                    preview.Children.Add(container);
+                }
+            }
+
+            var content = new VerticalStackLayout
+            {
+                Spacing = 6,
+                Children =
+                {
+                    preview,
+                    new Label
+                    {
+                        Text = option.DisplayName,
+                        TextColor = Colors.White,
+                        FontSize = 11,
+                        HorizontalOptions = LayoutOptions.Center
+                    }
+                }
+            };
+
+            var border = new Border
+            {
+                Content = content,
+                BackgroundColor = Color.FromArgb("#3C3C40"),
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+                Stroke = Colors.Transparent,
+                StrokeThickness = 2,
+                Padding = new Thickness(8),
+                WidthRequest = 130,
+                HeightRequest = 90
+            };
+
+            var tap = new TapGestureRecognizer();
+            var capturedOption = option;
+            tap.Tapped += (s, args) => OnLayoutOptionSelected(capturedOption);
+            border.GestureRecognizers.Add(tap);
+
+            // Hover highlight
+            var pointerGesture = new PointerGestureRecognizer();
+            pointerGesture.PointerEntered += (s, args) => border.BackgroundColor = Color.FromArgb("#505055");
+            pointerGesture.PointerExited += (s, args) => border.BackgroundColor = Color.FromArgb("#3C3C40");
+            border.GestureRecognizers.Add(pointerGesture);
+
+            return border;
+        }
+
+        private void OnLayoutOptionSelected(SnapLayoutOption option)
+        {
+            if (_layoutPickerTargetItem == null) return;
+
+            var item = _layoutPickerTargetItem;
+            _lastSelectedLayoutOption = option;
+            _layoutPickerTargetItem = null;
+            _isLayoutPickerShowing = false;
+
+            HideLayoutPicker();
+
+            // Apply the chosen layout — snap the primary window
+            ApplyCustomLayout(item, option);
+
+            // Show content chooser for remaining zones
+            var emptyZones = option.Zones.Skip(1).ToList();
+            if (emptyZones.Count > 0 && IsContentChooserEnabled)
+            {
+                ShowContentChooserForZones(item, emptyZones);
+            }
+        }
+
+        private void ApplyCustomLayout(MultiWindowItem snappedItem, SnapLayoutOption option)
+        {
+            var area = GetMdiArea();
+            var zones = option.Zones;
+            if (zones.Count == 0) return;
+
+            // Snap the dragged window to zone[0]
+            var primaryBounds = GetLayoutZoneBounds(area, option, 0);
+            if (primaryBounds.Width > 0 && primaryBounds.Height > 0)
+            {
+                // Save pre-snap bounds before applying the custom layout snap
+                if (!snappedItem.PreSnapBounds.HasValue)
+                {
+                    var w = snappedItem.WidthRequest > 0 ? snappedItem.WidthRequest : Math.Max(400, primaryBounds.Width * 0.6);
+                    var h = snappedItem.HeightRequest > 0 ? snappedItem.HeightRequest : Math.Max(300, primaryBounds.Height * 0.6);
+                    snappedItem.PreSnapBounds = new Rect(snappedItem.TranslationX, snappedItem.TranslationY, w, h);
+                }
+
+                SetWindowBounds(snappedItem, primaryBounds, clearSnapState: false);
+                _snapStates[snappedItem] = zones[0];
+                BringToFront(snappedItem);
+            }
+        }
+
+        private Rect GetLayoutZoneBounds(Rect area, SnapLayoutOption option, int zoneIndex)
+        {
+            var w = area.Width;
+            var h = area.Height;
+
+            if (option.Rows == 1)
+            {
+                // Horizontal split by column ratios
+                var colStart = option.ColumnRatios.Take(zoneIndex).Sum() * w;
+                var colWidth = option.ColumnRatios[zoneIndex] * w;
+                return new Rect(area.X + colStart, area.Y, colWidth, h);
+            }
+            else if (option.Rows == 2 && option.ColumnRatios.Length == 2)
+            {
+                // 2x2 grid
+                var col = zoneIndex % 2;
+                var row = zoneIndex / 2;
+                var cellW = w / 2;
+                var cellH = h / 2;
+                return new Rect(area.X + col * cellW, area.Y + row * cellH, cellW, cellH);
+            }
+            else if (option.Rows == 2 && option.ColumnRatios.Length == 1)
+            {
+                // Top/bottom split
+                return zoneIndex == 0
+                    ? new Rect(area.X, area.Y, w, h / 2)
+                    : new Rect(area.X, area.Y + h / 2, w, h / 2);
+            }
+
+            return Rect.Zero;
+        }
+
+        private async void HideLayoutPicker()
+        {
+            if (LayoutPickerOverlay == null) return;
+            await LayoutPickerOverlay.FadeToAsync(0, 150, Easing.CubicIn);
+            LayoutPickerOverlay.IsVisible = false;
+            _isLayoutPickerShowing = false;
+            _layoutPickerTargetItem = null;
+        }
+
+        private void OnLayoutPickerCancelClicked(object? sender, EventArgs e)
+        {
+            HideLayoutPicker();
+        }
+
+        // ========================================================================
+        //  Content Chooser
+        // ========================================================================
+
+        private void ShowContentChooserAfterSnap(MultiWindowItem snappedItem, WindowSnapZone snappedZone)
+        {
+            var remaining = Windows.Where(w => !MultiWindowItem.ReferenceEquals(w, snappedItem) && w.IsVisible).ToList();
+            if (remaining.Count == 0) return;
+
+            var complementZone = GetComplementZone(snappedZone);
+            if (complementZone == WindowSnapZone.None) return;
+
+            ShowContentChooserForZones(snappedItem, new List<WindowSnapZone> { complementZone });
+        }
+
+        private static WindowSnapZone GetComplementZone(WindowSnapZone snappedZone)
+        {
+            return snappedZone switch
+            {
+                WindowSnapZone.LeftHalf => WindowSnapZone.RightHalf,
+                WindowSnapZone.RightHalf => WindowSnapZone.LeftHalf,
+                WindowSnapZone.TopHalf => WindowSnapZone.BottomHalf,
+                WindowSnapZone.BottomHalf => WindowSnapZone.TopHalf,
+                WindowSnapZone.TopLeftQuarter => WindowSnapZone.TopRightQuarter,
+                WindowSnapZone.TopRightQuarter => WindowSnapZone.TopLeftQuarter,
+                WindowSnapZone.BottomLeftQuarter => WindowSnapZone.BottomRightQuarter,
+                WindowSnapZone.BottomRightQuarter => WindowSnapZone.BottomLeftQuarter,
+                _ => WindowSnapZone.None
+            };
+        }
+
+        private void ShowContentChooserForZones(MultiWindowItem snappedItem, List<WindowSnapZone> emptyZones)
+        {
+            if (_isContentChooserShowing) return;
+            if (emptyZones.Count == 0) return;
+            if (ContentChooserOverlay == null) return;
+
+            _isContentChooserShowing = true;
+            _contentChooserSnappedItem = snappedItem;
+            _contentChooserEmptyZones = emptyZones;
+
+            // Build the list of available windows
+            BuildContentChooserList(snappedItem);
+
+            // Position the overlay in the first empty zone
+            var bounds = GetSnapBounds(emptyZones[0]);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                _isContentChooserShowing = false;
+                _contentChooserSnappedItem = null;
+                _contentChooserEmptyZones = null;
+                return;
+            }
+
+            ContentChooserOverlay.WidthRequest = bounds.Width;
+            ContentChooserOverlay.HeightRequest = bounds.Height;
+            ContentChooserOverlay.TranslationX = bounds.X;
+            ContentChooserOverlay.TranslationY = bounds.Y;
+            ContentChooserOverlay.IsVisible = true;
+
+            // Fade in
+            ContentChooserOverlay.Opacity = 0;
+            _ = ContentChooserOverlay.FadeToAsync(1, 200, Easing.CubicOut);
+        }
+
+        private void BuildContentChooserList(MultiWindowItem excludeItem)
+        {
+            ContentChooserList.Children.Clear();
+
+            var available = Windows
+                .Where(w => !MultiWindowItem.ReferenceEquals(w, excludeItem) && w.IsVisible)
+                .ToList();
+
+            if (available.Count == 0)
+            {
+                ContentChooserList.Children.Add(new Label
+                {
+                    Text = "No other windows available",
+                    TextColor = Color.FromArgb("#808080"),
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(0, 8)
+                });
+                return;
+            }
+
+            foreach (var window in available)
+            {
+                var btn = CreateContentChooserItemButton(window);
+                ContentChooserList.Children.Add(btn);
+            }
+        }
+
+        private Border CreateContentChooserItemButton(MultiWindowItem window)
+        {
+            var label = new Label
+            {
+                Text = window.Title,
+                TextColor = Colors.White,
+                FontSize = 13,
+                VerticalOptions = LayoutOptions.Center,
+                LineBreakMode = Microsoft.Maui.LineBreakMode.TailTruncation,
+                Margin = new Thickness(8, 0)
+            };
+
+            var border = new Border
+            {
+                Content = label,
+                BackgroundColor = Color.FromArgb("#3C3C40"),
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+                Stroke = Colors.Transparent,
+                HeightRequest = 32,
+                Padding = new Thickness(0)
+            };
+
+            var tap = new TapGestureRecognizer();
+            var capturedWindow = window;
+            tap.Tapped += (s, args) => OnContentChooserItemSelected(capturedWindow);
+            border.GestureRecognizers.Add(tap);
+
+            var pointerGesture = new PointerGestureRecognizer();
+            pointerGesture.PointerEntered += (s, args) => border.BackgroundColor = Color.FromArgb("#505055");
+            pointerGesture.PointerExited += (s, args) => border.BackgroundColor = Color.FromArgb("#3C3C40");
+            border.GestureRecognizers.Add(pointerGesture);
+
+            return border;
+        }
+
+        private void OnContentChooserItemSelected(MultiWindowItem selectedWindow)
+        {
+            if (_contentChooserEmptyZones == null || _contentChooserEmptyZones.Count == 0) return;
+
+            // Snap the selected window to the first empty zone
+            var zone = _contentChooserEmptyZones[0];
+            ApplySnap(selectedWindow, zone, rememberState: true, bringToFront: true);
+
+            // Remove the used zone and check if there are more
+            var remainingZones = _contentChooserEmptyZones.Skip(1).ToList();
+            if (remainingZones.Count > 0)
+            {
+                // Keep the chooser open for the next zone
+                _contentChooserEmptyZones = remainingZones;
+                var bounds = GetSnapBounds(remainingZones[0]);
+                if (bounds.Width > 0 && bounds.Height > 0)
+                {
+                    ContentChooserOverlay.WidthRequest = bounds.Width;
+                    ContentChooserOverlay.HeightRequest = bounds.Height;
+                    ContentChooserOverlay.TranslationX = bounds.X;
+                    ContentChooserOverlay.TranslationY = bounds.Y;
+
+                    // Rebuild the list (remove the just-snapped window)
+                    if (_contentChooserSnappedItem != null)
+                    {
+                        // Actually, the selected window is now snapped, so exclude it too
+                        BuildContentChooserList(_contentChooserSnappedItem);
+                    }
+                    return;
+                }
+            }
+
+            // No more zones — dismiss
+            DismissContentChooser();
+        }
+
+        private void OnContentChooserDismissClicked(object? sender, EventArgs e)
+        {
+            DismissContentChooser();
+        }
+
+        private void DismissContentChooser()
+        {
+            _isContentChooserShowing = false;
+            _contentChooserSnappedItem = null;
+            _contentChooserEmptyZones = null;
+            if (ContentChooserOverlay != null)
+                ContentChooserOverlay.IsVisible = false;
         }
 
         private void AutoArrangeRemainingWindows(MultiWindowItem snappedItem, WindowSnapZone snappedZone)

@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
@@ -9,7 +9,7 @@ public class ArcHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Arc";
     public override string DisplayName => "弧线";
-    public override string Icon => "⌒";
+    public override string Icon => "\ue155";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new ArcComponent();
 
