@@ -2,6 +2,7 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
@@ -63,41 +64,41 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
     protected static void AddCommonProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
         // ── Position section ──
-        builder.AddCollapsibleSection("位置", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Position, b =>
         {
-            b.AddSlider("RelativeX", "X:", 0.0, 1.0, GetParam(component, "RelativeX", 0.5f),
+            b.AddSlider("RelativeX", PPLocalizedResources.VectorContentHandler_X, 0.0, 1.0, GetParam(component, "RelativeX", 0.5f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("RelativeY", "Y:", 0.0, 1.0, GetParam(component, "RelativeY", 0.5f),
+            b.AddSlider("RelativeY", PPLocalizedResources.VectorContentHandler_Y, 0.0, 1.0, GetParam(component, "RelativeY", 0.5f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("Rotation", "旋转:", -3.1416, 3.1416, GetParam(component, "Rotation", 0.0f),
+            b.AddSlider("Rotation", PPLocalizedResources.VectorContentHandler_Rotation, -3.1416, 3.1416, GetParam(component, "Rotation", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
         }, defaultExpanded: true);
 
         // ── Appearance section ──
-        builder.AddCollapsibleSection("外观", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Appearance, b =>
         {
-            b.AddSlider("Thickness", "描边:", 0.0, 20.0, GetParam(component, "Thickness", 2.0f),
+            b.AddSlider("Thickness", PPLocalizedResources.VectorContentHandler_Stroke, 0.0, 20.0, GetParam(component, "Thickness", 2.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
 
             // Stroke RGBA
-            b.AddSlider("StrokeR", "描边 R:", 0.0, 255.0, GetParam(component, "StrokeR", 255.0f),
+            b.AddSlider("StrokeR", PPLocalizedResources.VectorContentHandler_StrokeR, 0.0, 255.0, GetParam(component, "StrokeR", 255.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeG", "描边 G:", 0.0, 255.0, GetParam(component, "StrokeG", 255.0f),
+            b.AddSlider("StrokeG", PPLocalizedResources.VectorContentHandler_StrokeG, 0.0, 255.0, GetParam(component, "StrokeG", 255.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeB", "描边 B:", 0.0, 255.0, GetParam(component, "StrokeB", 255.0f),
+            b.AddSlider("StrokeB", PPLocalizedResources.VectorContentHandler_StrokeB, 0.0, 255.0, GetParam(component, "StrokeB", 255.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeA", "描边 A:", 0.0, 1.0, GetParam(component, "StrokeA", 1.0f),
+            b.AddSlider("StrokeA", PPLocalizedResources.VectorContentHandler_StrokeA, 0.0, 1.0, GetParam(component, "StrokeA", 1.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
             b.AddSeparator();
 
             // Fill RGBA
-            b.AddSlider("FillR", "填充 R:", 0.0, 255.0, GetParam(component, "FillR", 0.0f),
+            b.AddSlider("FillR", PPLocalizedResources.VectorContentHandler_FillR, 0.0, 255.0, GetParam(component, "FillR", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillG", "填充 G:", 0.0, 255.0, GetParam(component, "FillG", 0.0f),
+            b.AddSlider("FillG", PPLocalizedResources.VectorContentHandler_FillG, 0.0, 255.0, GetParam(component, "FillG", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillB", "填充 B:", 0.0, 255.0, GetParam(component, "FillB", 0.0f),
+            b.AddSlider("FillB", PPLocalizedResources.VectorContentHandler_FillB, 0.0, 255.0, GetParam(component, "FillB", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillA", "填充 A:", 0.0, 1.0, GetParam(component, "FillA", 1.0f),
+            b.AddSlider("FillA", PPLocalizedResources.VectorContentHandler_FillA, 0.0, 1.0, GetParam(component, "FillA", 1.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
         }, defaultExpanded: true);
     }

@@ -667,13 +667,11 @@ namespace projectFrameCut.DraftStuff
                             page.SetStateFail("Target clip is invalid.");
                             return;
                         }
-                        var editor = new VectorContentEditorView(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
-                        var editorPage = new ContentPage { Content = editor, Title = "" };
-                        Shell.SetNavBarIsVisible(editorPage, false);
+                        var editorPage = new VectorContentEditorPage(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, page.WorkingPath);
 
                         if (DeviceInfo.Idiom == DeviceIdiom.Desktop)
                         {
-                            var window = new Microsoft.Maui.Controls.Window(editorPage)
+                            var window = new Microsoft.Maui.Controls.Window(new NavigationPage(editorPage))
                             {
                                 Title = PPLocalizedResources.General_VectorCanvas_EditorTitle(clip.DisplayName),
                             };
@@ -681,20 +679,19 @@ namespace projectFrameCut.DraftStuff
                             {
                                 try
                                 {
-                                    foreach (var item in editor.MainMultiWindowView.Windows.ToList().Where(c => c.IsInStandaloneWindowMode))
+                                    foreach (var item in editorPage.MainMultiWindowView.Windows.ToList().Where(c => c.IsInStandaloneWindowMode))
                                     {
                                         item.Close(true);
                                     }
                                 }
                                 catch { }
                             };
-                            editor.ChangesApplied += (d) =>
+                            editorPage.ChangesApplied += (d) =>
                             {
                                 clip.ExtraData = d;
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
-                                Microsoft.Maui.Controls.Application.Current?.CloseWindow(window);
                             };
-                            editor.ChangesCancelled += (s, e) =>
+                            editorPage.ChangesCancelled += (s, e) =>
                             {
                                 Microsoft.Maui.Controls.Application.Current?.CloseWindow(window);
                             };
@@ -712,13 +709,12 @@ namespace projectFrameCut.DraftStuff
                         }
                         else
                         {
-                            editor.ChangesApplied += async (d) =>
+                            editorPage.ChangesApplied += async (d) =>
                             {
                                 clip.ExtraData = d;
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
-                                await page.Navigation.PopModalAsync();
                             };
-                            editor.ChangesCancelled += async (s, e) =>
+                            editorPage.ChangesCancelled += async (s, e) =>
                             {
                                 await page.Navigation.PopModalAsync();
                             };

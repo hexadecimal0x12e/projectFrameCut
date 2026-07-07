@@ -32,6 +32,9 @@ using System.Reflection;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
+using projectFrameCut.Render.Benchmark;
+
+
 
 
 #if ANDROID
@@ -162,11 +165,7 @@ public partial class RenderPage : ContentPage
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
-        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-        {
-            ExportProjectJSONButton.IsVisible = true;
-            PerformPostRenderActionNowTestButton.IsVisible = true;
-        }
+        DebugView.IsVisible = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
@@ -622,6 +621,86 @@ public partial class RenderPage : ContentPage
 
     }
 
+    private async void RenderToVoidButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await PrepareUIForRender();
+
+            if (BindingContext is RenderPageViewModel vm)
+            {
+                running = true;
+                DeviceDisplay.Current.KeepScreenOn = true;
+
+                try
+                {
+                    await DoCompute(vm, "", null!, null, "blank");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
+                DeviceDisplay.Current.KeepScreenOn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "render", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+
+    }
+
+    private async void RenderNoWritingButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await PrepareUIForRender();
+
+            if (BindingContext is RenderPageViewModel vm)
+            {
+                running = true;
+                DeviceDisplay.Current.KeepScreenOn = true;
+
+                try
+                {
+                    await DoCompute(vm, "", null!, null, "null");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
+                DeviceDisplay.Current.KeepScreenOn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "render", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+    }
+
+
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
     VideoBuilder? builder = null;
@@ -647,7 +726,7 @@ public partial class RenderPage : ContentPage
         });
     }
 
-    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null)
+    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null, string? writerOverride = null)
     {
         try
         {
@@ -693,9 +772,6 @@ public partial class RenderPage : ContentPage
             }
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
-
-            var outTempFile = outputPath + ext;
-            Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
 
             int[] CPUAffinityOverride = Array.Empty<int>(), preparerAffinityCpuIndexes = [];
             bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
@@ -778,17 +854,47 @@ public partial class RenderPage : ContentPage
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
             var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
-            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+            if (!string.IsNullOrWhiteSpace(writerOverride))
             {
-                EnablePreview = true,
-                DoGCAfterEachWrite = gcOption > 0,
-                DisposeFrameAfterEachWrite = true,
-                Duration = duration,
-                LogStat = false,
-                BlockWrite = blockwrite
-            };
+                switch (writerOverride)
+                {
+                    case "blank":
+                        Log("writeToVoid is enabled, no file will be written, only rendering will be performed.", "warn");
+                        builder = new VideoBuilder(new BlackholeVideoWriter() { Width = width, Height = height, FramePerSecond = fps, PixelFormat = fmt, OutputPath = "/dev/null" })
+                        {
+                            EnablePreview = true,
+                            minFrameCountToGeneratePreview = 1,
+                            DoGCAfterEachWrite = gcOption > 0,
+                            DisposeFrameAfterEachWrite = true,
+                            Duration = duration,
+                            LogStat = false,
+                            BlockWrite = blockwrite
+                        };
+                        break;
+                    case "null":
+                        Log("writer is disabled.", "warn");
+                        builder = null; 
+                        break;
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(outputPath)) throw new InvalidOperationException("No output path specified for rendering.");
+                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? throw new NullReferenceException());
 
-            builder.Writer?.Metadata = metadata ?? new();
+                builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+                {
+                    EnablePreview = true,
+                    DoGCAfterEachWrite = gcOption > 0,
+                    DisposeFrameAfterEachWrite = true,
+                    Duration = duration,
+                    LogStat = false,
+                    BlockWrite = blockwrite
+                };
+            }
+
+
+            builder?.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
             {
@@ -840,7 +946,7 @@ public partial class RenderPage : ContentPage
                 });
             };
 
-            builder.OnPreviewGenerated += async (s, e) =>
+            builder?.OnPreviewGenerated += async (s, e) =>
             {
                 if (!_previewUpdateSemaphore.Wait(0))
                 {

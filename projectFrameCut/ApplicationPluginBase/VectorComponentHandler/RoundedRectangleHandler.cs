@@ -2,24 +2,25 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 public class RoundedRectangleHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "RoundedRectangle";
-    public override string DisplayName => "圆角矩形";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_RoundedRectangle_DisplayName;
     public override string Icon => "\ue3c6";
     public override bool HasDefaultHandles => true;
     protected override IVectorComponent CreateComponent() => new RoundedRectangleComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddSlider("Width", "宽度:", 0.001f, 1f, GetParam(component, "Width", 0.3f));
-            b.AddSlider("Height", "高度:", 0.001f, 1f, GetParam(component, "Height", 0.3f));
-            b.AddSlider("CornerRadius", "圆角:", 0f, 0.5f, GetParam(component, "CornerRadius", 0.05f));
+            b.AddSlider("Width", PPLocalizedResources.VectorContentHandler_Width, 0.001f, 1f, GetParam(component, "Width", 0.3f));
+            b.AddSlider("Height", PPLocalizedResources.VectorContentHandler_Height, 0.001f, 1f, GetParam(component, "Height", 0.3f));
+            b.AddSlider("CornerRadius", PPLocalizedResources.VectorContentHandler_CornerRadius, float.Epsilon, 0.5f, GetParam(component, "CornerRadius", 0.05f));
         }, defaultExpanded: true);
     }
 

@@ -500,7 +500,7 @@ public class VectorPreviewDrawable : IDrawable
 /// </summary>
 public class TimelineDrawable : IDrawable
 {
-    public VectorContentEditorView? View { get; set; }
+    public VectorContentEditorPage? View { get; set; }
 
     // Layout constants
     public const float LeftMargin = 92f;

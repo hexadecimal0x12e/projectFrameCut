@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
@@ -10,7 +11,7 @@ namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 public class PolygonHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Polygon";
-    public override string DisplayName => "多边形";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Polygon_DisplayName;
     public override string Icon => "\ueb39";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new PolygonComponent();
@@ -22,10 +23,10 @@ public class PolygonHandler : BaseVectorComponentHandler
             : new List<Point>();
         int count = Math.Max(3, points.Count);
 
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddEntry("Sides", "边数:", count.ToString(), "3-20", c => c.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
-            b.AddText("拖动滑块修改边数，手柄可在画布上调整顶点位置。");
+            b.AddEntry("Sides", PPLocalizedResources.VectorContentHandler_Sides, count.ToString(), "3-20", c => c.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
+            b.AddText(PPLocalizedResources.VectorContentHandler_Polygon_Description);
         }, defaultExpanded: true);
     }
 

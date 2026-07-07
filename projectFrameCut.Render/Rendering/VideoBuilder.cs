@@ -68,7 +68,7 @@ namespace projectFrameCut.Render.Rendering
         /// the minimum number of frames between generating preview images.
         /// </summary>
         public int minFrameCountToGeneratePreview { get; set; } = 10;
-        private uint countSinceLastPreview = 0;
+        private uint countSinceLastPreview = 0, lastPreviewFrame = 0;
 
         /// <summary>
         /// The duration (in frames) of the video to be built.
@@ -180,10 +180,11 @@ namespace projectFrameCut.Render.Rendering
                 if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
 
-            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview && lastPreviewFrame < index)
             {
                 OnPreviewGenerated?.Invoke(this, frame.Clone());
                 countSinceLastPreview = 0;
+                lastPreviewFrame = index;
             }
 
         }

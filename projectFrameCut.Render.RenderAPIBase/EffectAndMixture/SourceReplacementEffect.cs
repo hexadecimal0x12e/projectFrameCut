@@ -21,6 +21,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int ProjectFrameRate { get; set; }
 
         /// <summary>
+        /// Indicate whether this effect supports source replacement for the given input clip. 
+        /// <br />
+        /// If it returns true, the render pipeline will use <see cref="Compute(IClip, IComputer?, int, int, uint, IPicture.PicturePixelMode)"/> to compute the new source frames for the clip.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public bool SupportsSourceReplacement(IClip input, int targetWidth, int targetHeight);
+
+        /// <summary>
         /// Computes the new picture for the given input clip, with the specified target width, height, and frame.
         /// </summary>
         /// <remarks>
@@ -38,5 +47,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         bool IEffect.IsReorderable => false;
+        int IEffect.Index { get => int.MinValue; set { } } 
     }
 }

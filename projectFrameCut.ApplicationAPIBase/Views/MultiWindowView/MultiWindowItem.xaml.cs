@@ -1563,7 +1563,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     break;
                 case GestureStatus.Running:
                     this.TranslationX = _startX + e.TotalX;
-                    this.TranslationY = _startY + e.TotalY;
+                    // Clamp Y: prevent any part of the window from being dragged above
+                    // the container's top edge, which would conflict with snap targeting.
+                    this.TranslationY = Math.Max(0, _startY + e.TotalY);
                     Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Completed:

@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
@@ -10,16 +11,16 @@ namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 public class PolylineHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Polyline";
-    public override string DisplayName => "折线";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Polyline_DisplayName;
     public override string Icon => "\uebbb";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new PolylineComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddText("折线顶点通过手柄在画布上编辑。");
+            b.AddText(PPLocalizedResources.VectorContentHandler_Polyline_Description);
         }, defaultExpanded: true);
     }
 

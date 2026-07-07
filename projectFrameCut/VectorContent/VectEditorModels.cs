@@ -5,6 +5,7 @@ using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.DraftStuff;
@@ -15,20 +16,20 @@ namespace projectFrameCut.DraftStuff;
 
 public static class ShapeGalleryProvider
 {
-    public static readonly IReadOnlyList<ShapeGalleryItem> Items = new List<ShapeGalleryItem>
+    public static List<ShapeGalleryItem> Items => new List<ShapeGalleryItem>
     {
-        new() { TypeName = "Rectangle",         DisplayName = "Rectangle",        Icon = "\ueb54" },
-        new() { TypeName = "RoundedRectangle",  DisplayName = "Rounded Rect",     Icon = "\ue3c6" },
-        new() { TypeName = "Ellipse",           DisplayName = "Ellipse",          Icon = "\ue836" },
-        new() { TypeName = "Line",              DisplayName = "Line",             Icon = "\uf108" },
-        new() { TypeName = "CubicBezier",       DisplayName = "Cubic Bezier",     Icon = "\ue6e1" },
-        new() { TypeName = "QuadraticBezier",   DisplayName = "Quad Bezier",      Icon = "\ue922" },
-        new() { TypeName = "Arc",               DisplayName = "Arc",              Icon = "\ue155" },
-        new() { TypeName = "Polygon",           DisplayName = "Polygon",          Icon = "\ueb39" },
-        new() { TypeName = "Polyline",          DisplayName = "Polyline",         Icon = "\uebbb" },
-        new() { TypeName = "Text",              DisplayName = "Text",             Icon = "\ue262" },
-        new() { TypeName = "ComponentGroup",    DisplayName = "Group",            Icon = "\uf500", ExcludeInNewComponent = true },
-        new() { TypeName = "SVGImage",          DisplayName = "SVG",              Icon = "\ue3f4", ExcludeInNewComponent = true },
+        new() { TypeName = "Rectangle",         DisplayName = PPLocalizedResources.VectorContentHandler_Rectangle_DisplayName,        Icon = "\ueb54" },
+        new() { TypeName = "RoundedRectangle",  DisplayName = PPLocalizedResources.VectorContentHandler_RoundedRectangle_DisplayName, Icon = "\ue3c6" },
+        new() { TypeName = "Ellipse",           DisplayName = PPLocalizedResources.VectorContentHandler_Ellipse_DisplayName,          Icon = "\ue836" },
+        new() { TypeName = "Line",              DisplayName = PPLocalizedResources.VectorContentHandler_Line_DisplayName,             Icon = "\uf108" },
+        new() { TypeName = "CubicBezier",       DisplayName = PPLocalizedResources.VectorContentHandler_CubicBezier_DisplayName,      Icon = "\ue6e1" },
+        new() { TypeName = "QuadraticBezier",   DisplayName = PPLocalizedResources.VectorContentHandler_QuadraticBezier_DisplayName,  Icon = "\ue922" },
+        new() { TypeName = "Arc",               DisplayName = PPLocalizedResources.VectorContentHandler_Arc_DisplayName,              Icon = "\ue155" },
+        new() { TypeName = "Polygon",           DisplayName = PPLocalizedResources.VectorContentHandler_Polygon_DisplayName,          Icon = "\ueb39" },
+        new() { TypeName = "Polyline",          DisplayName = PPLocalizedResources.VectorContentHandler_Polyline_DisplayName,         Icon = "\uebbb" },
+        new() { TypeName = "Text",              DisplayName = PPLocalizedResources.VectorContentHandler_Text_DisplayName,             Icon = "\ue262" },
+        new() { TypeName = "ComponentGroup",    DisplayName = PPLocalizedResources.VectorContentHandler_ComponentGroup_DisplayName,   Icon = "\uf500", ExcludeInNewComponent = true },
+        new() { TypeName = "SVGImage",          DisplayName = PPLocalizedResources.VectorContentHandler_SVGImage_DisplayName,         Icon = "\ue3f4", ExcludeInNewComponent = true },
     };
 
     public static string GetIcon(string typeName) =>
@@ -346,12 +347,12 @@ public class AnimationTrackItem : INotifyPropertyChanged
 /// <summary>
 /// Wraps an <see cref="IVectorComponent"/> for editing in the vector animation editor UI.
 /// Manages per-component animation tracks and shape parameters.
-/// Owned by <see cref="VectorContentEditorView"/>.
+/// Owned by <see cref="VectorContentEditorPage"/>.
 /// </summary>
 public class VectorComponentItem : INotifyPropertyChanged
 {
     private readonly IVectorComponent _source;
-    private readonly VectorContentEditorView _owner;
+    private readonly VectorContentEditorPage _owner;
 
     /// <summary>Callback invoked when timeline needs repainting.</summary>
     public Action? InvalidateTimeline { get; set; }
@@ -401,7 +402,7 @@ public class VectorComponentItem : INotifyPropertyChanged
     /// <summary>Polygon/Polyline vertices.</summary>
     public List<Point> EditorPoints { get; set; } = new();
 
-    public VectorComponentItem(IVectorComponent source, VectorContentEditorView owner)
+    public VectorComponentItem(IVectorComponent source, VectorContentEditorPage owner)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));

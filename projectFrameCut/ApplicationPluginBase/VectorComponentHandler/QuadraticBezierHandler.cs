@@ -2,27 +2,28 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 public class QuadraticBezierHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "QuadraticBezier";
-    public override string DisplayName => "二次贝塞尔";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_QuadraticBezier_DisplayName;
     public override string Icon => "\ue922";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new QuadraticBezierComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddSlider("X1", "X1:", 0f, 1f, GetParam(component, "X1", 0.1f));
-            b.AddSlider("Y1", "Y1:", 0f, 1f, GetParam(component, "Y1", 0.1f));
-            b.AddSlider("X2", "X2:", 0f, 1f, GetParam(component, "X2", 0.5f));
-            b.AddSlider("Y2", "Y2:", 0f, 1f, GetParam(component, "Y2", 0.9f));
-            b.AddSlider("X3", "X3:", 0f, 1f, GetParam(component, "X3", 0.9f));
-            b.AddSlider("Y3", "Y3:", 0f, 1f, GetParam(component, "Y3", 0.1f));
+            b.AddSlider("X1", PPLocalizedResources.VectorContentHandler_X1, 0f, 1f, GetParam(component, "X1", 0.1f));
+            b.AddSlider("Y1", PPLocalizedResources.VectorContentHandler_Y1, 0f, 1f, GetParam(component, "Y1", 0.1f));
+            b.AddSlider("X2", PPLocalizedResources.VectorContentHandler_X2, 0f, 1f, GetParam(component, "X2", 0.5f));
+            b.AddSlider("Y2", PPLocalizedResources.VectorContentHandler_Y2, 0f, 1f, GetParam(component, "Y2", 0.9f));
+            b.AddSlider("X3", PPLocalizedResources.VectorContentHandler_X3, 0f, 1f, GetParam(component, "X3", 0.9f));
+            b.AddSlider("Y3", PPLocalizedResources.VectorContentHandler_Y3, 0f, 1f, GetParam(component, "Y3", 0.1f));
         }, defaultExpanded: true);
     }
 

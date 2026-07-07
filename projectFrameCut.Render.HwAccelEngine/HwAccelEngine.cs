@@ -54,7 +54,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 
 #if WINDOWS
         static bool? forceSync = null;
-        static bool disableWin2DRasterizer = false;
+        internal static bool disableWin2DRasterizer = false;
 
         Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
             new Dictionary<string, Func<IComputer>>
@@ -241,14 +241,18 @@ namespace projectFrameCut.Render.HwAccelEngine
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
             dataRootPath = this.GetPluginDataRoot();
-            AcceleratorsManager.InitializeAccelerators();
-            forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
+            ApplyConfiguration();
             FailedReason = "";
             return true;
         }
         private void ApplyConfiguration()
         {
+            AcceleratorsManager.InitializeAccelerators();
             forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
+            disableWin2DRasterizer = Configuration.TryGetValue("disableWin2DRasterizer", out var disableWin2DRasterizerStr) && bool.TryParse(disableWin2DRasterizerStr, out var r) && r;
+
+            Logger.Log($"[HwAccelEnginePlugin] ILGPU Main Accel:{AcceleratorsManager.DefaultAccelerator?.Name ?? "(null)"}, Rendering accel: {string.Join(", ", AcceleratorsManager.Accelerators.Select(a => a.Name))}");
+            Logger.Log($"[HwAccelEnginePlugin] ForceSync: {forceSync?.ToString() ?? "default"}, Disable Win2D Rasterizer: {disableWin2DRasterizer}");
         }
 #elif ANDROID
         bool IPluginBase.OnLoaded(out string FailedReason)

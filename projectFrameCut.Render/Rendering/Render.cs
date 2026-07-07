@@ -149,6 +149,7 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            if(builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
             var clipsForFrame = new List<IClip>(Clips.Length);
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
@@ -245,25 +246,26 @@ namespace projectFrameCut.Render.Rendering
 
         private void InitializeRenderCaches()
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
-
             _ppb = Use16Bit ? 16 : 8;
-            TargetWidth = builder.Width;
-            TargetHeight = builder.Height;
+            if (builder is not null)
+            {
+                TargetWidth = builder.Width;
+                TargetHeight = builder.Height;
+            }
             ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
             ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             if (UseHDR)
             {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
             }
             else if (Use16Bit)
             {
-                BlankFrame = Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+                BlankFrame = Picture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0);
             }
             else
             {
-                BlankFrame = Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+                BlankFrame = Picture8bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0);
             }
             BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
@@ -342,7 +344,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (item.AlternativeSource is ISourceReplacementEffect sre)
                 {
-                    sre.ProjectFrameRate = builder.Writer.FramePerSecond;
+                    sre.ProjectFrameRate = builder?.Writer.FramePerSecond ?? 0;
                 }
 
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
@@ -399,7 +401,7 @@ namespace projectFrameCut.Render.Rendering
         #region render
         public async Task GoRender(CancellationToken token)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             if (ClipNeedForFrame.IsEmpty || Duration <= 0)
             {
@@ -407,7 +409,7 @@ namespace projectFrameCut.Render.Rendering
             }
             _renderTotalStopwatch.Restart();
             if (AutoSetupRenderContext) IRenderContext.Current = this;
-            if (OneByOneRender || builder.BlockWrite || MaxThreads == 1)
+            if (OneByOneRender || builder?.BlockWrite == true || MaxThreads == 1)
             {
                 await GoRenderSync(token);
             }
@@ -743,7 +745,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clips) || clips == null || clips.Length == 0)
                     {
-                        builder!.Append(targetFrame, BlankFrame);
+                        builder?.Append(targetFrame, BlankFrame);
                         TrackRenderElapsed(TimeSpan.Zero);
                         FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                         FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -925,7 +927,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void RenderPreparedFrameByLayer(uint targetFrame, CancellationToken token)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
 
             PreparedFlag.TryRemove(targetFrame, out _);
 
@@ -1181,7 +1183,7 @@ namespace projectFrameCut.Render.Rendering
                         if (!FrameLayerGroups!.TryGetValue(targetFrame, out var layerGroups) || layerGroups.Length == 0)
                         {
                             // No clips at this frame: treat as blank
-                            builder!.Append(targetFrame, BlankFrame);
+                            builder?.Append(targetFrame, BlankFrame);
                             TrackRenderElapsed(TimeSpan.Zero);
                             FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                             FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -1301,7 +1303,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private void RenderAFrame(uint targetFrame, CancellationToken token)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
             if (targetFrame >= StartFrame + Duration)
             {
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
@@ -1312,7 +1314,7 @@ namespace projectFrameCut.Render.Rendering
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
             {
                 // 帧已被 RenderSpecificFrame 预写入 builder，Finished 已在其路径中递增
-                if (builder!.FramePendedToWrite.ContainsKey(targetFrame))
+                if (builder?.FramePendedToWrite?.ContainsKey(targetFrame) == true)
                 {
                     if (LogRenderState) Log($"[Render] Frame {targetFrame} was already pre-cached; skipping.");
                     return;
@@ -1325,7 +1327,7 @@ namespace projectFrameCut.Render.Rendering
             // 二次检查：在 Remove 成功之后、开始合成之前，确认帧没有被 RenderSpecificFrame 预写入
             // 这覆盖了：Worker 早已消费了 PreparedFlag，RenderSpecificFrame 的 TryAdd/TryPreAppend
             // 竞争成功写入 builder 但 Worker 还未开始合成的场景。
-            if (builder.TryGetCachedFrame(targetFrame, out _))
+            if (builder?.TryGetCachedFrame(targetFrame, out _) == true)
             {
                 if (LogRenderState) Log($"[Render] Frame {targetFrame} was pre-cached before composition; skipping.");
                 foreach (var clip in ClipsNeed)
@@ -1386,7 +1388,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void RenderOneFrameSync(uint targetFrame, CancellationToken token)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
             if (targetFrame >= StartFrame + Duration)
             {
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
@@ -1457,7 +1459,7 @@ namespace projectFrameCut.Render.Rendering
         /// </returns>
         public IPicture? RenderSpecificFrame(uint frameIndex, CancellationToken token)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
 
             if (frameIndex < StartFrame || frameIndex >= StartFrame + Duration)
             {
@@ -1466,7 +1468,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             // 1) 优先从 builder 的未写入缓存取（帧已合成但尚未写入视频文件）
-            if (builder.TryGetCachedFrame(frameIndex, out var cachedFrame) && cachedFrame is not null)
+            if (builder?.TryGetCachedFrame(frameIndex, out var cachedFrame) == true && cachedFrame is not null)
             {
                 Log($"[GetPictureForFrame] Got frame {frameIndex} from VideoBuilder cache.");
                 return cachedFrame.Clone();
@@ -1485,11 +1487,11 @@ namespace projectFrameCut.Render.Rendering
             //    - 注意：不能移除 ClipNeedForFrame——Preparer 正在用索引器遍历它
             //    - 如果 Worker 已出队此帧（TryRemove 消费了 flag），TryAdd 也会成功，
             //      TryPreAppend 写入 Cache，Worker 结束后 RenderAFrame 会检测到并跳过
-            if (!builder.FramePendedToWrite.ContainsKey(frameIndex)
+            if (builder?.FramePendedToWrite.ContainsKey(frameIndex) == false
                 && PreparedFlag.TryAdd(frameIndex, 0))
             {
                 var clone = result.Clone();
-                if (builder.TryPreAppend(frameIndex, clone))
+                if (builder?.TryPreAppend(frameIndex, clone) == true)
                 {
                     // 不删除 ClipNeedForFrame：Preparer 正在遍历它，移除 key 会导致 KeyNotFoundException
                     // 但 Preparer 的 PreparedFlag.TryAdd 会失败 → 不会入队 PreparedFrames
@@ -1645,7 +1647,7 @@ namespace projectFrameCut.Render.Rendering
                 frame = ImmutableContentCache.GetOrAdd(immutableCacheKey, _ =>
                 {
                     IPicture f;
-                    if (item.AlternativeSource is ISourceReplacementEffect sre)
+                    if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
                     {
                         f = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
                     }
@@ -1659,7 +1661,7 @@ namespace projectFrameCut.Render.Rendering
                     return f;
                 });
             }
-            else if (item.AlternativeSource is ISourceReplacementEffect sre)
+            else if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
             {
                 frame = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
             }
@@ -2033,7 +2035,7 @@ namespace projectFrameCut.Render.Rendering
         private void SubmitAndFinishFrame(uint frameIndex, IPicture? result, Stopwatch sw)
         {
             ArgumentNullException.ThrowIfNull(result, nameof(result));
-            if (builder!.FramePendedToWrite.ContainsKey(frameIndex))
+            if (builder?.FramePendedToWrite?.ContainsKey(frameIndex) == true)
             {
                 if (result != BlankFrame)
                 {
@@ -2048,7 +2050,7 @@ namespace projectFrameCut.Render.Rendering
                 return;
             }
 
-            builder!.Append(frameIndex, result);
+            builder?.Append(frameIndex, result);
             Interlocked.Increment(ref Finished);
             sw.Stop();
             if (LogProcessStack)
@@ -2318,7 +2320,7 @@ namespace projectFrameCut.Render.Rendering
         /// </summary>
         private void TryAssembleAndSubmitFrame(uint frame, FrameLayerCompletion completion)
         {
-            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            
 
             IPicture? merged = null;
             try
@@ -2360,7 +2362,7 @@ namespace projectFrameCut.Render.Rendering
                     merged = merged.Resize(TargetWidth, TargetHeight, false);
                 }
 
-                builder.Append(frame, merged);
+                builder?.Append(frame, merged);
                 completion.RenderStopwatch?.Stop();
                 TrackRenderElapsed(completion.RenderStopwatch?.Elapsed ?? TimeSpan.Zero);
                 FrameRenderElapsed[frame] = completion.RenderStopwatch?.Elapsed ?? TimeSpan.Zero;
@@ -2675,7 +2677,6 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
-                ArgumentNullException.ThrowIfNull(builder, nameof(builder));
                 while (!token.IsCancellationRequested && BlankFrames.TryPeek(out var head) && head < frameIndex)
                 {
                     if (!BlankFrames.TryDequeue(out var blankIdx))
@@ -2687,7 +2688,7 @@ namespace projectFrameCut.Render.Rendering
                         break;
                     }
 
-                    builder!.Append(blankIdx, BlankFrame);
+                    builder?.Append(blankIdx, BlankFrame);
                     TrackRenderElapsed(TimeSpan.Zero);
                     FramePrepareElapsed.TryAdd(blankIdx, TimeSpan.Zero);
                     FrameRenderElapsed.TryAdd(blankIdx, TimeSpan.Zero);

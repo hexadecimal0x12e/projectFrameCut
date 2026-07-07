@@ -39,7 +39,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             // Preferred path: Win2D (Direct2D) offscreen rendering. Direct2D has
             // high-quality per-primitive antialiasing, so we render at the target
             // size directly instead of supersampling.
-            if (!s_win2dUnavailable)
+            if (!(s_win2dUnavailable || HwAccelEnginePlugin.disableWin2DRasterizer))
             {
                 try
                 {

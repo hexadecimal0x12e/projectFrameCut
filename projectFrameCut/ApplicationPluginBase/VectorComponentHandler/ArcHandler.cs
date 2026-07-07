@@ -2,27 +2,28 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 public class ArcHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Arc";
-    public override string DisplayName => "弧线";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Arc_DisplayName;
     public override string Icon => "\ue155";
     public override bool HasDefaultHandles => false;
     protected override IVectorComponent CreateComponent() => new ArcComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddSlider("CenterX", "中心 X:", 0f, 1f, GetParam(component, "CenterX", 0.5f));
-            b.AddSlider("CenterY", "中心 Y:", 0f, 1f, GetParam(component, "CenterY", 0.5f));
-            b.AddSlider("RadiusX", "半径 X:", 0.001f, 1f, GetParam(component, "RadiusX", 0.3f));
-            b.AddSlider("RadiusY", "半径 Y:", 0.001f, 1f, GetParam(component, "RadiusY", 0.3f));
-            b.AddSlider("StartAngle", "起始角:", -MathF.PI * 2f, MathF.PI * 2f, GetParam(component, "StartAngle", 0f));
-            b.AddSlider("SweepAngle", "扫过角:", -MathF.PI * 2f, MathF.PI * 2f, GetParam(component, "SweepAngle", MathF.PI));
+            b.AddSlider("CenterX", PPLocalizedResources.VectorContentHandler_CenterX, 0f, 1f, GetParam(component, "CenterX", 0.5f));
+            b.AddSlider("CenterY", PPLocalizedResources.VectorContentHandler_CenterY, 0f, 1f, GetParam(component, "CenterY", 0.5f));
+            b.AddSlider("RadiusX", PPLocalizedResources.VectorContentHandler_RadiusX, 0.001f, 1f, GetParam(component, "RadiusX", 0.3f));
+            b.AddSlider("RadiusY", PPLocalizedResources.VectorContentHandler_RadiusY, 0.001f, 1f, GetParam(component, "RadiusY", 0.3f));
+            b.AddSlider("StartAngle", PPLocalizedResources.VectorContentHandler_StartAngle, -MathF.PI * 2f, MathF.PI * 2f, GetParam(component, "StartAngle", 0f));
+            b.AddSlider("SweepAngle", PPLocalizedResources.VectorContentHandler_SweepAngle, -MathF.PI * 2f, MathF.PI * 2f, GetParam(component, "SweepAngle", MathF.PI));
         }, defaultExpanded: true);
     }
 

@@ -27,26 +27,6 @@ public class DraftSettingPage
 
     public View? HistoryTabContent { get; private set; }
 
-    private Guid _selectedSnapshotId = Guid.Empty;
-    private HistoryGraphNode? _selectedSnapshot = null;
-    private List<HistoryGraphNode> _currentGraphNodes = [];
-    private List<HistoryGraphRowDrawable> _currentRowDrawables = [];
-    private List<GraphicsView> _currentRowGraphicsViews = [];
-    private Border? _detailsPanel;
-    private Label? _detailsSavedAtLabel;
-    private Label? _detailsAuthorLabel;
-    private Label? _detailsChangeReasonLabel;
-    private Button? _detailsRestoreButton;
-
-    private sealed class SaveSlotHistoryItem
-    {
-        public Guid SnapshotID { get; init; }
-        public DateTime SavedAt { get; init; }
-        public string ChangeReason { get; init; } = string.Empty;
-        public string ChangedBy { get; internal set; } = string.Empty;
-        public Guid ChangedByUserID { get; internal set; }
-    }
-
     public TabbedView tabView;
     public DraftPage parent;
 
@@ -96,7 +76,6 @@ public class DraftSettingPage
             Header = Localized.MainSettingsPage_Tab_General,
             Content = BuildGeneralTab()
         });
-        _showGraphView = false;
         var historyTabContent = BuildHistoryGraphTab();
         HistoryTabContent = historyTabContent;
         tabView.TabItems.Add(new TabbedViewItem
@@ -162,22 +141,7 @@ public class DraftSettingPage
                 };
                 clearOldHistoryButton.Clicked += async (_, _) => await ShowCleanupOptionsAsync();
 
-                var toggleViewButton = new Button
-                {
-                    Text = _showGraphView ? "\ue896" : "\ueaf5",
-                    FontFamily = "Icons"
-                };
-                ToolTipProperties.SetText(toggleViewButton, _showGraphView ? Localized.DraftSettingPage_Tab_History_List : Localized.DraftSettingPage_Tab_History_Graph);
-                toggleViewButton.Clicked += (_, _) =>
-                {
-                    _showGraphView = !_showGraphView;
-                    toggleViewButton.Text = _showGraphView ? "\ue896" : "\ueaf5";
-                    ToolTipProperties.SetText(toggleViewButton, _showGraphView ? Localized.DraftSettingPage_Tab_History_List : Localized.DraftSettingPage_Tab_History_Graph);
-                    tabView.SelectedItem.Content = BuildHistoryGraphTab();
-                };
-
                 clearHistoryButtonsLayout.Children.Add(clearOldHistoryButton);
-                clearHistoryButtonsLayout.Children.Add(toggleViewButton);
                 clearHistoryButtonsLayout.Add(popOutButton);
                 tabView.HeaderRightContent = clearHistoryButtonsLayout;
             }
@@ -512,307 +476,31 @@ public class DraftSettingPage
         }
     }
 
-    private (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) BuildGraphData()
-    {
-        var nodes = new List<HistoryGraphNode>();
-        var edges = new List<HistoryGraphEdge>();
-
-        if (IsStandaloneJsonMode)
-        {
-            return BuildGraphDataStandalone();
-        }
-
-        if (string.IsNullOrWhiteSpace(parent.WorkingPath))
-        {
-            return (nodes, edges);
-        }
-
-        var mapping = parent.ProjectInfo.SnapshotIDMapping;
-        if (mapping is null || mapping.Count == 0)
-        {
-            return (nodes, edges);
-        }
-
-        var historyItems = ReadSaveSlotHistory();
-        var historyById = historyItems.ToDictionary(h => h.SnapshotID);
-
-        foreach (var kv in mapping)
-        {
-            historyById.TryGetValue(kv.Key, out var item);
-            nodes.Add(new HistoryGraphNode
-            {
-                SnapshotID = kv.Key,
-                PreviousSnapshotID = kv.Value.Previous,
-                NextSnapshotIDs = kv.Value.Next,
-                SavedAt = item?.SavedAt ?? DateTime.MinValue,
-                ChangeReason = item?.ChangeReason ?? string.Empty,
-                ChangedByUserDisplayName = item?.ChangedBy ?? "Anonymous",
-                ChangedByUser = item?.ChangedByUserID ?? Guid.Empty,
-                IsCurrentSnapshot = kv.Key == parent.CurrentSnapshotID,
-                IsHead = kv.Value.Next.Count == 0
-            });
-        }
-
-        foreach (var node in nodes)
-        {
-            foreach (var nextId in node.NextSnapshotIDs)
-            {
-                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, parent.CurrentSnapshotID, mapping)
-                                   && IsSnapshotOnCurrentPath(nextId, parent.CurrentSnapshotID, mapping);
-                edges.Add(new HistoryGraphEdge
-                {
-                    FromSnapshotID = node.SnapshotID,
-                    ToSnapshotID = nextId,
-                    IsCurrentPath = isCurrentPath
-                });
-            }
-        }
-
-        nodes = nodes.OrderByDescending(n => n.SavedAt == DateTime.MinValue ? DateTime.MaxValue.Ticks : n.SavedAt.Ticks)
-                     .ThenByDescending(n => n.SnapshotID.ToString())
-                     .ToList();
-
-        return (nodes, edges);
-    }
-
-    private (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) BuildGraphDataStandalone()
-    {
-        var nodes = new List<HistoryGraphNode>();
-        var edges = new List<HistoryGraphEdge>();
-
-        if (string.IsNullOrWhiteSpace(standaloneProjectPath))
-        {
-            return (nodes, edges);
-        }
-
-        if (!TryLoadStandaloneProjectInfo(out var projectInfo, out _))
-        {
-            return (nodes, edges);
-        }
-
-        var mapping = projectInfo.SnapshotIDMapping;
-        if (mapping is null || mapping.Count == 0)
-        {
-            return (nodes, edges);
-        }
-
-        string saveSlotsPath = System.IO.Path.Combine(standaloneProjectPath, SaveSlotDirectoryName);
-        var slotMetaById = new Dictionary<Guid, (DateTime SavedAt, string Reason, string UserName, Guid UserId)>();
-        if (System.IO.Directory.Exists(saveSlotsPath))
-        {
-            foreach (var slotDir in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
-            {
-                string timelinePath = System.IO.Path.Combine(slotDir, "timeline.json");
-                if (!System.IO.File.Exists(timelinePath)) continue;
-                try
-                {
-                    string json = System.IO.File.ReadAllText(timelinePath);
-                    var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
-                    if (draft is null || draft.SnapshotID == Guid.Empty) continue;
-                    slotMetaById[draft.SnapshotID] = (draft.SavedAt, draft.ChangeReason,
-                        string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
-                        draft.ChangedByUser);
-                }
-                catch { }
-            }
-        }
-
-        Guid lastId = projectInfo.LastSnapshotID;
-
-        foreach (var kv in mapping)
-        {
-            slotMetaById.TryGetValue(kv.Key, out var meta);
-            nodes.Add(new HistoryGraphNode
-            {
-                SnapshotID = kv.Key,
-                PreviousSnapshotID = kv.Value.Previous,
-                NextSnapshotIDs = kv.Value.Next,
-                SavedAt = meta.SavedAt,
-                ChangeReason = meta.Reason,
-                ChangedByUserDisplayName = meta.UserName,
-                ChangedByUser = meta.UserId,
-                IsCurrentSnapshot = kv.Key == lastId,
-                IsHead = kv.Value.Next.Count == 0
-            });
-        }
-
-        foreach (var node in nodes)
-        {
-            foreach (var nextId in node.NextSnapshotIDs)
-            {
-                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, lastId, mapping)
-                                   && IsSnapshotOnCurrentPath(nextId, lastId, mapping);
-                edges.Add(new HistoryGraphEdge
-                {
-                    FromSnapshotID = node.SnapshotID,
-                    ToSnapshotID = nextId,
-                    IsCurrentPath = isCurrentPath
-                });
-            }
-        }
-
-        nodes = nodes.OrderByDescending(n => n.SavedAt == DateTime.MinValue ? DateTime.MaxValue.Ticks : n.SavedAt.Ticks)
-                     .ThenByDescending(n => n.SnapshotID.ToString())
-                     .ToList();
-
-        return (nodes, edges);
-    }
-
-    private static bool IsSnapshotOnCurrentPath(Guid snapshotId, Guid currentId,
-        Dictionary<Guid, ProjectJSONStructure.SnapshotIDMappingStructure> mapping)
-    {
-        if (snapshotId == currentId) return true;
-        var visited = new HashSet<Guid>();
-        var cursor = currentId;
-        while (cursor != Guid.Empty && visited.Add(cursor))
-        {
-            if (cursor == snapshotId) return true;
-            if (!mapping.TryGetValue(cursor, out var entry)) break;
-            cursor = entry.Previous;
-        }
-        return false;
-    }
-
-    private bool _showGraphView = true;
-
     public View BuildHistoryGraphTab(bool listOnly = false)
     {
-        _selectedSnapshotId = Guid.Empty;
-        _currentGraphNodes.Clear();
-        _currentRowDrawables.Clear();
-        _currentRowGraphicsViews.Clear();
-        var (nodes, edges) = BuildGraphData();
+        // Standalone mode (no DraftPage) — use builder directly, read-only
+        if (IsStandaloneJsonMode)
+        {
+            var standData = HistoryGraphDataBuilder.BuildStandalone(standaloneProjectPath);
+            var standaloneGraph = new HistoryGraphView();
+            standaloneGraph.ViewMode = HistoryViewMode.List;
+            standaloneGraph.LoadHistory(standData.Nodes, standData.Edges,
+                standData.Nodes.Count > 0 ? standData.Nodes[0].SnapshotID : Guid.Empty);
+            HistoryTabContent = standaloneGraph;
+            return standaloneGraph;
+        }
 
+        var provider = new DraftHistoryGraphProvider(parent);
+        parent.RegisterHistoryProvider(provider);
+        var (graphNodes, graphEdges) = provider.BuildGraphData();
+
+        var historyView = new HistoryGraphView(provider);
         if (listOnly)
-        {
-            return BuildHistoryGraphListContent(nodes, edges);
-        }
+            historyView.ViewMode = HistoryViewMode.List;
+        historyView.LoadHistory(graphNodes, graphEdges, parent.CurrentSnapshotID);
 
-        // Graph view
-        var graphView = new HistoryGraphView(parent);
-        graphView.LoadHistory(nodes, edges, parent.CurrentSnapshotID);
-
-        // List view
-        var listView = BuildHistoryGraphListContent(nodes, edges);
-
-        graphView.IsVisible = _showGraphView;
-        listView.IsVisible = !_showGraphView;
-
-        var container = new Grid
-        {
-            graphView,
-            listView
-        };
-
-        HistoryTabContent = container;
-        return container;
-    }
-
-    private View BuildHistoryGraphListContent(List<HistoryGraphNode> nodes, List<HistoryGraphEdge> edges)
-    {
-        if (nodes.Count == 0)
-        {
-            var emptyRoot = new VerticalStackLayout
-            {
-                Spacing = 10,
-                Padding = new Thickness(10),
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center
-            };
-            emptyRoot.Children.Add(new Label
-            {
-                Text = Localized.DraftSettingPage_Tab_History_NotAvailable,
-                FontSize = 25,
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center
-            });
-            emptyRoot.Children.Add(new Label
-            {
-                Text = Localized.DraftSettingPage_Tab_History_NotAvailable_Sub,
-                FontSize = 13,
-                Opacity = 0.75,
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center
-            });
-            return new ScrollView { Content = emptyRoot };
-        }
-
-        var edgeSet = new HashSet<(Guid from, Guid to)>();
-        foreach (var edge in edges)
-        {
-            edgeSet.Add((edge.FromSnapshotID, edge.ToSnapshotID));
-        }
-
-        var graphContainer = new VerticalStackLayout { Spacing = 0 };
-
-        for (int i = 0; i < nodes.Count; i++)
-        {
-            var node = nodes[i];
-            Guid prevId = node.PreviousSnapshotID;
-            Guid nextId = node.NextSnapshotID;
-
-            bool hasPredecessor = edgeSet.Contains((node.SnapshotID, nextId)) || nextId != Guid.Empty;
-            bool hasSuccessor = edgeSet.Contains((prevId, node.SnapshotID)) || prevId != Guid.Empty;
-            bool isFirst = i == 0;
-            bool isLast = i == nodes.Count - 1;
-
-            var row = BuildHistoryGraphRow(node, hasPredecessor || !isFirst, hasSuccessor || !isLast);
-
-            var tapGesture = new TapGestureRecognizer();
-            var capturedNode = node;
-            tapGesture.Tapped += (_, _) => OnGraphRowTapped(capturedNode);
-            row.GestureRecognizers.Add(tapGesture);
-
-            graphContainer.Children.Add(row);
-        }
-
-        _currentGraphNodes = nodes;
-
-        _detailsPanel = new Border
-        {
-            Padding = new Thickness(12),
-            Margin = new Thickness(0, 8, 0, 0),
-            Stroke = Colors.Gray,
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
-            IsVisible = false
-        };
-
-        var detailsLayout = new VerticalStackLayout { Spacing = 6 };
-
-        _detailsSavedAtLabel = new Label { FontSize = 13 };
-        _detailsAuthorLabel = new Label { FontSize = 13 };
-        _detailsChangeReasonLabel = new Label { FontSize = 13, FontAttributes = FontAttributes.Bold };
-        _detailsRestoreButton = new Button
-        {
-            Text = Localized._Apply,
-            BackgroundColor = Color.FromArgb("#4A9EFF"),
-            TextColor = Colors.White,
-            HorizontalOptions = LayoutOptions.Fill,
-        };
-        _detailsRestoreButton.Clicked += OnRestoreClicked;
-
-        detailsLayout.Children.Add(new Label { Text = Localized.DraftSettingPage_Tab_History_Details, FontSize = 16, FontAttributes = FontAttributes.Bold });
-        detailsLayout.Children.Add(_detailsSavedAtLabel);
-        detailsLayout.Children.Add(_detailsAuthorLabel);
-        detailsLayout.Children.Add(_detailsChangeReasonLabel);
-        detailsLayout.Children.Add(_detailsRestoreButton);
-
-        _detailsPanel.Content = detailsLayout;
-
-        var mainLayout = new Grid
-        {
-            RowDefinitions =
-            {
-                new RowDefinition { Height = GridLength.Star },
-                new RowDefinition { Height = GridLength.Auto }
-            }
-        };
-
-        mainLayout.Add(new ScrollView { Content = graphContainer }, 0, 0);
-        mainLayout.Add(_detailsPanel, 0, 1);
-
-        return mainLayout;
+        HistoryTabContent = historyView;
+        return historyView;
     }
 
     private View BuildHistoryLogsTab()
@@ -900,153 +588,6 @@ public class DraftSettingPage
         }
 
         return new ScrollView { Content = root };
-    }
-
-    private View BuildHistoryGraphRow(HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
-    {
-        var drawable = new HistoryGraphRowDrawable
-        {
-            HasPredecessor = hasPredecessor,
-            HasSuccessor = hasSuccessor,
-            IsCurrentSnapshot = node.IsCurrentSnapshot,
-            IsSelected = node.SnapshotID == _selectedSnapshotId
-        };
-
-        var graphView = new GraphicsView
-        {
-            WidthRequest = 50,
-            HeightRequest = 56,
-            Drawable = drawable,
-            BackgroundColor = Colors.Transparent
-        };
-
-        _currentRowDrawables.Add(drawable);
-        _currentRowGraphicsViews.Add(graphView);
-
-        string reasonText = string.IsNullOrWhiteSpace(node.ChangeReason)
-            ? "(no description)"
-            : node.ChangeReason.Trim();
-        if (node.IsCurrentSnapshot) reasonText = "* " + reasonText;
-
-        bool isCurrent = node.IsCurrentSnapshot;
-
-        var reasonLabel = new Label
-        {
-            Text = reasonText,
-            FontSize = 14,
-            FontAttributes = isCurrent ? FontAttributes.Bold : FontAttributes.None,
-            VerticalOptions = LayoutOptions.Center,
-            LineBreakMode = LineBreakMode.TailTruncation
-        };
-
-        var timeLabel = new Label
-        {
-            Text = $"{node.ChangedByUserDisplayName} · {node.RelativeTimeDisplay}",
-            FontSize = 11,
-            Opacity = 0.75,
-            VerticalOptions = LayoutOptions.Center
-        };
-
-        if (node.SavedAt != DateTime.MinValue)
-        {
-            ToolTipProperties.SetText(timeLabel, $"{node.SavedAt:yyyy-MM-dd HH:mm:ss}");
-        }
-
-        var textStack = new VerticalStackLayout
-        {
-            Spacing = 2,
-            VerticalOptions = LayoutOptions.Center,
-            Children = { reasonLabel, timeLabel }
-        };
-
-        var row = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = 50 },
-                new ColumnDefinition { Width = GridLength.Star }
-            },
-            Padding = new Thickness(0, 0),
-            BackgroundColor = isCurrent ? Color.FromArgb("#1A4A9EFF") : Colors.Transparent
-        };
-
-        row.Add(graphView, 0);
-        row.Add(textStack, 1);
-
-        return row;
-    }
-
-    private void OnGraphRowTapped(HistoryGraphNode node)
-    {
-        _selectedSnapshotId = node.SnapshotID;
-        _selectedSnapshot = node;
-
-        for (int i = 0; i < _currentRowDrawables.Count; i++)
-        {
-            _currentRowDrawables[i].IsSelected = _currentGraphNodes[i].SnapshotID == _selectedSnapshotId;
-            _currentRowGraphicsViews[i].Invalidate();
-        }
-
-        if (_detailsPanel is null) return;
-
-        _detailsPanel.IsVisible = true;
-
-        if (_detailsSavedAtLabel is not null)
-        {
-            _detailsSavedAtLabel.Text =
-                DateTime.Now.Ticks - node.SavedAt.Ticks >= 0 ?
-                TimeSpan.FromTicks(DateTime.Now.Ticks - node.SavedAt.Ticks) switch
-                {
-                    var t when t.TotalMinutes < 1 => Localized.DraftSettingPage_Tab_History_Now,
-                    var t when t.TotalHours < 2 => Localized.DraftSettingPage_Tab_History_MinutesAgo(t.Minutes),
-                    var t when t.TotalHours < 48 => Localized.DraftSettingPage_Tab_History_HoursAgo((int)t.TotalHours),
-                    var t when t.TotalDays < 14 => Localized.DraftSettingPage_Tab_History_DaysAgo((int)t.TotalDays),
-                    _ => Localized.DraftSettingPage_Tab_History_VeryLongAgo
-                }
-                : Localized.HomePage_LastChangedOnFuture;
-            ToolTipProperties.SetText(_detailsSavedAtLabel, node.SavedAt.ToString("F"));
-
-        }
-
-        if (_detailsAuthorLabel is not null)
-        {
-            _detailsAuthorLabel.Text = Localized.DraftSettingPage_Tab_History_Details_EditBy(node.ChangedByUserDisplayName);
-            ToolTipProperties.SetText(_detailsAuthorLabel, $"UserID: {node.ChangedByUser}");
-        }
-
-        if (_detailsChangeReasonLabel is not null)
-        {
-            _detailsChangeReasonLabel.Text = node.ChangeReason;
-            ToolTipProperties.SetText(_detailsChangeReasonLabel, $"This:{node.SnapshotID}{Environment.NewLine}Next:{node.NextSnapshotID}{Environment.NewLine}Previous: {node.PreviousSnapshotID}");
-
-        }
-
-
-        if (_detailsRestoreButton is not null)
-            _detailsRestoreButton.IsEnabled = !node.IsCurrentSnapshot;
-    }
-
-    private async void OnRestoreClicked(object? sender, EventArgs e)
-    {
-        if (_selectedSnapshotId == Guid.Empty) return;
-
-        if (IsStandaloneJsonMode)
-        {
-            await RestoreSlotStandalone(_selectedSnapshotId, _selectedSnapshot is not null ? _selectedSnapshot.SavedAt.ToString("yyyy-MM-dd HH:mm:ss") : "Unknown");
-            return;
-        }
-
-        try
-        {
-            parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
-            parent.ApplySlot(_selectedSnapshotId);
-            tabView.SelectedItem.Content = BuildHistoryGraphTab();
-        }
-        catch (Exception ex)
-        {
-            parent.SetStateFail();
-            parent.SetStatusText(Localized._ExceptionTemplate(ex));
-        }
     }
 
     private async Task ShowCleanupOptionsAsync()
@@ -1429,7 +970,7 @@ public class DraftSettingPage
         }
     }
 
-    private List<SaveSlotHistoryItem> ReadSaveSlotHistory()
+    internal List<SaveSlotHistoryItem> ReadSaveSlotHistory()
     {
         if (string.IsNullOrWhiteSpace(parent.WorkingPath))
         {
@@ -2733,108 +2274,3 @@ public class DraftSettingPage
     #endregion
 }
 
-#region history graph
-
-public sealed class HistoryGraphNode
-{
-    public Guid SnapshotID { get; init; }
-    public Guid PreviousSnapshotID { get; set; }
-    public List<Guid> NextSnapshotIDs { get; set; } = new();
-    public DateTime SavedAt { get; init; }
-    public string ChangeReason { get; init; } = string.Empty;
-    public string ChangedByUserDisplayName { get; init; } = string.Empty;
-    public Guid ChangedByUser { get; init; }
-    public bool IsCurrentSnapshot { get; set; }
-    public bool IsHead { get; set; }
-    public bool IsBranchNode { get; set; }
-
-    [System.Text.Json.Serialization.JsonIgnore]
-    public Guid NextSnapshotID => NextSnapshotIDs?.FirstOrDefault() ?? Guid.Empty;
-
-    public string DisplayLabel => IsCurrentSnapshot ? $"* {ChangeReason}" : ChangeReason;
-
-    public string RelativeTimeDisplay
-    {
-        get => DateTime.Now.Ticks - SavedAt.Ticks >= 0 ?
-               TimeSpan.FromTicks(DateTime.Now.Ticks - SavedAt.Ticks) switch
-               {
-                   var t when t.TotalMinutes < 1 => Localized.DraftSettingPage_Tab_History_Now,
-                   var t when t.TotalHours < 2 => Localized.DraftSettingPage_Tab_History_MinutesAgo(t.Minutes),
-                   var t when t.TotalHours < 48 => Localized.DraftSettingPage_Tab_History_HoursAgo((int)t.TotalHours),
-                   var t when t.TotalDays < 14 => Localized.DraftSettingPage_Tab_History_DaysAgo((int)t.TotalDays),
-                   _ => Localized.DraftSettingPage_Tab_History_VeryLongAgo
-               }
-               : Localized.HomePage_LastChangedOnFuture;
-    }
-}
-
-public sealed class HistoryGraphRowDrawable : IDrawable
-{
-    public bool HasPredecessor { get; set; }
-    public bool HasSuccessor { get; set; }
-    public bool IsCurrentSnapshot { get; set; }
-    public bool IsSelected { get; set; }
-
-    const float NodeRadius = 9f;
-    const float SelectedNodeRadius = 12f;
-    const float LineWidth = 2.5f;
-    static readonly Color LineColor = Color.FromArgb("#555555");
-    static readonly Color CurrentLineColor = Color.FromArgb("#4A9EFF");
-    static readonly Color NodeFillColor = Color.FromArgb("#666666");
-    static readonly Color CurrentNodeFillColor = Color.FromArgb("#4A9EFF");
-    static readonly Color SelectedRingColor = Color.FromArgb("#FFB74D");
-    static readonly Color CurrentNodeStrokeColor = Color.FromArgb("#1A6DD4");
-
-    public void Draw(ICanvas canvas, RectF dirtyRect)
-    {
-        canvas.Antialias = true;
-        float centerX = dirtyRect.Width / 2f;
-        float centerY = dirtyRect.Height / 2f;
-        float radius = IsSelected ? SelectedNodeRadius : NodeRadius;
-
-        Color lineClr = IsCurrentSnapshot ? CurrentLineColor : LineColor;
-
-        canvas.StrokeColor = lineClr;
-        canvas.StrokeSize = LineWidth;
-        canvas.StrokeLineCap = LineCap.Round;
-
-        if (HasSuccessor)
-        {
-            canvas.DrawLine(centerX, centerY, centerX, dirtyRect.Bottom);
-        }
-
-        if (HasPredecessor)
-        {
-            canvas.DrawLine(centerX, dirtyRect.Top, centerX, centerY);
-        }
-
-        if (IsSelected)
-        {
-            canvas.StrokeColor = SelectedRingColor;
-            canvas.StrokeSize = 3;
-            canvas.DrawCircle(centerX, centerY, radius + 3);
-        }
-
-        Color fillClr = IsCurrentSnapshot ? CurrentNodeFillColor : NodeFillColor;
-        canvas.FillColor = fillClr;
-        canvas.FillCircle(centerX, centerY, radius);
-
-        if (IsCurrentSnapshot)
-        {
-            canvas.StrokeColor = CurrentNodeStrokeColor;
-            canvas.StrokeSize = 1.5f;
-            canvas.DrawCircle(centerX, centerY, radius);
-        }
-    }
-}
-
-
-public sealed class HistoryGraphEdge
-{
-    public Guid FromSnapshotID { get; init; }
-    public Guid ToSnapshotID { get; init; }
-    public bool IsCurrentPath { get; set; }
-}
-
-
-#endregion

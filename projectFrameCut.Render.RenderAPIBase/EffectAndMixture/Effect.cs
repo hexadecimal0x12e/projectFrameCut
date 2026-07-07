@@ -73,6 +73,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get whether this effect is reorderable in the effect stack. If false, the effect will be rendered in a fixed position in the final effect stack.
         /// </summary>
+        [JsonIgnore]
         public bool IsReorderable { get; }
 
         /// <summary>

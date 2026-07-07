@@ -11,6 +11,7 @@ using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -920,7 +921,17 @@ namespace projectFrameCut.InteractableEditor
                 {
                     if (!ClipStatesHost.Children.Contains(state.Root))
                     {
-                        ClipStatesHost.Children.Add(state.Root);
+                        try
+                        {
+                            ClipStatesHost.Children.Add(state.Root);
+                        }
+                        catch (Exception ex) when (ex is NullReferenceException or InvalidComObjectException)
+                        {
+                            Dispatcher.Dispatch(() =>
+                            {
+                                ClipStatesHost.Children.Add(state.Root);
+                            });
+                        }
                     }
                 });
                 return state;

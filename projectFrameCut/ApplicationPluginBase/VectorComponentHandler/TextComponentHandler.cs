@@ -6,6 +6,7 @@ using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using System.Globalization;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
@@ -19,7 +20,7 @@ namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 public class TextComponentHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Text";
-    public override string DisplayName => "文本";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Text_DisplayName;
     public override string Icon => "\ue262";
     public override bool HasDefaultHandles => true;
 
@@ -79,20 +80,20 @@ public class TextComponentHandler : BaseVectorComponentHandler
         var providerPanel = provider.BuildPropertyPanel();
 
         // ── Auto-provided options (same layout as ClipInfoBuilder.BuildTextOptionTab) ──
-        builder.AddCollapsibleSection("文本", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Text, b =>
         {
             // ── Layout mode picker ──
             if (provider.ShowLayoutModePicker)
             {
                 string[] layoutOptions = { "FillClip", "FixedWidth", "FixedSize" };
                 string currentLayout = provider.LayoutMode.ToString();
-                b.AddPicker("LayoutMode", "布局模式", layoutOptions, currentLayout);
+                b.AddPicker("LayoutMode", PPLocalizedResources.VectorContentHandler_LayoutMode, layoutOptions, currentLayout);
             }
 
             // ── Text content editor (multi-line, like BuildTextOptionTab) ──
             if (provider.ShowDefaultTextEditor)
             {
-                b.AddCustomChild("内容:", invoker =>
+                b.AddCustomChild(PPLocalizedResources.VectorContentHandler_Content, invoker =>
                 {
                     var editor = new Editor
                     {
@@ -100,7 +101,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
                         Text = provider.BasicText,
                         IsSpellCheckEnabled = true,
                         IsTextPredictionEnabled = true,
-                        Placeholder = "输入文本内容..."
+                        Placeholder = PPLocalizedResources.VectorContentHandler_TextPlaceholder
                     };
                     editor.Unfocused += (_, _) => invoker(editor.Text);
                     return editor;
@@ -120,7 +121,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
                 if (fontNames.Length > 0)
                 {
                     var currentFont = provider.Parameters.TryGetValue("FontFamily", out var fn) ? fn : null;
-                    b.AddPicker("FontFamily", "字体", fontNames, currentFont);
+                    b.AddPicker("FontFamily", PPLocalizedResources.VectorContentHandler_Font, fontNames, currentFont);
                 }
             }
 

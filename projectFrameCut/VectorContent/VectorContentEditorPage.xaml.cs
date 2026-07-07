@@ -2,8 +2,10 @@
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
+using LocalizedResources;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
@@ -12,6 +14,7 @@ using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent;
@@ -21,7 +24,9 @@ using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Windows.Input;
 using Color = Microsoft.Maui.Graphics.Color;
@@ -33,10 +38,52 @@ using ShapeHandlePositionType = projectFrameCut.ApplicationAPIBase.VectorCompone
 namespace projectFrameCut.DraftStuff;
 
 /// <summary>
+/// A snapshot record with a GUID for history graph integration.
+/// </summary>
+internal readonly struct SnapshotRecord
+{
+    public readonly Guid Id;
+    public readonly string Json;
+    public readonly string Description;
+    public readonly DateTime Timestamp;
+
+    public SnapshotRecord(Guid id, string json, string description, DateTime timestamp)
+    {
+        Id = id;
+        Json = json;
+        Description = description;
+        Timestamp = timestamp;
+    }
+}
+
+/// <summary>
+/// DTO for persisting a single snapshot record to disk.
+/// </summary>
+internal class PersistedSnapshotRecord
+{
+    public Guid Id { get; set; }
+    public string Json { get; set; } = "";
+    public string Description { get; set; } = "";
+    public DateTime Timestamp { get; set; }
+}
+
+/// <summary>
+/// DTO for the full persisted history file.
+/// </summary>
+internal class PersistedVectorHistory
+{
+    public Guid ClipId { get; set; }
+    public Guid CurrentStateId { get; set; }
+    public string InitialComponentsJson { get; set; } = "";
+    public List<PersistedSnapshotRecord> UndoRecords { get; set; } = new();
+    public List<PersistedSnapshotRecord> RedoRecords { get; set; } = new();
+}
+
+/// <summary>
 /// Vector content editor — MVU-style self-contained page.
 /// Manages component list, shape parameters, animation tracks, and interactive preview.
 /// </summary>
-public partial class VectorContentEditorView : ContentView, INotifyPropertyChanged
+public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChanged, IHistoryGraphProvider
 {
     // ═══════════════════════════════════════════════════════════
     // Injected state
@@ -54,12 +101,42 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private Dictionary<Guid, ClipElementUI> _clipElementUIs = new();
     private bool _suppressComponentPropertySync;
 
+    // ── Undo / Redo (GUID-tracked for history graph) ──────────
+    // Past states: pushed via PushUndoSnapshot before each change.
+    private readonly List<SnapshotRecord> _undoRecords = new();
+    // Future states: pushed via Undo(), popped via Redo().
+    private readonly List<SnapshotRecord> _redoRecords = new();
+    // Dedicated GUID for the current (live, visible) state.
+    private Guid _currentStateId = Guid.NewGuid();
+
+    // ── History Graph View ─────────────────────────────────────
+    private HistoryGraphView? _historyGraphView;
+
+    // ── Clipboard (Copy / Cut / Paste) ────────────────────────
+    private List<IVectorComponent>? _clipboard;
+
+    // ── Persistent history (disk-backed) ───────────────────────
+    private string _historyDirectoryPath = string.Empty;
+
+    private static readonly JsonSerializerOptions UndoJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = null,
+    };
+
+    private static readonly JsonSerializerOptions HistoryJsonOptions = new()
+    {
+        WriteIndented = false,
+        PropertyNamingPolicy = null,
+        PropertyNameCaseInsensitive = true,
+    };
+
     // ═══════════════════════════════════════════════════════════
     // Constructors
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>Parameterless constructor required by XAML parser.</summary>
-    public VectorContentEditorView()
+    public VectorContentEditorPage()
     {
         InitializeComponent();
 
@@ -89,12 +166,16 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     /// Create the editor for the given <paramref name="clip"/>.
     /// Works for both SVG-backed and composition-only clips.
     /// </summary>
-    public VectorContentEditorView(VectorCanvasClip clip, int projectWidth, int projectHeight)
+    public VectorContentEditorPage(VectorCanvasClip clip, int projectWidth, int projectHeight, string? workingPath = null)
     {
         InitializeComponent();
 
         _clip = clip ?? throw new ArgumentNullException(nameof(clip));
         _dispatcher = Dispatcher;
+
+        // ── Set up persistent history directory ──
+        if (!string.IsNullOrWhiteSpace(workingPath))
+            _historyDirectoryPath = System.IO.Path.Combine(workingPath, "vectorContent", "history");
 
         int previewProjectWidth = Math.Max(1, projectWidth);
         int previewProjectHeight = Math.Max(1, projectHeight);
@@ -151,14 +232,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                         }
                         catch
                         {
-                            try
-                            {
-                                if (Parent is MultiWindowItem mvi)
-                                {
-                                    await mvi.ShowPopupAsync(new MultiWindowItemPopup { Content = v });
-                                }
-                            }
-                            catch { }
                         }
                     });
                 },
@@ -172,14 +245,6 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                         }
                         catch
                         {
-                            try
-                            {
-                                if (Parent is MultiWindowItem mvi)
-                                {
-                                    await mvi.HidePopupAsync();
-                                }
-                            }
-                            catch { }
                         }
                     });
                 });
@@ -214,6 +279,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         Components.CollectionChanged += (_, _) =>
         {
             MainThread.BeginInvokeOnMainThread(RebuildComponentClips);
+            ApplyChanges();
         };
 
         // ── Subscribe to individual component property changes (right panel → editor) ──
@@ -221,6 +287,9 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
         // ── Initialize state ──
         InitializeState();
+
+        // ── Restore persisted undo/redo history for this clip ──
+        LoadAndRestoreHistoryFromDisk();
 
         // ── Apply the default MDI layout once the MultiWindowView has a real size ──
         MainMultiWindowView.SizeChanged += OnMainMultiWindowViewSizeChanged;
@@ -232,6 +301,8 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         {
             mvi.IsPopOutVisible = false;
         }
+
+        MainMultiWindowView.CloseWindow(HistorySubWindow);
     }
 
     private void OnMainMultiWindowViewSizeChanged(object? sender, EventArgs e)
@@ -253,6 +324,15 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void OnChangesCancelledForward(object? sender, EventArgs e) =>
         ChangesCancelled?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>
+    /// Save history to disk when the page is navigated away from.
+    /// </summary>
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        SaveHistoryToDisk();
+    }
+
     /// <summary>点击组件行将其设为当前选中组件（用于右侧属性面板）。</summary>
     private void OnComponentItemTapped(object? sender, TappedEventArgs e)
     {
@@ -263,6 +343,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         OnPropertyChanged(nameof(CanGroupComponents));
         OnPropertyChanged(nameof(CanUngroupComponent));
         OnPropertyChanged(nameof(CanGroupOrUngroup));
+        OnPropertyChanged(nameof(GroupButtonText));
     }
 
     /// <summary>由 VectorComponentItem.IsChecked 通知，更新多选集合。 </summary>
@@ -281,6 +362,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         OnPropertyChanged(nameof(CanGroupComponents));
         OnPropertyChanged(nameof(CanUngroupComponent));
         OnPropertyChanged(nameof(CanGroupOrUngroup));
+        OnPropertyChanged(nameof(GroupButtonText));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -454,6 +536,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 OnPropertyChanged(nameof(CanGroupComponents));
                 OnPropertyChanged(nameof(CanUngroupComponent));
                 OnPropertyChanged(nameof(CanGroupOrUngroup));
+                OnPropertyChanged(nameof(GroupButtonText));
                 OnPropertyChanged(nameof(AvailableFieldIds));
                 // Also notify Command.CanExecute so the button re-evaluates its enabled state.
                 // The CheckBox-based OnComponentCheckedChanged may not always fire at the right
@@ -469,6 +552,197 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public ObservableCollection<VectorComponentItem> SelectedComponents { get; } = new();
 
     public bool HasSelectedComponent => SelectedComponent is not null;
+
+    // ═══════════════════════════════════════════════════════════
+    // IHistoryGraphProvider implementation
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>Display name shown in the history graph's info label.</summary>
+    string IHistoryGraphProvider.ProviderName => "VectorContentEditor";
+
+    /// <summary>GUID of the currently active state (the live visible state).</summary>
+    Guid IHistoryGraphProvider.CurrentSnapshotID => _currentStateId;
+
+    /// <summary>Raised when the current snapshot changes externally.</summary>
+    public event EventHandler<EventArgs>? CurrentSnapshotChanged;
+
+    void IHistoryGraphProvider.NotifyExternalSnapshotChanged()
+    {
+        CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Builds graph nodes and edges from the undo records + current state + redo records.
+    /// </summary>
+    (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) IHistoryGraphProvider.BuildGraphData()
+    {
+        var nodes = new List<HistoryGraphNode>();
+        var edges = new List<HistoryGraphEdge>();
+        Guid currentId = ((IHistoryGraphProvider)this).CurrentSnapshotID;
+
+        // ── Collect all restorable states in chronological order ──
+        // 1. Undo records (past states, oldest first)
+        // 2. Current live state
+        // 3. Redo records (future states, from earliest undone to latest)
+        var allStates = new List<(Guid Id, string Description, DateTime Timestamp)>();
+        var guidToState = new Dictionary<Guid, int>(); // state GUID → index in allStates
+
+        int idx = 0;
+        foreach (var rec in _undoRecords)
+        {
+            allStates.Add((rec.Id, rec.Description, rec.Timestamp));
+            guidToState[rec.Id] = idx++;
+        }
+
+        // Current state
+        allStates.Add((_currentStateId, "(current)", DateTime.Now));
+        guidToState[_currentStateId] = idx++;
+
+        foreach (var rec in _redoRecords)
+        {
+            allStates.Add((rec.Id, rec.Description, rec.Timestamp));
+            guidToState[rec.Id] = idx++;
+        }
+
+        // ── Build nodes ──
+        for (int i = 0; i < allStates.Count; i++)
+        {
+            var (id, desc, ts) = allStates[i];
+            Guid prevId = i > 0 ? allStates[i - 1].Id : Guid.Empty;
+            bool isCurrent = id == currentId;
+
+            List<Guid> nextIds = i < allStates.Count - 1
+                ? new() { allStates[i + 1].Id }
+                : new();
+
+            nodes.Add(new HistoryGraphNode
+            {
+                SnapshotID = id,
+                PreviousSnapshotID = prevId,
+                NextSnapshotIDs = nextIds,
+                SavedAt = ts,
+                ChangeReason = desc,
+                ChangedByUserDisplayName = "User",
+                IsCurrentSnapshot = isCurrent,
+                IsHead = nextIds.Count == 0,
+            });
+        }
+
+        // ── Build edges ──
+        for (int i = 0; i < allStates.Count - 1; i++)
+        {
+            var fromId = allStates[i].Id;
+            var toId = allStates[i + 1].Id;
+            bool isCurrentPath = fromId == currentId || toId == currentId;
+            edges.Add(new HistoryGraphEdge
+            {
+                FromSnapshotID = fromId,
+                ToSnapshotID = toId,
+                IsCurrentPath = isCurrentPath,
+            });
+        }
+
+        return (nodes, edges);
+    }
+
+    /// <summary>
+    /// Restores the editor state to the given snapshot GUID.
+    /// Searches undo records, then redo records.
+    /// </summary>
+    async Task<bool> IHistoryGraphProvider.ApplySnapshotAsync(Guid snapshotId)
+    {
+        // Is it the current state?
+        if (snapshotId == _currentStateId)
+            return true;
+
+        // Search undo records
+        for (int i = 0; i < _undoRecords.Count; i++)
+        {
+            if (_undoRecords[i].Id == snapshotId)
+            {
+                // Save current state as redo, then undo until we reach the target
+                SaveCurrentStateAsRedoRecord();
+                while (_undoRecords.Count > 0 && _undoRecords.Count > i)
+                {
+                    var rec = _undoRecords[^1];
+                    _redoRecords.Add(rec);
+                    _undoRecords.RemoveAt(_undoRecords.Count - 1);
+                }
+                // Restore target (it's now in redo, pop it back)
+                var target = _redoRecords[^1];
+                _redoRecords.RemoveAt(_redoRecords.Count - 1);
+                _undoRecords.Add(target);
+                RestoreComponentsFromJson(target.Json);
+                _currentStateId = target.Id;
+
+                ((Command)UndoCommand).ChangeCanExecute();
+                ((Command)RedoCommand).ChangeCanExecute();
+                CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+        }
+
+        // Search redo records
+        for (int i = 0; i < _redoRecords.Count; i++)
+        {
+            if (_redoRecords[i].Id == snapshotId)
+            {
+                // Redo until we reach the target
+                SaveCurrentStateAsUndoRecord();
+                while (_redoRecords.Count > 0 && _redoRecords.Count > i)
+                {
+                    var rec = _redoRecords[0];
+                    _undoRecords.Add(rec);
+                    _redoRecords.RemoveAt(0);
+                }
+                // i has been redo'd to become the last undo record
+                var target = _undoRecords[^1];
+                RestoreComponentsFromJson(target.Json);
+                _currentStateId = target.Id;
+
+                ((Command)UndoCommand).ChangeCanExecute();
+                ((Command)RedoCommand).ChangeCanExecute();
+                CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Snapshot current state and save as a new undo record.</summary>
+    private void SaveCurrentStateAsUndoRecord()
+    {
+        var group = new ComponentGroup { Name = "Undo Snapshot" };
+        group.SetChildren(_editingComponents.ToList());
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        _undoRecords.Add(new SnapshotRecord(
+            _currentStateId, json,
+            Localized.VectorContentEditorView_History_DefaultAction,
+            DateTime.Now));
+        _currentStateId = Guid.NewGuid();
+    }
+
+    /// <summary>Snapshot current state and save as a new redo record.</summary>
+    private void SaveCurrentStateAsRedoRecord()
+    {
+        var group = new ComponentGroup { Name = "Redo Snapshot" };
+        group.SetChildren(_editingComponents.ToList());
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        _redoRecords.Insert(0, new SnapshotRecord(
+            _currentStateId, json,
+            Localized.VectorContentEditorView_History_DefaultAction,
+            DateTime.Now));
+        _currentStateId = Guid.NewGuid();
+    }
+
+    void IHistoryGraphProvider.OnNodeSelected(HistoryGraphNode node) { }
+    void IHistoryGraphProvider.OnNodeDeselected(HistoryGraphNode node) { }
+
+    /// <summary>Number of undo steps available.</summary>
+    public int UndoCount => _undoRecords.Count;
+    /// <summary>Number of redo steps available.</summary>
+    public int RedoCount => _redoRecords.Count;
 
     public bool CanGroupComponents => SelectedComponents.Count >= 2 && SelectedComponents.All(c => c.Source is not ComponentGroup);
 
@@ -488,6 +762,11 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             }
         }
     }
+
+    /// <summary>Localized text for the Group/Ungroup button.</summary>
+    public string GroupButtonText => CanGroupComponents
+        ? Localized.VectorContentEditorView_Group
+        : Localized.VectorContentEditorView_Ungroup;
 
     // ── Shape gallery ──
 
@@ -522,6 +801,17 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     public ICommand ExportJsonCommand { get; private set; } = null!;
     public ICommand SelectComponentCommand { get; private set; } = null!;
 
+    // ── Menu bar commands ──
+    public ICommand SaveCommand { get; private set; } = null!;
+    public ICommand UndoCommand { get; private set; } = null!;
+    public ICommand RedoCommand { get; private set; } = null!;
+    public ICommand CopyCommand { get; private set; } = null!;
+    public ICommand CutCommand { get; private set; } = null!;
+    public ICommand PasteCommand { get; private set; } = null!;
+    public ICommand DuplicateCommand { get; private set; } = null!;
+    public ICommand ExportSvgCommand { get; private set; } = null!;
+    public ICommand ShowHistoryCommand { get; private set; } = null!;
+
     private void RegisterCommands()
     {
         AddTrackCommand = new Command(AddTrack);
@@ -538,6 +828,433 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         DeleteKeyFrameCommand = new Command(DeleteKeyFrame);
         ExportJsonCommand = new Command(async () => await ExportToJsonAsync());
         SelectComponentCommand = new Command<VectorComponentItem>(item => SelectedComponent = item);
+
+        // ── Menu bar commands ──
+        SaveCommand = new Command(ApplyChanges);
+        UndoCommand = new Command(Undo, () => _undoRecords.Count > 0);
+        RedoCommand = new Command(Redo, () => _redoRecords.Count > 0);
+        CopyCommand = new Command(Copy, () => HasSelectedComponent);
+        CutCommand = new Command(Cut, () => HasSelectedComponent);
+        PasteCommand = new Command(Paste, () => _clipboard is { Count: > 0 });
+        DuplicateCommand = new Command(Duplicate, () => HasSelectedComponent);
+        ExportSvgCommand = new Command(async () => await ExportAsSvg(), () => HasSelectedComponent);
+        ShowHistoryCommand = new Command(ToggleHistoryWindow);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Persistent history (disk I/O)
+    // ═══════════════════════════════════════════════════════════
+
+    private string GetHistoryFilePath()
+    {
+        if (string.IsNullOrWhiteSpace(_historyDirectoryPath)) return string.Empty;
+        return System.IO.Path.Combine(_historyDirectoryPath, $"{_clip.Id}.json");
+    }
+
+    /// <summary>Save the full undo/redo state to disk.</summary>
+    private void SaveHistoryToDisk()
+    {
+        string filePath = GetHistoryFilePath();
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+
+        try
+        {
+            Directory.CreateDirectory(_historyDirectoryPath);
+
+            var data = new PersistedVectorHistory
+            {
+                ClipId = _clip.Id,
+                CurrentStateId = _currentStateId,
+                InitialComponentsJson = SerializeEditingComponentsAsJson(),
+                UndoRecords = _undoRecords.ConvertAll(r => new PersistedSnapshotRecord
+                {
+                    Id = r.Id,
+                    Json = r.Json,
+                    Description = r.Description,
+                    Timestamp = r.Timestamp,
+                }),
+                RedoRecords = _redoRecords.ConvertAll(r => new PersistedSnapshotRecord
+                {
+                    Id = r.Id,
+                    Json = r.Json,
+                    Description = r.Description,
+                    Timestamp = r.Timestamp,
+                }),
+            };
+
+            string json = JsonSerializer.Serialize(data, HistoryJsonOptions);
+            File.WriteAllText(filePath, json);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[VectorContentEditorPage] Failed to save history: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Load persisted history from disk and restore the undo/redo stacks.
+    /// Only restores if the clip's current components match the saved initial state.
+    /// </summary>
+    private void LoadAndRestoreHistoryFromDisk()
+    {
+        string filePath = GetHistoryFilePath();
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            SaveHistoryToDisk(); // persist initial state for future loads
+            return;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            var data = JsonSerializer.Deserialize<PersistedVectorHistory>(json, HistoryJsonOptions);
+            if (data is null) { SaveHistoryToDisk(); return; }
+
+            // Consistency check: clip's current components must match saved initial state
+            string currentJson = SerializeEditingComponentsAsJson();
+            if (data.InitialComponentsJson != currentJson)
+            {
+                // Clip was changed externally — discard old history, start fresh
+                SafeDeleteFile(filePath);
+                SaveHistoryToDisk();
+                return;
+            }
+
+            _undoRecords.Clear();
+            _redoRecords.Clear();
+
+            foreach (var r in data.UndoRecords)
+                _undoRecords.Add(new SnapshotRecord(r.Id, r.Json, r.Description, r.Timestamp));
+            foreach (var r in data.RedoRecords)
+                _redoRecords.Add(new SnapshotRecord(r.Id, r.Json, r.Description, r.Timestamp));
+
+            _currentStateId = data.CurrentStateId;
+
+            ((Command)UndoCommand).ChangeCanExecute();
+            ((Command)RedoCommand).ChangeCanExecute();
+            RefreshHistoryGraph();
+            CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[VectorContentEditorPage] Failed to load history: {ex.Message}");
+            // Corrupted file — remove and start fresh
+            SafeDeleteFile(filePath);
+            SaveHistoryToDisk();
+        }
+    }
+
+    /// <summary>Serialize current <see cref="_editingComponents"/> to JSON (as a ComponentGroup).</summary>
+    private string SerializeEditingComponentsAsJson()
+    {
+        var group = new ComponentGroup { Name = "History State" };
+        group.SetChildren(_editingComponents.ToList());
+        return JsonSerializer.Serialize(group, UndoJsonOptions);
+    }
+
+    private static void SafeDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch { /* best effort */ }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Undo / Redo
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>Save a snapshot of the current component state onto the undo stack.</summary>
+    private void PushUndoSnapshot(string description = "")
+    {
+        var group = new ComponentGroup { Name = "Undo Snapshot" };
+        group.SetChildren(_editingComponents.ToList());
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        var guid = Guid.NewGuid();
+
+        _undoRecords.Add(new SnapshotRecord(
+            guid, json,
+            string.IsNullOrWhiteSpace(description)
+                ? Localized.VectorContentEditorView_History_DefaultAction
+                : description,
+            DateTime.Now));
+        _currentStateId = guid;
+        _redoRecords.Clear();
+
+        ((Command)UndoCommand).ChangeCanExecute();
+        ((Command)RedoCommand).ChangeCanExecute();
+        RefreshHistoryGraph();
+
+        // Notify the history graph that data changed
+        CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+
+        // Persist to disk
+        SaveHistoryToDisk();
+    }
+
+    private void Undo()
+    {
+        if (_undoRecords.Count == 0) return;
+
+        // Snapshot the current visible state as a redo record
+        var currentGroup = new ComponentGroup { Name = "Redo Snapshot" };
+        currentGroup.SetChildren(_editingComponents.ToList());
+        var currentJson = JsonSerializer.Serialize(currentGroup, UndoJsonOptions);
+
+        // Move the last undo record to become the current state
+        var lastUndo = _undoRecords[^1];
+        _undoRecords.RemoveAt(_undoRecords.Count - 1);
+
+        // Save current state as the newest redo record
+        _redoRecords.Insert(0, new SnapshotRecord(
+            _currentStateId, currentJson,
+            Localized.VectorContentEditorView_History_DefaultAction,
+            DateTime.Now));
+
+        // Restore the undone state
+        _currentStateId = lastUndo.Id;
+        RestoreComponentsFromJson(lastUndo.Json);
+
+        ((Command)UndoCommand).ChangeCanExecute();
+        ((Command)RedoCommand).ChangeCanExecute();
+        RefreshHistoryGraph();
+        CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+
+        // Persist to disk
+        SaveHistoryToDisk();
+    }
+
+    private void Redo()
+    {
+        if (_redoRecords.Count == 0) return;
+
+        // Snapshot the current visible state as an undo record
+        var currentGroup = new ComponentGroup { Name = "Undo Snapshot" };
+        currentGroup.SetChildren(_editingComponents.ToList());
+        var currentJson = JsonSerializer.Serialize(currentGroup, UndoJsonOptions);
+
+        // Move the first redo record to become the current state
+        var firstRedo = _redoRecords[0];
+        _redoRecords.RemoveAt(0);
+
+        // Save current state as a new undo record
+        _undoRecords.Add(new SnapshotRecord(
+            _currentStateId, currentJson,
+            Localized.VectorContentEditorView_History_DefaultAction,
+            DateTime.Now));
+
+        // Restore the redo state
+        _currentStateId = firstRedo.Id;
+        RestoreComponentsFromJson(firstRedo.Json);
+
+        ((Command)UndoCommand).ChangeCanExecute();
+        ((Command)RedoCommand).ChangeCanExecute();
+        RefreshHistoryGraph();
+        CurrentSnapshotChanged?.Invoke(this, EventArgs.Empty);
+
+        // Persist to disk
+        SaveHistoryToDisk();
+    }
+
+    /// <summary>
+    /// Deserializes a JSON snapshot of components and replaces the current editing state.
+    /// </summary>
+    private void RestoreComponentsFromJson(string json)
+    {
+        var group = JsonSerializer.Deserialize<ComponentGroup>(json, UndoJsonOptions);
+        if (group is null) return;
+
+        var restored = group.Children.ToList();
+        _editingComponents = restored;
+
+        Components.Clear();
+        foreach (var comp in restored)
+            Components.Add(new VectorComponentItem(comp, this));
+
+        SelectedComponent = Components.FirstOrDefault();
+        RebuildComponentClips();
+        _ = RefreshInteractivePreviewsAsync();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // History panel — uses HistoryGraphView
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Opens or closes the history sub-window with the HistoryGraphView.
+    /// </summary>
+    private void ToggleHistoryWindow()
+    {
+        bool isOpen = MainMultiWindowView.Windows.Contains(HistorySubWindow);
+        if (isOpen)
+        {
+            MainMultiWindowView.CloseWindow(HistorySubWindow);
+        }
+        else
+        {
+            EnsureHistoryGraphViewCreated();
+            RefreshHistoryGraph();
+            MainMultiWindowView.AddWindow(HistorySubWindow);
+            MainMultiWindowView.BringToFront(HistorySubWindow);
+        }
+    }
+
+    /// <summary>
+    /// Lazily creates the HistoryGraphView and hooks it up to the provider.
+    /// </summary>
+    private void EnsureHistoryGraphViewCreated()
+    {
+        if (_historyGraphView is not null) return;
+        _historyGraphView = new HistoryGraphView((IHistoryGraphProvider)this);
+        HistorySubWindow.Content = _historyGraphView;
+    }
+
+    /// <summary>
+    /// Rebuilds the graph data and pushes it to the HistoryGraphView.
+    /// </summary>
+    private void RefreshHistoryGraph()
+    {
+        if (_historyGraphView is null) return;
+        var provider = (IHistoryGraphProvider)this;
+        var (nodes, edges) = provider.BuildGraphData();
+        _historyGraphView.LoadHistory(nodes, edges, provider.CurrentSnapshotID);
+        OnPropertyChanged(nameof(UndoCount));
+        OnPropertyChanged(nameof(RedoCount));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Copy / Cut / Paste / Duplicate
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>Deep-clones the selected component(s) into the internal clipboard.</summary>
+    private void Copy()
+    {
+        var sources = SelectedComponents.Count > 0
+            ? SelectedComponents.Select(c => c.Source).ToList()
+            : SelectedComponent is not null
+                ? new List<IVectorComponent> { SelectedComponent.Source }
+                : null;
+
+        if (sources is null || sources.Count == 0) return;
+
+        var group = new ComponentGroup();
+        group.SetChildren(sources);
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        var restored = JsonSerializer.Deserialize<ComponentGroup>(json, UndoJsonOptions);
+        _clipboard = restored?.Children.ToList();
+
+        ((Command)PasteCommand).ChangeCanExecute();
+    }
+
+    private async void Cut()
+    {
+        if (!HasSelectedComponent) return;
+        Copy();
+        RemoveComponent(); // RemoveComponent() already calls PushUndoSnapshot()
+        await Task.CompletedTask;
+    }
+
+    private async void Paste()
+    {
+        if (_clipboard is null || _clipboard.Count == 0) return;
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_Paste);
+
+        var group = new ComponentGroup();
+        group.SetChildren(_clipboard);
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        var restored = JsonSerializer.Deserialize<ComponentGroup>(json, UndoJsonOptions);
+        if (restored is null) return;
+
+        var clones = restored.Children.ToList();
+        foreach (var comp in clones)
+        {
+            // Offset position slightly to indicate a fresh paste
+            var x = comp.Parameters.GetFloat("RelativeX", 0.5f) + 0.05f;
+            var y = comp.Parameters.GetFloat("RelativeY", 0.5f) + 0.05f;
+            comp.Parameters["RelativeX"] = Math.Clamp(x, 0f, 1f);
+            comp.Parameters["RelativeY"] = Math.Clamp(y, 0f, 1f);
+
+            _editingComponents.Add(comp);
+            var item = new VectorComponentItem(comp, this);
+            Components.Add(item);
+        }
+
+        SelectedComponent = Components.LastOrDefault();
+        RebuildComponentClips();
+        await RefreshInteractivePreviewsAsync();
+    }
+
+    private async void Duplicate()
+    {
+        if (SelectedComponent is null) return;
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_Duplicate);
+
+        var group = new ComponentGroup();
+        group.SetChildren(new List<IVectorComponent> { SelectedComponent.Source });
+        var json = JsonSerializer.Serialize(group, UndoJsonOptions);
+        var restored = JsonSerializer.Deserialize<ComponentGroup>(json, UndoJsonOptions);
+        if (restored?.Children is not { Count: > 0 }) return;
+
+        var clone = restored.Children[0];
+        clone.Parameters["RelativeX"] = Math.Clamp(
+            clone.Parameters.GetFloat("RelativeX", 0.5f) + 0.05f, 0f, 1f);
+        clone.Parameters["RelativeY"] = Math.Clamp(
+            clone.Parameters.GetFloat("RelativeY", 0.5f) + 0.05f, 0f, 1f);
+
+        _editingComponents.Add(clone);
+        var item = new VectorComponentItem(clone, this);
+        Components.Add(item);
+        SelectedComponent = item;
+
+        RebuildComponentClips();
+        await RefreshInteractivePreviewsAsync();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Export as SVG
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Exports the current composition as an SVG file by computing all animated
+    /// elements from every component and rendering them through
+    /// <see cref="SVGToVectorElement.ExportToSvg"/>.
+    /// </summary>
+    private async Task ExportAsSvg()
+    {
+        try
+        {
+            var allElements = new List<VectorCanvasElement>();
+            uint duration = Math.Max(1, _clip.Duration);
+
+            foreach (var compItem in Components)
+            {
+                var comp = compItem.Source;
+                // Use progress=0 (first frame) for a static export
+                float progress = 0f;
+                allElements.AddRange(comp.ComputeAll(progress));
+            }
+
+            if (allElements.Count == 0)
+                return;
+
+            var picture = new VectorPicture { Elements = allElements };
+            int w = Math.Max(1, PreviewWidth);
+            int h = Math.Max(1, PreviewHeight);
+            string svgContent = SVGToVectorElement.ExportToSvg(picture, w, h);
+
+            var safeName = SanitizeFileName(_clip.Name ?? "VectorComponents");
+            var fileName = $"{safeName}.svg";
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(svgContent));
+            var result = await FileSaver.Default.SaveAsync(fileName, stream);
+
+            if (!result.IsSuccessful)
+            {
+                // Export cancelled or failed
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "export SVG", this);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -556,7 +1273,17 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
                 TypeName = item.TypeName,
                 DisplayName = item.DisplayName,
                 Icon = item.Icon,
-                Description = $"Add a {item.DisplayName} shape",
+                Description = Localized.VectorContentEditorView_AddShapeDescription(item.DisplayName),
+            });
+        }
+        foreach (var item in PluginManager.LoadedPlugins.Select(c => c.Value).Where(c => c.PluginID != InternalPluginBase.InternalPluginBaseID).OfType<IApplicationPluginBase>().SelectMany(c => c.VectorComponentHandlerProvider.Values).Select(c => c()))
+        {
+            ShapeGalleryItems.Add(new ShapeGalleryItem
+            {
+                TypeName = item.TypeName,
+                DisplayName = item.DisplayName,
+                Icon = item.Icon,
+                Description = Localized.VectorContentEditorView_AddShapeDescription(item.DisplayName),
             });
         }
 
@@ -715,7 +1442,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
         ChangesApplied?.Invoke(_clip.ExtraData);
     }
 
-    private void Cancel()
+    private async void Cancel()
     {
         if (IsPlaying) Stop();
         _clip.Components = _componentsBackup.ToList();
@@ -751,7 +1478,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             var group = new ComponentGroup
             {
                 Id = Guid.NewGuid(),
-                Name = "Exported shapes",
+                Name = Localized.VectorContentEditorView_ExportShapesName,
                 IsImportedGroup = true,
                 IsSVG = false,
             };
@@ -800,6 +1527,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
     private void AddComponent(string typeName)
     {
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_AddComponent);
         var component = CreateComponent(typeName, Components.Count + 1);
         if (component is null) return;
 
@@ -840,6 +1568,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void RemoveComponent()
     {
         if (SelectedComponent is null) return;
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_Remove);
 
         var item = SelectedComponent;
         _editingComponents.Remove(item.Source);
@@ -869,6 +1598,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void GroupComponents()
     {
         if (SelectedComponents.Count < 2) return;
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_Group);
         if (SelectedComponents.Any(c => c.Source is ComponentGroup)) return;
 
         var itemsToGroup = SelectedComponents.ToList();
@@ -924,6 +1654,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
     private void UngroupComponent()
     {
         if (SelectedComponent?.Source is not ComponentGroup group) return;
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_Ungroup);
 
         var groupItem = SelectedComponent;
         var children = group.Children.ToList();
@@ -1104,6 +1835,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
             var group = WrapComponentsInGroup(individualComponents, fileName, isSVG: true, isImportedGroup: true, srcFileName: filePath);
             if (group is null) return;
 
+            PushUndoSnapshot(Localized.VectorContentEditorView_History_Import);
             _editingComponents.Add(group);
 
             var item = new VectorComponentItem(group, this)
@@ -1580,7 +2312,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
             var result = await FilePicker.PickAsync(new PickOptions
             {
-                PickerTitle = "Select SVG file to import",
+                PickerTitle = Localized.VectorContentEditorView_SelectSvgTitle,
                 FileTypes = customFileType,
             });
 
@@ -1855,7 +2587,7 @@ public partial class VectorContentEditorView : ContentView, INotifyPropertyChang
 
                 if (elements is null || elements.Count == 0)
                 {
-                    previews[i] = new DynamicPreview.PreparedPreview(cc.Id, null, "No components", cc);
+                    previews[i] = new DynamicPreview.PreparedPreview(cc.Id, null, Localized.VectorContentEditorView_NoComponentsPreview, cc);
                     continue;
                 }
 

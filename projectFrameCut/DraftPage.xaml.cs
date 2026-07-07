@@ -195,6 +195,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _historyNavigatedByUndoRedo = false;
     private bool _hasResolvedInitialPreviewFrame = false;
 
+    private IHistoryGraphProvider? _activeHistoryProvider;
+
 
     DateTime lastSyncTime = DateTime.MinValue;
     Guid PreviousSnapshotID = Guid.Empty;
@@ -8535,6 +8537,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    /// <summary>
+    /// Registers an <see cref="IHistoryGraphProvider"/> for this DraftPage session.
+    /// The provider's <see cref="IHistoryGraphProvider.CurrentSnapshotChanged"/> event
+    /// is raised when <see cref="ApplySlot"/> applies a new snapshot.
+    /// </summary>
+    public void RegisterHistoryProvider(IHistoryGraphProvider provider)
+    {
+        _activeHistoryProvider = provider;
+    }
+
     public void ApplySlot(Guid snapshotId)
     {
         try
@@ -8579,6 +8591,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             EnsureContinuousTrackIndices();
             CurrentSnapshotID = snapshotId;
+            _activeHistoryProvider?.NotifyExternalSnapshotChanged();
             PreviousSnapshotID = draftJson.PreviousSnapshot;
             RefreshHistorySubWindowContent();
             DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });

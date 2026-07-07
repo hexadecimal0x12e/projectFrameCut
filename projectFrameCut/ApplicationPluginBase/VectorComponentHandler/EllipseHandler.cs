@@ -2,23 +2,24 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 public class EllipseHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Ellipse";
-    public override string DisplayName => "椭圆";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Ellipse_DisplayName;
     public override string Icon => "\ue836";
     public override bool HasDefaultHandles => true;
     protected override IVectorComponent CreateComponent() => new EllipseComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddSlider("RadiusX", "半径 X:", 0.001f, 1f, GetParam(component, "RadiusX", 0.15f));
-            b.AddSlider("RadiusY", "半径 Y:", 0.001f, 1f, GetParam(component, "RadiusY", 0.15f));
+            b.AddSlider("RadiusX", PPLocalizedResources.VectorContentHandler_RadiusX, 0.001f, 1f, GetParam(component, "RadiusX", 0.15f));
+            b.AddSlider("RadiusY", PPLocalizedResources.VectorContentHandler_RadiusY, 0.001f, 1f, GetParam(component, "RadiusY", 0.15f));
         }, defaultExpanded: true);
     }
 

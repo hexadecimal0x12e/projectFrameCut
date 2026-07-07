@@ -2,25 +2,26 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
+using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
 
 public class LineHandler : BaseVectorComponentHandler
 {
     public override string TypeName => "Line";
-    public override string DisplayName => "线段";
+    public override string DisplayName => PPLocalizedResources.VectorContentHandler_Line_DisplayName;
     public override string Icon => "\uf108";
     public override bool HasDefaultHandles => true;
     protected override IVectorComponent CreateComponent() => new LineComponent();
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        builder.AddCollapsibleSection("形状", b =>
+        builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
         {
-            b.AddSlider("X1", "X1:", 0f, 1f, GetParam(component, "X1", 0.1f));
-            b.AddSlider("Y1", "Y1:", 0f, 1f, GetParam(component, "Y1", 0.1f));
-            b.AddSlider("X2", "X2:", 0f, 1f, GetParam(component, "X2", 0.9f));
-            b.AddSlider("Y2", "Y2:", 0f, 1f, GetParam(component, "Y2", 0.9f));
+            b.AddSlider("X1", PPLocalizedResources.VectorContentHandler_X1, 0f, 1f, GetParam(component, "X1", 0.1f));
+            b.AddSlider("Y1", PPLocalizedResources.VectorContentHandler_Y1, 0f, 1f, GetParam(component, "Y1", 0.1f));
+            b.AddSlider("X2", PPLocalizedResources.VectorContentHandler_X2, 0f, 1f, GetParam(component, "X2", 0.9f));
+            b.AddSlider("Y2", PPLocalizedResources.VectorContentHandler_Y2, 0f, 1f, GetParam(component, "Y2", 0.9f));
         }, defaultExpanded: true);
     }
 

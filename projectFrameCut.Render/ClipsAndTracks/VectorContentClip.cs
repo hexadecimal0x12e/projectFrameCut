@@ -7,6 +7,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Render.VectorContent.Components;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -71,6 +72,74 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public ISourceReplacementEffect? AlternativeSource { get; set; }
 
+        // ── Static-content cache ───────────────────────────
+        //
+        // When no component in the hierarchy carries any animation keyframe
+        // (VectorAnimationKeyFrame), the vector picture is identical for every
+        // frame.  We cache the VectorPicture so that subsequent frames skip
+        // the (expensive) component traversal.
+        //
+        // NOTE: we do NOT cache the final rasterised IPicture — the rendering
+        // pipeline disposes / consumes each IPicture after compositing, so
+        // sharing one instance across frames causes "Pictures are invalid"
+        // errors in ClassicOverlayMixture.
+        //
+        // Cache is invalidated on ReInit().
+
+        private VectorPicture? _cachedVectorPicture;
+
+        /// <summary>
+        /// null = not yet computed, true = at least one component has keyframes,
+        /// false = all components are static.
+        /// </summary>
+        private bool? _hasAnimation;
+
+        /// <summary>
+        /// Returns true when any component (recursively) carries at least one
+        /// <see cref="VectorAnimationKeyFrame"/>, meaning the vector picture
+        /// changes per frame and caching is not possible.
+        /// </summary>
+        private bool HasAnyAnimation()
+        {
+            if (_hasAnimation.HasValue)
+                return _hasAnimation.Value;
+
+            foreach (var component in Components)
+            {
+                if (ComponentOrDescendantHasAnimation(component))
+                {
+                    _hasAnimation = true;
+                    return true;
+                }
+            }
+
+            _hasAnimation = false;
+            return false;
+        }
+
+        private static bool ComponentOrDescendantHasAnimation(IVectorComponent component)
+        {
+            if (component.AnimationFrames.Count > 0)
+                return true;
+
+            if (component is ComponentGroup group)
+            {
+                foreach (var child in group.Children)
+                {
+                    if (ComponentOrDescendantHasAnimation(child))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void InvalidateCache()
+        {
+            _cachedVectorPicture = null;
+            _hasAnimation = null;
+        }
+
         // ── Core: animated vector picture per frame ─────────
 
         /// <summary>
@@ -81,13 +150,31 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight)
         {
+            // When no component has any animation keyframe the vector picture
+            // is frame-independent — compute once, cache, and reuse.
+            if (!HasAnyAnimation())
+            {
+                if (_cachedVectorPicture is not null)
+                    return _cachedVectorPicture;
+
+                _cachedVectorPicture = BuildVectorPicture(0f);
+                return _cachedVectorPicture;
+            }
+
+            return BuildVectorPicture(CalculateProgress(frameIndex));
+        }
+
+        /// <summary>
+        /// Builds a <see cref="VectorPicture"/> by evaluating every component
+        /// at the given normalised <paramref name="progress"/>.
+        /// </summary>
+        private VectorPicture BuildVectorPicture(float progress)
+        {
             var result = new VectorPicture();
-            float progress = CalculateProgress(frameIndex);
             foreach (var component in Components)
             {
                 result.Elements.AddRange(component.ComputeAll(progress));
             }
-
             return result;
         }
 
@@ -117,6 +204,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            InvalidateCache();
             Components = DeserializeComponents();
 
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) =
@@ -125,6 +213,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            InvalidateCache();
         }
 
         // ── Progress calculation ───────────────────────────
