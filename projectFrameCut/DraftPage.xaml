@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
@@ -28,6 +28,7 @@
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Scripting}" Command="{Binding ShowScriptWindowCommand}"/>
             <!-- TODO
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>

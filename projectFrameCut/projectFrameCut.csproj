@@ -67,6 +67,9 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
+
+		<MauiVersion>10.0.71</MauiVersion>
+		<PwshSDKVersion>7.6.3</PwshSDKVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -119,9 +122,9 @@
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
 		<PackageReference Include="OpenAI" Version="2.8.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.71" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.71" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.71" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
@@ -130,23 +133,16 @@
 		<Reference Include="Resources\Assembly\*.dll" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<UserHome Condition=" '$(HOME)' != '' ">$(HOME)</UserHome>
+		<UserHome Condition=" '$(UserHome)' == '' and '$(USERPROFILE)' != '' ">$(USERPROFILE)</UserHome>
+		<UserHome Condition=" '$(UserHome)' == '' ">$(HOMEDRIVE)$(HOMEPATH)</UserHome>
+	</PropertyGroup>
 
 	<ItemGroup>
-		<AndroidResource Remove="AIAssistance\AgentSystem\**" />
-		<Compile Remove="AIAssistance\AgentSystem\**" />
-		<EmbeddedResource Remove="AIAssistance\AgentSystem\**" />
-		<MauiCss Remove="AIAssistance\AgentSystem\**" />
-		<MauiXaml Remove="AIAssistance\AgentSystem\**" />
-		<None Remove="AIAssistance\AgentSystem\**" />
-
 		<Compile Update="Localize\**\*" Visible="false" />
-	</ItemGroup>
-
-
-	<ItemGroup>
-		<MauiAsset Include="Resources\Styles\Colors.xaml" />
-		<MauiAsset Include="Resources\Styles\Styles.Default.xaml" />
-		<MauiAsset Include="Resources\Styles\Styles.WinUI.xaml" />
+		<!--removing the annoying refs from Solution resource manager-->
+		<None Update="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false"  />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -161,8 +157,9 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
-		<PackageReference Include="System.Management" Version="10.0.0" />
+		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
@@ -179,8 +176,10 @@
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" ExcludeAssets="native" /> <!-- Microsoft.PowerShell.Native has a native lib which was not compactable with android, so we exclude it -->
 		<AndroidLibrary Include="Resources\Assembly\fishnet-1.1.0.aar" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
+		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>

@@ -573,7 +573,7 @@ namespace projectFrameCut
 #endif
             var view = new AIAssistance.AssistanceChatSessionsView(MauiProgram.DataPath, null)
             {
-                GlobalToolCallFactories = null!
+                GlobalToolCallFactories = AIAssistance.AITools.BuildToolCallsWhileNoProject()
             };
             var content = new ContentPage { Content = view, Title = "" };
             var page = new NavigationPage(content) { Title = "" };

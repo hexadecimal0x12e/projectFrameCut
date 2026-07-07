@@ -13,6 +13,7 @@ using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Management.Automation;
 using System.Text;
 using System.Text.Json.Serialization.Metadata;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -30,6 +31,8 @@ namespace projectFrameCut.AIAssistance
             void update() => handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
             currentPage = page;
             if (currentPage is null) throw new InvalidOperationException("Current page is not set. Please set the current page before building tool calls.");
+            pwsh ??= PowerShell.Create();
+
             List<AIFunction> toolCalls = new List<AIFunction>
             {
                 AIFunctionFactory.Create((Guid AssetID, int startPosition, int track) => TimelineMcpLiveService.AddFromAsset(currentPage, AssetID.ToString(), startPosition, track), "add_from_assets","Add a new clip from a assets inside this project and/or in the user environment.", serializerOptions),
@@ -74,11 +77,46 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
-                AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model.")
-                //AIFunctionFactory.Create((string Type) => , "get_cliptype_detail_info","Set a specific's clip information.")
+                AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model."),
+                AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) which could interact with the whole system. See your system prompt fore more rules, usages and descriptions.")
             };
 
             return new(() => toolCalls);
+        }
+        public static Func<IEnumerable<AIFunction>>? BuildToolCallsWhileNoProject()
+        {
+            pwsh ??= PowerShell.Create();
+            currentPage = null;
+
+            List<AIFunction> toolCalls = new List<AIFunction>
+            {
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableAssets(null,false,true,false), "environment_get_assets","Get all assets inside the user's environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
+                AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment.", serializerOptions),
+                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model."),
+                AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) which could interact with the whole system. See your system prompt fore more rules, usages and descriptions.")
+            };
+
+            return new(() => toolCalls);
+        }
+
+        static PowerShell? pwsh = null;
+
+        static async Task<PSDataCollection<PSObject>> InvokeInternalPowerShell(string Command)
+        {
+            pwsh ??= PowerShell.Create();
+            try
+            {
+                pwsh.AddScript(Command);
+                return (await pwsh.InvokeAsync());
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "invoke integrated PowerShell");
+                throw; // throw back to AI
+            }
         }
 
         static async Task<string> RunSubAgent(string System, string Message)

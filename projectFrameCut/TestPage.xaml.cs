@@ -42,6 +42,8 @@ using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using System.Management.Automation;
+
 
 
 #if ANDROID
@@ -76,16 +78,6 @@ public partial class TestPage : ContentPage
         }
 
 #endif
-        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
-
-        TextClipFontRegistry.Initialize();
-        _ = LoadFontPickerAsync();
-
-        TextPicker.SelectedFontChanged += async (s, e) =>
-        {
-            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
-
-        };
     }
 
 
@@ -1209,6 +1201,23 @@ public partial class TestPage : ContentPage
         TextPicker.Title = $"Fonts ({ordered.Count()})";
     }
 
+    private async void LoadFontButton_Clicked(object sender, EventArgs e)
+    {
+        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
+
+        TextClipFontRegistry.Initialize();
+        await LoadFontPickerAsync();
+
+        TextPicker.SelectedFontChanged += async (s, e) =>
+        {
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+
+        };
+
+        LoadFontButton.IsEnabled = false;
+    }
+
+
     private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
@@ -1231,6 +1240,180 @@ public partial class TestPage : ContentPage
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             }), "ok");
         }
+    }
+    #endregion
+
+    #region scripting
+    PowerShell? pwsh = null!;
+    private void ExecteCommandButton_Clicked(object sender, EventArgs e)
+    {
+        pwsh ??= PowerShell.Create();
+        if (!string.IsNullOrWhiteSpace(ScriptInputEntry.Text))
+        {
+            try
+            {
+                pwsh.AddScript(ScriptInputEntry.Text);
+                var results = pwsh.Invoke();
+                ScriptOutputEditor.Text += results.Select(r => r.ToString()).Aggregate((a, b) => a + Environment.NewLine + b);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "exec pwsh command");
+                ScriptOutputEditor.Text += $"{Environment.NewLine}Error: {ex}{Environment.NewLine}";
+            }
+        }
+    }
+    private void InvokeNativeFuncButton_Clicked(object sender, EventArgs e)
+    {
+        SysLog(SysLogPriority.Info, "Test message to test libpsl-native");
+    }
+
+
+
+    [DllImport("libpsl-native", CharSet = CharSet.Ansi, EntryPoint = "Native_SysLog")] //testing native call of pwsh
+    private static extern void SysLog(SysLogPriority priority, string message);
+
+    [Flags]
+    private enum SysLogPriority : uint
+    {
+        // Priorities enum values.
+
+        /// <summary>
+        /// System is unusable.
+        /// </summary>
+        Emergency = 0,
+
+        /// <summary>
+        /// Action must be taken immediately.
+        /// </summary>
+        Alert = 1,
+
+        /// <summary>
+        /// Critical conditions.
+        /// </summary>
+        Critical = 2,
+
+        /// <summary>
+        /// Error conditions.
+        /// </summary>
+        Error = 3,
+
+        /// <summary>
+        /// Warning conditions.
+        /// </summary>
+        Warning = 4,
+
+        /// <summary>
+        /// Normal but significant condition.
+        /// </summary>
+        Notice = 5,
+
+        /// <summary>
+        /// Informational.
+        /// </summary>
+        Info = 6,
+
+        /// <summary>
+        /// Debug-level messages.
+        /// </summary>
+        Debug = 7,
+
+        // Facility enum values.
+
+        /// <summary>
+        /// Kernel messages.
+        /// </summary>
+        Kernel = (0 << 3),
+
+        /// <summary>
+        /// Random user-level messages.
+        /// </summary>
+        User = (1 << 3),
+
+        /// <summary>
+        /// Mail system.
+        /// </summary>
+        Mail = (2 << 3),
+
+        /// <summary>
+        /// System daemons.
+        /// </summary>
+        Daemon = (3 << 3),
+
+        /// <summary>
+        /// Authorization messages.
+        /// </summary>
+        Authorization = (4 << 3),
+
+        /// <summary>
+        /// Messages generated internally by syslogd.
+        /// </summary>
+        Syslog = (5 << 3),
+
+        /// <summary>
+        /// Line printer subsystem.
+        /// </summary>
+        Lpr = (6 << 3),
+
+        /// <summary>
+        /// Network news subsystem.
+        /// </summary>
+        News = (7 << 3),
+
+        /// <summary>
+        /// UUCP subsystem.
+        /// </summary>
+        Uucp = (8 << 3),
+
+        /// <summary>
+        /// Clock daemon.
+        /// </summary>
+        Cron = (9 << 3),
+
+        /// <summary>
+        /// Security/authorization messages (private)
+        /// </summary>
+        Authpriv = (10 << 3),
+
+        /// <summary>
+        /// FTP daemon.
+        /// </summary>
+        Ftp = (11 << 3),
+
+        // Reserved for system use
+
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local0 = (16 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local1 = (17 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local2 = (18 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local3 = (19 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local4 = (20 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local5 = (21 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local6 = (22 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local7 = (23 << 3),
     }
     #endregion
 
@@ -1314,7 +1497,6 @@ public partial class TestPage : ContentPage
             await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
         }
     }
-
     private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button { Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });

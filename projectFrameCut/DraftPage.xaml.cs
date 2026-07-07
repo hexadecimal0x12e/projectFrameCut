@@ -51,6 +51,7 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
+using projectFrameCut.ScriptEngine;
 
 
 #if WINDOWS
@@ -218,6 +219,13 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ConcurrentDictionary<Guid, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
+
+    /// <summary>
+    /// 集成的 PowerShell 脚本引擎，可通过 <c>ScriptEngine.ExecuteAsync()</c> 执行脚本，
+    /// 内置 Get-ProjectClip / Add-ProjectClip 等命令与当前时间线交互。
+    /// </summary>
+    public ScriptCore ScriptEngine { get; } = new();
+
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
     public ConcurrentDictionary<long, DraftPageLogItem> HistoryLogs = new();
@@ -267,6 +275,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand SetTimelineScrollLockCommand { get; private set; }
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
+    public ICommand ShowScriptWindowCommand { get; private set; }
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
@@ -464,6 +473,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ProjectInfo.ProjectName ??= title;
         IsReadonly = isReadonly;
+
+        // 初始化脚本引擎，将当前 DraftPage 暴露为 $page 变量
+        ScriptEngine.Initialize(this);
     }
 
     private void RegisterCommands()
@@ -518,6 +530,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await TimelineScrollView.ScrollToAsync(TimelineScrollView.ScrollX + offset, TimelineScrollView.ScrollY, true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
+        ShowScriptWindowCommand = new Command(ShowScriptWindow);
 
         EscapeCommand =
             new Command(async () =>
@@ -5630,6 +5643,178 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
 
+    }
+
+    private void ShowScriptWindow()
+    {
+        const string scriptWindowTitle = "Script Console";
+        // 检查是否已存在脚本窗口
+        if (MainMultiWindowView.Windows.FirstOrDefault(w => w.Title == scriptWindowTitle) is MultiWindowItem existing)
+        {
+            MainMultiWindowView.BringToFront(existing);
+            return;
+        }
+
+        var inputEditor = new Editor
+        {
+            Placeholder = "Enter PowerShell command…\ne.g. Get-ProjectClip\n     Add-ProjectClip -Name Test -Track 0 -StartX 100",
+            HeightRequest = 100,
+            FontSize = 13,
+            FontFamily = "Consolas",
+            IsSpellCheckEnabled = false,
+            AutoSize = EditorAutoSizeOption.TextChanges,
+        };
+
+        var outputEditor = new Editor
+        {
+            IsReadOnly = true,
+            FontSize = 13,
+            FontFamily = "Consolas",
+            BackgroundColor = Color.FromArgb("#1E1E1E"),
+            TextColor = Colors.White,
+        };
+
+        var runButton = new Button
+        {
+            Text = "▶ Run",
+            BackgroundColor = Color.FromArgb("#0E639C"),
+            TextColor = Colors.White,
+            CornerRadius = 4,
+            HeightRequest = 32,
+            Margin = new Thickness(0, 0, 4, 0),
+        };
+
+        var clearButton = new Button
+        {
+            Text = "Clear",
+            BackgroundColor = Color.FromArgb("#333333"),
+            TextColor = Colors.White,
+            CornerRadius = 4,
+            HeightRequest = 32,
+            Margin = new Thickness(4, 0, 0, 0),
+        };
+
+        var statusLabel = new Label
+        {
+            Text = "Ready",
+            FontSize = 11,
+            VerticalOptions = LayoutOptions.Center,
+            HorizontalOptions = LayoutOptions.Fill,
+            TextColor = Color.FromArgb("#888888"),
+        };
+
+        runButton.Clicked += async (_, _) =>
+        {
+            var script = inputEditor.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(script))
+            {
+                statusLabel.Text = "Please enter a command.";
+                return;
+            }
+
+            runButton.IsEnabled = false;
+            statusLabel.Text = "Running…";
+            statusLabel.TextColor = Color.FromArgb("#888888");
+            outputEditor.Text = "";
+            try
+            {
+                var result = await ScriptEngine.ExecuteAsync(script);
+                outputEditor.Text = result;
+                statusLabel.Text = $"Completed ({result.Length} chars)";
+                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
+            }
+            catch (Exception ex)
+            {
+                outputEditor.Text = $"ERROR: {ex.Message}";
+                statusLabel.Text = "Failed";
+                statusLabel.TextColor = Colors.OrangeRed;
+            }
+            finally
+            {
+                runButton.IsEnabled = true;
+            }
+        };
+
+        clearButton.Clicked += (_, _) =>
+        {
+            inputEditor.Text = "";
+            outputEditor.Text = "";
+            statusLabel.Text = "Cleared";
+            statusLabel.TextColor = Color.FromArgb("#888888");
+        };
+
+        // 快速命令按钮
+        var quickCmds = new[] { "Get-ProjectClip", "Get-ProjectClip | Format-Table -AutoSize", "Add-ProjectClip -Name 'Test' -Track 0 -StartX 100" };
+        var quickCmdBar = new HorizontalStackLayout { Spacing = 4, Margin = new Thickness(0, 4) };
+        foreach (var cmd in quickCmds)
+        {
+            var chip = new Button
+            {
+                Text = cmd,
+                FontSize = 11,
+                BackgroundColor = Color.FromArgb("#2D2D2D"),
+                TextColor = Color.FromArgb("#CCCCCC"),
+                CornerRadius = 4,
+                Padding = new Thickness(8, 2),
+                HeightRequest = 26,
+            };
+            chip.Clicked += (_, _) =>
+            {
+                inputEditor.Text = cmd;
+            };
+            quickCmdBar.Children.Add(chip);
+        }
+
+        var buttonBar = new HorizontalStackLayout
+        {
+            Children = { runButton, clearButton },
+            Spacing = 0,
+            Margin = new Thickness(0, 4),
+        };
+
+        var windowContent = new Grid
+        {
+            RowDefinitions =
+            {
+                new RowDefinition { Height = GridLength.Auto },  // 快速命令
+                new RowDefinition { Height = GridLength.Auto },  // 输入
+                new RowDefinition { Height = GridLength.Auto },  // 按钮
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }, // 输出
+                new RowDefinition { Height = GridLength.Auto },  // 状态
+            },
+            Padding = new Thickness(8),
+            ColumnDefinitions = { new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) } },
+            RowSpacing = 4,
+            Children =
+            {
+                new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal },
+                inputEditor,
+                buttonBar,
+                outputEditor,
+                statusLabel,
+            },
+        };
+
+        Grid.SetRow(inputEditor, 1);
+        Grid.SetRow(buttonBar, 2);
+        Grid.SetRow(outputEditor, 3);
+        Grid.SetRow(statusLabel, 4);
+
+        var window = new MultiWindowItem
+        {
+            Title = scriptWindowTitle,
+            Content = windowContent,
+            WidthRequest = 500,
+            HeightRequest = 450,
+            IsResizable = true,
+            IsMaximizable = true,
+            IsMinimizable = true,
+            IsClosable = true,
+            IsDraggable = true,
+            IsPopOutVisible = true
+        };
+
+        MainMultiWindowView.AddWindow(window);
     }
 
     private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)

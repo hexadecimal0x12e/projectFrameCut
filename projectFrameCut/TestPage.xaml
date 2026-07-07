@@ -133,10 +133,22 @@
                     <ContentView x:Name="ResultParticalContentView" />
                 </VerticalStackLayout>
             </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="pwsh script engine test"/>
+                    <Entry x:Name="ScriptInputEntry" Placeholder="Input script here" />
+                    <Button x:Name="ExecteCommandButton" Text="Execute Command" Clicked="ExecteCommandButton_Clicked"/>
+                    <Editor x:Name="ScriptOutputEditor" HeightRequest="150" Placeholder="" IsReadOnly="False"></Editor>
+                    <Button x:Name="InvokeNativeFuncButton" Text="Invoke libpsl-native" Clicked="InvokeNativeFuncButton_Clicked"/>
+                </VerticalStackLayout>
+            </Border>
+            
+            
 
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Font picker test"/>
+                    <Button x:Name="LoadFontButton" Text="Load fonts" Clicked="LoadFontButton_Clicked"/>
                     <p:FontPicker x:Name="TextPicker" Title="test123"/>
                     <Button x:Name="TestFontPropReaderButton" Text="Test read property" Clicked="TestFontPropReaderButton_Clicked"/>
                 </VerticalStackLayout>
