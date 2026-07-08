@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -21,6 +21,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Opacity", 0.8f }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Opacity", EffectBundleHelper.FloatField("Opacity", "Opacity", "Opacity multiplier for the frame", 0.8f, 0f, 1f) }
+        };
+
         public List<string> ParametersNeeded => FadeOpacityEffect_IPicture.ParametersNeeded;
         public Dictionary<string, string> ParametersType => FadeOpacityEffect_IPicture.ParametersType;
 
@@ -30,6 +35,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
         public EffectTarget Target => EffectTarget.Video;
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -52,13 +59,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            float opacity = EffectBundleUiHelper.GetFloat(Parameters, "Opacity", 0.8f);
+            float opacity = EffectBundleHelper.GetFloat(Parameters, "Opacity", 0.8f);
             opacity = Math.Clamp(opacity, 0f, 1f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Opacity",
-                EffectBundleUiHelper.L("Effect_FadeOpacity_Opacity", "Opacity"),
+                EffectBundleHelper.L("Effect_FadeOpacity_Opacity", "Opacity"),
                 0,
                 1,
                 opacity,
@@ -69,20 +76,25 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Opacity" && EffectBundleUiHelper.TrySetFloat(Parameters, "Opacity", args.Value))
+            if (args.Id == "Opacity" && EffectBundleHelper.TrySetFloat(Parameters, "Opacity", args.Value))
             {
-                Parameters["Opacity"] = Math.Clamp(EffectBundleUiHelper.GetFloat(Parameters, "Opacity", 0.8f), 0f, 1f);
+                Parameters["Opacity"] = Math.Clamp(EffectBundleHelper.GetFloat(Parameters, "Opacity", 0.8f), 0f, 1f);
             }
 
             return Parameters;
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
         }
 
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_FadeOpacity", "Fade Opacity"),
-                Description = EffectBundleUiHelper.L("Description_Effect_FadeOpacity", "Apply a uniform opacity multiplier to the frame."),
+                Name = EffectBundleHelper.L("DisplayName_Effect_FadeOpacity", "Fade Opacity"),
+                Description = EffectBundleHelper.L("Description_Effect_FadeOpacity", "Apply a uniform opacity multiplier to the frame."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
 {
@@ -49,16 +49,28 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
         {
             try
             {
+                // 安全预扫描：在原始用户输入上拦截恶意模式
+                XamlSecurityValidator.PreScan(code);
+
                 if (code.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\" ?>"))
                 {
+                    // 用户提供完整 XAML 文档 → 修复 + 深度验证 + 加载
+                    string fixedCode = XAMLFixer.FixIncompleteXml(code);
+                    XamlSecurityValidator.Validate(fixedCode);
+
                     var view = new ContentView();
-                    view.LoadFromXaml(XAMLFixer.FixIncompleteXml(code));
+                    view.LoadFromXaml(fixedCode);
                     return view;
                 }
                 else
                 {
+                    // XAML 片段 → FixXamlAndGenerateView 内部已含 PreScan + Validate
                     return XAMLFixer.FixXamlAndGenerateView(code);
                 }
+            }
+            catch (XamlSecurityException ex)
+            {
+                return new Label { Text = $"Cannot render XAML for security reasons: {ex.Message}" };
             }
             catch (Exception ex)
             {
@@ -78,21 +90,29 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
             if (string.IsNullOrEmpty(code) || code.Length < MinPartialCodeLength)
                 return null;
 
-            //if (!HasLikelyXamlStructure(code))
-            //    return null;
+            // 恢复 HasLikelyXamlStructure 检查，在安全预扫之前先过滤明显无效输入
+            if (!HasLikelyXamlStructure(code))
+                return null;
 
             // 不需要异常信息字符串拼接的静默失败路径
             View? result = null;
             try
             {
+                // 安全预扫描：在原始用户输入上拦截恶意模式
+                XamlSecurityValidator.PreScan(code);
+
                 if (code.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\" ?>"))
                 {
+                    string fixedCode = XAMLFixer.FixIncompleteXml(code);
+                    XamlSecurityValidator.Validate(fixedCode);
+
                     var view = new ContentView();
-                    view.LoadFromXaml(XAMLFixer.FixIncompleteXml(code));
+                    view.LoadFromXaml(fixedCode);
                     result = view;
                 }
                 else
                 {
+                    // FixXamlAndGenerateView 内部已含 PreScan + Validate
                     result = XAMLFixer.FixXamlAndGenerateView(code);
                 }
             }
@@ -109,31 +129,29 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
         {
             try
             {
+                // 安全预扫描：在原始用户输入上拦截恶意模式
+                XamlSecurityValidator.PreScan(code);
+
                 if (code.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\" ?>"))
                 {
+                    // 用户提供完整 XAML 文档；直接使用，先深度验证再加载
+                    XamlSecurityValidator.Validate(code);
+
                     var view = new ContentView();
                     view.LoadFromXaml(code);
                     return view;
                 }
                 else
                 {
-                    string fixedXaml =
-                    $"""
-                    <?xml version="1.0" encoding="utf-8" ?>
-                    <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-                                 xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-                                 xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-                                 xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.MarkdownToXAML"
-                                 x:Class="projectFrameCut.ApplicationAPIBase.Helpers.DynamicGenerateView">
-                        {code}
-                    </ContentView>
-                    """;
-
-                    var view = new ContentView();
-                    view.LoadFromXaml(fixedXaml);
-                    return view;
+                    // XAML 片段 → FixXamlAndGenerateView 内部已含 PreScan + Validate
+                    // 不再重复编写包裹模板，统一由 FixXamlAndGenerateView 处理
+                    return XAMLFixer.FixXamlAndGenerateView(code);
                 }
 
+            }
+            catch (XamlSecurityException ex)
+            {
+                return new Label { Text = $"Cannot render XAML for security reasons: {ex.Message}" };
             }
             catch (Exception ex)
             {

@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -21,6 +21,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Strength", 0.5f },
             { "Radius", 0.65f }
         };
+
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Strength", EffectBundleHelper.FloatField("Strength", "Strength", "Vignette strength", 0.5f, 0f, 1f) },
+            { "Radius", EffectBundleHelper.FloatField("Radius", "Radius", "Vignette radius", 0.65f, 0f, 1f) },
+        };
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
 
         public List<string> ParametersNeeded => VignetteEffect_IPicture.ParametersNeeded;
         public Dictionary<string, string> ParametersType => VignetteEffect_IPicture.ParametersType;
@@ -53,8 +66,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            float strength = EffectBundleUiHelper.GetFloat(Parameters, "Strength", 0.5f);
-            float radius = EffectBundleUiHelper.GetFloat(Parameters, "Radius", 0.65f);
+            float strength = EffectBundleHelper.GetFloat(Parameters, "Strength", 0.5f);
+            float radius = EffectBundleHelper.GetFloat(Parameters, "Radius", 0.65f);
 
             strength = Math.Clamp(strength, 0f, 1f);
             radius = Math.Clamp(radius, 0.05f, 0.99f);
@@ -62,7 +75,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Strength",
-                EffectBundleUiHelper.L("Effect_Vignette_Strength", "Strength"),
+                EffectBundleHelper.L("Effect_Vignette_Strength", "Strength"),
                 0,
                 1,
                 strength,
@@ -70,7 +83,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Radius",
-                EffectBundleUiHelper.L("Effect_Vignette_Radius", "Radius"),
+                EffectBundleHelper.L("Effect_Vignette_Radius", "Radius"),
                 0.05f,
                 0.99f,
                 radius,
@@ -81,13 +94,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Strength" && EffectBundleUiHelper.TrySetFloat(Parameters, "Strength", args.Value))
+            if (args.Id == "Strength" && EffectBundleHelper.TrySetFloat(Parameters, "Strength", args.Value))
             {
-                Parameters["Strength"] = Math.Clamp(EffectBundleUiHelper.GetFloat(Parameters, "Strength", 0.5f), 0f, 1f);
+                Parameters["Strength"] = Math.Clamp(EffectBundleHelper.GetFloat(Parameters, "Strength", 0.5f), 0f, 1f);
             }
-            else if (args.Id == "Radius" && EffectBundleUiHelper.TrySetFloat(Parameters, "Radius", args.Value))
+            else if (args.Id == "Radius" && EffectBundleHelper.TrySetFloat(Parameters, "Radius", args.Value))
             {
-                Parameters["Radius"] = Math.Clamp(EffectBundleUiHelper.GetFloat(Parameters, "Radius", 0.65f), 0.05f, 0.99f);
+                Parameters["Radius"] = Math.Clamp(EffectBundleHelper.GetFloat(Parameters, "Radius", 0.65f), 0.05f, 0.99f);
             }
 
             return Parameters;
@@ -97,8 +110,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Vignette", "Vignette"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Vignette", "Darken image edges to emphasize the center area."),
+                Name = EffectBundleHelper.L("DisplayName_Effect_Vignette", "Vignette"),
+                Description = EffectBundleHelper.L("Description_Effect_Vignette", "Darken image edges to emphasize the center area."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

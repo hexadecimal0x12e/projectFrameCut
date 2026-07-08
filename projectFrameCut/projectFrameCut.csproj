@@ -128,6 +128,7 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
+		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 
 		<!--For which assembles included, see Resources\Assembly\about.txt-->
 		<Reference Include="Resources\Assembly\*.dll" />

@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.AI;
+using Microsoft.Maui.Controls.Handlers;
+using Microsoft.PowerShell;
 using OpenAI.Chat;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -8,12 +10,14 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.ScriptEngine;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Text;
 using System.Text.Json.Serialization.Metadata;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -31,7 +35,6 @@ namespace projectFrameCut.AIAssistance
             void update() => handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
             currentPage = page;
             if (currentPage is null) throw new InvalidOperationException("Current page is not set. Please set the current page before building tool calls.");
-            pwsh ??= PowerShell.Create();
 
             List<AIFunction> toolCalls = new List<AIFunction>
             {
@@ -85,7 +88,6 @@ namespace projectFrameCut.AIAssistance
         }
         public static Func<IEnumerable<AIFunction>>? BuildToolCallsWhileNoProject()
         {
-            pwsh ??= PowerShell.Create();
             currentPage = null;
 
             List<AIFunction> toolCalls = new List<AIFunction>
@@ -96,26 +98,86 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
                 AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model."),
-                AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) which could interact with the whole system. See your system prompt fore more rules, usages and descriptions.")
             };
 
             return new(() => toolCalls);
         }
 
-        static PowerShell? pwsh = null;
-
-        static async Task<PSDataCollection<PSObject>> InvokeInternalPowerShell(string Command)
+        static async Task<string> InvokeInternalPowerShell(string Command)
         {
-            pwsh ??= PowerShell.Create();
-            try
+            if (currentPage?.ScriptEngine is not null)
             {
-                pwsh.AddScript(Command);
-                return (await pwsh.InvokeAsync());
+                return await currentPage.ScriptEngine.ExecuteAsync(Command);
             }
-            catch (Exception ex)
+            else
             {
-                Log(ex, "invoke integrated PowerShell");
-                throw; // throw back to AI
+                // 创建临时 CommandFilter 并设置项目路径
+                var filter = new CommandFilter();
+                if (AppShell.instance.CurrentPage is DraftPage dp)
+                    filter.WorkingPath = dp.WorkingPath;
+
+                // 预分析：检查混淆
+                var analysis = filter.AnalyzeScript(Command);
+                if (analysis.ThreatLevel >= ThreatLevel.Critical)
+                {
+                    return $"错误：脚本因检测到危险模式被安全策略阻止。{analysis.Summary}";
+                }
+                if (analysis.IsSuspicious)
+                {
+                    Logger.Log($"[AITools.CommandFilter] 脚本威胁级别: {analysis.ThreatLevel}, " +
+                               $"标记: {string.Join(", ", analysis.Flags)}");
+                }
+
+                // 提取命令参数并注入 AsyncLocal
+                var cmdParams = filter.AnalyzeCommands(Command);
+                var currentPageDraft = AppShell.instance.CurrentPage as DraftPage;
+                ScriptCore.PendingCommandParameters.Value = cmdParams;
+
+                try
+                {
+                    var auth = new PSCommandAuthorizationHelper(Guid.NewGuid().ToString())
+                    {
+                        AuthorizationHandler = currentPageDraft != null
+                            ? DraftPage.CreatePowerShellAuthorizationHandler(currentPageDraft)
+                            : null,
+                        EnhancedAuthorizationHandler = currentPageDraft != null
+                            ? DraftPage.CreateEnhancedPowerShellAuthorizationHandler(currentPageDraft)
+                            : null,
+                        CommandFilter = filter,
+                    };
+
+                    // 创建自定义的 InitialSessionState，注册所有 Cmdlet
+                    var iss = InitialSessionState.CreateDefault();
+                    iss.AuthorizationManager = auth;
+
+                    // 创建与应用程序同进程的 PowerShell 运行空间，命令持久化
+                    var runspace = RunspaceFactory.CreateRunspace(iss);
+                    runspace.Open();
+                    PowerShell pwsh = PowerShell.Create(runspace);
+
+                    pwsh.AddScript(Command).AddCommand("Out-String").AddParameter("Width", 4096);
+                    var results = await pwsh.InvokeAsync();
+
+                    if (!results.Any()) //in some cases pwsh command will return nothing, like when you call command like 'cls'
+                    {
+                        return "";
+                    }
+                    var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
+                    if (pwsh.HadErrors)
+                    {
+                        var errors = string.Join(Environment.NewLine,
+                            pwsh.Streams.Error.Select(e => { Log(e.Exception, "exec pwsh command", pwsh); return $"ERROR: {e}"; }));
+                        if (!string.IsNullOrEmpty(output))
+                            output += Environment.NewLine + "---" + Environment.NewLine;
+                        output += errors;
+                    }
+                    return output.TrimEnd();
+                }
+                finally
+                {
+                    ScriptCore.PendingCommandParameters.Value = null;
+                }
+
             }
         }
 

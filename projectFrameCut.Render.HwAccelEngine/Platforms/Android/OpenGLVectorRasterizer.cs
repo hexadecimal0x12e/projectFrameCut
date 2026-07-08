@@ -373,9 +373,9 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     {{'#'}}endif
 
                     outPacked[i] = pr;
-                    outPacked[i + {{pixelCount}}] = pg;
-                    outPacked[i + {{pixelCount * 2}}] = pb;
-                    outPacked[i + {{pixelCount * 3}}] = pa;
+                    outPacked[i + uint({{pixelCount}})] = pg;
+                    outPacked[i + uint({{pixelCount * 2}})] = pb;
+                    outPacked[i + uint({{pixelCount * 3}})] = pa;
                 }
                 """;
         }

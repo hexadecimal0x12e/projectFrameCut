@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -22,6 +22,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Vertical", false }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Horizontal", EffectBundleHelper.BoolField("Horizontal", "Horizontal", "Flip horizontally", false) },
+            { "Vertical", EffectBundleHelper.BoolField("Vertical", "Vertical", "Flip vertically", false) }
+        };
+
         public List<string> ParametersNeeded => FlipEffect_IPicture.ParametersNeeded;
         public Dictionary<string, string> ParametersType => FlipEffect_IPicture.ParametersType;
 
@@ -31,6 +37,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
         public EffectTarget Target => EffectTarget.Video;
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -53,12 +61,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            bool horizontal = EffectBundleUiHelper.GetBool(Parameters, "Horizontal", false);
-            bool vertical = EffectBundleUiHelper.GetBool(Parameters, "Vertical", false);
+            bool horizontal = EffectBundleHelper.GetBool(Parameters, "Horizontal", false);
+            bool vertical = EffectBundleHelper.GetBool(Parameters, "Vertical", false);
 
             var panel = new PropertyPanelBuilder();
-            panel.AddCheckbox("Horizontal", EffectBundleUiHelper.L("Effect_Flip_Horizontal", "Flip Horizontal"), horizontal);
-            panel.AddCheckbox("Vertical", EffectBundleUiHelper.L("Effect_Flip_Vertical", "Flip Vertical"), vertical);
+            panel.AddCheckbox("Horizontal", EffectBundleHelper.L("Effect_Flip_Horizontal", "Flip Horizontal"), horizontal);
+            panel.AddCheckbox("Vertical", EffectBundleHelper.L("Effect_Flip_Vertical", "Flip Vertical"), vertical);
             return panel;
         }
 
@@ -66,22 +74,27 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (args.Id == "Horizontal")
             {
-                EffectBundleUiHelper.TrySetBool(Parameters, "Horizontal", args.Value);
+                EffectBundleHelper.TrySetBool(Parameters, "Horizontal", args.Value);
             }
             else if (args.Id == "Vertical")
             {
-                EffectBundleUiHelper.TrySetBool(Parameters, "Vertical", args.Value);
+                EffectBundleHelper.TrySetBool(Parameters, "Vertical", args.Value);
             }
 
             return Parameters;
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
         }
 
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Flip", "Flip"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Flip", "Flip the frame horizontally and/or vertically."),
+                Name = EffectBundleHelper.L("DisplayName_Effect_Flip", "Flip"),
+                Description = EffectBundleHelper.L("Description_Effect_Flip", "Flip the frame horizontally and/or vertically."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

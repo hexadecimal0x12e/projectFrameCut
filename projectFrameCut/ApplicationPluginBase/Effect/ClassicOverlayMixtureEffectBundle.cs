@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
@@ -45,6 +45,17 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "AccuracyMode", "Accurate" }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "AccuracyMode", EffectBundleHelper.EnumField("AccuracyMode", "Accuracy Mode", "Overlay accuracy mode", "Accurate", ["Accurate", "Approximate"]) },
+        };
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
 
         public List<string> ParametersNeeded => ["AccuracyMode"];
         public Dictionary<string, string> ParametersType => new()
@@ -61,13 +72,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            var mode = EffectBundleUiHelper.GetString(Parameters, "AccuracyMode", "Accurate");
+            var mode = EffectBundleHelper.GetString(Parameters, "AccuracyMode", "Accurate");
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
                 "Classic Overlay Mixture\nblends each frame onto the layer below using alpha compositing.", 14));
             panel.AddPicker(
                 "AccuracyMode",
-                EffectBundleUiHelper.L("ClassicOverlay_AccuracyMode", "Accuracy Mode"),
+                EffectBundleHelper.L("ClassicOverlay_AccuracyMode", "Accuracy Mode"),
                 AccuracyModeOptions,
                 Array.IndexOf(AccuracyModeOptions, mode) >= 0 ? mode : "Accurate");
             return panel;
@@ -90,8 +101,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Mixture_ClassicOverlay", "Classic Overlay"),
-                Description = EffectBundleUiHelper.L("Description_Mixture_ClassicOverlay",
+                Name = EffectBundleHelper.L("DisplayName_Mixture_ClassicOverlay", "Classic Overlay"),
+                Description = EffectBundleHelper.L("Description_Mixture_ClassicOverlay",
                     "Classic alpha-blend overlay. Blends each frame onto the layer below using standard alpha compositing."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };

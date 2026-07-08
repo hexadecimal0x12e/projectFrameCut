@@ -1,6 +1,7 @@
 ﻿using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Text;
+using System.Threading;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 
@@ -21,24 +22,54 @@ namespace projectFrameCut.ScriptEngine
         public DraftPage? CurrentPage { get; private set; }
 
         /// <summary>
+        /// 获取当前运行空间使用的授权管理器实例。
+        /// </summary>
+        internal PSCommandAuthorizationHelper? AuthorizationManager { get; private set; }
+
+        /// <summary>
+        /// 当前引擎关联的命令筛选器，提供预分析和参数提取。
+        /// </summary>
+        internal CommandFilter CommandFilter { get; } = new();
+
+        /// <summary>
+        /// 待执行的命令参数缓存，由 <see cref="CommandFilter.AnalyzeCommands"/> 填充，
+        /// 供 <see cref="PSCommandAuthorizationHelper.ShouldRun"/> 在命令级使用。
+        /// 使用 AsyncLocal 确保多线程场景下的隔离。
+        /// </summary>
+        internal static readonly AsyncLocal<List<CommandParameterInfo>?> PendingCommandParameters = new();
+
+        /// <summary>
         /// 初始化脚本引擎，创建持久的 PowerShell 运行空间并注册内置命令。
         /// </summary>
-        public void Initialize(DraftPage? page = null)
+        /// <param name="page">当前绑定的 DraftPage。</param>
+        /// <param name="authHandler">可选的命令授权处理器，用于询问用户授权决策。</param>
+        public void Initialize(DraftPage? page = null,
+            CommandAuthorizationCallback? authHandler = null,
+            EnhancedAuthorizationCallback? enhancedAuthHandler = null)
         {
             CurrentPage = page;
 
+            // 设置 CommandFilter 的项目路径
+            CommandFilter.WorkingPath = page?.WorkingPath;
+
+            // 创建授权管理器并设置可配置的授权处理器
+            var auth = new PSCommandAuthorizationHelper(Guid.NewGuid().ToString());
+            auth.AuthorizationHandler = authHandler;
+            auth.EnhancedAuthorizationHandler = enhancedAuthHandler;
+            auth.CommandFilter = CommandFilter;
+            AuthorizationManager = auth;
+
+            // 创建自定义的 InitialSessionState，注册所有 Cmdlet
+            var iss = InitialSessionState.CreateDefault();
+            iss.AuthorizationManager = auth;
+            RegisterCmdlets(iss);
+
             // 创建与应用程序同进程的 PowerShell 运行空间，命令持久化
-            _runspace = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault());
+            _runspace = RunspaceFactory.CreateRunspace(iss);
             _runspace.Open();
 
             // 将 DraftPage 作为全局变量暴露给 PowerShell 脚本
             _runspace.SessionStateProxy.SetVariable("page", page);
-
-            // 注册内置的 PowerShell 函数到运行空间
-            using var ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps.AddScript(GetBuiltInModuleScript());
-            ps.Invoke();
         }
 
         /// <summary>
@@ -47,24 +78,34 @@ namespace projectFrameCut.ScriptEngine
         /// </summary>
         public string Execute(string script)
         {
-            using var ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps.AddScript(script);
-            ps.AddCommand("Out-String").AddParameter("Width", 4096);
+            // ---- 预分析 ----
+            PreAnalyzeScript(script);
 
-            var results = ps.Invoke();
-            var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
-
-            if (ps.HadErrors)
+            try
             {
-                var errors = string.Join(Environment.NewLine,
-                    ps.Streams.Error.Select(e => $"ERROR: {e}"));
-                if (!string.IsNullOrEmpty(output))
-                    output += Environment.NewLine + "---" + Environment.NewLine;
-                output += errors;
-            }
+                using var ps = PowerShell.Create(_runspace);
+                ps.AddScript(script).AddCommand("Out-String").AddParameter("Width", 4096);
+                var results = ps.Invoke();
 
-            return output.TrimEnd();
+                if (!results.Any()) //in some cases pwsh command will return nothing, like when you call command like 'cls'
+                {
+                    return "";
+                }
+                var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
+                if (ps.HadErrors)
+                {
+                    var errors = string.Join(Environment.NewLine,
+                        ps.Streams.Error.Select(e => { Log(e.Exception, "exec pwsh command", ps); return $"ERROR: {e}"; }));
+                    if (!string.IsNullOrEmpty(output))
+                        output += Environment.NewLine + "---" + Environment.NewLine;
+                    output += errors;
+                }
+                return output.TrimEnd();
+            }
+            finally
+            {
+                PendingCommandParameters.Value = null;
+            }
         }
 
         /// <summary>
@@ -73,24 +114,78 @@ namespace projectFrameCut.ScriptEngine
         /// </summary>
         public async Task<string> ExecuteAsync(string script)
         {
-            using var ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps.AddScript(script);
-            ps.AddCommand("Out-String").AddParameter("Width", 4096);
+            // ---- 预分析 ----
+            PreAnalyzeScript(script);
 
-            var results = await ps.InvokeAsync();
-            var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
-
-            if (ps.HadErrors)
+            try
             {
-                var errors = string.Join(Environment.NewLine,
-                    ps.Streams.Error.Select(e => $"ERROR: {e}"));
-                if (!string.IsNullOrEmpty(output))
-                    output += Environment.NewLine + "---" + Environment.NewLine;
-                output += errors;
-            }
+                using var ps = PowerShell.Create(_runspace);
+                ps.AddScript(script).AddCommand("Out-String").AddParameter("Width", 4096);
+                var results = await ps.InvokeAsync();
 
-            return output.TrimEnd();
+                if (!results.Any()) //in some cases pwsh command will return nothing, like when you call command like 'cls'
+                {
+                    return "";
+                }
+                var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
+                if (ps.HadErrors)
+                {
+                    var errors = string.Join(Environment.NewLine,
+                        ps.Streams.Error.Select(e => { Log(e.Exception, "exec pwsh command", ps); return $"ERROR: {e}"; }));
+                    if (!string.IsNullOrEmpty(output))
+                        output += Environment.NewLine + "---" + Environment.NewLine;
+                    output += errors;
+                }
+                return output.TrimEnd();
+            }
+            finally
+            {
+                PendingCommandParameters.Value = null;
+            }
+        }
+
+        /// <summary>
+        /// 执行预分析：检测脚本混淆并提取命令参数。
+        /// 在 PowerShell 执行前调用，结果通过 <see cref="PendingCommandParameters"/>
+        /// 传递给授权管理器。
+        /// </summary>
+        private void PreAnalyzeScript(string script)
+        {
+            if (string.IsNullOrWhiteSpace(script))
+                return;
+
+            try
+            {
+                // 1. 混淆分析
+                var analysis = CommandFilter.AnalyzeScript(script);
+
+                if (analysis.ThreatLevel >= ThreatLevel.Critical)
+                {
+                    throw new InvalidOperationException(
+                        $"脚本因检测到危险模式被安全策略阻止：{analysis.Summary}");
+                }
+
+                if (analysis.IsSuspicious)
+                {
+                    Logger.Log($"[CommandFilter] 脚本威胁级别: {analysis.ThreatLevel}, " +
+                               $"标记: {string.Join(", ", analysis.Flags)}, " +
+                               $"混淆模式: {analysis.Obfuscations.Count} 个");
+                }
+
+                // 2. 提取命令参数（路径/URL），供授权管理器使用
+                var cmdParams = CommandFilter.AnalyzeCommands(script);
+                PendingCommandParameters.Value = cmdParams;
+            }
+            catch (InvalidOperationException)
+            {
+                // 重新抛出 Critical 级别的异常
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // 其他异常（如 Parser 相关）仅记录日志，不影响执行
+                Logger.Log(ex, "[CommandFilter] 脚本预分析异常");
+            }
         }
 
         /// <summary>
@@ -110,118 +205,55 @@ namespace projectFrameCut.ScriptEngine
         }
 
         /// <summary>
-        /// 返回注册到 PowerShell 运行空间的内置函数脚本。
+        /// 将所有 DraftManager 中的 Cmdlet 注册到 InitialSessionState。
         /// </summary>
-        private static string GetBuiltInModuleScript() => @"
-<#
-.SYNOPSIS
-    获取当前 DraftPage 项目中所有或指定的 Clip。
-.PARAMETER Id
-    可选的 Guid，用于筛选特定 Clip。
-.EXAMPLE
-    Get-ProjectClip
-.EXAMPLE
-    Get-ProjectClip -Id 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-.EXAMPLE
-    Get-ProjectClip | Where-Object Type -eq 'VideoClip'
-#>
-function Get-ProjectClip {
-    param([Guid]$Id = [Guid]::Empty)
+        private static void RegisterCmdlets(InitialSessionState iss)
+        {
+            var entries = new[]
+            {
+                // Clip CRUD
+                new SessionStateCmdletEntry("Get-ProjectClip", typeof(GetProjectClipCommand), null),
+                new SessionStateCmdletEntry("Add-ProjectClip", typeof(AddProjectClipCommand), null),
+                new SessionStateCmdletEntry("Set-ProjectClip", typeof(SetProjectClipCommand), null),
+                new SessionStateCmdletEntry("Remove-ProjectClip", typeof(RemoveProjectClipCommand), null),
+                new SessionStateCmdletEntry("Copy-ProjectClip", typeof(CopyProjectClipCommand), null),
 
-    $page = Get-Variable -Name 'page' -ValueOnly -Scope Global -ErrorAction SilentlyContinue
-    if (-not $page) { Write-Error 'No DraftPage is loaded.'; return }
+                // Asset CRUD
+                new SessionStateCmdletEntry("Get-ProjectAsset", typeof(GetProjectAssetCommand), null),
+                new SessionStateCmdletEntry("Add-ProjectAsset", typeof(AddProjectAssetCommand), null),
+                new SessionStateCmdletEntry("Remove-ProjectAsset", typeof(RemoveProjectAssetCommand), null),
 
-    $clips = $page.Clips.Values
-    if ($Id -ne [Guid]::Empty) { $clips = $clips | Where-Object { $_.Id -eq $Id } }
+                // Effect Management
+                new SessionStateCmdletEntry("Get-ProjectClipEffect", typeof(GetProjectClipEffectCommand), null),
+                new SessionStateCmdletEntry("Add-ProjectClipEffect", typeof(AddProjectClipEffectCommand), null),
+                new SessionStateCmdletEntry("Set-ProjectClipEffect", typeof(SetProjectClipEffectCommand), null),
+                new SessionStateCmdletEntry("Remove-ProjectClipEffect", typeof(RemoveProjectClipEffectCommand), null),
 
-    $clips | ForEach-Object {
-        [PSCustomObject]@{
-            Id       = $_.Id
-            Name     = $_.DisplayName
-            Type     = $_.ClipType.ToString()
-            Track    = $_.origTrack
-            StartX   = [Math]::Round($_.origX, 1)
-            Length   = [Math]::Round($_.origLength, 1)
-            Source   = $_.SourcePath
-            Width    = $_.TargetWidth
-            Height   = $_.TargetHeight
-        }
-    }
-}
+                // EffectBundle Management
+                new SessionStateCmdletEntry("Get-EffectBundleTypes", typeof(GetProjectEffectBundleTypeCommand), null),
+                new SessionStateCmdletEntry("Get-ProjectClipEffectBundle", typeof(GetProjectClipEffectBundleCommand), null),
+                new SessionStateCmdletEntry("Add-ProjectClipEffectBundle", typeof(AddProjectClipEffectBundleCommand), null),
+                new SessionStateCmdletEntry("Set-ProjectClipEffectBundle", typeof(SetProjectClipEffectBundleCommand), null),
+                new SessionStateCmdletEntry("Remove-ProjectClipEffectBundle", typeof(RemoveProjectClipEffectBundleCommand), null),
+                new SessionStateCmdletEntry("Get-EffectBundleField", typeof(GetEffectBundleFieldCommand), null),
 
-<#
-.SYNOPSIS
-    向当前 DraftPage 项目添加一个新的 Clip。
-.PARAMETER Name
-    Clip 的显示名称。
-.PARAMETER Track
-    放置 Clip 的轨道索引。
-.PARAMETER StartX
-    时间线上的起始 X 位置（像素）。
-.PARAMETER Width
-    Clip 在时间线上的宽度（像素）。
-.PARAMETER FilePath
-    可选的源文件路径（视频/图片/音频）。
-.EXAMPLE
-    Add-ProjectClip -Name '我的片段' -Track 0 -StartX 100 -Width 300
-.EXAMPLE
-    Add-ProjectClip -FilePath 'C:\video.mp4' -Track 0 -StartX 100
-#>
-function Add-ProjectClip {
-    param(
-        [string]$Name        = 'New Clip',
-        [int]$Track          = 0,
-        [double]$StartX      = 0,
-        [double]$Width       = 300,
-        [string]$FilePath    = ''
-    )
+                // Track Management
+                new SessionStateCmdletEntry("Get-ProjectTrack", typeof(GetProjectTrackCommand), null),
+                new SessionStateCmdletEntry("Add-ProjectTrack", typeof(AddProjectTrackCommand), null),
 
-    $page = Get-Variable -Name 'page' -ValueOnly -Scope Global -ErrorAction SilentlyContinue
-    if (-not $page) { Write-Error 'No DraftPage is loaded.'; return }
+                // Project Info
+                new SessionStateCmdletEntry("Get-ProjectInfo", typeof(GetProjectInfoCommand), null),
+                new SessionStateCmdletEntry("Get-EnvironmentInfo", typeof(GetEnvironmentInfoCommand), null),
 
-    if ($FilePath -and -not (Test-Path $FilePath)) {
-        Write-Error ""File '$FilePath' does not exist.""
-        return
-    }
+                // Multimedia
+                new SessionStateCmdletEntry("Get-MediaInfo", typeof(GetMediaInfoCommand), null),
+                new SessionStateCmdletEntry("Get-MediaFrame", typeof(GetMediaFrameCommand), null),
+            };
 
-    try {
-        $clip = $page.CreateAndAddClip(
-            [double]$StartX,
-            [double]$Width,
-            [int]$Track,
-            $null,              # id
-            [string]$Name,
-            $null,              # background
-            $null,              # prototype
-            $true,              # resolveOverlap
-            0,                  # relativeStart
-            0,                  # maxFrames
-            $null               # sourceElement
-        )
-
-        if ($FilePath) {
-            $clip.SourcePath = [System.IO.Path]::GetFullPath($FilePath)
-            $mode = [projectFrameCut.DraftStuff.ClipElementUI]::DetermineClipMode($FilePath)
-            $clip.ClipType = $mode
-            if ($mode -eq [projectFrameCut.Shared.ClipMode]::VideoClip -or
-                $mode -eq [projectFrameCut.Shared.ClipMode]::AudioClip) {
-                $clip.UpdateSourceDuration()
+            foreach (var entry in entries)
+            {
+                iss.Commands.Add(entry);
             }
         }
-
-        [PSCustomObject]@{
-            Id     = $clip.Id
-            Name   = $clip.DisplayName
-            Type   = $clip.ClipType.ToString()
-            Track  = $clip.origTrack
-            StartX = [Math]::Round($clip.origX, 1)
-            Source = $clip.SourcePath
-        }
-    }
-    catch {
-        Write-Error ""Failed to add clip: $_""
-    }
-}
-";
     }
 }

@@ -141,7 +141,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return null;
         }
 
-        internal static void DetectWhyCannotOpenVideo(string path, int averr)
+        public static void DetectWhyCannotOpenVideo(string path, int averr)
         {
             var fi = new FileInfo(path);
             if (!fi.Exists)

@@ -9,6 +9,10 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
     {
         public static View FixXamlAndGenerateView(string xaml)
         {
+            // 第 1 层防护：对用户原始输入进行快速安全预扫描
+            XamlSecurityValidator.PreScan(xaml);
+
+            string fixedInner = FixIncompleteXml(xaml);
             string fixedXaml =
                 $"""
                 <?xml version="1.0" encoding="utf-8" ?>
@@ -17,10 +21,13 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
                              xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.MarkdownToXAML"
                              x:Class="projectFrameCut.ApplicationAPIBase.Helpers.DynamicGenerateView">
-                    {FixIncompleteXml(xaml)}
+                    {fixedInner}
                 </ContentView>
                 """;
-            
+
+            // 第 2 层防护：在 LoadFromXaml 之前对完整 XAML 文档进行深度验证
+            XamlSecurityValidator.Validate(fixedXaml);
+
             var view = new ContentView();
             view.LoadFromXaml(fixedXaml);
             return view;

@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
@@ -35,6 +35,20 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {"Opacity", 1f}
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Brightness", EffectBundleHelper.FloatField("Brightness", "Brightness", "Brightness adjustment", 1f, 0f, 2f) },
+            { "Contrast", EffectBundleHelper.FloatField("Contrast", "Contrast", "Contrast adjustment", 1f, 0f, 3f) },
+            { "Saturation", EffectBundleHelper.FloatField("Saturation", "Saturation", "Saturation adjustment", 1f, 0f, 3f) },
+            { "Hue", EffectBundleHelper.FloatField("Hue", "Hue", "Hue rotation in degrees", 0f, 0f, 360f) },
+            { "Gamma", EffectBundleHelper.FloatField("Gamma", "Gamma", "Gamma correction", 1f, 0.5f, 2f) },
+            { "Vibrance", EffectBundleHelper.FloatField("Vibrance", "Vibrance", "Vibrance adjustment", 0f, -1f, 1f) },
+            { "Temperature", EffectBundleHelper.FloatField("Temperature", "Temperature", "Color temperature adjustment", 0f, -100f, 100f) },
+            { "Invert", EffectBundleHelper.BoolField("Invert", "Invert Colors", "Invert all colors", false) },
+            { "Grayscale", EffectBundleHelper.FloatField("Grayscale", "Grayscale", "Grayscale conversion amount", 0f, 0f, 1f) },
+            { "Opacity", EffectBundleHelper.FloatField("Opacity", "Opacity", "Overall opacity", 1f, 0f, 1f) }
+        };
+
         public List<string> ParametersNeeded => new List<string>
         {
             "Brightness",
@@ -62,6 +76,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {"Grayscale", "float"},
             {"Opacity", "float"}
         };
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public string TypeName => "ColorAdjustment";
 
@@ -101,22 +116,22 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 {
                     new TabbedViewItem
                     {
-                        Header = EffectBundleUiHelper.L("ColorAdjust_TabTone", "Tone"),
+                        Header = EffectBundleHelper.L("ColorAdjust_TabTone", "Tone"),
                         Content = BuildToneTab().ListenToChanges((s, e) => PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, e)).Build()
                     },
                     new TabbedViewItem
                     {
-                        Header = EffectBundleUiHelper.L("ColorAdjust_TabColor", "Color"),
+                        Header = EffectBundleHelper.L("ColorAdjust_TabColor", "Color"),
                         Content = BuildColorTab().ListenToChanges((s, e) => PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, e)).Build()
                     },
                     new TabbedViewItem
                     {
-                        Header = EffectBundleUiHelper.L("ColorAdjust_TabAdvanced", "Advanced"),
+                        Header = EffectBundleHelper.L("ColorAdjust_TabAdvanced", "Advanced"),
                         Content = BuildAdvancedTab().ListenToChanges((s, e) => PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, e)).Build()
                     },
                     new TabbedViewItem
                     {
-                        Header = EffectBundleUiHelper.L("ColorAdjust_TabEffects", "Effects"),
+                        Header = EffectBundleHelper.L("ColorAdjust_TabEffects", "Effects"),
                         Content = BuildEffectsTab().ListenToChanges((s, e) => PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, e)).Build()
                     }
                 }
@@ -126,13 +141,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private PropertyPanelBuilder BuildToneTab()
         {
-            float brightness = EffectBundleUiHelper.GetFloat(Parameters, "Brightness", 1f);
-            float contrast = EffectBundleUiHelper.GetFloat(Parameters, "Contrast", 1f);
+            float brightness = EffectBundleHelper.GetFloat(Parameters, "Brightness", 1f);
+            float contrast = EffectBundleHelper.GetFloat(Parameters, "Contrast", 1f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Brightness",
-                EffectBundleUiHelper.L("ColorAdjust_TabTone_Brightness", "Brightness"),
+                EffectBundleHelper.L("ColorAdjust_TabTone_Brightness", "Brightness"),
                 0,
                 2,
                 brightness,
@@ -140,7 +155,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Contrast",
-                EffectBundleUiHelper.L("ColorAdjust_TabTone_Contrast", "Contrast"),
+                EffectBundleHelper.L("ColorAdjust_TabTone_Contrast", "Contrast"),
                 0,
                 3,
                 contrast,
@@ -152,14 +167,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private PropertyPanelBuilder BuildColorTab()
         {
-            float saturation = EffectBundleUiHelper.GetFloat(Parameters, "Saturation", 1f);
-            float hue = EffectBundleUiHelper.GetFloat(Parameters, "Hue", 0f);
-            float vibrance = EffectBundleUiHelper.GetFloat(Parameters, "Vibrance", 0f);
+            float saturation = EffectBundleHelper.GetFloat(Parameters, "Saturation", 1f);
+            float hue = EffectBundleHelper.GetFloat(Parameters, "Hue", 0f);
+            float vibrance = EffectBundleHelper.GetFloat(Parameters, "Vibrance", 0f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Saturation",
-                EffectBundleUiHelper.L("ColorAdjust_TabColor_Saturation", "Saturation"),
+                EffectBundleHelper.L("ColorAdjust_TabColor_Saturation", "Saturation"),
                 0,
                 3,
                 saturation,
@@ -167,7 +182,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Hue",
-                EffectBundleUiHelper.L("ColorAdjust_TabColor_Hue", "Hue"),
+                EffectBundleHelper.L("ColorAdjust_TabColor_Hue", "Hue"),
                 0,
                 360,
                 hue,
@@ -175,7 +190,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Vibrance",
-                EffectBundleUiHelper.L("ColorAdjust_TabColor_Vibrance", "Vibrance"),
+                EffectBundleHelper.L("ColorAdjust_TabColor_Vibrance", "Vibrance"),
                 -1,
                 1,
                 vibrance,
@@ -186,13 +201,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private PropertyPanelBuilder BuildAdvancedTab()
         {
-            float gamma = EffectBundleUiHelper.GetFloat(Parameters, "Gamma", 1f);
-            float temperature = EffectBundleUiHelper.GetFloat(Parameters, "Temperature", 0f);
+            float gamma = EffectBundleHelper.GetFloat(Parameters, "Gamma", 1f);
+            float temperature = EffectBundleHelper.GetFloat(Parameters, "Temperature", 0f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Gamma",
-                EffectBundleUiHelper.L("ColorAdjust_TabAdvanced_Gamma", "Gamma"),
+                EffectBundleHelper.L("ColorAdjust_TabAdvanced_Gamma", "Gamma"),
                 0.5f,
                 2f,
                 gamma,
@@ -200,7 +215,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Temperature",
-                EffectBundleUiHelper.L("ColorAdjust_TabAdvanced_Temperature", "Temperature"),
+                EffectBundleHelper.L("ColorAdjust_TabAdvanced_Temperature", "Temperature"),
                 -100,
                 100,
                 temperature,
@@ -211,18 +226,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private PropertyPanelBuilder BuildEffectsTab()
         {
-            bool invert = EffectBundleUiHelper.GetBool(Parameters, "Invert", false);
-            float grayscale = EffectBundleUiHelper.GetFloat(Parameters, "Grayscale", 0f);
-            float opacity = EffectBundleUiHelper.GetFloat(Parameters, "Opacity", 1f);
+            bool invert = EffectBundleHelper.GetBool(Parameters, "Invert", false);
+            float grayscale = EffectBundleHelper.GetFloat(Parameters, "Grayscale", 0f);
+            float opacity = EffectBundleHelper.GetFloat(Parameters, "Opacity", 1f);
 
             var panel = new PropertyPanelBuilder();
             panel.AddCheckbox(
                 "Invert",
-                EffectBundleUiHelper.L("ColorAdjust_TabEffects_Invert", "Invert Colors"),
+                EffectBundleHelper.L("ColorAdjust_TabEffects_Invert", "Invert Colors"),
                 invert);
             panel.AddSlider(
                 "Grayscale",
-                EffectBundleUiHelper.L("ColorAdjust_TabEffects_Grayscale", "Grayscale"),
+                EffectBundleHelper.L("ColorAdjust_TabEffects_Grayscale", "Grayscale"),
                 0,
                 1,
                 grayscale,
@@ -230,7 +245,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Opacity",
-                EffectBundleUiHelper.L("ColorAdjust_TabEffects_Opacity", "Opacity"),
+                EffectBundleHelper.L("ColorAdjust_TabEffects_Opacity", "Opacity"),
                 0,
                 1,
                 opacity,
@@ -241,55 +256,60 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Brightness" && EffectBundleUiHelper.TrySetFloat(Parameters, "Brightness", args.Value))
+            if (args.Id == "Brightness" && EffectBundleHelper.TrySetFloat(Parameters, "Brightness", args.Value))
             {
             }
 
-            if (args.Id == "Contrast" && EffectBundleUiHelper.TrySetFloat(Parameters, "Contrast", args.Value))
+            if (args.Id == "Contrast" && EffectBundleHelper.TrySetFloat(Parameters, "Contrast", args.Value))
             {
             }
 
-            if (args.Id == "Saturation" && EffectBundleUiHelper.TrySetFloat(Parameters, "Saturation", args.Value))
+            if (args.Id == "Saturation" && EffectBundleHelper.TrySetFloat(Parameters, "Saturation", args.Value))
             {
             }
 
-            if (args.Id == "Hue" && EffectBundleUiHelper.TrySetFloat(Parameters, "Hue", args.Value))
+            if (args.Id == "Hue" && EffectBundleHelper.TrySetFloat(Parameters, "Hue", args.Value))
             {
             }
 
-            if (args.Id == "Gamma" && EffectBundleUiHelper.TrySetFloat(Parameters, "Gamma", args.Value))
+            if (args.Id == "Gamma" && EffectBundleHelper.TrySetFloat(Parameters, "Gamma", args.Value))
             {
             }
 
-            if (args.Id == "Vibrance" && EffectBundleUiHelper.TrySetFloat(Parameters, "Vibrance", args.Value))
+            if (args.Id == "Vibrance" && EffectBundleHelper.TrySetFloat(Parameters, "Vibrance", args.Value))
             {
             }
 
-            if (args.Id == "Temperature" && EffectBundleUiHelper.TrySetFloat(Parameters, "Temperature", args.Value))
+            if (args.Id == "Temperature" && EffectBundleHelper.TrySetFloat(Parameters, "Temperature", args.Value))
             {
             }
 
-            if (args.Id == "Invert" && EffectBundleUiHelper.TrySetBool(Parameters, "Invert", args.Value))
+            if (args.Id == "Invert" && EffectBundleHelper.TrySetBool(Parameters, "Invert", args.Value))
             {
             }
 
-            if (args.Id == "Grayscale" && EffectBundleUiHelper.TrySetFloat(Parameters, "Grayscale", args.Value))
+            if (args.Id == "Grayscale" && EffectBundleHelper.TrySetFloat(Parameters, "Grayscale", args.Value))
             {
             }
 
-            if (args.Id == "Opacity" && EffectBundleUiHelper.TrySetFloat(Parameters, "Opacity", args.Value))
+            if (args.Id == "Opacity" && EffectBundleHelper.TrySetFloat(Parameters, "Opacity", args.Value))
             {
             }
 
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_ColorAdjustment", "Color Adjustment"),
-                Description = EffectBundleUiHelper.L("Description_Effect_ColorAdjustment", "Comprehensive color adjustment with brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, and opacity controls.")
+                Name = EffectBundleHelper.L("DisplayName_Effect_ColorAdjustment", "Color Adjustment"),
+                Description = EffectBundleHelper.L("Description_Effect_ColorAdjustment", "Comprehensive color adjustment with brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, and opacity controls.")
             };
         }
     }

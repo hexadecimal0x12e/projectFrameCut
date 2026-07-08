@@ -1469,7 +1469,7 @@ namespace projectFrameCut.DraftStuff
         {
             var section = new VerticalStackLayout { Spacing = 8, Margin = new Thickness(0, 0, 0, 8) };
 
-            string displayName = EffectBundleUiHelper.L(provider.TypeName, provider.TypeName);
+            string displayName = EffectBundleHelper.L(provider.TypeName, provider.TypeName);
 
             var actionsRow = new HorizontalStackLayout { Spacing = 8 };
             var collapseButton = new Label
@@ -5450,6 +5450,14 @@ namespace projectFrameCut.DraftStuff
             public PropertyPanelBuilder CreateUI()
             {
                 throw new NotImplementedException();
+            }
+
+            public Dictionary<string, EffectBundleSettableFields> SettableFields => new();
+
+            public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+            {
+                feedback = "The Dummy effect bundle has no settable fields.";
+                return false;
             }
 
             public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)

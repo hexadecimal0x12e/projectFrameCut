@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -475,7 +476,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         IsReadonly = isReadonly;
 
         // 初始化脚本引擎，将当前 DraftPage 暴露为 $page 变量
-        ScriptEngine.Initialize(this);
+        // 同时设置命令授权处理器，在脚本尝试执行高危/未分类命令时询问用户
+        ScriptEngine.Initialize(this,
+            CreatePowerShellAuthorizationHandler(this),
+            CreateEnhancedPowerShellAuthorizationHandler(this));
     }
 
     private void RegisterCommands()
@@ -9367,6 +9371,187 @@ public partial class DraftPage : ContentPage, IDraftPage
         double widthDp = info.Width / info.Density;
         double heightDp = info.Height / info.Density;
         return new Size(widthDp, heightDp);
+    }
+
+    /// <summary>
+    /// 创建 PowerShell 命令授权处理器。
+    /// 当脚本尝试执行可能危害或未分类的命令时，弹出对话框询问用户。
+    /// 用户可以选择允许/拒绝，并可选择记住此次决策。
+    /// </summary>
+    public static CommandAuthorizationCallback CreatePowerShellAuthorizationHandler(Page page)
+    {
+        return (commandInfo, commandOrigin) =>
+        {
+            var signal = new ManualResetEventSlim(false);
+            var result = AuthorizationResult.Deny;
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    // 第一层：询问是否允许执行此命令
+                    var allowed = await page.DisplayAlertAsync(
+                        "PowerShell 命令授权",
+                        $"脚本尝试执行命令：{commandInfo.Name}\n\n来源：{commandOrigin}\n\n是否允许此操作？",
+                        "允许", "拒绝");
+
+                    if (allowed)
+                    {
+                        // 第二层：询问是否记住此决策
+                        var remember = await page.DisplayAlertAsync(
+                            "记住决策",
+                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
+                            "记住并允许", "仅本次允许");
+                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                    }
+                    else
+                    {
+                        var remember = await page.DisplayAlertAsync(
+                            "记住决策",
+                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
+                            "记住并拒绝", "仅本次拒绝");
+                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex, "PowerShell authorization prompt");
+                    result = AuthorizationResult.Deny;
+                }
+                finally
+                {
+                    signal.Set();
+                }
+            });
+
+            // 阻塞等待用户决策（30 秒超时保护）
+            if (!signal.Wait(TimeSpan.FromSeconds(30)))
+            {
+                Logger.Log("PowerShell authorization prompt timed out after 30s");
+                result = AuthorizationResult.Deny;
+            }
+
+            return result;
+        };
+    }
+
+    /// <summary>
+    /// 创建增强的 PowerShell 命令授权处理器，显示丰富的命令参数信息。
+    /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
+    /// </summary>
+    public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
+    {
+        return (context) =>
+        {
+            var signal = new ManualResetEventSlim(false);
+            var result = AuthorizationResult.Deny;
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    // 构建详细消息
+                    var message = BuildDetailedAuthMessage(context);
+
+                    // 第一层：询问是否允许执行此命令
+                    var allowed = await page.DisplayAlertAsync(
+                        "PowerShell 命令授权",
+                        message,
+                        "允许", "拒绝");
+
+                    if (allowed)
+                    {
+                        var remember = await page.DisplayAlertAsync(
+                            "记住决策",
+                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
+                            "记住并允许", "仅本次允许");
+                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                    }
+                    else
+                    {
+                        var remember = await page.DisplayAlertAsync(
+                            "记住决策",
+                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
+                            "记住并拒绝", "仅本次拒绝");
+                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex, "PowerShell enhanced authorization");
+                    result = AuthorizationResult.Deny;
+                }
+                finally
+                {
+                    signal.Set();
+                }
+            });
+
+            if (!signal.Wait(TimeSpan.FromSeconds(30)))
+            {
+                Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
+                result = AuthorizationResult.Deny;
+            }
+
+            return result;
+        };
+    }
+
+    /// <summary>
+    /// 构建增强授权对话框的详细消息文本。
+    /// </summary>
+    private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"命令：{ctx.CommandInfo.Name}");
+        sb.AppendLine($"来源：{ctx.CommandOrigin}");
+
+        // 文件路径信息
+        if (!string.IsNullOrEmpty(ctx.TargetPath))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"目标路径：{ctx.TargetPath}");
+            sb.AppendLine($"路径状态：{ctx.PathSafetyStatus switch
+            {
+                PathSafety.Safe => "✅ 在项目目录内",
+                PathSafety.OutsideProject => "⚠️ 在项目目录之外",
+                PathSafety.PathTraversal => "🚫 检测到路径遍历",
+                PathSafety.Unresolved => "❓ 路径来自变量，无法静态验证",
+                _ => "未知",
+            }}");
+
+            if (ctx.PathSafetyStatus == PathSafety.OutsideProject ||
+                ctx.PathSafetyStatus == PathSafety.PathTraversal)
+            {
+                sb.AppendLine("⚠️ 该操作将访问项目目录外的文件，请谨慎确认。");
+            }
+        }
+
+        // URL 信息
+        if (!string.IsNullOrEmpty(ctx.TargetUrl))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"目标 URL：🌐 {ctx.TargetUrl}");
+            sb.AppendLine("该命令将发起网络请求，请确认目标地址可信。");
+        }
+
+        // 混淆警告
+        if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"⚠️ 安全警告：{ctx.ObfuscationWarning}");
+        }
+
+        if (ctx.ThreatLevel >= ThreatLevel.Medium)
+        {
+            sb.AppendLine();
+            sb.AppendLine("⚠️ 该命令包含可疑模式，请确认操作来源可信。");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("是否允许此操作？");
+
+        return sb.ToString();
     }
 
     #endregion

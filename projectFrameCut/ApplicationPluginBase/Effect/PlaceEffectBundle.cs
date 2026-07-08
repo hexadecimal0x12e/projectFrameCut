@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -22,6 +22,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "StartY", 0 },
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "StartX", EffectBundleHelper.IntField("StartX", "X", "X position of the clip", 0) },
+            { "StartY", EffectBundleHelper.IntField("StartY", "Y", "Y position of the clip", 0) }
+        };
+
         public List<string> ParametersNeeded => PlaceEffect_HwAccel.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PlaceEffect_HwAccel.ParametersType;
 
@@ -31,6 +37,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
         public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -53,11 +61,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            int startX = EffectBundleUiHelper.GetInt(Parameters, "StartX", 0);
-            int startY = EffectBundleUiHelper.GetInt(Parameters, "StartY", 0);
+            int startX = EffectBundleHelper.GetInt(Parameters, "StartX", 0);
+            int startY = EffectBundleHelper.GetInt(Parameters, "StartY", 0);
 
             var panel = new PropertyPanelBuilder();
-            panel.AddPositionTupleInputBox("place", new SingleLineLabel(EffectBundleUiHelper.L("_PlacePosition", "Position")), PositionTupleMode.XY, (startX, startY, 0, 0));
+            panel.AddPositionTupleInputBox("place", new SingleLineLabel(EffectBundleHelper.L("_PlacePosition", "Position")), PositionTupleMode.XY, (startX, startY, 0, 0));
             return panel;
         }
 
@@ -66,22 +74,27 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             switch (args.Id)
             {
                 case "place_X":
-                    EffectBundleUiHelper.TrySetInt(Parameters, "StartX", args.Value);
+                    EffectBundleHelper.TrySetInt(Parameters, "StartX", args.Value);
                     break;
                 case "place_Y":
-                    EffectBundleUiHelper.TrySetInt(Parameters, "StartY", args.Value);
+                    EffectBundleHelper.TrySetInt(Parameters, "StartY", args.Value);
                     break;
             }
 
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Place", "Place"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Place", "Move the frame to a target position on the canvas."),
+                Name = EffectBundleHelper.L("DisplayName_Effect_Place", "Place"),
+                Description = EffectBundleHelper.L("Description_Effect_Place", "Move the frame to a target position on the canvas."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

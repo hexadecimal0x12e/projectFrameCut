@@ -49,9 +49,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Seed", 0 },
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "MaxOffsetX", EffectBundleHelper.IntField("MaxOffsetX", "Max X Offset", "Maximum horizontal jitter offset", 10, 0) },
+            { "MaxOffsetY", EffectBundleHelper.IntField("MaxOffsetY", "Max Y Offset", "Maximum vertical jitter offset", 10, 0) },
+            { "Direction", EffectBundleHelper.EnumField("Direction", "Direction", "Jitter direction", "Both", ["Both", "XOnly", "YOnly"]) },
+            { "Seed", EffectBundleHelper.IntField("Seed", "Random Seed", "Random seed for jitter pattern", 0) }
+        };
+
         public List<string> ParametersNeeded => JitterEffect.s_ParametersNeeded;
 
         public Dictionary<string, string> ParametersType => JitterEffect.s_ParametersType;
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public bool Enabled { get; set; } = true;
 
@@ -64,10 +73,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            int maxOffsetX = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetX", 10));
-            int maxOffsetY = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetY", 10));
-            int seed = EffectBundleUiHelper.GetInt(Parameters, "Seed", 0);
-            string direction = EffectBundleUiHelper.GetString(Parameters, "Direction", JitterEffect.Direction_Both);
+            int maxOffsetX = Math.Max(0, EffectBundleHelper.GetInt(Parameters, "MaxOffsetX", 10));
+            int maxOffsetY = Math.Max(0, EffectBundleHelper.GetInt(Parameters, "MaxOffsetY", 10));
+            int seed = EffectBundleHelper.GetInt(Parameters, "Seed", 0);
+            string direction = EffectBundleHelper.GetString(Parameters, "Direction", JitterEffect.Direction_Both);
 
             var options = GetDirectionOptions();
             string selectedDirection = ToDirectionLabel(direction, options);
@@ -75,7 +84,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "MaxOffsetX",
-                EffectBundleUiHelper.L("Effect_Jitter_MaxOffsetX", "Max X Offset"),
+                EffectBundleHelper.L("Effect_Jitter_MaxOffsetX", "Max X Offset"),
                 0,
                 Math.Max(200, maxOffsetX),
                 maxOffsetX,
@@ -83,14 +92,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "MaxOffsetY",
-                EffectBundleUiHelper.L("Effect_Jitter_MaxOffsetY", "Max Y Offset"),
+                EffectBundleHelper.L("Effect_Jitter_MaxOffsetY", "Max Y Offset"),
                 0,
                 Math.Max(200, maxOffsetY),
                 maxOffsetY,
                 null,
                 SliderUpdateEventCallMode.OnMouseUp);
-            panel.AddPicker("Direction", EffectBundleUiHelper.L("Direction", "Direction"), options, selectedDirection);
-            EffectBundleUiHelper.AddNumericEntry(panel, "Seed", EffectBundleUiHelper.L("Effect_Jitter_Seed", "Random Seed"), seed.ToString(), "0");
+            panel.AddPicker("Direction", EffectBundleHelper.L("Direction", "Direction"), options, selectedDirection);
+            EffectBundleHelper.AddNumericEntry(panel, "Seed", EffectBundleHelper.L("Effect_Jitter_Seed", "Random Seed"), seed.ToString(), "0");
             return panel;
         }
 
@@ -100,28 +109,33 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Parameters["Direction"] = ToDirectionValue(args.Value?.ToString(), GetDirectionOptions());
             }
-            else if (args.Id == "MaxOffsetX" && EffectBundleUiHelper.TrySetInt(Parameters, "MaxOffsetX", args.Value))
+            else if (args.Id == "MaxOffsetX" && EffectBundleHelper.TrySetInt(Parameters, "MaxOffsetX", args.Value))
             {
-                Parameters["MaxOffsetX"] = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetX", 10));
+                Parameters["MaxOffsetX"] = Math.Max(0, EffectBundleHelper.GetInt(Parameters, "MaxOffsetX", 10));
             }
-            else if (args.Id == "MaxOffsetY" && EffectBundleUiHelper.TrySetInt(Parameters, "MaxOffsetY", args.Value))
+            else if (args.Id == "MaxOffsetY" && EffectBundleHelper.TrySetInt(Parameters, "MaxOffsetY", args.Value))
             {
-                Parameters["MaxOffsetY"] = Math.Max(0, EffectBundleUiHelper.GetInt(Parameters, "MaxOffsetY", 10));
+                Parameters["MaxOffsetY"] = Math.Max(0, EffectBundleHelper.GetInt(Parameters, "MaxOffsetY", 10));
             }
             else if (args.Id == "Seed")
             {
-                EffectBundleUiHelper.TrySetInt(Parameters, "Seed", args.Value);
+                EffectBundleHelper.TrySetInt(Parameters, "Seed", args.Value);
             }
 
             return Parameters;
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
         }
 
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Jitter", "Jitter"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Jitter", "Apply random frame-to-frame positional jitter."),
+                Name = EffectBundleHelper.L("DisplayName_Effect_Jitter", "Jitter"),
+                Description = EffectBundleHelper.L("Description_Effect_Jitter", "Apply random frame-to-frame positional jitter."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }
@@ -130,9 +144,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return
             [
-                EffectBundleUiHelper.L("_Effect_Jitter_Both", "Both directions"),
-                EffectBundleUiHelper.L("_Effect_Jitter_XOnly", "X direction"),
-                EffectBundleUiHelper.L("_Effect_Jitter_YOnly", "Y direction")
+                EffectBundleHelper.L("_Effect_Jitter_Both", "Both directions"),
+                EffectBundleHelper.L("_Effect_Jitter_XOnly", "X direction"),
+                EffectBundleHelper.L("_Effect_Jitter_YOnly", "Y direction")
             ];
         }
 
