@@ -492,7 +492,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "timeline.json"),
             JsonSerializer.Serialize(new DraftStructureJSON
             {
-                Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),
+                Clips = Array.Empty<ClipDraftDTO>(),
             }));
         File.WriteAllText(
             Path.Combine(draftSourcePath, "assets.json"),
@@ -1921,10 +1921,7 @@ public partial class HomePage : ContentPage
                 Path.Combine(draftSourcePath, "timeline.json"),
                 JsonSerializer.Serialize(new DraftStructureJSON
                 {
-                    Clips = new List<ClipDraftDTO>
-                    {
-                        DraftImportAndExportHelper.ExportClipElementFromDraftPage(_draftPage, element, false)
-                    }.Cast<object>().ToArray(),
+                    Clips = [DraftImportAndExportHelper.ExportClipElementFromDraftPage(_draftPage, element, false)],
                 }));
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "assets.json"),

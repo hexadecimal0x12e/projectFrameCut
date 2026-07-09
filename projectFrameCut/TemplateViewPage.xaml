@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.TemplateViewPage"
@@ -6,6 +6,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="{l:Localized Key=TemplateViewPage_Title}">
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=TemplateViewPage_CreateNew}" Clicked="CreateScriptTemplateButton_Clicked" />
         <ToolbarItem Text="{l:Localized Key=TemplateViewPage_ImportTemplate}" Clicked="ImportTemplateButton_Clicked" />
     </ContentPage.ToolbarItems>
     <Grid RowDefinitions="Auto,*,Auto" Padding="8">
@@ -102,7 +103,7 @@
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" VerticalOptions="Center" Spacing="8">
-                    <Button Text="{l:Localized Key=AssetPage_ShowPreview}" Clicked="PreviewTemplate_Clicked" MinimumWidthRequest="120" />
+                    <Button Text="{l:Localized Key=TemplateViewPage_ShowReadme}" Clicked="PreviewTemplate_Clicked" MinimumWidthRequest="120" />
                     <Button Text="{l:Localized Key=TemplateViewPage_CreateVideo}" IsEnabled="{Binding SelectedTemplate.IsSupportProject}" ToolTipProperties.Text="{Binding Path=IsEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='', FalseObject='unsupport scope'}}" Clicked="CreateVideo_Clicked" MinimumWidthRequest="120" />
                     <Button Text="{l:Localized Key=HomePage_ProjectContextMenu_Delete}" Clicked="DeleteTemplate_Clicked" MinimumWidthRequest="120" />
                 </VerticalStackLayout>

@@ -47,6 +47,12 @@ namespace projectFrameCut.ScriptEngine
             CommandAuthorizationCallback? authHandler = null,
             EnhancedAuthorizationCallback? enhancedAuthHandler = null)
         {
+            try
+            {
+                Directory.Delete(Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace")), true);
+            }
+            catch { }
+
             CurrentPage = page;
 
             // 设置 CommandFilter 的项目路径
@@ -198,59 +204,84 @@ namespace projectFrameCut.ScriptEngine
                 _runspace.SessionStateProxy.SetVariable("page", page);
         }
 
+        /// <summary>
+        /// 在脚本运行空间中设置一个 PowerShell 变量，供后续脚本直接使用。
+        /// 变量名无需加 <c>$</c> 前缀。
+        /// </summary>
+        /// <param name="name">变量名。</param>
+        /// <param name="value">变量值。</param>
+        public void SetVariable(string name, object? value)
+        {
+            if (_runspace?.RunspaceStateInfo.State == RunspaceState.Opened)
+                _runspace.SessionStateProxy.SetVariable(name, value);
+        }
+
+        /// <summary>
+        /// 批量设置多个 PowerShell 变量。
+        /// </summary>
+        /// <param name="variables">变量名字典。</param>
+        public void SetVariables(IDictionary<string, object?> variables)
+        {
+            if (_runspace?.RunspaceStateInfo.State != RunspaceState.Opened)
+                return;
+            foreach (var (key, value) in variables)
+                _runspace.SessionStateProxy.SetVariable(key, value);
+        }
+
         public void Dispose()
         {
             _runspace?.Dispose();
             _runspace = null;
         }
 
+        public static List<SessionStateCmdletEntry> InternalCmdlets => new List<SessionStateCmdletEntry>
+        {
+            // Clip CRUD
+            new SessionStateCmdletEntry("Get-ProjectClip", typeof(GetProjectClipCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectClip", typeof(AddProjectClipCommand), null),
+            new SessionStateCmdletEntry("Set-ProjectClip", typeof(SetProjectClipCommand), null),
+            new SessionStateCmdletEntry("Remove-ProjectClip", typeof(RemoveProjectClipCommand), null),
+            new SessionStateCmdletEntry("Copy-ProjectClip", typeof(CopyProjectClipCommand), null),
+
+            // Asset CRUD
+            new SessionStateCmdletEntry("Get-ProjectAsset", typeof(GetProjectAssetCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectAsset", typeof(AddProjectAssetCommand), null),
+            new SessionStateCmdletEntry("Remove-ProjectAsset", typeof(RemoveProjectAssetCommand), null),
+
+            // Effect Management
+            new SessionStateCmdletEntry("Get-ProjectClipEffect", typeof(GetProjectClipEffectCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectClipEffect", typeof(AddProjectClipEffectCommand), null),
+            new SessionStateCmdletEntry("Set-ProjectClipEffect", typeof(SetProjectClipEffectCommand), null),
+            new SessionStateCmdletEntry("Remove-ProjectClipEffect", typeof(RemoveProjectClipEffectCommand), null),
+
+            // EffectBundle Management
+            new SessionStateCmdletEntry("Get-EffectBundleTypes", typeof(GetProjectEffectBundleTypeCommand), null),
+            new SessionStateCmdletEntry("Get-ProjectClipEffectBundle", typeof(GetProjectClipEffectBundleCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectClipEffectBundle", typeof(AddProjectClipEffectBundleCommand), null),
+            new SessionStateCmdletEntry("Set-ProjectClipEffectBundle", typeof(SetProjectClipEffectBundleCommand), null),
+            new SessionStateCmdletEntry("Remove-ProjectClipEffectBundle", typeof(RemoveProjectClipEffectBundleCommand), null),
+            new SessionStateCmdletEntry("Get-EffectBundleField", typeof(GetEffectBundleFieldCommand), null),
+
+            // Track Management
+            new SessionStateCmdletEntry("Get-ProjectTrack", typeof(GetProjectTrackCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectTrack", typeof(AddProjectTrackCommand), null),
+
+            // Project Info
+            new SessionStateCmdletEntry("Get-ProjectInfo", typeof(GetProjectInfoCommand), null),
+            new SessionStateCmdletEntry("Get-EnvironmentInfo", typeof(GetEnvironmentInfoCommand), null),
+            new SessionStateCmdletEntry("Get-ScriptWorkspacePath", typeof(GetScriptWorkspacePathCommand), null),
+
+            // Multimedia
+            new SessionStateCmdletEntry("Get-MediaInfo", typeof(GetMediaInfoCommand), null),
+            new SessionStateCmdletEntry("Get-MediaFrame", typeof(GetMediaFrameCommand), null),
+        };
+
         /// <summary>
         /// 将所有 DraftManager 中的 Cmdlet 注册到 InitialSessionState。
         /// </summary>
         private static void RegisterCmdlets(InitialSessionState iss)
         {
-            var entries = new[]
-            {
-                // Clip CRUD
-                new SessionStateCmdletEntry("Get-ProjectClip", typeof(GetProjectClipCommand), null),
-                new SessionStateCmdletEntry("Add-ProjectClip", typeof(AddProjectClipCommand), null),
-                new SessionStateCmdletEntry("Set-ProjectClip", typeof(SetProjectClipCommand), null),
-                new SessionStateCmdletEntry("Remove-ProjectClip", typeof(RemoveProjectClipCommand), null),
-                new SessionStateCmdletEntry("Copy-ProjectClip", typeof(CopyProjectClipCommand), null),
-
-                // Asset CRUD
-                new SessionStateCmdletEntry("Get-ProjectAsset", typeof(GetProjectAssetCommand), null),
-                new SessionStateCmdletEntry("Add-ProjectAsset", typeof(AddProjectAssetCommand), null),
-                new SessionStateCmdletEntry("Remove-ProjectAsset", typeof(RemoveProjectAssetCommand), null),
-
-                // Effect Management
-                new SessionStateCmdletEntry("Get-ProjectClipEffect", typeof(GetProjectClipEffectCommand), null),
-                new SessionStateCmdletEntry("Add-ProjectClipEffect", typeof(AddProjectClipEffectCommand), null),
-                new SessionStateCmdletEntry("Set-ProjectClipEffect", typeof(SetProjectClipEffectCommand), null),
-                new SessionStateCmdletEntry("Remove-ProjectClipEffect", typeof(RemoveProjectClipEffectCommand), null),
-
-                // EffectBundle Management
-                new SessionStateCmdletEntry("Get-EffectBundleTypes", typeof(GetProjectEffectBundleTypeCommand), null),
-                new SessionStateCmdletEntry("Get-ProjectClipEffectBundle", typeof(GetProjectClipEffectBundleCommand), null),
-                new SessionStateCmdletEntry("Add-ProjectClipEffectBundle", typeof(AddProjectClipEffectBundleCommand), null),
-                new SessionStateCmdletEntry("Set-ProjectClipEffectBundle", typeof(SetProjectClipEffectBundleCommand), null),
-                new SessionStateCmdletEntry("Remove-ProjectClipEffectBundle", typeof(RemoveProjectClipEffectBundleCommand), null),
-                new SessionStateCmdletEntry("Get-EffectBundleField", typeof(GetEffectBundleFieldCommand), null),
-
-                // Track Management
-                new SessionStateCmdletEntry("Get-ProjectTrack", typeof(GetProjectTrackCommand), null),
-                new SessionStateCmdletEntry("Add-ProjectTrack", typeof(AddProjectTrackCommand), null),
-
-                // Project Info
-                new SessionStateCmdletEntry("Get-ProjectInfo", typeof(GetProjectInfoCommand), null),
-                new SessionStateCmdletEntry("Get-EnvironmentInfo", typeof(GetEnvironmentInfoCommand), null),
-
-                // Multimedia
-                new SessionStateCmdletEntry("Get-MediaInfo", typeof(GetMediaInfoCommand), null),
-                new SessionStateCmdletEntry("Get-MediaFrame", typeof(GetMediaFrameCommand), null),
-            };
-
-            foreach (var entry in entries)
+            foreach (var entry in InternalCmdlets)
             {
                 iss.Commands.Add(entry);
             }

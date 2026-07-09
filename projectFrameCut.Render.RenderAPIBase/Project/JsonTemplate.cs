@@ -41,6 +41,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
         public Dictionary<string, string>? AssetHashTable { get; set; } = null;
 
+        /// <summary>
+        /// 片段数量。用于列表展示；从 .pjfcTemplate 加载完整数据时
+        /// 应使用 <see cref="Draft"/> 中的实际片段数。
+        /// </summary>
+        public int ClipCount { get; set; }
+
+        /// <summary>
+        /// 音轨数量。用于列表展示。
+        /// </summary>
+        public int TrackCount { get; set; }
+
+        /// <summary>
+        /// Markdown 格式的 Readme/介绍文档。从 .pjfcTemplate 包中的 metadata.json 读取。
+        /// </summary>
+        public string? Readme { get; set; }
     }
 
     /// <summary>

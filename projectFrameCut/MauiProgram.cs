@@ -32,6 +32,8 @@ using FFmpeg.AutoGen.Native;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.Project;
+
 
 
 #if ANDROID
@@ -854,15 +856,47 @@ namespace projectFrameCut
 
             try
             {
-                foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Templates"), "*.json", SearchOption.AllDirectories))
+                var templateDir = Path.Combine(DataPath, "My Templates");
+                if (Directory.Exists(templateDir))
                 {
-                    var templateJson = File.ReadAllText(item);
+                    // 加载轻量元数据 .json（不含 Project/Draft，仅供列表展示）
+                    foreach (var item in Directory.GetFiles(templateDir, "*.json", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            var templateJson = File.ReadAllText(item);
 
-                    // Deserialize the template
-                    var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                            // 检测是否为新的轻量元数据格式（含 $schema 标记）
+                            if (templateJson.Contains("\"$schema\"") && templateJson.Contains("\"template-meta-v2\""))
+                            {
+                                var listingTemplate = TemplatePackageIO.LoadListingTemplate(templateJson);
+                                if (listingTemplate.TemplateID != Guid.Empty)
+                                    TemplateStore.Templates[listingTemplate.TemplateID] = listingTemplate;
+                            }
+                            else
+                            {
+                                // 兼容旧格式：通过 JSON 中的 ScriptContent 字段检测旧版脚本模板
+                                if (templateJson.Contains("\"ScriptContent\""))
+                                {
+                                    var scriptCandidate = JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(templateJson);
+                                    if (scriptCandidate?.TemplateID != Guid.Empty)
+                                    {
+                                        TemplateStore.Templates[scriptCandidate.TemplateID] = scriptCandidate;
+                                        continue;
+                                    }
+                                }
 
-                    // Add to TemplateStore
-                    TemplateStore.Templates[template.TemplateID] = template;
+                                var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                                TemplateStore.Templates[template.TemplateID] = template;
+                            }
+                        }
+                        catch (Exception exInner)
+                        {
+                            Log(exInner, $"load template meta: {item}", CreateMauiApp);
+                        }
+                    }
+
+                    // 不再在启动时解压 .pjfcTemplate，改为使用时按需解压
                 }
             }
             catch (Exception ex)
@@ -961,6 +995,39 @@ namespace projectFrameCut
             throw ex; //let Fishnet handle it
 #endif
         }
+
+        public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)
+        {
+            var extractDir = Path.Combine(FileSystem.CacheDirectory, $"startup_extract_{Guid.NewGuid():N}");
+            try
+            {
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePath, extractDir, overwriteFiles: true);
+
+                var templateJsonPath = Path.Combine(extractDir, "template.json");
+                if (!File.Exists(templateJsonPath))
+                    return null;
+
+                var text = File.ReadAllText(templateJsonPath);
+
+                // 检测是否包含脚本
+                var scriptPath = Path.Combine(extractDir, "script.ps1");
+                if (File.Exists(scriptPath))
+                {
+                    return JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(text);
+                }
+
+                return JsonSerializer.Deserialize<JSONBasedTemplateStructure>(text);
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                try { Directory.Delete(extractDir, true); } catch { }
+            }
+        }
+
         public static void ConfigFontFromCulture(MauiAppBuilder builder, CultureInfo culture)
         {
             int codePage = culture.TextInfo.ANSICodePage;

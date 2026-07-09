@@ -177,21 +177,23 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0)
+            {
+                return Array.Empty<IClip>();
+            }
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -212,18 +214,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && !string.IsNullOrEmpty(clip.FilePath) && clipInstance.NeedFilePath)
                 {
                     try
                     {
-                        if (string.IsNullOrWhiteSpace(fp.GetString())) throw new InvalidDataException($"Clip {clipInstance.Name} ({clipInstance.TypeName}) has empty FilePath, which is not valid for clips that need file path.");
-                        if (Path.IsPathRooted(fp.GetString()))
+                        if (string.IsNullOrWhiteSpace(clip.FilePath)) throw new InvalidDataException($"Clip {clipInstance.Name} ({clipInstance.TypeName}) has empty FilePath, which is not valid for clips that need file path.");
+                        if (Path.IsPathRooted(clip.FilePath))
                         {
-                            clipInstance.FilePath = fp.GetString();
+                            clipInstance.FilePath = clip.FilePath;
                         }
                         else
                         {
-                            clipInstance.FilePath = Path.Combine(ProjectRoot, fp.GetString());
+                            clipInstance.FilePath = Path.Combine(ProjectRoot, clip.FilePath);
                         }
                     }
                     catch (InvalidOperationException)

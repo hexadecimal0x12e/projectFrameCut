@@ -66,6 +66,7 @@ namespace projectFrameCut.Shared
         Mixture = 16,
         ColorAdjustment = 32,
         Text = 64,
+        SourceReplacement = 128,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,

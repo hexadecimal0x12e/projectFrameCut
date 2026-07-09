@@ -3075,6 +3075,7 @@ namespace projectFrameCut.DraftStuff
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
             var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
             var haveManyMixtureProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
+            var haveManySourceReplacementEffect = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SourceReplacement)) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
                 var filteredBundles = clip.EffectBundles
@@ -3083,7 +3084,8 @@ namespace projectFrameCut.DraftStuff
                         || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
                              && c.Value.Target.HasFlag(clip.GetEffectTarget()))
                         || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
-                        || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider))
+                        || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)
+                        || (c.Value.Target == EffectTarget.SourceReplacement && haveManySourceReplacementEffect))
                     .ToList();
 
                 // Sort bundles in input→output order by traversing the connection chain
@@ -3169,6 +3171,10 @@ namespace projectFrameCut.DraftStuff
 
                         ppb.AddSeparator();
 
+                        //they can't be reordered
+                        if (bundleInstance.TypeOfEffect is EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement) goto remove_btn;
+                        
+
                         // 计算当前输入锚点选中项（用于 Picker 默认值和确保当前选中项不被过滤掉）
                         Guid resolvedInAnchorId;
                         if (bundleInstance.InputAnchorsDisplayName is null)
@@ -3223,6 +3229,7 @@ namespace projectFrameCut.DraftStuff
 
                         ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), outTargetBundleOptions.Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).Distinct(StringComparer.InvariantCultureIgnoreCase).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
 
+                    remove_btn:
                         ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                         ppb.AddSeparator();
                     }

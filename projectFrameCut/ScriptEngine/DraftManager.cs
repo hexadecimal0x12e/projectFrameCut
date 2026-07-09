@@ -1097,4 +1097,14 @@ namespace projectFrameCut.ScriptEngine
             WriteObject(obj);
         }
     }
+    [Cmdlet(VerbsCommon.Get, "ScriptWorkspacePath")]
+    public sealed class GetScriptWorkspacePathCommand : DraftPageCmdletBase
+    {
+        protected override bool RequiresUIThread => false;
+
+        protected override void ProcessRecordImpl()
+        {
+            WriteObject(Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace")));
+        }
+    }
 }

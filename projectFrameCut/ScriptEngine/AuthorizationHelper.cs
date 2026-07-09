@@ -359,12 +359,12 @@ namespace projectFrameCut.ScriptEngine
             // ---- 1. 审计日志 ----
             if (AuditMode)
             {
-                Logger.Log($"[CommandAuthorization] {cmdName} (origin: {commandOrigin}, host: {host.InstanceId})");
+                Logger.Log($"[CommandAuthorization] {cmdName} (source: {commandInfo.Source} (type:{(commandInfo as CmdletInfo)?.ImplementingType?.Name ?? "unknown"}), origin: {commandOrigin}, host: {host.InstanceId})");
 
             }
 
             // ---- 2. 项目自有 cmdlet 始终放行 ----
-            if (IsProjectCmdlet(cmdName))
+            if (commandInfo is CmdletInfo clt && ScriptCore.InternalCmdlets.Any(c => c.ImplementingType == clt.ImplementingType))
             {
                 return true;
             }
@@ -388,6 +388,14 @@ namespace projectFrameCut.ScriptEngine
                 reason = new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
                     $"命令 '{cmdName}' 被安全策略禁止执行。");
+                return false;
+            }
+
+            if (cmdName.ToLowerInvariant().TrimEnd().EndsWith(".exe"))
+            {
+                reason = new NotAllowedCommandException(
+                    NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
+                    $"出于安全考虑，不允许执行可执行文件 '{cmdName}'。 请使用cmdlet指令，或者在设置-安全中启用“允许执行可执行文件”。");
                 return false;
             }
 

@@ -992,21 +992,23 @@ namespace projectFrameCut.StandaloneRender
 
         public static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0)
+            {
+                return Array.Empty<IClip>();
+            }
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -1027,11 +1029,11 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && !string.IsNullOrEmpty(clip.FilePath) && clipInstance.NeedFilePath)
                 {
                     try
                     {
-                        clipInstance.FilePath = fp.GetString();
+                        clipInstance.FilePath = clip.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -1051,14 +1053,19 @@ namespace projectFrameCut.StandaloneRender
 
         public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, IDictionary<string, AssetItem> assets)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.SoundTracks) ?? throw new NullReferenceException("Failed to cast SoundtrackDTOs to ISoundTracks.");
+            var tracks = json.SoundTracks;
+            if (tracks is null || tracks.Length == 0)
+            {
+                return Array.Empty<ISoundTrack>();
+            }
 
             var tracksList = new List<ISoundTrack>();
 
-            foreach (var track in elements.Cast<JsonElement>())
+            foreach (var track in tracks)
             {
-                var trackInstance = PluginManager.CreateSoundTrack(track);
-                trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+                var trackJson = JsonSerializer.SerializeToElement(track);
+                var trackInstance = PluginManager.CreateSoundTrack(trackJson);
+                trackInstance.ExtraData = track.MetaData ?? new();
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -1092,11 +1099,11 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(trackInstance.FilePath) && track.TryGetProperty("FilePath", out var fp) && trackInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(trackInstance.FilePath) && !string.IsNullOrEmpty(track.FilePath) && trackInstance.NeedFilePath)
                 {
                     try
                     {
-                        trackInstance.FilePath = fp.GetString();
+                        trackInstance.FilePath = track.FilePath;
                     }
                     catch (InvalidOperationException)
                     {

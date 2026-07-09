@@ -150,6 +150,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private Func<int, double, ClipElementUI>? _pendingClipPlacementFactory = null;
     private string? _pendingClipPlacementName = null;
     private Predicate<int>? _pendingClipPlacementTrackFilter = null;
+    private Action? _pendingClipPlacementAfterPlacement = null;
     private readonly Dictionary<string, (int Track, double X)> _keyboardMoveOriginalPlacement = new();
     private List<ClipElementUI> _keyboardMoveClips = [];
     private bool _keyboardMoveHasMoved = false;
@@ -475,8 +476,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         ProjectInfo.ProjectName ??= title;
         IsReadonly = isReadonly;
 
-        // 初始化脚本引擎，将当前 DraftPage 暴露为 $page 变量
-        // 同时设置命令授权处理器，在脚本尝试执行高危/未分类命令时询问用户
         ScriptEngine.Initialize(this,
             CreatePowerShellAuthorizationHandler(this),
             CreateEnhancedPowerShellAuthorizationHandler(this));
@@ -2249,12 +2248,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         await ShowAPopup(AddClipView);
     }
 
-    public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null)
+    public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null, Action? afterPlacement = null)
     {
         ArgumentNullException.ThrowIfNull(clipFactory);
         _pendingClipPlacementName = name;
         _pendingClipPlacementFactory = clipFactory;
         _pendingClipPlacementTrackFilter = trackFilter;
+        _pendingClipPlacementAfterPlacement = afterPlacement;
         SetStateOK();
         AddClip.IsVisible = false;
         AssetPanelButton.IsVisible = false;
@@ -2360,6 +2360,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     clipName,
                     $"Placed at track {trackId}, x={Math.Round(startX, 2)}")
             });
+
+            _pendingClipPlacementAfterPlacement?.Invoke();
 
             SetStateOK();
             SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace_Done(clip.DisplayName));
@@ -5664,7 +5666,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             Placeholder = "Enter PowerShell command…\ne.g. Get-ProjectClip\n     Add-ProjectClip -Name Test -Track 0 -StartX 100",
             HeightRequest = 100,
             FontSize = 13,
-            FontFamily = "Consolas",
+            FontFamily = "MarkdownCodeBlock",
             IsSpellCheckEnabled = false,
             AutoSize = EditorAutoSizeOption.TextChanges,
         };
@@ -5673,7 +5675,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             IsReadOnly = true,
             FontSize = 13,
-            FontFamily = "Consolas",
+            FontFamily = "MarkdownCodeBlock",
             BackgroundColor = Color.FromArgb("#1E1E1E"),
             TextColor = Colors.White,
         };
@@ -5776,10 +5778,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             Margin = new Thickness(0, 4),
         };
 
+        var cmdBar = new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal };
+
         var windowContent = new Grid
         {
             RowDefinitions =
             {
+                new RowDefinition { Height = GridLength.Auto },
                 new RowDefinition { Height = GridLength.Auto },  // 快速命令
                 new RowDefinition { Height = GridLength.Auto },  // 输入
                 new RowDefinition { Height = GridLength.Auto },  // 按钮
@@ -5791,7 +5796,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             RowSpacing = 4,
             Children =
             {
-                new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal },
+                new Label { Text = Localized.DraftPage_Scripting_TestOnly, TextColor = Colors.Yellow },
+                cmdBar,
                 inputEditor,
                 buttonBar,
                 outputEditor,
@@ -5799,10 +5805,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             },
         };
 
-        Grid.SetRow(inputEditor, 1);
-        Grid.SetRow(buttonBar, 2);
-        Grid.SetRow(outputEditor, 3);
-        Grid.SetRow(statusLabel, 4);
+        Grid.SetRow(cmdBar, 1);
+        Grid.SetRow(inputEditor, 2);
+        Grid.SetRow(buttonBar, 3);
+        Grid.SetRow(outputEditor, 4);
+        Grid.SetRow(statusLabel, 5);
 
         var window = new MultiWindowItem
         {
@@ -8007,7 +8014,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         var firstVisualStartFrame = draft.Clips
-            .OfType<ClipDraftDTO>()
             .Where(c => c.ShouldDisplayInUI && c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
             .Select(c => (double)c.StartFrame)
             .DefaultIfEmpty(0)
@@ -8470,10 +8476,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
             ProjectInfo.PluginUsed =
-                draft.Clips.OfType<ClipDraftDTO>()
+                draft.Clips
                            .Select(c => c.FromPlugin)
-                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
-                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
                            .Where(c => !c.StartsWith("projectFrameCut.Render."))
                            .Distinct().ToList();
 
@@ -9103,6 +9109,16 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Priority = 1,
                 Command = SettingsCommand
             });
+            if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+            {
+                ToolbarItems.Add(new ToolbarItem
+                {
+                    Text = Localized.DraftPage_MenuBar_Project_Scripting,
+                    Order = ToolbarItemOrder.Secondary,
+                    Priority = 1,
+                    Command = ShowScriptWindowCommand,
+                });
+            }
 
             var MoreOptionButton = new ToolbarItem
             {

@@ -26,7 +26,7 @@ public static class TimelineMcpLiveService
         => DraftImportAndExportHelper.ExportFromDraftPage(page, false);
 
     public static IEnumerable ListClips(DraftPage page)
-        => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips.OfType<ClipDraftDTO>().OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).Select(c => new { id = c.Id, displayName = c.Name, type = c.ClipType.ToString() });
+        => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips.OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).Select(c => new { id = c.Id, displayName = c.Name, type = c.ClipType.ToString() });
 
     public static ClipDraftDTO? GetClip(DraftPage page, Guid? id)
         => id.HasValue && page.Clips.TryGetValue(id.Value, out var clip) ? DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false) : null;

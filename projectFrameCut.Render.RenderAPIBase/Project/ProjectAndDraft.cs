@@ -219,11 +219,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// All of the clips in the draft.
         /// </summary>
-        public object[] Clips { get; set; } = Array.Empty<object>();
+        public ClipDraftDTO[] Clips { get; set; } = Array.Empty<ClipDraftDTO>();
         /// <summary>
         /// All of the soundtracks in the draft.
         /// </summary>
-        public object[] SoundTracks { get; set; } = Array.Empty<object>();
+        public SoundtrackDTO[] SoundTracks { get; set; } = Array.Empty<SoundtrackDTO>();
 
 
         /// <summary>

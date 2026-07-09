@@ -100,6 +100,7 @@ namespace projectFrameCut
         public static Microsoft.UI.Xaml.Window NativeWindow;
         public static NavigationViewItem homeItem, assetItem, templateItem, debugItem, settingItem, createItem;
         internal static Microsoft.UI.Xaml.FrameworkElement? _shellContent;
+        private string _titleBeforeModelShow = "";
 
         // Modal-tracking: save nav state before a modal appears, restore on dismiss.
         internal static bool _navWasVisibleBeforeModal;
@@ -364,23 +365,17 @@ namespace projectFrameCut
                         // restore it when the modal is dismissed.
                         Microsoft.Maui.Controls.Application.Current.ModalPushed += (_, _) =>
                         {
-                            if (MainNavView is null) return;
-                            _navWasVisibleBeforeModal = MainNavView.IsPaneVisible;
-                            _navWasOpenBeforeModal = MainNavView.IsPaneOpen;
-                            HideNavBar();
+                            if (MainNavView is null || MainNavView.Visibility == Microsoft.UI.Xaml.Visibility.Collapsed) return;
+                            _titleBeforeModelShow = Application.Current.Windows[0].Title;
+                            Application.Current.Windows[0].Title = "";
+                            MainNavView.IsEnabled = false;
                         };
                         Microsoft.Maui.Controls.Application.Current.ModalPopped += (_, _) =>
                         {
-                            if (MainNavView is null || _shellContent is null) return;
-                            if (!_navWasVisibleBeforeModal)
-                            {
-                                HideNavBar();
-                                return;
-                            }
-                            MainNavView.IsPaneVisible = true;
-                            MainNavView.IsPaneOpen = _navWasOpenBeforeModal;
-                            _shellContent.Margin = new Microsoft.UI.Xaml.Thickness(
-                                _navWasOpenBeforeModal ? 240 : 48, 0, 0, 0);
+                            if (MainNavView is null || MainNavView.Visibility == Microsoft.UI.Xaml.Visibility.Collapsed) return;
+                            Application.Current.Windows[0].Title = _titleBeforeModelShow;
+                            MainNavView.IsEnabled = true;
+
                         };
                     }
                 }

@@ -101,23 +101,21 @@ namespace projectFrameCut.LivePreview
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
-            if (json.Clips is null) throw new NullReferenceException("Failed to get ClipDraftDTOs.");
-            var elements = json.Clips.Select(c => JsonSerializer.SerializeToElement(c)).ToList();
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0) return;
 
             var clipsList = new List<IClip>();
             var reinitTasks = new List<Task>();
 
-            foreach (var clip in elements)
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath is not null)
                 {
                     if (clipInstance.FilePath.StartsWith('$'))

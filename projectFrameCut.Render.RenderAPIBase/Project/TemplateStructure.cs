@@ -141,6 +141,7 @@
     {
         JSON = 0,
         Assembly = 1,
+        Script = 2,
         Undefined = -1
     }
 

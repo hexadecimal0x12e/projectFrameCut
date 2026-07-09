@@ -1935,7 +1935,7 @@ public class DraftSettingPage
 
     private static void SetEditableClipDtos(DraftStructureJSON draft, IEnumerable<ClipDraftDTO> clips)
     {
-        draft.Clips = clips.Cast<object>().ToArray();
+        draft.Clips = clips.ToArray();
     }
 
     private string ResolveJsonProjectRoot()
