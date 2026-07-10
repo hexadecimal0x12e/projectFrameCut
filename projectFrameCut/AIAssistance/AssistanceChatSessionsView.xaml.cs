@@ -109,7 +109,7 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void NavigateToSession(Guid sessionId)
     {
-        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories, _projectPath);
+        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories, _projectPath, _projectName);
         Current = s;
         if (GetHostWindow() is MultiWindowItem host)
         {

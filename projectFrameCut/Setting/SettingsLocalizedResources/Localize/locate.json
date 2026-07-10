@@ -2533,6 +2533,198 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "AI \u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u5141\u8BB8\u901A\u8FC7\u5DE5\u5177\u8C03\u7528\u6765\u914D\u7F6E\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "\u5141\u8BB8AI\u8BBF\u95EE\u811A\u672C\u5F15\u64CE\uFF0C\u5B9E\u73B0\u914D\u7F6E\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u5141\u8BB8\u5DE5\u5177\u8C03\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u901A\u7528\u5B89\u5168\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u8FDC\u7A0B\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "\u542F\u7528 HTTP \u89E3\u7801\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u542F\u7528\u4E91\u63D0\u4F9B\u7684\u5185\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u5BCC\u6587\u672C\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\u5141\u8BB8\u663E\u793A\u7F51\u9875\u3001HTML\u548CMermaid\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u5141\u8BB8\u663E\u793A\u56FE\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "\u5141\u8BB8\u6E32\u67D3 XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u5141\u8BB8\u6E32\u67D3\u5BCC\u6587\u672C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "\u5141\u8BB8 XAML \u8BBF\u95EE\u5916\u90E8\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u811A\u672C\u8FD0\u884C\u65F6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u5141\u8BB8\u811A\u672C\u8BBF\u95EE \u0027$page\u0027 \u9875\u9762\u5BF9\u8C61 (\u9AD8\u7EA7\u7528\u9014)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u5141\u8BB8\u6267\u884C\u5916\u90E8\u53EF\u6267\u884C\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u5141\u8BB8\u8BF7\u6C42\u4E92\u8054\u7F51",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u5141\u8BB8\u548C\u811A\u672C\u548C\u9879\u76EE\u4E92\u64CD\u4F5C (\u57FA\u4E8E\u811A\u672C\u7684\u6A21\u677F\u9700\u8981\u6B64\u6743\u9650)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u5141\u8BB8\u79FB\u9664\u7C7B\u578B\u7684\u64CD\u4F5C (\u59CB\u7EC8\u9700\u8981\u7528\u6237\u5BA1\u6279)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u542F\u7528\u5BA1\u8BA1\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u9ED8\u8BA4\u62D2\u7EDD\u4EE5\u4E0B\u547D\u4EE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u8BF7\u4F7F\u7528\u547D\u4EE4\u5168\u540D\uFF0C\u4F7F\u7528\u5206\u53F7\u5206\u5272\uFF0C\u652F\u6301\u6B63\u5219\u8868\u8FBE\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "\u542F\u7528 PowerShell \u811A\u672C\u5F15\u64CE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -5319,6 +5511,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "AI Capabilities",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Allow configuring projects via tool calls",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Allow AI to access the script engine to implement configuration items",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Allow Tool Calls",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "General Security Configuration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Remote Content",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "Enable HTTP Decoder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Enable cloud-provided content",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Rich Text Rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Allow displaying web pages, HTML, and Mermaid diagrams",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Allow displaying images",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Allow XAML rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Allow rich text rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Allow XAML to access external sources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Script Runtime",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Allow script access to the \u0027$page\u0027 page object (Advanced use)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Allow execution of external executable files",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Allow internet requests",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Allow interoperability between scripts and projects (This permission is required for script-based templates)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Allow type removal operations (Always requires user approval)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Enable Audit Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "By default, the following commands are denied",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Please use full command names, separated by semicolons. Regular expressions are supported.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "Enable PowerShell Script Engine",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -8100,6 +8508,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "\u6B64\u529F\u80FD\u9700\u8981\u4F7F\u7528\u642D\u8F09\u7570\u69CB\uFF08\u5927\u5C0F\u6838\uFF09\u67B6\u69CB\u8655\u7406\u5668\u7684\u88DD\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "AI \u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u5141\u8A31\u900F\u904E\u5DE5\u5177\u547C\u53EB\u4F86\u8A2D\u5B9A\u5C08\u6848",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u5141\u8A31\u5DE5\u5177\u547C\u53EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "\u5141\u8A31 AI \u5B58\u53D6\u8173\u672C\u5F15\u64CE\uFF0C\u5BE6\u4F5C\u8A2D\u5B9A\u9805\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u901A\u7528\u5B89\u5168\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u9060\u7AEF\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "\u555F\u7528 HTTP \u89E3\u78BC\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u555F\u7528\u96F2\u7AEF\u63D0\u4F9B\u7684\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u5BCC\u6587\u672C\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\u5141\u8A31\u986F\u793A\u7DB2\u9801\u3001HTML\u548CMermaid\u5716",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u5141\u8A31\u986F\u793A\u5716\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "\u5141\u8A31\u8F49\u8B6F XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "\u5141\u8A31 XAML \u5B58\u53D6\u5916\u90E8\u4F86\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u5141\u8A31\u8F49\u8B6F\u5BCC\u6587\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u5141\u8A31\u6307\u4EE4\u78BC\u5B58\u53D6 \u0027$page\u0027 \u9801\u9762\u7269\u4EF6\uFF08\u9032\u968E\u7528\u9014\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u5141\u8A31\u57F7\u884C\u5916\u90E8\u53EF\u57F7\u884C\u6A94",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u5141\u8A31\u8ACB\u6C42\u7DB2\u969B\u7DB2\u8DEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u5141\u8A31\u8207\u8173\u672C\u53CA\u5C08\u6848\u4E92\u64CD\u4F5C (\u57FA\u65BC\u8173\u672C\u7684\u7BC4\u672C\u9700\u8981\u6B64\u6B0A\u9650)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u5141\u8A31\u79FB\u9664\u985E\u578B\u7684\u64CD\u4F5C (\u4E00\u5F8B\u9700\u8981\u4F7F\u7528\u8005\u6838\u51C6)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u6307\u4EE4\u78BC\u57F7\u884C\u6642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u555F\u7528\u7A3D\u6838\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "\u555F\u7528 PowerShell \u6307\u4EE4\u78BC\u5F15\u64CE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u8ACB\u4F7F\u7528\u547D\u4EE4\u5168\u7A31\uFF0C\u4EE5\u5206\u865F\u5206\u9694\uFF0C\u652F\u63F4\u6B63\u898F\u8868\u793A\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u9810\u8A2D\u62D2\u7D55\u4EE5\u4E0B\u547D\u4EE4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10896,6 +11520,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "AI\u6A5F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u30C4\u30FC\u30EB\u547C\u3073\u51FA\u3057\u306B\u3088\u308B\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u69CB\u6210\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "AI\u306B\u3088\u308B\u30B9\u30AF\u30EA\u30D7\u30C8\u30A8\u30F3\u30B8\u30F3\u3078\u306E\u30A2\u30AF\u30BB\u30B9\u3092\u8A31\u53EF\u3057\u3001\u8A2D\u5B9A\u9805\u76EE\u3092\u5B9F\u88C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u4E00\u822C\u30BB\u30AD\u30E5\u30EA\u30C6\u30A3\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u30EA\u30E2\u30FC\u30C8\u30B3\u30F3\u30C6\u30F3\u30C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "HTTP\u30C7\u30B3\u30FC\u30C0\u30FC\u3092\u6709\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u30AF\u30E9\u30A6\u30C9\u914D\u4FE1\u60C5\u5831\u306E\u6709\u52B9\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u30C4\u30FC\u30EB\u547C\u3073\u51FA\u3057\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Web\u30DA\u30FC\u30B8\u3001HTML\u3001Mermaid\u56F3\u306E\u8868\u793A\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u753B\u50CF\u306E\u8868\u793A\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "XAML \u306E\u63CF\u753B\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u66F8\u5F0F\u4ED8\u304D\u30C6\u30AD\u30B9\u30C8\u63CF\u753B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u30EA\u30C3\u30C1\u30C6\u30AD\u30B9\u30C8\u306E\u8868\u793A\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u30B9\u30AF\u30EA\u30D7\u30C8\u5B9F\u884C\u6642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u30B9\u30AF\u30EA\u30D7\u30C8\u306B\u3088\u308B \u0027$page\u0027 \u30DA\u30FC\u30B8\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3078\u306E\u30A2\u30AF\u30BB\u30B9\u3092\u8A31\u53EF\uFF08\u4E0A\u7D1A\u8005\u5411\u3051\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u901A\u4FE1\u3092\u8A31\u53EF\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "XAML \u306B\u3088\u308B\u5916\u90E8\u53C2\u7167\u5148\u3078\u306E\u30A2\u30AF\u30BB\u30B9\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4F7F\u7528\u6C49\u5B57\u8BCD\u300C\u5916\u90E8\u53C2\u7167\u5148\u300D\u66FF\u4EE3\u7247\u5047\u540D\u300C\u5916\u90E8\u30BD\u30FC\u30B9\u300D\uFF0C\u4EE5\u51CF\u5C11\u7247\u5047\u540D\u4F7F\u7528\u5E76\u7F29\u77ED\u5B57\u7B26\u4E32\u957F\u5EA6\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u5916\u90E8\u5B9F\u884C\u30D5\u30A1\u30A4\u30EB\u306E\u5B9F\u884C\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u578B\u306E\u524A\u9664\u64CD\u4F5C\u3092\u8A31\u53EF\uFF08\u5E38\u306B\u5229\u7528\u8005\u306E\u627F\u8A8D\u304C\u5FC5\u8981\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u30B9\u30AF\u30EA\u30D7\u30C8\u3068\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u76F8\u4E92\u64CD\u4F5C\u3092\u8A31\u53EF (\u30B9\u30AF\u30EA\u30D7\u30C8\u30D9\u30FC\u30B9\u306E\u3072\u306A\u5F62\u306B\u5FC5\u8981)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u65E2\u5B9A\u3067\u4EE5\u4E0B\u306E\u30B3\u30DE\u30F3\u30C9\u3092\u62D2\u5426",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u30B3\u30DE\u30F3\u30C9\u306F\u6B63\u5F0F\u540D\u79F0\u3092\u4F7F\u7528\u3057\u3001\u30BB\u30DF\u30B3\u30ED\u30F3\u3067\u533A\u5207\u308A\u307E\u3059\u3002\u6B63\u898F\u8868\u73FE\u5BFE\u5FDC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "PowerShell \u30B9\u30AF\u30EA\u30D7\u30C8\u6A5F\u80FD\u306E\u6709\u52B9\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u76E3\u67FB\u30E2\u30FC\u30C9\u6709\u52B9\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -13681,6 +14521,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "AI\uAC00 \uC2A4\uD06C\uB9BD\uD2B8 \uC5D4\uC9C4\uC5D0 \uC561\uC138\uC2A4\uD558\uB3C4\uB85D \uD5C8\uC6A9\uD558\uC5EC \uAD6C\uC131 \uD56D\uBAA9\uC744 \uAD6C\uD604",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\uC6D0\uACA9 \uCF58\uD150\uCE20",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\uB3C4\uAD6C \uD638\uCD9C\uC744 \uD1B5\uD55C \uD504\uB85C\uC81D\uD2B8 \uAD6C\uC131 \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "AI \uAE30\uB2A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\uB3C4\uAD6C \uD638\uCD9C \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "HTTP \uB514\uCF54\uB354 \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\uC77C\uBC18 \uBCF4\uC548 \uAD6C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\uC6F9 \uD398\uC774\uC9C0, HTML \uBC0F Mermaid \uB2E4\uC774\uC5B4\uADF8\uB7A8 \uD45C\uC2DC \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\uC774\uBBF8\uC9C0 \uD45C\uC2DC \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\uB9AC\uCE58 \uD14D\uC2A4\uD2B8 \uB80C\uB354\uB9C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\uC11C\uC2DD \uC788\uB294 \uD14D\uC2A4\uD2B8 \uB80C\uB354\uB9C1 \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "XAML \uB80C\uB354\uB9C1 \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\uC2A4\uD06C\uB9BD\uD2B8 \uB7F0\uD0C0\uC784",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "XAML\uC774 \uC678\uBD80 \uC18C\uC2A4\uC5D0 \uC561\uC138\uC2A4\uD558\uB3C4\uB85D \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\uC678\uBD80 \uC2E4\uD589 \uD30C\uC77C \uC2E4\uD589 \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\uC778\uD130\uB137 \uC694\uCCAD \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\uAC10\uC0AC \uBAA8\uB4DC \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\uC2A4\uD06C\uB9BD\uD2B8 \uBC0F \uD504\uB85C\uC81D\uD2B8 \uAC04 \uC0C1\uD638 \uC6B4\uC6A9 \uD5C8\uC6A9 (\uC2A4\uD06C\uB9BD\uD2B8 \uAE30\uBC18 \uD15C\uD50C\uB9BF\uC5D0 \uC774 \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\uC720\uD615 \uC81C\uAC70 \uC791\uC5C5 \uD5C8\uC6A9 (\uD56D\uC0C1 \uC0AC\uC6A9\uC790 \uC2B9\uC778 \uD544\uC694)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\uBA85\uB839 \uC804\uCCB4 \uC774\uB984\uC744 \uC0AC\uC6A9\uD558\uACE0 \uC138\uBBF8\uCF5C\uB860\uC73C\uB85C \uAD6C\uBD84\uD574 \uC8FC\uC138\uC694. \uC815\uADDC \uD45C\uD604\uC2DD\uC744 \uC9C0\uC6D0\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "PowerShell \uC2A4\uD06C\uB9BD\uD2B8 \uC5D4\uC9C4 \uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\uC2A4\uD06C\uB9BD\uD2B8\uC758 \u0027$page\u0027 \uD398\uC774\uC9C0 \uAC1C\uCCB4 \uC561\uC138\uC2A4 \uD5C8\uC6A9 (\uACE0\uAE09 \uC6A9\uB3C4)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\uAE30\uBCF8\uC801\uC73C\uB85C \uB2E4\uC74C \uBA85\uB839\uC744 \uAC70\uBD80\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\uD074\uB77C\uC6B0\uB4DC \uC81C\uACF5 \uCF58\uD150\uCE20 \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -16461,6 +17517,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "Cette fonctionnalit\u00E9 n\u00E9cessite un appareil \u00E9quip\u00E9 d\u0027un processeur \u00E0 architecture h\u00E9t\u00E9rog\u00E8ne (gros et petits c\u0153urs).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Autoriser la configuration des projets via des appels d\u0027outils",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Fonctionnalit\u00E9s IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Configuration g\u00E9n\u00E9rale de la s\u00E9curit\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Autoriser les appels d\u0027outils",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "Activer le d\u00E9codeur HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Contenu distant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Rendu du texte enrichi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Autoriser l\u0027IA \u00E0 acc\u00E9der au moteur de script pour impl\u00E9menter des \u00E9l\u00E9ments de configuration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Activer le contenu fourni par le cloud",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Autoriser l\u0027affichage des pages web, du HTML et des diagrammes Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Autoriser le rendu XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Autoriser XAML \u00E0 acc\u00E9der aux sources externes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Autoriser le rendu du texte enrichi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Ex\u00E9cution du script",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Autoriser l\u0027affichage des images",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Autoriser les requ\u00EAtes Internet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Autoriser l\u0027ex\u00E9cution de fichiers ex\u00E9cutables externes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Interdire les commandes suivantes par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Autoriser les scripts \u00E0 acc\u00E9der \u00E0 l\u0027objet de page \u0027$page\u0027 (usage avanc\u00E9)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Activer le mode d\u0027audit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Autoriser les op\u00E9rations de suppression de types (approbation de l\u0027utilisateur toujours requise)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Veuillez utiliser le nom complet des commandes, s\u00E9par\u00E9es par des points-virgules. Les expressions r\u00E9guli\u00E8res sont prises en charge.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Autoriser l\u0027interop\u00E9rabilit\u00E9 entre les scripts et le projet (cette autorisation est requise pour les mod\u00E8les bas\u00E9s sur des scripts)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "Activer le moteur de script PowerShell",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19257,6 +20529,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u8BB8\u501F\u5668\u7528\u4E4B\u53EC\u4EE5\u7F6E\u5176\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "\u8BB8\u667A\u7B97\u901A\u811A\u672C\u4E4B\u67A2\uFF0C\u4EE5\u7406\u8BF8\u9879\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u8BB8\u5176\u7528\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "\u795E\u673A\u4E4B\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "\u542F HTTP \u89E3\u8BD1\u4E4B\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u901A\u8BBE\u5B89\u536B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u542F\u4E91\u7AEF\u6240\u4F9B\u4E4B\u7269",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u534E\u7AE0\u6577\u5F69",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4EE5\u2018\u534E\u7AE0\u2019\u6307\u4EE3\u5BCC\u6587\u672C\uFF0C\u2018\u6577\u5F69\u2019\u6307\u4EE3\u6E32\u67D3\uFF0C\u7686\u7528\u4F20\u7EDF\u6587\u5B66\u4E0E\u7ED8\u753B\u4E4B\u96C5\u79F0\u4EE5\u5408\u6587\u8A00\u6587\u4F53\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u8FDC\u6765\u4E4B\u7269",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "\u5141\u7ED8XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u811A\u672C\u8FD0\u884C\u4E4B\u9645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u8BB8\u7ED8\u534E\u8F9E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u8BB8\u811A\u672C\u8BBF\u2018$page\u2019\u9875\u8C61\uFF08\u9AD8\u9636\u4E4B\u7528\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u8F6F\u4EF6\u672F\u8BED\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u98CE\u683C\uFF0C\u4FDD\u7559\u0027$page\u0027\u53D8\u91CF\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\u8BB8\u663E\u7F51\u9875\u3001HTML\u53CAMermaid\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u8BB8\u901A\u5929\u4E0B\u4E4B\u7F51",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u8BB8\u884C\u5916\u95F4\u53EF\u6267\u4E4B\u6863",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u8BA1\u7B97\u673A\u672F\u8BED\u2018\u53EF\u6267\u884C\u6587\u4EF6\u2019\u8BD1\u4E3A\u2018\u53EF\u6267\u4E4B\u6863\u2019\uFF0C\u2018\u5916\u90E8\u2019\u8BD1\u4E3A\u2018\u5916\u95F4\u2019\uFF0C\u4EE5\u7B26\u5408\u6587\u8A00\u6587\u7684\u8868\u8FBE\u4E60\u60EF\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "\u8BB8XAML\u901A\u5916\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u8BB8\u811A\u672C\u4E0E\u9879\u76EE\u4E92\u901A\uFF08\u811A\u672C\u6240\u672C\u4E4B\u6A21\u987B\u6B64\u6743\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u8BB8\u663E\u56FE\u50CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u8BB8\u9664\u5176\u7C7B\uFF08\u7686\u987B\u7528\u8005\u6838\u51C6\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "\u542F PowerShell \u811A\u672C\u67A2\u673A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u542F\u5BA1\u8BA1\u4E4B\u5236",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u4F8B\u7EDD\u4E0B\u8BF8\u4EE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u987B\u7528\u547D\u4EE4\u5168\u540D\uFF0C\u4EE5\u5206\u53F7\u9694\u4E4B\uFF0C\u517C\u7EB3\u6B63\u5219\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5DF2\u6309\u76EE\u6807\u8BED\u8A00\u8981\u6C42\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\u98CE\u683C\u3002",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -22046,6 +23534,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "\u0642\u062F\u0631\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639 \u0639\u0628\u0631 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0623\u062F\u0648\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0623\u062F\u0648\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0623\u0645\u0627\u0646 \u0627\u0644\u0639\u0627\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0628\u0639\u064A\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0648\u062D\u062F\u0629 \u0641\u0643 \u062A\u0631\u0645\u064A\u0632 HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u062A\u0635\u064A\u064A\u0631 \u0627\u0644\u0646\u0635 \u0627\u0644\u063A\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0639\u0631\u0636 \u0635\u0641\u062D\u0627\u062A \u0627\u0644\u0648\u064A\u0628 \u0648HTML \u0648\u0645\u062E\u0637\u0637\u0627\u062A Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0642\u062F\u0645 \u0645\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u062A\u0635\u064A\u064A\u0631 \u0627\u0644\u0646\u0635 \u0627\u0644\u063A\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0639\u0631\u0636 XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u0648\u0642\u062A \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0627\u0644\u0646\u0635\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0635\u0648\u0635 \u0627\u0644\u0628\u0631\u0645\u062C\u064A\u0629 \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0643\u0627\u0626\u0646 \u0627\u0644\u0635\u0641\u062D\u0629 \u0027$page\u0027 (\u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u062A\u0642\u062F\u0645)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062D\u0631\u0643 \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u0646\u0635\u064A\u0629 \u0644\u062A\u0646\u0641\u064A\u0630 \u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u062A\u0643\u0648\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629 \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0640 XAML \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0645\u0635\u0627\u062F\u0631 \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u064A\u0646\u064A \u0628\u064A\u0646 \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u0646\u0635\u064A\u0629 \u0648\u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639 (\u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u0646\u0635\u064A\u0629 \u0647\u0630\u0627 \u0627\u0644\u0625\u0630\u0646)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0639\u0645\u0644\u064A\u0627\u062A \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0646\u0648\u0639 (\u064A\u062A\u0637\u0644\u0628 \u062F\u0627\u0626\u0645\u0627\u064B \u0645\u0648\u0627\u0641\u0642\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u0628\u0634\u0643\u0644 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u060C \u064A\u062A\u0645 \u0631\u0641\u0636 \u0627\u0644\u0623\u0648\u0627\u0645\u0631 \u0627\u0644\u062A\u0627\u0644\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0644\u0644\u0623\u0645\u0631\u060C \u0648\u0641\u0635\u0644\u0647\u0627 \u0628\u0641\u0627\u0635\u0644\u0629 \u0645\u0646\u0642\u0648\u0637\u0629. \u064A\u062A\u0645 \u062F\u0639\u0645 \u0627\u0644\u062A\u0639\u0628\u064A\u0631\u0627\u062A \u0627\u0644\u0646\u0645\u0637\u064A\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0648\u0636\u0639 \u0627\u0644\u062A\u062F\u0642\u064A\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0645\u062D\u0631\u0643 \u0628\u0631\u0627\u0645\u062C PowerShell \u0627\u0644\u0646\u0635\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -24825,6 +26529,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "Diese Funktion erfordert ein Ger\u00E4t mit einem Prozessor mit heterogener Architektur (Big- und Little-Cores).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "KI-Funktionen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Allgemeine Sicherheitskonfiguration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Projektkonfiguration \u00FCber Toolaufrufe zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Remoteinhalte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Von der Cloud bereitgestellte Inhalte aktivieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Der KI den Zugriff auf die Skript-Engine erlauben, um Konfigurationselemente zu implementieren.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Toolaufrufe zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Rich-Text-Rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "XAML-Rendering zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Anzeige von Webseiten, HTML und Mermaid-Diagrammen erlauben",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Rendern von Rich-Text zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "XAML-Zugriff auf externe Quellen zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Skriptzugriff auf das \u0027$page\u0027-Seitenobjekt erlauben (Erweiterte Verwendung)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Skriptlaufzeit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Ausf\u00FChren externer ausf\u00FChrbarer Dateien zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Internetanfragen zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Bildanzeige zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Interaktion zwischen Skripten und Projekten zulassen (Diese Berechtigung ist f\u00FCr skriptbasierte Vorlagen erforderlich)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Vorg\u00E4nge zum Entfernen von Typen zulassen (erfordert stets die Genehmigung des Benutzers)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Audit-Modus aktivieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Die folgenden Befehle werden standardm\u00E4\u00DFig abgelehnt.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "PowerShell-Skript-Engine aktivieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Bitte verwenden Sie den vollst\u00E4ndigen Befehlsnamen, getrennt durch Semikolons. Regul\u00E4re Ausdr\u00FCcke werden unterst\u00FCtzt.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "HTTP-Decoder aktivieren",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27617,6 +29537,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Funciones de IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Permitir configurar el proyecto mediante llamadas a herramientas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Permitir que la IA acceda al motor de scripts para implementar elementos de configuraci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Contenido remoto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Configuraci\u00F3n general de seguridad",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Habilitar contenido proporcionado por la nube",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "Habilitar decodificador HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Renderizado de texto enriquecido",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Permitir mostrar im\u00E1genes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Permitir mostrar p\u00E1ginas web, HTML y diagramas de Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Permitir llamadas a herramientas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Tiempo de ejecuci\u00F3n de scripts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Permitir que XAML acceda a or\u00EDgenes externos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Permitir la representaci\u00F3n de texto enriquecido",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Permitir que los scripts accedan al objeto de p\u00E1gina \u0027$page\u0027 (uso avanzado)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Permitir solicitudes a Internet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Permitir operaciones para eliminar tipos (siempre requiere la aprobaci\u00F3n del usuario)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Permitir la interoperabilidad entre scripts y proyectos (las plantillas basadas en scripts requieren este permiso)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Permitir la ejecuci\u00F3n de archivos ejecutables externos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Habilitar modo de auditor\u00EDa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Utilice el nombre completo del comando, sep\u00E1relos con punto y coma. Se admiten expresiones regulares.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "Activar motor de scripts de PowerShell",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Permitir la representaci\u00F3n de XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Denegar de forma predeterminada los siguientes comandos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -30398,6 +32534,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "Questa funzione richiede un dispositivo dotato di processore con architettura eterogenea (core grandi e piccoli).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Funzionalit\u00E0 AI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Consenti la configurazione del progetto tramite chiamate agli strumenti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "Abilita decodificatore HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Contenuto remoto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Rendering del testo formattato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Configurazione generale della sicurezza",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Abilita i contenuti forniti dal cloud",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Consenti chiamate degli strumenti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Consenti il rendering XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Consenti il rendering del testo formattato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Consenti a XAML di accedere a origini esterne",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Runtime dello script",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Consenti la visualizzazione delle immagini",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Consenti la visualizzazione di pagine web, HTML e diagrammi Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Consenti agli script di accedere all\u0027oggetto pagina \u0027$page\u0027 (Utilizzo avanzato)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Consenti all\u0027IA di accedere al motore di script per implementare le voci di configurazione.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Consenti operazioni di rimozione dei tipi (richiede sempre l\u0027approvazione dell\u0027utente)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Consenti l\u0027interoperabilit\u00E0 tra script e progetto (i modelli basati su script richiedono questa autorizzazione)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Abilita modalit\u00E0 di audit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Rifiuta i seguenti comandi per impostazione predefinita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Consenti richieste a Internet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Utilizzare il nome completo del comando, separato da punti e virgola. Sono supportate le espressioni regolari.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "Abilita il motore di script PowerShell",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Consenti l\u0027esecuzione di file eseguibili esterni",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33189,6 +35541,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Funkcje AI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Zezwalaj na konfiguracj\u0119 projektu za pomoc\u0105 wywo\u0142a\u0144 narz\u0119dzi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Zezwalaj na wywo\u0142ywanie narz\u0119dzi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Zezw\u00F3l AI na dost\u0119p do silnika skrypt\u00F3w w celu implementacji element\u00F3w konfiguracji",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Zdalna zawarto\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "W\u0142\u0105cz zawarto\u015B\u0107 dostarczan\u0105 z chmury",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Og\u00F3lna konfiguracja bezpiecze\u0144stwa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Renderowanie tekstu sformatowanego",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Zezwalaj na wy\u015Bwietlanie obraz\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "W\u0142\u0105cz dekoder HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Zezw\u00F3l na wy\u015Bwietlanie stron internetowych, HTML i diagram\u00F3w Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Zezwalaj na renderowanie XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u015Arodowisko uruchomieniowe skrypt\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Zezwalaj skryptom na dost\u0119p do obiektu strony \u0027$page\u0027 (zaawansowane)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Zezw\u00F3l na wykonywanie zewn\u0119trznych plik\u00F3w wykonywalnych",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Zezwalaj na \u017C\u0105dania internetowe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Zezwalaj na operacje usuwania typ\u00F3w (zawsze wymaga zatwierdzenia przez u\u017Cytkownika)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Zezw\u00F3l XAML na dost\u0119p do \u017Ar\u00F3de\u0142 zewn\u0119trznych",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Zezw\u00F3l na interoperacyjno\u015B\u0107 mi\u0119dzy skryptami a projektem (szablony oparte na skryptach wymagaj\u0105 tego uprawnienia)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "W\u0142\u0105cz tryb audytu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Domy\u015Blnie odrzucaj nast\u0119puj\u0105ce polecenia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Zezw\u00F3l na renderowanie sformatowanego tekstu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "W\u0142\u0105cz silnik skrypt\u00F3w PowerShell",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "U\u017Cyj pe\u0142nych nazw polece\u0144, rozdzielonych \u015Brednikami. Obs\u0142ugiwane s\u0105 wyra\u017Cenia regularne.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -35970,6 +38538,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "Este recurso requer um dispositivo com processador de arquitetura heterog\u00EAnea (big.LITTLE).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "Permitir que a IA acesse o mecanismo de scripts para implementar itens de configura\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Recursos de IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Configura\u00E7\u00F5es Gerais de Seguran\u00E7a",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Permitir chamada de ferramentas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Habilitar conte\u00FAdo fornecido pela nuvem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Permitir a configura\u00E7\u00E3o do projeto por meio de chamadas de ferramentas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "Habilitar decodificador HTTP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Conte\u00FAdo remoto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Renderiza\u00E7\u00E3o de Rich Text",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Permitir a exibi\u00E7\u00E3o de p\u00E1ginas da web, HTML e diagramas Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Permitir a renderiza\u00E7\u00E3o de texto rico",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "Permitir a renderiza\u00E7\u00E3o de XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Permitir exibi\u00E7\u00E3o de imagens",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Permitir que scripts acessem o objeto de p\u00E1gina \u0027$page\u0027 (uso avan\u00E7ado)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Tempo de execu\u00E7\u00E3o do script",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "Permitir requisi\u00E7\u00F5es \u00E0 internet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Ativar modo de auditoria",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "Permitir opera\u00E7\u00F5es de remo\u00E7\u00E3o (sempre requer aprova\u00E7\u00E3o do usu\u00E1rio)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Negar os seguintes comandos por padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Permitir interopera\u00E7\u00E3o entre scripts e projetos (modelos baseados em scripts requerem esta permiss\u00E3o)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "Permitir que o XAML acesse fontes externas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Permitir a execu\u00E7\u00E3o de arquivos execut\u00E1veis externos",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "Use o nome completo do comando, separado por ponto e v\u00EDrgula. Suporta express\u00F5es regulares.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "Habilitar mecanismo de scripts do PowerShell",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38765,6 +41549,222 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "\u0412\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u0418\u0418",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 \u0432\u044B\u0437\u043E\u0432\u044B \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u043E\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u044B\u0437\u043E\u0432 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u043E\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "\u0423\u0434\u0430\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0418\u0418 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0441\u043A\u0440\u0438\u043F\u0442\u043E\u0432\u043E\u043C\u0443 \u0434\u0432\u0438\u0436\u043A\u0443 \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u0434\u0430\u0447 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u043E\u043D\u0442\u0435\u043D\u0442, \u043F\u0440\u0435\u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C\u044B\u0439 \u043E\u0431\u043B\u0430\u043A\u043E\u043C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "\u0420\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433 \u0444\u043E\u0440\u043C\u0430\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0439",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0432\u0435\u0431-\u0441\u0442\u0440\u0430\u043D\u0438\u0446, HTML \u0438 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0444\u043E\u0440\u043C\u0430\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C HTTP-\u0434\u0435\u043A\u043E\u0434\u0435\u0440",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "\u041E\u0431\u0449\u0438\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043E\u0442\u0440\u0438\u0441\u043E\u0432\u043A\u0443 XAML",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "\u0412\u0440\u0435\u043C\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0441\u043A\u0440\u0438\u043F\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C XAML \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0432\u043D\u0435\u0448\u043D\u0438\u043C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430\u043C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0441\u043A\u0440\u0438\u043F\u0442\u0430\u043C \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u043E\u0431\u044A\u0435\u043A\u0442\u0443 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u044B \u0027$page\u0027 (\u0434\u043B\u044F \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u043D\u043E\u0433\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u044F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0437\u0430\u043F\u0440\u043E\u0441\u044B \u0432 \u0418\u043D\u0442\u0435\u0440\u043D\u0435\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u0437\u0430\u0438\u043C\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0441\u043A\u0440\u0438\u043F\u0442\u043E\u0432 \u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 (\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u0434\u043B\u044F \u0448\u0430\u0431\u043B\u043E\u043D\u043E\u0432 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0435 \u0441\u043A\u0440\u0438\u043F\u0442\u043E\u0432)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "\u041F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u043E\u0442\u043A\u043B\u043E\u043D\u044F\u044E\u0442\u0441\u044F \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u043F\u043E\u043B\u043D\u044B\u0435 \u0438\u043C\u0435\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434, \u0440\u0430\u0437\u0434\u0435\u043B\u044F\u044F \u0438\u0445 \u0442\u043E\u0447\u043A\u043E\u0439 \u0441 \u0437\u0430\u043F\u044F\u0442\u043E\u0439. \u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u044B\u0435 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u044F.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u0432\u043D\u0435\u0448\u043D\u0438\u0445 \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u0435\u043C\u044B\u0445 \u0444\u0430\u0439\u043B\u043E\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0434\u0432\u0438\u0436\u043E\u043A \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u0432 PowerShell",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C \u0430\u0443\u0434\u0438\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438 \u0443\u0434\u0430\u043B\u0435\u043D\u0438\u044F \u0442\u0438\u043F\u043E\u0432 (\u0432\u0441\u0435\u0433\u0434\u0430 \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -41548,6 +44548,222 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "Bu \u00F6zellik, heterojen (b\u00FCy\u00FCk ve k\u00FC\u00E7\u00FCk \u00E7ekirdek) mimarili i\u015Flemcilere sahip cihazlar gerektirir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities",
+        "Value": "Yapay Zeka \u00D6zellikleri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowScript",
+        "Value": "AI\u0027\u0131n yap\u0131land\u0131rma \u00F6\u011Felerini uygulamak i\u00E7in komut dosyas\u0131 motoruna eri\u015Fmesine izin verin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_General",
+        "Value": "Genel G\u00FCvenlik Yap\u0131land\u0131rmas\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent",
+        "Value": "Uzak i\u00E7erik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableHttpDecoder",
+        "Value": "HTTP Kod \u00C7\u00F6z\u00FCc\u00FCy\u00FC Etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RemoteContent_EnableRemoteContent",
+        "Value": "Bulut taraf\u0131ndan sa\u011Flanan i\u00E7eri\u011Fi etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText",
+        "Value": "Zengin Metin Olu\u015Fturma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingImage",
+        "Value": "Resimlerin g\u00F6r\u00FCnt\u00FClenmesine izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingHtml",
+        "Value": "Web sayfalar\u0131n\u0131, HTML\u0027yi ve Mermaid diyagramlar\u0131n\u0131 g\u00F6r\u00FCnt\u00FClemeye izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableDisplayingXAML",
+        "Value": "XAML olu\u015Fturulmas\u0131na izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableRendering",
+        "Value": "Zengin metin olu\u015Fturulmas\u0131na izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_RichText_EnableXAMLExternalSource",
+        "Value": "XAML\u0027in harici kaynaklara eri\u015Fmesine izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script",
+        "Value": "Komut dosyas\u0131 \u00E7al\u0131\u015Fma zaman\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowAccessPageObject",
+        "Value": "Komut dosyalar\u0131n\u0131n \u0027$page\u0027 sayfa nesnesine eri\u015Fmesine izin ver (\u0130leri d\u00FCzey kullan\u0131m)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowExecutable",
+        "Value": "Harici y\u00FCr\u00FCt\u00FClebilir dosyalar\u0131n y\u00FCr\u00FCt\u00FClmesine izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowModifyProject",
+        "Value": "Komut dosyalar\u0131 ve projeler aras\u0131nda birlikte \u00E7al\u0131\u015Fmaya izin ver (Bu izin, komut dosyas\u0131 tabanl\u0131 \u015Fablonlar i\u00E7in gereklidir)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowToolCall",
+        "Value": "Ara\u00E7 \u00E7a\u011Fr\u0131s\u0131na izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowInternet",
+        "Value": "\u0130nternet isteklerine izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand",
+        "Value": "Varsay\u0131lan olarak a\u015Fa\u011F\u0131daki komutlar\u0131 reddet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_EnableScript",
+        "Value": "PowerShell Betik Motorunu Etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_DisallowCommand_Hint",
+        "Value": "L\u00FCtfen komutun tam ad\u0131n\u0131 kullan\u0131n, noktal\u0131 virg\u00FClle ay\u0131r\u0131n, d\u00FCzenli ifadeler desteklenir.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AuditMode",
+        "Value": "Denetim Modunu Etkinle\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_Script_AllowRemove",
+        "Value": "T\u00FCr kald\u0131rma i\u015Flemlerine izin ver (Her zaman kullan\u0131c\u0131 onay\u0131 gerekir)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_AICapabilities_AllowModifyProject",
+        "Value": "Ara\u00E7 \u00E7a\u011Fr\u0131lar\u0131 arac\u0131l\u0131\u011F\u0131yla projeleri yap\u0131land\u0131rmaya izin ver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
@@ -7,6 +7,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -17,6 +18,7 @@ using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System.Collections;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace projectFrameCut.Services;
 
@@ -52,14 +54,26 @@ public static class TimelineMcpLiveService
 
     public static IEnumerable GetAllAvailableTextStyles()
     {
-        return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.TextClipStyleProvider).Select(c => new { id = c.Key, fromPlugin = c.Value().FromPlugin, typeName = c.Value().TypeName, displayName = PluginManager.GetLocalizationItem("DisplayName_TextStyle_" + c.Key, c.Key) });    
+        return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.TextClipStyleProvider).Select(c => c.Value()).Select(c => new { id = c.TypeName, fromPlugin = c.FromPlugin, typeName = c.TypeName, displayName = PluginManager.GetLocalizationItem("DisplayName_TextStyle_" + c.TypeName, c.TypeName), settableFields = c.SettableFields });    
     }
 
-    public static IEnumerable<AssetItem> GetAllAvailableAssets(DraftPage? page, bool includeDraftWide, bool includeGlobal, bool includeRemote)
+    public static IEnumerable<AssetItem> GetAllAvailableAssets(DraftPage? page, bool includeDraftWide, bool includeGlobal, bool includeRemote, bool searchWithRegex = false, string filter = "")
     {
         List<AssetItem> assets = new();
         if (includeDraftWide && page is not null) assets.AddRange(page.Assets.Values);
         if (includeGlobal) assets.AddRange(Asset.AssetDatabase.Assets.Values);
+        if (!string.IsNullOrEmpty(filter))
+        {
+            if (searchWithRegex)
+            {
+                var rgx = new Regex(filter);
+                assets = assets.Where(a => rgx.IsMatch(a.Name ?? "")).ToList();
+            }
+            else
+            {
+                assets = assets.Where(a => a.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+        }
         return assets;
     }
 
@@ -159,67 +173,228 @@ public static class TimelineMcpLiveService
         }
     }
 
-    internal static async Task AddAText(DraftPage page, string styleId, string text, int startPosition, int track)
+    internal static ITextClipStyleProvider? ResolveTextStyleProvider(string styleId)
     {
         var pvd = PluginManager.LoadedPlugins.Values
             .OfType<IApplicationPluginBase>()
             .SelectMany(c => c.TextClipStyleProvider)
             .FirstOrDefault(C => C.Key == styleId);
-        if (pvd.Value?.Invoke() is ITextClipStyleProvider providerItem)
-        {
-            var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
-            provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
-            provider.BasicText = text;
+        return pvd.Value?.Invoke();
+    }
 
-            var entries = provider.BuildEntries();
-            var textLang = TextHelper.DetectTextLanguage(text);
-            if (textLang != TextLanguage.English)
+    internal static void ApplyTextStyleFields(ITextClipStyleProvider provider, Dictionary<string, object>? fields, List<string>? resultLog = null)
+    {
+        if (fields is null || fields.Count == 0) return;
+        if (provider.SettableFields is null || provider.SettableFields.Count == 0) return;
+
+        foreach (var kv in fields)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Key)) continue;
+            if (!provider.SettableFields.TryGetValue(kv.Key, out var fieldDef))
             {
-                var fontOverride = textLang switch
-                {
-                    TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
-                    TextLanguage.Japanese => "Noto Sans JP Regular",
-                    TextLanguage.Korean => "Noto Sans KR Regular",
-                    TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
-                    _ => "Noto Sans"
-                };
-                entries = entries
-                    .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
-                    .ToArray();
+                resultLog?.Add($"Warning: Field '{kv.Key}' not found on text style '{provider.TypeName}'. Available: {string.Join(", ", provider.SettableFields.Keys)}");
+                continue;
             }
 
-            // 必须在 UI 线程上创建和添加 Clip，CreateAndAddClip 内部已调用 RegisterClip + AddAClip
-            ClipElementUI? element = null;
-            await page.Dispatcher.DispatchAsync(() =>
+            if (provider.HandleSettableFieldsChange(fieldDef, kv.Value, out var feedback))
             {
-                element = page.CreateAndAddClip(
-                    startX: startPosition,
-                    width: page.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
-                    trackIndex: track,
-                    id: null,
-                    labelText: text,
-                    background: new SolidColorBrush(Colors.MediumPurple),
-                    resolveOverlap: true,
-                    relativeStart: 0,
-                    maxFrames: 0
-                );
-
-                element.ClipType = ClipMode.TextClip;
-                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                element.isInfiniteLength = true;
-                element.maxFrameCount = 0;
-                element.ExtraData = new();
-                element.ExtraData["TextEntries"] = entries.ToList();
-                element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
-                element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
-                element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
-            });
+                resultLog?.Add($"{kv.Key} = {kv.Value}");
+            }
+            else
+            {
+                resultLog?.Add($"Warning: Failed to set field '{kv.Key}' on text style '{provider.TypeName}': {feedback}");
+            }
         }
-        else
+    }
+
+    internal static TextEntry[] BuildTextEntriesWithFontFallback(ITextClipStyleProvider provider)
+    {
+        var entries = provider.BuildEntries();
+        var textLang = TextHelper.DetectTextLanguage(provider.BasicText);
+        if (textLang == TextLanguage.English) return entries;
+
+        var fontOverride = textLang switch
+        {
+            TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
+            TextLanguage.Japanese => "Noto Sans JP Regular",
+            TextLanguage.Korean => "Noto Sans KR Regular",
+            TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
+            _ => "Noto Sans"
+        };
+        return entries
+            .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
+            .ToArray();
+    }
+
+    internal static async Task AddAText(DraftPage page, string styleId, string text, int startPosition, int track)
+    {
+        await AddAText(page, styleId, text, startPosition, track, null);
+    }
+
+    internal static async Task AddAText(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields)
+    {
+        var providerItem = ResolveTextStyleProvider(styleId);
+        if (providerItem is null)
         {
             throw new KeyNotFoundException($"Cannot find text style provider with id {styleId}.");
         }
 
+        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
+        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        provider.BasicText = text;
+
+        ApplyTextStyleFields(provider, fields);
+
+        var entries = BuildTextEntriesWithFontFallback(provider);
+
+        // 必须在 UI 线程上创建和添加 Clip，CreateAndAddClip 内部已调用 RegisterClip + AddAClip
+        ClipElementUI? element = null;
+        await page.Dispatcher.DispatchAsync(() =>
+        {
+            element = page.CreateAndAddClip(
+                startX: startPosition,
+                width: page.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
+                trackIndex: track,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
+            element.ExtraData["TextEntries"] = entries.ToList();
+            element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
+            element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
+            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+        });
+    }
+
+    /// <summary>
+    /// 同步创建并添加文本 Clip。调用方必须已在 UI 线程上。
+    /// </summary>
+    internal static ClipElementUI AddTextClipToPage(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields = null)
+    {
+        var providerItem = ResolveTextStyleProvider(styleId);
+        if (providerItem is null)
+        {
+            throw new KeyNotFoundException($"Cannot find text style provider with id {styleId}.");
+        }
+
+        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
+        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        provider.BasicText = text;
+
+        ApplyTextStyleFields(provider, fields);
+
+        var entries = BuildTextEntriesWithFontFallback(provider);
+
+        var element = page.CreateAndAddClip(
+            startX: startPosition,
+            width: page.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
+            trackIndex: track,
+            id: null,
+            labelText: text,
+            background: new SolidColorBrush(Colors.MediumPurple),
+            resolveOverlap: true,
+            relativeStart: 0,
+            maxFrames: 0
+        );
+
+        element.ClipType = ClipMode.TextClip;
+        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+        element.isInfiniteLength = true;
+        element.maxFrameCount = 0;
+        element.ExtraData = new();
+        element.ExtraData["TextEntries"] = entries.ToList();
+        element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
+        element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
+        element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+
+        return element;
+    }
+
+    internal static ITextClipStyleProvider? RestoreTextStyleProviderFromClip(ClipElementUI clip)
+    {
+        if (clip.ExtraData is null) return null;
+
+        string? ReadStringValue(object? raw)
+        {
+            if (raw is string s) return s;
+            if (raw is JsonElement elem && elem.ValueKind == JsonValueKind.String) return elem.GetString();
+            return raw?.ToString();
+        }
+
+        Dictionary<string, string>? ReadParameters(object? raw)
+        {
+            if (raw is Dictionary<string, string> dict) return new Dictionary<string, string>(dict);
+            if (raw is Dictionary<string, object> objDict)
+                return objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty);
+            if (raw is JsonElement elem)
+            {
+                try { return JsonSerializer.Deserialize<Dictionary<string, string>>(elem); }
+                catch { return null; }
+            }
+            if (raw is string json && !string.IsNullOrWhiteSpace(json))
+            {
+                try { return JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
+                catch { return null; }
+            }
+            return null;
+        }
+
+        var fromPlugin = clip.ExtraData.TryGetValue("TextStyleProvider_FromPlugin", out var fromObj) ? ReadStringValue(fromObj) : null;
+        var typeName = clip.ExtraData.TryGetValue("TextStyleProvider_TypeName", out var typeObj) ? ReadStringValue(typeObj) : null;
+        var parameters = clip.ExtraData.TryGetValue("TextStyleProvider_Parameters", out var paramsObj) ? ReadParameters(paramsObj) : null;
+
+        if (string.IsNullOrWhiteSpace(fromPlugin) || string.IsNullOrWhiteSpace(typeName))
+            return null;
+
+        var provider = TextStyleServices.RestoreTextStyleProvider(fromPlugin, typeName, parameters);
+        if (provider is null) return null;
+        if (parameters is not null)
+            provider.Parameters = new Dictionary<string, string>(parameters);
+
+        return provider;
+    }
+
+    internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields)
+    {
+        if (!page.Clips.TryGetValue(clipId, out var clip))
+        {
+            throw new KeyNotFoundException($"Clip '{clipId}' not found.");
+        }
+
+        if (clip.ClipType != ClipMode.TextClip)
+        {
+            throw new InvalidOperationException($"Clip '{clipId}' is not a text clip.");
+        }
+
+        var provider = RestoreTextStyleProviderFromClip(clip);
+        if (provider is null)
+        {
+            throw new InvalidOperationException($"Clip '{clipId}' does not have a restorable text style provider.");
+        }
+
+        var resultLog = new List<string>();
+        ApplyTextStyleFields(provider, fields, resultLog);
+
+        var entries = BuildTextEntriesWithFontFallback(provider);
+
+        clip.ExtraData ??= new Dictionary<string, object>();
+        clip.ExtraData["TextEntries"] = entries.ToList();
+        clip.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+        clip.IsMoveable = true;
+        clip.IsHorizontalResizable = provider.IsHorizontalResizable;
+        clip.IsVerticalResizable = provider.IsVerticalResizable;
+        clip.CanSnapWhileResizing = provider.CanSnapWhileResizing;
+
+        return resultLog;
     }
 
     public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame)

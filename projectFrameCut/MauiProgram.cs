@@ -72,6 +72,7 @@ namespace projectFrameCut
             "My Drafts",
             "My Assets",
             "My Templates",
+            "My Skills",
             "RenderCache",
 #if WINDOWS
             "My Assets\\.database",

@@ -1247,6 +1247,7 @@ public partial class TestPage : ContentPage
     PowerShell? pwsh = null!;
     private void ExecteCommandButton_Clicked(object sender, EventArgs e)
     {
+#if DEBUG
         pwsh ??= PowerShell.Create();
         if (!string.IsNullOrWhiteSpace(ScriptInputEntry.Text))
         {
@@ -1262,6 +1263,10 @@ public partial class TestPage : ContentPage
                 ScriptOutputEditor.Text += $"{Environment.NewLine}Error: {ex}{Environment.NewLine}";
             }
         }
+#else
+        ScriptOutputEditor.Text += $"This is a development stage only feature.";
+
+#endif
     }
     private void InvokeNativeFuncButton_Clicked(object sender, EventArgs e)
     {
@@ -1415,7 +1420,7 @@ public partial class TestPage : ContentPage
         /// </summary>
         Local7 = (23 << 3),
     }
-    #endregion
+#endregion
 
     #region misc
 

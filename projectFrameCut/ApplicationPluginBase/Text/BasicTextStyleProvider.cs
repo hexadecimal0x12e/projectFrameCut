@@ -1,6 +1,7 @@
 using Microsoft.Maui.Graphics;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -123,6 +124,70 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
+        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        {
+            get
+            {
+                var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
+                return new Dictionary<string, EffectBundleSettableFields>
+                {
+                    [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Text", "Text content", DefaultText),
+                    [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used to render the text", "HarmonyOS Sans SC Medium", fontNames),
+                    [SizeKey] = TextStyleProviderSettableFieldHelper.NumericField(SizeKey, "Font Size", "Font size in canvas pixels", DefaultFontSize, 1f),
+                    [ColorKey] = TextStyleProviderSettableFieldHelper.ColorField(ColorKey, "Text Color", "Text fill color", "#FFFFFF"),
+                    [FontStyleKey] = TextStyleProviderSettableFieldHelper.EnumField(FontStyleKey, "Font Style", "Font weight and slant", ClipFontStyle.Regular.ToString(), Enum.GetNames<ClipFontStyle>()),
+                    [HorizontalAlignmentKey] = TextStyleProviderSettableFieldHelper.EnumField(HorizontalAlignmentKey, "Horizontal Alignment", "Horizontal text alignment", ClipHorizontalAlignment.Left.ToString(), Enum.GetNames<ClipHorizontalAlignment>()),
+                    [VerticalAlignmentKey] = TextStyleProviderSettableFieldHelper.EnumField(VerticalAlignmentKey, "Vertical Alignment", "Vertical text alignment", ClipVerticalAlignment.Top.ToString(), Enum.GetNames<ClipVerticalAlignment>()),
+                    [LayoutModeKey] = TextStyleProviderSettableFieldHelper.EnumField(LayoutModeKey, "Layout Mode", "How text is sized relative to the clip", TextClipLayoutMode.FillClip.ToString(), GetSettableLayoutModes()),
+                    [WrappingWidthKey] = TextStyleProviderSettableFieldHelper.NumericField(WrappingWidthKey, "Wrapping Width", "Optional text wrapping width in canvas pixels", null, 1f, mandatory: false),
+                    [ApplyKerningKey] = TextStyleProviderSettableFieldHelper.BooleanField(ApplyKerningKey, "Apply Kerning", "Apply font kerning", true),
+                    [LineSpacingKey] = TextStyleProviderSettableFieldHelper.NumericField(LineSpacingKey, "Line Spacing", "Line spacing multiplier", 1f),
+                    [RotationKey] = TextStyleProviderSettableFieldHelper.NumericField(RotationKey, "Rotation", "Text rotation in degrees", 0f),
+                    [StrokeWidthKey] = TextStyleProviderSettableFieldHelper.NumericField(StrokeWidthKey, "Stroke Width", "Optional text stroke width", null, 0f, mandatory: false),
+                    [StrokeColorKey] = TextStyleProviderSettableFieldHelper.ColorField(StrokeColorKey, "Stroke Color", "Text stroke color", "#000000"),
+                    [DpiKey] = TextStyleProviderSettableFieldHelper.NumericField(DpiKey, "DPI", "Optional text rendering DPI", null, 1f, mandatory: false),
+                    [UseVerticalLayoutKey] = TextStyleProviderSettableFieldHelper.BooleanField(UseVerticalLayoutKey, "Use Vertical Layout", "Lay out text vertically", false),
+                    [KeepNonCJKTextAsHorizontalKey] = TextStyleProviderSettableFieldHelper.BooleanField(KeepNonCJKTextAsHorizontalKey, "Keep Non-CJK Text Horizontal", "Keep non-CJK runs horizontal in vertical layout", false)
+                };
+            }
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
+            {
+                feedback = field is null
+                    ? "Field definition is null."
+                    : $"Unknown settable field '{field.Id}' for text style '{TypeName}'.";
+                return false;
+            }
+
+            if (!TextStyleProviderSettableFieldHelper.TryNormalizeValue(
+                canonicalField, value, out var normalizedValue, out feedback))
+            {
+                return false;
+            }
+
+            if (canonicalField.Id == LayoutModeKey)
+            {
+                LayoutMode = Enum.Parse<TextClipLayoutMode>((string)normalizedValue);
+            }
+            else
+            {
+                HandlePropertyPanelChange(new PropertyPanelPropertyChangedEventArgs(
+                    canonicalField.Id, normalizedValue, null));
+            }
+
+            feedback = "";
+            return true;
+        }
+
+        private static string[] GetSettableLayoutModes() =>
+        [
+            TextClipLayoutMode.FillClip.ToString(),
+            TextClipLayoutMode.FixedWidth.ToString(),
+            TextClipLayoutMode.FixedSize.ToString()
+        ];
 
         /// <summary>
         /// Build TextEntry array. FontSize/X/Y/StrokeThickness are stored in pixel space

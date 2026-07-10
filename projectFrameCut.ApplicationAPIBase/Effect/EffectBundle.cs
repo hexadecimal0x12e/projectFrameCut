@@ -331,6 +331,16 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
             Position = 1 << 10,
 
             /// <summary>
+            /// A field that represents both size and position, which is a combination of <see cref="Size"/> and <see cref="Position"/>.
+            /// </summary>
+            /// <remarks>
+            /// Results parsed in <see cref="IEffectBundle.HandleSettableFieldsChange"/> should be a <see cref="Shared.ClipPositionTuple"/>.
+            /// <br />
+            /// All fields except <see cref="Shared.ClipPositionTuple.IsDelta"/> of <see cref="Shared.ClipPositionTuple"/> are used to present the size and position of the effect.
+            /// </remarks>
+            SizeAndPosition = Size | Position,
+
+            /// <summary>
             /// Indicate that the field is a mandatory field, which means it must be set before the effect can be applied.
             /// </summary>
             Mandatory = 1 << 16,

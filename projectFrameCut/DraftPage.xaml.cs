@@ -406,35 +406,46 @@ public partial class DraftPage : ContentPage, IDraftPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
-        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-        ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
-        ClipEditor.SetAssets(Assets);
-        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
-        ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
-        ClipEditor.ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync);
-        ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
-        ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
-        ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
-        ClipEditor.ConfigureReferenceLinesChanged(() =>
-        {
-            ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
-            SetStateOK(Localized.DraftPage_EverythingFine);
-            return Task.CompletedTask;
-        });
-        ClipEditor.ConfigureManageReferenceLinesRequested(() =>
-        {
-            ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
-        });
-        ClipEditor.ConfigureDefaultColorPickerRequested((currentColor) =>
-        {
-            _ = ShowReferenceLineColorPicker(currentColor);
-        });
+        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
+        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync)
+                  .ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync)
+                  .ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync)
+                  .ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync)
+                  .ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured)
+                  .ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback)
+                  .ConfigureReferenceLinesChanged(() =>
+                  {
+                      ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
+                      SetStateOK(Localized.DraftPage_EverythingFine);
+                      return Task.CompletedTask;
+                  })
+                 .ConfigureManageReferenceLinesRequested(() =>
+                  {
+                      ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
+                  })
+                  .ConfigureDefaultColorPickerRequested((currentColor) =>
+                  {
+                      _ = ShowReferenceLineColorPicker(currentColor);
+                  })
+                  .SetAssets(Assets);
+
+        ApplyClipEditorPreviewOverlayMode();
         HookPreviewSurfaceSizeSync();
+
+
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
 #endif
+
+        Clips = clips;
+        Assets = assets ?? new();
+        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+        trackCount = initialTrackCount;
+        ProjectInfo.ProjectName ??= title;
+        IsReadonly = isReadonly;
+
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
         ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir, ProjectName);
@@ -443,12 +454,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
-        Clips = clips;
-        Assets = assets ?? new();
-        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
-        NormalizeLoadedClipFrameSemantics();
 
-        trackCount = initialTrackCount;
         var maxMainTrack = Clips.Values.Where(c => c.origTrack < SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(0).Max();
         for (int i = 0; i <= maxMainTrack; i++)
         {
@@ -462,8 +468,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 AddASubTrack(i);
             }
         }
-
-
         foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
         {
             var item = kv.Value;
@@ -472,9 +476,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             AddAClip(item);
             RegisterClip(item, true);
         }
-
-        ProjectInfo.ProjectName ??= title;
-        IsReadonly = isReadonly;
+        NormalizeLoadedClipFrameSemantics();
 
         ScriptEngine.Initialize(this,
             CreatePowerShellAuthorizationHandler(this),
@@ -1311,7 +1313,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             element.ClipType = sourceElement.ClipType;
             element.FromPlugin = sourceElement.FromPlugin;
-            //element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
             element.SourcePath = sourceElement.SourcePath;
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
@@ -5709,37 +5710,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             TextColor = Color.FromArgb("#888888"),
         };
 
-        runButton.Clicked += async (_, _) =>
-        {
-            var script = inputEditor.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(script))
-            {
-                statusLabel.Text = "Please enter a command.";
-                return;
-            }
-
-            runButton.IsEnabled = false;
-            statusLabel.Text = "Running…";
-            statusLabel.TextColor = Color.FromArgb("#888888");
-            outputEditor.Text = "";
-            try
-            {
-                var result = await ScriptEngine.ExecuteAsync(script);
-                outputEditor.Text = result;
-                statusLabel.Text = $"Completed ({result.Length} chars)";
-                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
-            }
-            catch (Exception ex)
-            {
-                outputEditor.Text = $"ERROR: {ex.Message}";
-                statusLabel.Text = "Failed";
-                statusLabel.TextColor = Colors.OrangeRed;
-            }
-            finally
-            {
-                runButton.IsEnabled = true;
-            }
-        };
 
         clearButton.Clicked += (_, _) =>
         {
@@ -5780,16 +5750,155 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var cmdBar = new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal };
 
+        // ════════════════════════════════════════════════════════════════
+        //  授权面板（内联在 Script Console 窗口内，基于事件驱动）
+        //  通过 TaskCompletionSource 实现完全非阻塞授权。
+        // ════════════════════════════════════════════════════════════════
+        var authMessageLabel = new Label
+        {
+            FontSize = 12,
+            TextColor = Colors.White,
+            LineBreakMode = LineBreakMode.WordWrap,
+        };
+
+        // 当前待处理的授权请求
+        TaskCompletionSource<Dictionary<string, AuthorizationResult>>? pendingAuthTcs = null;
+        IReadOnlyList<string>? pendingCmdNames = null;
+
+        var btnAllow = new Button { Text = "✅ 允许全部", BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnAllowRemember = new Button { Text = "✅ 允许并记住", BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDeny = new Button { Text = "❌ 拒绝全部", BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDenyRemember = new Button { Text = "❌ 拒绝并记住", BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+
+        var authPanel = new Border
+        {
+            IsVisible = false,
+            BackgroundColor = Color.FromArgb("#252526"),
+            Stroke = Color.FromArgb("#555555"),
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+            Padding = new Thickness(12, 10),
+            Content = new VerticalStackLayout
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle ?? "⚡ 命令授权请求", FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
+                    new ScrollView { Content = authMessageLabel, MaximumHeightRequest = 150 },
+                    new HorizontalStackLayout
+                    {
+                        Spacing = 8,
+                        HorizontalOptions = LayoutOptions.Center,
+                        Children = { btnAllow, btnAllowRemember, btnDeny, btnDenyRemember },
+                    },
+                }
+            },
+        };
+
+        // ── 订阅授权请求事件（完全非阻塞） ──
+        EventHandler<AuthorizationRequestedEventArgs>? authHandler = null;
+        authHandler = (sender, args) =>
+        {
+            // 构建显示消息
+            var sb = new System.Text.StringBuilder();
+
+            if (!string.IsNullOrEmpty(args.ObfuscationWarning))
+            {
+                sb.AppendLine($"⚠️ 安全警告：{args.ObfuscationWarning}");
+                sb.AppendLine($"威胁级别：{args.ThreatLevel}");
+                sb.AppendLine();
+            }
+
+            if (args.CommandNames.Count > 0)
+            {
+                sb.AppendLine("以下命令需要授权：");
+                for (int i = 0; i < args.CommandNames.Count; i++)
+                {
+                    var name = args.CommandNames[i];
+                    var ctx = args.Commands.Count > i ? args.Commands[i] : null;
+                    sb.Append($"\n  • {name}");
+                    if (ctx?.TargetPath != null) sb.Append($"\n    路径：{ctx.TargetPath}");
+                    if (ctx?.TargetUrl != null) sb.Append($"\n    URL：{ctx.TargetUrl}");
+                }
+            }
+            else
+            {
+                sb.Append("此脚本需要授权确认。");
+            }
+
+            // 更新 UI 并存储 TCS
+            authMessageLabel.Text = sb.ToString();
+            pendingAuthTcs = args.Completion;
+            pendingCmdNames = args.CommandNames;
+            authPanel.IsVisible = true;
+        };
+        ScriptEngine.AuthorizationRequested += authHandler;
+
+        // ── 简化后的 Run 按钮 ──
+        runButton.Clicked += async (_, _) =>
+        {
+            var script = inputEditor.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(script))
+            {
+                statusLabel.Text = "Please enter a command.";
+                return;
+            }
+
+            runButton.IsEnabled = false;
+            statusLabel.Text = "Running…";
+            statusLabel.TextColor = Color.FromArgb("#888888");
+            outputEditor.Text = "";
+
+            try
+            {
+                var result = await ScriptEngine.ExecuteAsync(script);
+                outputEditor.Text = result;
+                statusLabel.Text = $"Completed ({result.Length} chars)";
+                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
+            }
+            catch (Exception ex)
+            {
+                outputEditor.Text = $"ERROR: {ex.Message}";
+                statusLabel.Text = "Failed";
+                statusLabel.TextColor = Colors.OrangeRed;
+            }
+            finally
+            {
+                runButton.IsEnabled = true;
+            }
+        };
+
+        void CompleteAuth(AuthorizationResult decision)
+        {
+            var tcs = pendingAuthTcs;
+            var names = pendingCmdNames;
+            pendingAuthTcs = null;
+            pendingCmdNames = null;
+            if (tcs != null)
+            {
+                var decisions = names?.ToDictionary(c => c, _ => decision)
+                    ?? new Dictionary<string, AuthorizationResult>();
+                tcs.TrySetResult(decisions);
+            }
+            authPanel.IsVisible = false;
+        }
+
+        btnAllow.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Allow);
+        btnAllowRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.AllowAndRemember);
+        btnDeny.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Deny);
+        btnDenyRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.DenyAndRemember);
+
         var windowContent = new Grid
         {
             RowDefinitions =
             {
-                new RowDefinition { Height = GridLength.Auto },
-                new RowDefinition { Height = GridLength.Auto },  // 快速命令
-                new RowDefinition { Height = GridLength.Auto },  // 输入
-                new RowDefinition { Height = GridLength.Auto },  // 按钮
-                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }, // 输出
-                new RowDefinition { Height = GridLength.Auto },  // 状态
+                new RowDefinition { Height = GridLength.Auto },                          // 0: 测试警告
+                new RowDefinition { Height = GridLength.Auto },                          // 1: 快速命令
+                new RowDefinition { Height = GridLength.Auto },                          // 2: 输入
+                new RowDefinition { Height = GridLength.Auto },                          // 3: 按钮
+                new RowDefinition { Height = GridLength.Auto },                          // 4: 授权面板（默认隐藏）
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },     // 5: 输出
+                new RowDefinition { Height = GridLength.Auto },                          // 6: 状态
             },
             Padding = new Thickness(8),
             ColumnDefinitions = { new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) } },
@@ -5800,6 +5909,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 cmdBar,
                 inputEditor,
                 buttonBar,
+                authPanel,
                 outputEditor,
                 statusLabel,
             },
@@ -5808,8 +5918,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         Grid.SetRow(cmdBar, 1);
         Grid.SetRow(inputEditor, 2);
         Grid.SetRow(buttonBar, 3);
-        Grid.SetRow(outputEditor, 4);
-        Grid.SetRow(statusLabel, 5);
+        Grid.SetRow(authPanel, 4);
+        Grid.SetRow(outputEditor, 5);
+        Grid.SetRow(statusLabel, 6);
 
         var window = new MultiWindowItem
         {
@@ -5823,6 +5934,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             IsClosable = true,
             IsDraggable = true,
             IsPopOutVisible = true
+        };
+
+        // ── 窗口关闭时取消订阅事件 ──
+        window.CloseClicked += (_, _) =>
+        {
+            if (authHandler != null)
+                ScriptEngine.AuthorizationRequested -= authHandler;
         };
 
         MainMultiWindowView.AddWindow(window);
@@ -9452,61 +9570,112 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     /// <summary>
+    /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
+    /// </summary>
+    private bool IsChatActive()
+    {
+        return MainMultiWindowView.Children.Contains(AssisstantSubWindow)
+            && AssisstantSubWindow.IsVisible
+            && ChatSessionsView.Current is not null;
+    }
+
+    /// <summary>
     /// 创建增强的 PowerShell 命令授权处理器，显示丰富的命令参数信息。
+    /// 如果有活跃的 AI 聊天窗口，将授权请求路由到聊天界面中，减少弹框打断。
     /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
     /// </summary>
     public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
     {
-        return (context) =>
+        return (context, allowRemember) =>
         {
             var signal = new ManualResetEventSlim(false);
             var result = AuthorizationResult.Deny;
 
-            MainThread.BeginInvokeOnMainThread(async () =>
+            // ════════════════════════════════════════════════════════════════
+            //  路由到聊天界面：如果有活跃的 AI 聊天窗口
+            // ════════════════════════════════════════════════════════════════
+            if (page is DraftPage draftPage && draftPage.IsChatActive())
             {
-                try
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    // 构建详细消息
-                    var message = BuildDetailedAuthMessage(context);
-
-                    // 第一层：询问是否允许执行此命令
-                    var allowed = await page.DisplayAlertAsync(
-                        "PowerShell 命令授权",
-                        message,
-                        "允许", "拒绝");
-
-                    if (allowed)
+                    try
                     {
-                        var remember = await page.DisplayAlertAsync(
-                            "记住决策",
-                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
-                            "记住并允许", "仅本次允许");
-                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                        var chatTask = draftPage.ChatSessionsView.Current!
+                            .ShowAuthorizationRequestAsync(context, allowRemember);
+
+                        // 用户点击按钮后，在后台线程完成对 ManualResetEvent 的信号通知
+                        chatTask.ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                                result = t.Result;
+                            signal.Set();
+                        }, TaskScheduler.Default);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        var remember = await page.DisplayAlertAsync(
-                            "记住决策",
-                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
-                            "记住并拒绝", "仅本次拒绝");
-                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                        Logger.Log(ex, "PowerShell chat authorization");
+                        signal.Set(); // 防止超时，使用默认 Deny
                     }
-                }
-                catch (Exception ex)
+                });
+
+                // 聊天界面不阻塞 UI，给予用户充分的决策时间（5 分钟）
+                if (!signal.Wait(TimeSpan.FromSeconds(300)))
                 {
-                    Logger.Log(ex, "PowerShell enhanced authorization");
+                    Logger.Log("PowerShell chat authorization timed out after 300s");
                     result = AuthorizationResult.Deny;
                 }
-                finally
-                {
-                    signal.Set();
-                }
-            });
-
-            if (!signal.Wait(TimeSpan.FromSeconds(30)))
+            }
+            else
             {
-                Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
-                result = AuthorizationResult.Deny;
+                // ════════════════════════════════════════════════════════════════
+                //  传统对话框方式（聊天窗口不可用时）
+                // ════════════════════════════════════════════════════════════════
+                MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    try
+                    {
+                        // 构建详细消息
+                        var message = BuildDetailedAuthMessage(context);
+
+                        // 第一层：询问是否允许执行此命令
+                        var allowed = await page.DisplayAlertAsync(
+                            Localized.ScriptEngine_Auth_DialogTitle,
+                            message,
+                            Localized._Confirm, Localized._Cancel);
+
+                        if (allowed)
+                        {
+                            var remember = allowRemember && await page.DisplayAlertAsync(
+                                Localized._Info,
+                                Localized.ScriptEngine_Auth_SureRemember,
+                                Localized.ScriptEngine_Auth_RememberAllow_Yes, Localized.ScriptEngine_Auth_RememberAllow_No);
+                            result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                        }
+                        else
+                        {
+                            var remember = allowRemember && await page.DisplayAlertAsync(
+                                Localized._Info,
+                                Localized.ScriptEngine_Auth_SureRemember,
+                                Localized.ScriptEngine_Auth_RememberDeny_Yes, Localized.ScriptEngine_Auth_RememberDeny_No);
+                            result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex, "PowerShell enhanced authorization");
+                        result = AuthorizationResult.Deny;
+                    }
+                    finally
+                    {
+                        signal.Set();
+                    }
+                });
+
+                if (!signal.Wait(TimeSpan.FromSeconds(30)))
+                {
+                    Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
+                    result = AuthorizationResult.Deny;
+                }
             }
 
             return result;
@@ -9519,13 +9688,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"命令：{ctx.CommandInfo.Name}");
-        sb.AppendLine($"来源：{ctx.CommandOrigin}");
+        if (!string.IsNullOrWhiteSpace(ctx.CommandInfo?.Name)) sb.AppendLine($"命令：{ctx.CommandInfo.Name}").AppendLine();
 
         // 文件路径信息
         if (!string.IsNullOrEmpty(ctx.TargetPath))
         {
-            sb.AppendLine();
             sb.AppendLine($"目标路径：{ctx.TargetPath}");
             sb.AppendLine($"路径状态：{ctx.PathSafetyStatus switch
             {
@@ -9546,22 +9713,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         // URL 信息
         if (!string.IsNullOrEmpty(ctx.TargetUrl))
         {
-            sb.AppendLine();
-            sb.AppendLine($"目标 URL：🌐 {ctx.TargetUrl}");
-            sb.AppendLine("该命令将发起网络请求，请确认目标地址可信。");
+            sb.AppendLine($"""
+                           🌐 目标 URL：{ctx.TargetUrl}
+                           ⚠️ 该命令将发起网络请求，并且可能造成信息外泄或者资源变动风险。
+                           ⚠️ 请确认目标地址可信。
+                           """);
         }
 
         // 混淆警告
         if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
         {
-            sb.AppendLine();
-            sb.AppendLine($"⚠️ 安全警告：{ctx.ObfuscationWarning}");
-        }
-
-        if (ctx.ThreatLevel >= ThreatLevel.Medium)
-        {
-            sb.AppendLine();
-            sb.AppendLine("⚠️ 该命令包含可疑模式，请确认操作来源可信。");
+            sb.AppendLine($"""
+                           ⚠️ 安全警告：{ctx.ObfuscationWarning}
+                           ⚠️ 该命令包含可疑模式 (等级 {ctx.ThreatLevel})，请确认操作来源可信。
+                           """);
         }
 
         sb.AppendLine();

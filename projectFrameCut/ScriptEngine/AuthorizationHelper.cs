@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Host;
 using System.Text;
+using System.Text.RegularExpressions;
+using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
+using LocalizedResources;
 
 namespace projectFrameCut.ScriptEngine
 {
@@ -67,7 +71,47 @@ namespace projectFrameCut.ScriptEngine
     /// </summary>
     /// <param name="context">包含命令详细参数和安全分析结果的上下文。</param>
     /// <returns>授权决策结果。</returns>
-    public delegate AuthorizationResult EnhancedAuthorizationCallback(AuthorizationContext context);
+    public delegate AuthorizationResult EnhancedAuthorizationCallback(AuthorizationContext context, bool allowRemember = true);
+
+    /// <summary>
+    /// 授权请求事件参数。宿主通过订阅 <see cref="ScriptCore.AuthorizationRequested"/>
+    /// 事件来处理授权请求，并通过 <see cref="Completion"/> TCS 异步返回决策结果。
+    /// </summary>
+    public class AuthorizationRequestedEventArgs : EventArgs
+    {
+        /// <summary>需要授权的命令上下文列表。</summary>
+        public IReadOnlyList<AuthorizationContext> Commands { get; }
+
+        /// <summary>与 <see cref="Commands"/> 对应的命令名称列表。</summary>
+        public IReadOnlyList<string> CommandNames { get; }
+
+        /// <summary>脚本混淆警告（如有）。</summary>
+        public string? ObfuscationWarning { get; }
+
+        /// <summary>脚本威胁级别（如有）。</summary>
+        public ThreatLevel? ThreatLevel { get; }
+
+        /// <summary>
+        /// 宿主完成决策后设置此 TCS 的结果。
+        /// Key 为命令名称，Value 为授权决策。
+        /// 若用户取消执行可返回 null 或空字典。
+        /// </summary>
+        public TaskCompletionSource<Dictionary<string, AuthorizationResult>> Completion { get; }
+
+        public AuthorizationRequestedEventArgs(
+            IReadOnlyList<AuthorizationContext> commands,
+            IReadOnlyList<string> commandNames,
+            string? obfuscationWarning,
+            ThreatLevel? threatLevel,
+            TaskCompletionSource<Dictionary<string, AuthorizationResult>> completion)
+        {
+            Commands = commands;
+            CommandNames = commandNames;
+            ObfuscationWarning = obfuscationWarning;
+            ThreatLevel = threatLevel;
+            Completion = completion;
+        }
+    }
 
     /// <summary>
     /// 自定义 PowerShell 授权管理器，实现三层检测：
@@ -103,10 +147,17 @@ namespace projectFrameCut.ScriptEngine
         /// </summary>
         private readonly Dictionary<string, bool> _sessionCache = new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// 预授权缓存（当次脚本执行期间的预计算决策）。
+        /// 由 <see cref="ScriptCore.PreAuthorizeScriptAsync"/> 填充，脚本执行完毕后清空。
+        /// Key 为命令名，Value 为授权决策。
+        /// </summary>
+        private readonly Dictionary<string, AuthorizationResult> _preAuthCache = new(StringComparer.OrdinalIgnoreCase);
+
         // ====================================================================
         // 高危命令 —— 直接拦截，不问用户
         // ====================================================================
-        private static readonly HashSet<string> AlwaysDenyCommands = new(StringComparer.OrdinalIgnoreCase)
+        internal static readonly HashSet<string> AlwaysDenyCommands = new(StringComparer.OrdinalIgnoreCase)
         {
             // ---- 代码执行 / 注入 ----
             "Invoke-Expression", "iex",
@@ -165,7 +216,7 @@ namespace projectFrameCut.ScriptEngine
         // ====================================================================
         // 安全命令 —— 默认放行
         // ====================================================================
-        private static readonly HashSet<string> AlwaysAllowCommands = new(StringComparer.OrdinalIgnoreCase)
+        internal static readonly HashSet<string> AlwaysAllowCommands = new(StringComparer.OrdinalIgnoreCase)
         {
             // ---- 项目自有 cmdlet（允许所有 project-* 前缀） ----
             // 以下在检查时按前缀匹配，不在 HashSet 中逐条列出
@@ -237,7 +288,7 @@ namespace projectFrameCut.ScriptEngine
         // ====================================================================
         // 可能危害命令 —— 需要询问用户
         // ====================================================================
-        private static readonly HashSet<string> PromptUserCommands = new(StringComparer.OrdinalIgnoreCase)
+        internal static readonly HashSet<string> PromptUserCommands = new(StringComparer.OrdinalIgnoreCase)
         {
             // ---- 文件写入 / 创建 ----
             "Set-Content", "sc",
@@ -315,26 +366,61 @@ namespace projectFrameCut.ScriptEngine
         public PSCommandAuthorizationHelper(string shellId) : base(shellId) { }
 
         /// <summary>
-        /// 判断命令是否属于项目自定义 cmdlet（以其前缀识别）。
-        /// </summary>
-        private static bool IsProjectCmdlet(string commandName)
-        {
-            return commandName.StartsWith("Get-Project", StringComparison.OrdinalIgnoreCase)
-                || commandName.StartsWith("Add-Project", StringComparison.OrdinalIgnoreCase)
-                || commandName.StartsWith("Set-Project", StringComparison.OrdinalIgnoreCase)
-                || commandName.StartsWith("Remove-Project", StringComparison.OrdinalIgnoreCase)
-                || commandName.StartsWith("Copy-Project", StringComparison.OrdinalIgnoreCase)
-                || commandName.Equals("Get-EffectBundleTypes", StringComparison.OrdinalIgnoreCase)
-                || commandName.Equals("Get-EffectBundleField", StringComparison.OrdinalIgnoreCase)
-                || commandName.Equals("Get-EnvironmentInfo", StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
         /// 清除会话记忆缓存（例如当用户切换项目时可调用）。
         /// </summary>
         public void ClearSessionCache()
         {
             _sessionCache.Clear();
+        }
+
+        /// <summary>
+        /// 设置预授权缓存（由 PreAuthorizeScriptAsync 预计算填充）。
+        /// </summary>
+        public void SetPreAuthCache(string commandName, AuthorizationResult result)
+        {
+            _preAuthCache[commandName] = result;
+        }
+
+        /// <summary>
+        /// 清除预授权缓存（脚本执行完毕后调用）。
+        /// </summary>
+        public void ClearPreAuthCache()
+        {
+            _preAuthCache.Clear();
+        }
+
+        /// <summary>
+        /// 判断指定命令是否需要用户授权确认（用于预授权阶段筛选需要展示给用户的命令）。
+        /// </summary>
+        internal static bool RequiresUserAuthorization(string commandName, CommandParameterInfo? paramInfo = null)
+        {
+            if (string.IsNullOrWhiteSpace(commandName)) return false;
+
+            // 始终允许的 → 不需要
+            if (AlwaysAllowCommands.Contains(commandName)) return false;
+
+            // 始终拒绝的 → 不需要询问（直接拒绝）
+            if (AlwaysDenyCommands.Contains(commandName)) return false;
+
+            // 项目自有 cmdlet → 不需要
+            if (ScriptCore.InternalCmdlets.Any(c =>
+                c.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            // PromptUser 命令 → 需要
+            if (PromptUserCommands.Contains(commandName)) return true;
+
+            // 有路径风险或 URL → 需要
+            if (paramInfo != null)
+            {
+                bool hasPathRisk = paramInfo.TargetPath != null
+                    && (paramInfo.PathSafetyStatus == PathSafety.OutsideProject
+                        || paramInfo.PathSafetyStatus == PathSafety.PathTraversal);
+                if (hasPathRisk || paramInfo.TargetUrl != null) return true;
+            }
+
+            // 未知命令默认不授权询问（由 ShouldRun 兜底拒绝）
+            return false;
         }
 
         protected override bool ShouldRun(CommandInfo commandInfo, CommandOrigin commandOrigin, PSHost host, out Exception reason)
@@ -356,6 +442,58 @@ namespace projectFrameCut.ScriptEngine
                 }
             }
 
+            // ---- 0. 用户自定义安全策略检查 ----
+
+            // 0a. DisallowCommand：检查命令是否在用户禁止列表中
+            string disallowRaw = SettingsManager.GetSetting("Security_Script_DisallowCommand", "");
+            if (!string.IsNullOrEmpty(disallowRaw))
+            {
+                var disallowedCommands = disallowRaw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (disallowedCommands.Any(d => string.Equals(d, cmdName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    reason = new NotAllowedCommandException(
+                        NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
+                        Localized.ScriptEngine_Auth_DisallowCmd(cmdName));
+                    return false;
+                }
+                foreach (var item in disallowedCommands.Where(c => c.Contains('\\')))
+                {
+                    try
+                    {
+                        var regex = new Regex(item, RegexOptions.IgnoreCase);
+                        if (regex.IsMatch(cmdName))
+                        {
+                            reason = new NotAllowedCommandException(
+                                NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
+                                Localized.ScriptEngine_Auth_DisallowCmdWithPattern(cmdName, item));
+                            return false;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        reason = new NotAllowedCommandException(
+                            NotAllowedCommandException.DeniedReason.CannotParseCommand,
+                            Localized.ScriptEngine_Auth_RegexParseError(item, cmdName, ex.Message));
+                        return false;
+                    }
+                }
+            }
+
+            // 0b. AllowInternet：禁止网络请求命令
+            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowInternet", true)
+                && (string.Equals(cmdName, "Invoke-WebRequest", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "iwr", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Invoke-RestMethod", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "irm", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "curl", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "wget", StringComparison.OrdinalIgnoreCase)))
+            {
+                reason = new NotAllowedCommandException(
+                    NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
+                    Localized.ScriptEngine_Auth_InternetDisabled(cmdName));
+                return false;
+            }
+
             // ---- 1. 审计日志 ----
             if (AuditMode)
             {
@@ -366,6 +504,13 @@ namespace projectFrameCut.ScriptEngine
             // ---- 2. 项目自有 cmdlet 始终放行 ----
             if (commandInfo is CmdletInfo clt && ScriptCore.InternalCmdlets.Any(c => c.ImplementingType == clt.ImplementingType))
             {
+                if(!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowModifyProject", true) && clt.Verb.ToLower() is "set" or "remove" or "copy")
+                {
+                    reason = new NotAllowedCommandException(
+                        NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
+                        Localized.ScriptEngine_Auth_ModifyProjectCmdletDisabled(cmdName));
+                    return false;
+                }
                 return true;
             }
 
@@ -376,26 +521,74 @@ namespace projectFrameCut.ScriptEngine
                 {
                     reason = new NotAllowedCommandException(
                         NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
-                        $"命令 '{cmdName}' 之前已被用户拒绝。如需重新授权，请重新打开项目或重启应用。");
+                        Localized.ScriptEngine_Auth_UserPreviouslyRejected(cmdName));
                     return false;
                 }
                 return true;
             }
 
+            // ---- 3.5 用户自定义豁免：AllowRemove ----
+            // Remove-Item 默认被 AlwaysDenyCommands 禁止，当用户显式启用时豁免
+            bool isRemoveCommand = string.Equals(cmdName, "Remove-Item", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(cmdName, "ri", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(cmdName, "del", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(cmdName, "rm", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(cmdName, "rd", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(cmdName, "erase", StringComparison.OrdinalIgnoreCase);
+
             // ---- 4. Always Deny —— 直接拦截 ----
-            if (AlwaysDenyCommands.Contains(cmdName))
+            if (!isRemoveCommand && !SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowRemove", false)
+                && AlwaysDenyCommands.Contains(cmdName))
             {
                 reason = new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
-                    $"命令 '{cmdName}' 被安全策略禁止执行。");
+                    Localized.ScriptEngine_Auth_AlwaysDeny(cmdName));
                 return false;
             }
+            // AllowRemove 豁免时：跳过 AlwaysDenyCommands 检查，继续后续流程
+            if (isRemoveCommand && SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowRemove", false))
+            {
+                Logger.Log($"[CommandFilter] 命令 '{cmdName}' 通过 AllowRemove 豁免检查。");
+            }
 
-            if (cmdName.ToLowerInvariant().TrimEnd().EndsWith(".exe"))
+            // ---- 4b. AllowModifyProject：禁止修改项目文件的命令 ----
+            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowModifyProject", true))
+            {
+                bool isModifyCommand = string.Equals(cmdName, "Set-Content", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "sc", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Add-Content", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "ac", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Out-File", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "New-Item", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "ni", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Set-ItemProperty", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "sp", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Copy-Item", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "ci", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "cp", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "copy", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Move-Item", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "mi", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "mv", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "move", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "Rename-Item", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "rni", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(cmdName, "ren", StringComparison.OrdinalIgnoreCase);
+                if (isModifyCommand)
+                {
+                    reason = new NotAllowedCommandException(
+                        NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
+                        Localized.ScriptEngine_Auth_ModifyFileDisabled(cmdName));
+                    return false;
+                }
+            }
+
+            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowExecutable", false)
+                && cmdName.ToLowerInvariant().TrimEnd().EndsWith(".exe"))
             {
                 reason = new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
-                    $"出于安全考虑，不允许执行可执行文件 '{cmdName}'。 请使用cmdlet指令，或者在设置-安全中启用“允许执行可执行文件”。");
+                    Localized.ScriptEngine_Auth_ExeDisabled(cmdName));
                 return false;
             }
 
@@ -472,35 +665,82 @@ namespace projectFrameCut.ScriptEngine
                     || authContext.ThreatLevel >= ThreatLevel.Medium);             // 混淆警告需展示
 
             // 优先使用增强处理器（携带路径/URL/混淆信息的对话框）
-            if (EnhancedAuthorizationHandler != null && hasEnhancedContext)
+            if (hasEnhancedContext)
             {
-                var enhancedResult = EnhancedAuthorizationHandler(authContext);
-
-                switch (enhancedResult)
+                // ── 检查预授权缓存（非阻塞路径） ──
+                if (_preAuthCache.TryGetValue(cmdName, out var preAuthResult))
                 {
-                    case AuthorizationResult.Allow:
-                        return true;
+                    switch (preAuthResult)
+                    {
+                        case AuthorizationResult.Allow: return true;
+                        case AuthorizationResult.Deny:
+                            reason = new NotAllowedCommandException(
+                                NotAllowedCommandException.DeniedReason.UserRejected,
+                                Localized.ScriptEngine_Auth_UserRejected(cmdName));
+                            return false;
+                        case AuthorizationResult.AllowAndRemember:
+                            _sessionCache[cmdName] = true; return true;
+                        case AuthorizationResult.DenyAndRemember:
+                            _sessionCache[cmdName] = false;
+                            reason = new NotAllowedCommandException(
+                                NotAllowedCommandException.DeniedReason.UserRejected,
+                                Localized.ScriptEngine_Auth_UserRejectedAndRemembered(cmdName));
+                            return false;
+                    }
+                }
 
-                    case AuthorizationResult.Deny:
-                        reason = new NotAllowedCommandException(
-                            NotAllowedCommandException.DeniedReason.UserRejected,
-                            $"用户拒绝了命令 '{cmdName}'。");
-                        return false;
+                // ── 回退到增强处理器（可能阻塞，用于非预授权的调用方） ──
+                if (EnhancedAuthorizationHandler != null)
+                {
+                    var enhancedResult = EnhancedAuthorizationHandler(authContext);
 
-                    case AuthorizationResult.AllowAndRemember:
-                        _sessionCache[cmdName] = true;
-                        return true;
+                    switch (enhancedResult)
+                    {
+                        case AuthorizationResult.Allow:
+                            return true;
 
-                    case AuthorizationResult.DenyAndRemember:
-                        _sessionCache[cmdName] = false;
-                        reason = new NotAllowedCommandException(
-                            NotAllowedCommandException.DeniedReason.UserRejected,
-                            $"用户拒绝了命令 '{cmdName}'，并选择了记住此决策。");
-                        return false;
+                        case AuthorizationResult.Deny:
+                            reason = new NotAllowedCommandException(
+                                NotAllowedCommandException.DeniedReason.UserRejected,
+                                Localized.ScriptEngine_Auth_UserRejected(cmdName));
+                            return false;
+
+                        case AuthorizationResult.AllowAndRemember:
+                            _sessionCache[cmdName] = true;
+                            return true;
+
+                        case AuthorizationResult.DenyAndRemember:
+                            _sessionCache[cmdName] = false;
+                            reason = new NotAllowedCommandException(
+                                NotAllowedCommandException.DeniedReason.UserRejected,
+                                Localized.ScriptEngine_Auth_UserRejectedAndRemembered(cmdName));
+                            return false;
+                    }
                 }
             }
 
             // 6c. 回退到原始授权处理器
+            if (_preAuthCache.TryGetValue(cmdName, out var basicPreAuth))
+            {
+                switch (basicPreAuth)
+                {
+                    case AuthorizationResult.Allow: return true;
+                    case AuthorizationResult.Deny:
+                        reason = new NotAllowedCommandException(
+                            NotAllowedCommandException.DeniedReason.UserRejected,
+                            Localized.ScriptEngine_Auth_UserRejected(cmdName));
+                        return false;
+                    case AuthorizationResult.AllowAndRemember:
+                        _sessionCache[cmdName] = true; return true;
+                    case AuthorizationResult.DenyAndRemember:
+                        _sessionCache[cmdName] = false;
+                        reason = new NotAllowedCommandException(
+                            NotAllowedCommandException.DeniedReason.UserRejected,
+                            Localized.ScriptEngine_Auth_UserRejectedAndRemembered(cmdName));
+                        return false;
+                }
+            }
+
             if (AuthorizationHandler != null)
             {
                 var result = AuthorizationHandler(commandInfo, commandOrigin);
@@ -513,7 +753,7 @@ namespace projectFrameCut.ScriptEngine
                     case AuthorizationResult.Deny:
                         reason = new NotAllowedCommandException(
                             NotAllowedCommandException.DeniedReason.UserRejected,
-                            $"用户拒绝了命令 '{cmdName}'。");
+                            Localized.ScriptEngine_Auth_UserRejected(cmdName));
                         return false;
 
                     case AuthorizationResult.AllowAndRemember:
@@ -524,7 +764,7 @@ namespace projectFrameCut.ScriptEngine
                         _sessionCache[cmdName] = false;
                         reason = new NotAllowedCommandException(
                             NotAllowedCommandException.DeniedReason.UserRejected,
-                            $"用户拒绝了命令 '{cmdName}'，并选择了记住此决策。");
+                            Localized.ScriptEngine_Auth_UserRejectedAndRemembered(cmdName));
                         return false;
                 }
             }
@@ -533,14 +773,14 @@ namespace projectFrameCut.ScriptEngine
                 // Prompt 命令但无 handler 配置 —— 拒绝
                 reason = new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.UserNotRespond,
-                    $"命令 '{cmdName}' 需要用户授权，但没有配置授权处理器。");
+                    Localized.ScriptEngine_Auth_NoHandler(cmdName));
                 return false;
             }
 
             // ---- 7. 未分类命令且无 handler —— 安全模式：拒绝 ----
             reason = new NotAllowedCommandException(
                 NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
-                $"命令 '{cmdName}' 未分类且未配置授权处理器，已被安全策略禁止。");
+                Localized.ScriptEngine_Auth_UnclassifiedAndNoHandler(cmdName));
             return false;
         }
     }
@@ -564,6 +804,8 @@ namespace projectFrameCut.ScriptEngine
             DisallowedByRuleOfAdministrator,
             /// <summary>内部安全规则禁止了此命令。</summary>
             DisallowedByInternalRules,
+            /// <summary>命令无法解析或不符合预期的格式，导致无法进行授权决策。</summary>
+            CannotParseCommand, 
         }
     }
 }

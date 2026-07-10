@@ -268,7 +268,7 @@ namespace projectFrameCut.ScriptEngine
                 return obj;
             }).ToList();
 
-            WriteObject(results, enumerateCollection: true);
+            WriteObject(results, enumerateCollection: false);
         }
     }
 
@@ -655,7 +655,6 @@ namespace projectFrameCut.ScriptEngine
     /// 用于脚本编写时查看可设置的字段。
     /// </summary>
     [Cmdlet("Get", "EffectBundleField")]
-    [Alias("geb-field")]
     public sealed class GetEffectBundleFieldCommand : EffectBundleCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0)]

@@ -86,7 +86,6 @@
                                                     MinimumHeightRequest="30"
                                                     WidthRequest="30"                                                  
                                                     TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
-                                                    IsVisible="{Binding IsAssistant}"
                                                     Clicked="AIReplyCopyButton_Clicked"/>
                                         </HorizontalStackLayout>
                                     </Grid>
@@ -224,6 +223,16 @@
                     Text="{l:Localized Key=AIAssistant_ChatView_Send}"
                     Clicked="AISendButton_Clicked"/>
         </Grid>
+
+        <!-- Temporary off-screen host used by the AI webpage browsing tool. -->
+        <WebView x:Name="WebBrowserHost"
+                 Grid.RowSpan="4"
+                 WidthRequest="1"
+                 HeightRequest="1"
+                 Opacity="0.01"
+                 InputTransparent="True"
+                 HorizontalOptions="Start"
+                 VerticalOptions="Start"/>
     </Grid>
     <ContentView.GestureRecognizers>
         <DropGestureRecognizer AllowDrop="True" Drop="FileDropGestureRecognizer_Drop"/>

@@ -2,12 +2,14 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections;
@@ -150,6 +152,8 @@ namespace projectFrameCut.ScriptEngine
             obj.Properties.Add(new PSNoteProperty("Width", c.TargetWidth));
             obj.Properties.Add(new PSNoteProperty("Height", c.TargetHeight));
             obj.Properties.Add(new PSNoteProperty("EffectCount", c.Effects?.Count ?? 0));
+            obj.Properties.Add(new PSNoteProperty("VisibleOnUI", c.ShouldDisplayInUI));
+            if (SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowAccessPageObject", false)) obj.Properties.Add(new PSNoteProperty("InnerClip", c));
             return obj;
         }
 
@@ -736,18 +740,27 @@ namespace projectFrameCut.ScriptEngine
                 var assetType = Type ?? AssetItem.GetAssetType(fullPath);
                 var assetId = Guid.NewGuid().ToString("N");
 
-                // TODO: 在此可以使用 AssetDatabase.Create 以获得更完整的元数据；
-                // 当前使用轻量方式直接构造 AssetItem 并加入项目资产字典
-                var asset = new AssetItem
+                if (!string.IsNullOrWhiteSpace(page?.WorkingPath))
                 {
-                    Name = Name,
-                    Path = fullPath,
-                    AssetType = assetType,
-                    AssetId = assetId,
-                };
-
-                page!.Assets.TryAdd(assetId, asset);
-                WriteObject(NewAssetObject(asset));
+                    var resultPath = Path.Combine(page.WorkingPath, "assets", Guid.NewGuid().ToString() + Path.GetExtension(fullPath));
+                    File.Copy(fullPath, resultPath, true);
+                    var asset = AssetDatabase.Create(resultPath, Name, AssetItem.GetAssetType(resultPath));
+                    if(asset is null)
+                    {
+                        WriteError(new ErrorRecord(
+                            new InvalidOperationException("Failed to create asset, and the source file may be invalid. Try reading the media's info via Get-MediaInfo."),
+                            "AssetCreationFailed", ErrorCategory.InvalidData, null));
+                        return;
+                    }
+                    page!.Assets.TryAdd(assetId, asset);
+                    WriteObject(NewAssetObject(asset));
+                }
+                else
+                {
+                    WriteError(new ErrorRecord(
+                        new InvalidOperationException("Project working path is not set. Cannot add asset."),
+                        "WorkingPathNotSet", ErrorCategory.InvalidOperation, null));
+                }
             }
             catch (Exception ex)
             {
@@ -792,214 +805,6 @@ namespace projectFrameCut.ScriptEngine
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  #region Effect Management
-    // ════════════════════════════════════════════════════════════════
-
-    [Cmdlet(VerbsCommon.Get, "ProjectClipEffect")]
-    public sealed class GetProjectClipEffectCommand : DraftPageCmdletBase
-    {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
-        public Guid ClipId { get; set; }
-
-        [Parameter]
-        public string? Name { get; set; }
-
-        [Parameter]
-        public EffectType? Type { get; set; }
-
-        protected override void ProcessRecordImpl()
-        {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null || clip.Effects is null) return;
-
-            var effects = clip.Effects.AsEnumerable();
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                var pattern = "^" + System.Text.RegularExpressions.Regex.Escape(Name)
-                    .Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                effects = effects.Where(kv =>
-                    System.Text.RegularExpressions.Regex.IsMatch(kv.Key, pattern,
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase));
-            }
-
-            if (Type.HasValue)
-                effects = effects.Where(kv => kv.Value.TypeOfEffect == Type.Value);
-
-            WriteObject(
-                effects.Select(kv => NewEffectObject(kv.Key, kv.Value)).ToList(),
-                enumerateCollection: true);
-        }
-    }
-
-    [Cmdlet(VerbsCommon.Add, "ProjectClipEffect", SupportsShouldProcess = true)]
-    public sealed class AddProjectClipEffectCommand : DraftPageCmdletBase
-    {
-        protected override bool RequiresUIThread => true;
-
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
-        public Guid ClipId { get; set; }
-
-        [Parameter(Mandatory = true, Position = 1)]
-        public string? Name { get; set; }
-
-        [Parameter]
-        public string? TypeName { get; set; }
-
-        [Parameter]
-        public Hashtable? Parameters { get; set; }
-
-        [Parameter]
-        public int? Index { get; set; }
-
-        protected override void ProcessRecordImpl()
-        {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            var effectTypeName = TypeName ?? Name!;
-            if (string.IsNullOrEmpty(effectTypeName))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException("Effect type name is required."),
-                    "InvalidArgument", ErrorCategory.InvalidArgument, null));
-                return;
-            }
-
-            if (!ShouldProcess($"Clip '{clip.DisplayName}'",
-                    $"Add effect '{Name}' (type: {effectTypeName})"))
-                return;
-
-            try
-            {
-                // 通过 EffectHelper 获取效果工厂
-                if (!EffectHelper.EffectsEnum.TryGetValue(effectTypeName, out var factory))
-                {
-                    WriteError(new ErrorRecord(
-                        new ArgumentException($"Effect type '{effectTypeName}' not found. " +
-                            "Use Get-ProjectClipEffect -ListAvailable to see available types."),
-                        "EffectTypeNotFound", ErrorCategory.ObjectNotFound, effectTypeName));
-                    return;
-                }
-
-                var effect = factory();
-                effect.Name = Name;
-                effect.Enabled = true;
-                effect.Index = Index ?? (clip.Effects?.Count ?? 0);
-
-                // 设置参数
-                if (Parameters is { Count: > 0 })
-                {
-                    foreach (var key in Parameters.Keys)
-                    {
-                        var strKey = key?.ToString();
-                        if (strKey is not null)
-                            effect.Parameters[strKey] = Parameters[key]!;
-                    }
-                }
-
-                clip.Effects ??= new Dictionary<string, IEffect>();
-                clip.Effects[Name!] = effect;
-
-                WriteObject(NewEffectObject(Name!, effect));
-            }
-            catch (Exception ex)
-            {
-                WriteError(new ErrorRecord(ex, "AddEffectFailed", ErrorCategory.NotSpecified, null));
-            }
-        }
-    }
-
-    [Cmdlet(VerbsCommon.Set, "ProjectClipEffect", SupportsShouldProcess = true)]
-    public sealed class SetProjectClipEffectCommand : DraftPageCmdletBase
-    {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
-        public Guid ClipId { get; set; }
-
-        [Parameter(Mandatory = true, Position = 1)]
-        public string? Name { get; set; }
-
-        [Parameter]
-        public bool? Enabled { get; set; }
-
-        [Parameter]
-        public Hashtable? Parameters { get; set; }
-
-        [Parameter]
-        public SwitchParameter ClearParameters { get; set; }
-
-        [Parameter]
-        public int? Index { get; set; }
-
-        protected override void ProcessRecordImpl()
-        {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            var effect = ResolveEffect(clip, Name!);
-            if (effect is null) return;
-
-            if (!ShouldProcess($"Effect '{Name}' on clip '{clip.DisplayName}'",
-                    "Modify effect"))
-                return;
-
-            if (Enabled.HasValue)
-                effect.Enabled = Enabled.Value;
-
-            if (ClearParameters)
-                effect.Parameters.Clear();
-
-            if (Parameters is { Count: > 0 })
-            {
-                foreach (var key in Parameters.Keys)
-                {
-                    var strKey = key?.ToString();
-                    if (strKey is not null)
-                        effect.Parameters[strKey] = Parameters[key]!;
-                }
-            }
-
-            if (Index.HasValue)
-                effect.Index = Index.Value;
-
-            WriteObject(NewEffectObject(Name!, effect));
-        }
-    }
-
-    [Cmdlet(VerbsCommon.Remove, "ProjectClipEffect", SupportsShouldProcess = true)]
-    public sealed class RemoveProjectClipEffectCommand : DraftPageCmdletBase
-    {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
-        public Guid ClipId { get; set; }
-
-        [Parameter(Mandatory = true, Position = 1)]
-        public string? Name { get; set; }
-
-        protected override void ProcessRecordImpl()
-        {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            if (clip.Effects is null || !clip.Effects.ContainsKey(Name!))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException($"Effect '{Name}' not found on clip '{clip.DisplayName}'."),
-                    "EffectNotFound", ErrorCategory.ObjectNotFound, Name));
-                return;
-            }
-
-            if (!ShouldProcess($"Effect '{Name}' on clip '{clip.DisplayName}'",
-                    "Remove effect"))
-                return;
-
-            clip.Effects.Remove(Name!);
-        }
-    }
 
     // ════════════════════════════════════════════════════════════════
     //  #region Track Management

@@ -299,6 +299,22 @@ namespace projectFrameCut.DraftStuff
 
         }
 
+        public override string ToString()
+        {
+            return $"{DisplayName}, {ClipType} ({Id})";
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is not ClipElementUI c) return false;
+            return c.Id == Id;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
         [SetsRequiredMembers]
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
         public ClipElementUI()

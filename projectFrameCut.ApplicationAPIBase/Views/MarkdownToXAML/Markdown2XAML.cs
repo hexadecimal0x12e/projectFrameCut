@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
-using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 {
@@ -84,6 +86,38 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
         /// <summary>图片标题文字颜色</summary>
         public static Color ImageCaptionTextColor { get; set; } = Color.FromArgb("#6B7280");
+
+        // ===== RichText 安全开关 =====
+
+        /// <summary>是否允许渲染富文本（总开关）。关闭时所有 Markdown 渲染返回空内容。</summary>
+        public static bool SecurityEnableRendering { get; private set; } = true;
+        /// <summary>是否允许显示图片（![alt](url) 和 &lt;img&gt;）。关闭时图片位置显示占位文本。</summary>
+        public static bool SecurityEnableDisplayingImage { get; private set; } = true;
+        /// <summary>是否允许渲染 HTML/Mermaid 代码块。关闭时显示纯文本代码视图。</summary>
+        public static bool SecurityEnableDisplayingHtml { get; private set; } = true;
+        /// <summary>是否允许渲染 XAML 代码块。关闭时显示纯文本代码视图。</summary>
+        public static bool SecurityEnableDisplayingXAML { get; private set; } = true;
+        /// <summary>是否允许 XAML 代码块访问外部 Source。关闭时阻止通过 Source 属性加载外部资源。</summary>
+        public static bool SecurityEnableXAMLExternalSource { get; private set; } = true;
+
+        /// <summary>
+        /// 统一应用 RichText 安全设置。由主程序在启动或设置变更时调用。
+        /// </summary>
+        public static void ApplySecuritySettings(bool enableRendering, bool enableDisplayingImage, bool enableDisplayingHtml, bool enableDisplayingXAML, bool enableXAMLExternalSource)
+        {
+            if (new StackTrace().GetFrames().Any(c => c.GetMethod()?.GetCustomAttributes(typeof(DescriptionAttribute), false).Any(c => c is DescriptionAttribute d && d.Description == "ApplySecuritySettings") == true))
+            {
+                SecurityEnableRendering = enableRendering;
+                SecurityEnableDisplayingImage = enableDisplayingImage;
+                SecurityEnableDisplayingHtml = enableDisplayingHtml;
+                SecurityEnableDisplayingXAML = enableDisplayingXAML;
+                SecurityEnableXAMLExternalSource = enableXAMLExternalSource;
+            }
+            else
+            {
+                throw new UnauthorizedAccessException("ApplySecuritySettings can only be called from the main application context.");
+            }
+        }
 
         // ===== 表格样式 =====
 
@@ -176,6 +210,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         {
             if (string.IsNullOrEmpty(input))
                 return new VerticalStackLayout();
+
+            // 安全开关：不允许渲染富文本时返回空内容
+            if (!SecurityEnableRendering)
+                return new Label
+                {
+                    Text = input,
+                    FontFamily = "MarkdownCodeBlock",
+                };
 
             // 规范化换行符
             input = input.Replace("\r\n", "\n").Replace('\r', '\n');
@@ -395,6 +437,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (string.IsNullOrEmpty(chunk))
                     return Array.Empty<View>();
 
+                if (!SecurityEnableRendering)
+                    return [new Label
+                    {
+                        Text = chunk,
+                        FontFamily = "MarkdownCodeBlock",
+                    }];
+
                 // 设置引用定义上下文（_refDefinitions 在 ProcessLine 中被增量填充）
                 _currentRefDefinitions = _refDefinitions;
 
@@ -420,6 +469,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             /// </summary>
             public IReadOnlyList<View> Flush()
             {
+                if (!SecurityEnableRendering)
+                    return [new Label
+                    {
+                        Text = _buffer,
+                        FontFamily = "MarkdownCodeBlock",
+                    }];
+
                 var views = new List<View>();
 
                 // 设置引用定义上下文
@@ -819,8 +875,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
             private static View BuildPartialCodeBlockView(string? language, string code)
             {
-                // 检查是否有支持流式的自定义渲染器
-                if (language != null
+                // 安全开关：检查是否需要跳过自定义渲染器
+                bool skipCustomRenderer = false;
+                if (language != null)
+                {
+                    bool isHtmlOrMermaid = string.Equals(language, "html", StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(language, "mermaid", StringComparison.OrdinalIgnoreCase);
+                    bool isXaml = string.Equals(language, "xaml", StringComparison.OrdinalIgnoreCase);
+                    skipCustomRenderer = (isHtmlOrMermaid && !SecurityEnableDisplayingHtml)
+                                      || (isXaml && !SecurityEnableDisplayingXAML);
+                }
+
+                // 检查是否有支持流式的自定义渲染器（安全策略禁止时跳过）
+                if (!skipCustomRenderer && language != null
                     && _codeBlockRenderers.TryGetValue(language, out var customRenderer)
                     && customRenderer.SupportsStreaming)
                 {
@@ -1149,7 +1216,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 }
 
                 // 段落内容
-                paragraphContent:
+            paragraphContent:
                 FlushList();
                 FlushQuote();
                 paraLines.Add(line);
@@ -1844,17 +1911,30 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     var alt = m.Groups[1].Value;
                     var url = m.Groups[2].Value;
                     var displayText = string.IsNullOrEmpty(alt) ? "🖼 " + url : "🖼 " + alt;
-                    atomics.Add(new AtomicSpanInfo
+                    if (SecurityEnableDisplayingImage)
                     {
-                        Start = m.Index,
-                        Length = m.Length,
-                        Span = new ImageSpan
+                        atomics.Add(new AtomicSpanInfo
                         {
-                            Text = displayText,
-                            AltText = alt,
-                            ImageUrl = url,
-                        }
-                    });
+                            Start = m.Index,
+                            Length = m.Length,
+                            Span = new ImageSpan
+                            {
+                                Text = displayText,
+                                AltText = alt,
+                                ImageUrl = url,
+                            }
+                        });
+                    }
+                    else
+                    {
+                        // 安全策略禁止显示图片，显示纯文本
+                        atomics.Add(new AtomicSpanInfo
+                        {
+                            Start = m.Index,
+                            Length = m.Length,
+                            Span = new Span { Text = displayText, TextColor = MarkdownTextColor }
+                        });
+                    }
                 }
             }
 
@@ -1869,17 +1949,30 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         var alt = info.Value.Alt;
                         var url = info.Value.Src;
                         var displayText = string.IsNullOrEmpty(alt) ? "🖼 " + url : "🖼 " + alt;
-                        atomics.Add(new AtomicSpanInfo
+                        if (SecurityEnableDisplayingImage)
                         {
-                            Start = m.Index,
-                            Length = m.Length,
-                            Span = new ImageSpan
+                            atomics.Add(new AtomicSpanInfo
                             {
-                                Text = displayText,
-                                AltText = alt,
-                                ImageUrl = url,
-                            }
-                        });
+                                Start = m.Index,
+                                Length = m.Length,
+                                Span = new ImageSpan
+                                {
+                                    Text = displayText,
+                                    AltText = alt,
+                                    ImageUrl = url,
+                                }
+                            });
+                        }
+                        else
+                        {
+                            // 安全策略禁止显示图片，显示纯文本
+                            atomics.Add(new AtomicSpanInfo
+                            {
+                                Start = m.Index,
+                                Length = m.Length,
+                                Span = new Span { Text = displayText, TextColor = MarkdownTextColor }
+                            });
+                        }
                     }
                 }
             }
@@ -2036,8 +2129,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
         internal static View BuildCodeBlockView(string? language, string code)
         {
-            // 检查自定义渲染器
-            if (language != null && _codeBlockRenderers.TryGetValue(language, out var customRenderer))
+            // 安全开关：检查是否需要绕过自定义渲染器
+            bool skipCustomRenderer = false;
+            if (language != null)
+            {
+                bool isHtmlOrMermaid = string.Equals(language, "html", StringComparison.OrdinalIgnoreCase)
+                                    || string.Equals(language, "mermaid", StringComparison.OrdinalIgnoreCase);
+                bool isXaml = string.Equals(language, "xaml", StringComparison.OrdinalIgnoreCase);
+                skipCustomRenderer = (isHtmlOrMermaid && !SecurityEnableDisplayingHtml)
+                                  || (isXaml && !SecurityEnableDisplayingXAML);
+            }
+
+            // 检查自定义渲染器（安全策略禁止时跳过）
+            if (!skipCustomRenderer && language != null && _codeBlockRenderers.TryGetValue(language, out var customRenderer))
             {
                 if (customRenderer.SupportsStreaming)
                     return customRenderer.RenderComplete(code);
@@ -2309,6 +2413,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         internal static View BuildImageView(string alt, string url,
             double? explicitWidth = null, double? explicitHeight = null)
         {
+            // 安全开关：不允许显示图片时，返回占位文本
+            if (!SecurityEnableDisplayingImage)
+            {
+                return new Label
+                {
+                    Text = string.IsNullOrEmpty(alt) ? "🖼" : $"🖼 {alt}",
+                    FontSize = BodyFontSize,
+                    TextColor = ImageCaptionTextColor,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(0, 8),
+                };
+            }
+
             var container = new VerticalStackLayout
             {
                 Spacing = 4,

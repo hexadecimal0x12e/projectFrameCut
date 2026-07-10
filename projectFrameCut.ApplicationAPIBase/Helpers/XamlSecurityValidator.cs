@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Xml;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 
 namespace projectFrameCut.ApplicationAPIBase.Helpers;
 
@@ -80,12 +81,14 @@ internal static class XamlSecurityValidator
                 "WebView element is not allowed for security reasons.");
 
         // 5. Source 属性中的网络/文件 URI — SSRF 或本地文件读取
-        if (NetworkSourceAttrPattern.IsMatch(rawXaml))
+        //    仅当用户设置为禁止外部源时才拦截
+        if (!Markdown2XAML.SecurityEnableXAMLExternalSource && NetworkSourceAttrPattern.IsMatch(rawXaml))
             throw new XamlSecurityException(
                 "Network and file URIs are not allowed in Source attributes for security reasons.");
 
         // 6. ResourceDictionary 引用外部 Source — 可加载恶意 XAML
-        if (ResourceDictionarySourcePattern.IsMatch(rawXaml))
+        //    仅当用户设置为禁止外部源时才拦截
+        if (!Markdown2XAML.SecurityEnableXAMLExternalSource && ResourceDictionarySourcePattern.IsMatch(rawXaml))
             throw new XamlSecurityException(
                 "ResourceDictionary with external Source is not allowed for security reasons.");
     }
@@ -132,8 +135,9 @@ internal static class XamlSecurityValidator
                         throw new XamlSecurityException(
                             "WebView is not allowed for security reasons.");
 
-                    // 禁止 ResourceDictionary 引用外部 Source
-                    if (string.Equals(localName, "ResourceDictionary", StringComparison.OrdinalIgnoreCase))
+                    // 禁止 ResourceDictionary 引用外部 Source（仅在用户禁止外部源时）
+                    if (!Markdown2XAML.SecurityEnableXAMLExternalSource
+                        && string.Equals(localName, "ResourceDictionary", StringComparison.OrdinalIgnoreCase))
                     {
                         string? sourceAttr = reader.GetAttribute("Source");
                         if (!string.IsNullOrEmpty(sourceAttr))
@@ -161,8 +165,9 @@ internal static class XamlSecurityValidator
                                 throw new XamlSecurityException(
                                     "x:TypeArguments is not allowed for security reasons.");
 
-                            // Source 中的网络/文件 URI
-                            if (string.Equals(attrLocal, "Source", StringComparison.OrdinalIgnoreCase) &&
+                            // Source 中的网络/文件 URI（仅在用户禁止外部源时）
+                            if (!Markdown2XAML.SecurityEnableXAMLExternalSource
+                                && string.Equals(attrLocal, "Source", StringComparison.OrdinalIgnoreCase) &&
                                 !string.IsNullOrEmpty(reader.Value))
                             {
                                 string val = reader.Value.Trim();

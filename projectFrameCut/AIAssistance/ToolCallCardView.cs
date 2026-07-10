@@ -14,9 +14,12 @@ public class ToolCallCardView
     private readonly Border _root;
     private readonly Border _contentBorder;
     private readonly Label _contentLabel;
+    private readonly VerticalStackLayout _resultSection;
+    private readonly Label _resultLabel;
+    private readonly Label _titleLabel;
     private readonly Label _toggleIcon;
     private readonly Label _collapseIndicator;
-    private bool _isExpanded = true;
+    private bool _isExpanded;
 
     private static readonly Color LightToggleColor = Color.FromArgb("#FF886644");
     private static readonly Color DarkToggleColor = Color.FromArgb("#FFBB9966");
@@ -34,12 +37,12 @@ public class ToolCallCardView
     /// <summary>获取此卡片的根 View，可添加到任意 Layout 中。</summary>
     public View View => _root;
 
-    public ToolCallCardView(string initialText = "")
+    public ToolCallCardView(string initialText = "", string resultText = "")
     {
         // Toggle icon
         _toggleIcon = new Label
         {
-            Text = "▼",
+            Text = "▶",
             FontSize = 9,
             VerticalOptions = LayoutOptions.Center,
             Margin = new Thickness(0, 0, 4, 0),
@@ -47,14 +50,14 @@ public class ToolCallCardView
         _toggleIcon.SetAppThemeColor(Label.TextColorProperty, LightToggleColor, DarkToggleColor);
 
         // Title label
-        var titleLabel = new Label
+        _titleLabel = new Label
         {
-            Text = Localized.AIAssistant_ChatView_ToolCall,
+            Text = ExtractToolName(initialText),
             FontSize = 11,
             FontAttributes = FontAttributes.Bold,
             VerticalOptions = LayoutOptions.Center,
         };
-        titleLabel.SetAppThemeColor(Label.TextColorProperty, LightTitleColor, DarkTitleColor);
+        _titleLabel.SetAppThemeColor(Label.TextColorProperty, LightTitleColor, DarkTitleColor);
 
         // Collapse indicator (shown when collapsed)
         _collapseIndicator = new Label
@@ -62,7 +65,7 @@ public class ToolCallCardView
             Text = "…",
             FontSize = 10,
             VerticalOptions = LayoutOptions.Center,
-            IsVisible = false,
+            IsVisible = true,
         };
         _collapseIndicator.SetAppThemeColor(Label.TextColorProperty, LightCollapseColor, DarkCollapseColor);
 
@@ -79,7 +82,7 @@ public class ToolCallCardView
         };
         headerGrid.SetAppThemeColor(Grid.BackgroundColorProperty, LightHeaderBg, DarkHeaderBg);
         headerGrid.Add(_toggleIcon, 0);
-        headerGrid.Add(titleLabel, 1);
+        headerGrid.Add(_titleLabel, 1);
         headerGrid.Add(_collapseIndicator, 2);
 
         var tapGesture = new TapGestureRecognizer();
@@ -96,6 +99,39 @@ public class ToolCallCardView
         };
         _contentLabel.SetAppThemeColor(Label.TextColorProperty, LightContentColor, DarkContentColor);
 
+        var resultTitleLabel = new Label
+        {
+            Text = "Result",
+            FontSize = 10,
+            FontAttributes = FontAttributes.Bold,
+            Margin = new Thickness(0, 6, 0, 0),
+        };
+        resultTitleLabel.SetAppThemeColor(Label.TextColorProperty, LightTitleColor, DarkTitleColor);
+
+        _resultLabel = new Label
+        {
+            Text = resultText,
+            FontSize = 11,
+            FontFamily = "MarkdownCodeBlock",
+            LineBreakMode = LineBreakMode.WordWrap,
+        };
+        _resultLabel.SetAppThemeColor(Label.TextColorProperty, LightContentColor, DarkContentColor);
+
+        _resultSection = new VerticalStackLayout
+        {
+            Spacing = 2,
+            IsVisible = !string.IsNullOrWhiteSpace(resultText),
+            Children =
+            {
+                resultTitleLabel,
+                _resultLabel,
+            },
+        };
+
+        var contentStack = new VerticalStackLayout { Spacing = 0 };
+        contentStack.Children.Add(_contentLabel);
+        contentStack.Children.Add(_resultSection);
+
         // Content border (collapsible area)
         _contentBorder = new Border
         {
@@ -103,7 +139,8 @@ public class ToolCallCardView
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 0, 6, 6) },
             Padding = new Thickness(8, 6),
             BackgroundColor = Colors.Transparent,
-            Content = _contentLabel,
+            Content = contentStack,
+            IsVisible = false,
         };
 
         // Root structure
@@ -127,11 +164,59 @@ public class ToolCallCardView
         if (MainThread.IsMainThread)
         {
             _contentLabel.Text = text;
+            _titleLabel.Text = ExtractToolName(text);
         }
         else
         {
-            MainThread.BeginInvokeOnMainThread(() => _contentLabel.Text = text);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _contentLabel.Text = text;
+                _titleLabel.Text = ExtractToolName(text);
+            });
         }
+    }
+
+    /// <summary>更新工具调用结果。</summary>
+    public void UpdateResult(string result)
+    {
+        void Update()
+        {
+            _resultLabel.Text = result;
+            _resultSection.IsVisible = !string.IsNullOrWhiteSpace(result);
+        }
+
+        if (MainThread.IsMainThread)
+        {
+            Update();
+        }
+        else
+        {
+            MainThread.BeginInvokeOnMainThread(Update);
+        }
+    }
+
+    private static string ExtractToolName(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        string firstLine = text.Split('\n', 2)[0].TrimEnd('\r');
+        int nameStart = firstLine.IndexOf(' ');
+        if (!firstLine.StartsWith('#') || nameStart < 0)
+        {
+            return firstLine;
+        }
+
+        string name = firstLine[(nameStart + 1)..];
+        int callIdStart = name.LastIndexOf("  [", StringComparison.Ordinal);
+        if (callIdStart >= 0 && name.EndsWith(']'))
+        {
+            name = name[..callIdStart];
+        }
+
+        return name.Trim();
     }
 
     /// <summary>切换展开/折叠状态。</summary>

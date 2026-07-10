@@ -65,6 +65,8 @@ internal sealed class AssistanceChatMessageSnapshot
 
     public string ToolCallsText { get; init; } = string.Empty;
 
+    public List<ChatContentSegmentSnapshot>? ContentSegments { get; init; }
+
     public bool HasFeedbackSubmitted { get; init; }
 
     /// <summary>
@@ -72,6 +74,21 @@ internal sealed class AssistanceChatMessageSnapshot
     /// 文件存储在 chats/{sessionId:N}/media/ 目录下。
     /// </summary>
     public List<ChatAttachmentSnapshot>? Attachments { get; init; }
+}
+
+internal sealed class ChatContentSegmentSnapshot
+{
+    public required string Kind { get; init; }
+
+    public required string Text { get; set; }
+
+    public string ResultText { get; set; } = string.Empty;
+}
+
+internal static class ChatContentSegmentKinds
+{
+    public const string Text = "text";
+    public const string ToolCall = "tool_call";
 }
 
 public sealed class ChatAttachmentSnapshot
@@ -367,6 +384,7 @@ internal static class AssistanceChatSessionStore
                     IsUser = message.IsUser,
                     ReasoningText = message.ReasoningText,
                     ToolCallsText = message.ToolCallsText,
+                    ContentSegments = CloneContentSegments(message.ContentSegments),
                     HasFeedbackSubmitted = message.HasFeedbackSubmitted,
                     Attachments = message.Attachments?.Select(a => new ChatAttachmentSnapshot
                     {
@@ -408,6 +426,7 @@ internal static class AssistanceChatSessionStore
                 IsUser = x.IsUser,
                 ReasoningText = x.ReasoningText,
                 ToolCallsText = x.ToolCallsText,
+                ContentSegments = CloneContentSegments(x.ContentSegments),
                 HasFeedbackSubmitted = x.HasFeedbackSubmitted,
                 Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
                 {
@@ -423,6 +442,16 @@ internal static class AssistanceChatSessionStore
                 Text = x.Text,
             }).ToList(),
         };
+    }
+
+    private static List<ChatContentSegmentSnapshot>? CloneContentSegments(IEnumerable<ChatContentSegmentSnapshot>? segments)
+    {
+        return segments?.Select(segment => new ChatContentSegmentSnapshot
+        {
+            Kind = segment.Kind,
+            Text = segment.Text,
+            ResultText = segment.ResultText,
+        }).ToList();
     }
 
     private static ChatRole ParseRole(string? roleText)

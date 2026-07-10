@@ -24,6 +24,7 @@ using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using Path = System.IO.Path;
+using projectFrameCut.ScriptEngine;
 
 public partial class AssistanceChatView : ContentView
 {
@@ -36,6 +37,8 @@ public partial class AssistanceChatView : ContentView
     private readonly string? _projectName;
     private bool _isReplying;
     private CancellationTokenSource? _cts;
+    private readonly SkillManager _skillManager;
+    private readonly WebBrowsingService _webBrowsingService;
 
     /// <summary>
     /// 平台级别的 IME 追踪：当 IME 输入法刚刚结束文字组合（例如中文按回车取消/确认，日文按回车确定转换）时，
@@ -76,14 +79,18 @@ public partial class AssistanceChatView : ContentView
 
     public AssistanceChatView() : this(null, null, null)
     {
+        Log("AssistanceChatView created with default constructor (no sessionId, no projectPath, no projectName)", "error");
     }
 
     public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null)
     {
         InitializeComponent();
+        _webBrowsingService = new WebBrowsingService(WebBrowserHost, AuthorizeWebDomainAsync);
         _projectPath = projectPath;
         _projectName = projectName;
+        _skillManager = SkillManager.ForProject(projectPath);
         ToolCallFactories = aIFunctionsFactory;
+        LogDiagnostic($"Loading to project {_projectName} ({_projectPath}) with session {sessionId}");
         AIChatHistoryView.ItemsSource = _messages;
         _messages.CollectionChanged += Messages_CollectionChanged;
         _chatClient = CreateChatClient();
@@ -94,7 +101,26 @@ public partial class AssistanceChatView : ContentView
 
         AssistanceChatSession session = AssistanceChatSessionStore.GetOrCreate(_projectPath, sessionId);
         _sessionId = session.SessionId;
+        // 设置当前会话 ID，使 SkillRegistry 工具可以正确追踪加载状态
+        SkillRegistry.CurrentSessionId = _sessionId.ToString("N");
         LoadSession(session);
+    }
+
+    protected override void OnParentSet()
+    {
+        base.OnParentSet();
+        if (Parent is null)
+            _webBrowsingService.Dispose();
+    }
+
+    private async Task<bool> AuthorizeWebDomainAsync(Uri uri)
+    {
+        return await MainThread.InvokeOnMainThreadAsync(() =>
+            DisplayAlertAsync(
+                "Allow webpage access?",
+                $"The AI wants to open {uri.Host}.\n\nAllow this domain for the rest of this app session?",
+                "Allow",
+                "Deny"));
     }
 
     private async void AISendButton_Clicked(object? sender, EventArgs e)
@@ -774,6 +800,54 @@ public partial class AssistanceChatView : ContentView
         _messages.Add(item);
     }
 
+    private async Task<string> BuildSystemPromptAsync()
+    {
+        string promptPath = string.IsNullOrWhiteSpace(_projectName)
+            ? "AIAgent\\system_outsideProject.md"
+            : "AIAgent\\system.md";
+        using Stream stream = await FileSystem.OpenAppPackageFileAsync(promptPath);
+        using var reader = new StreamReader(stream);
+        string prompt = await reader.ReadToEndAsync();
+
+        prompt = prompt.Replace("!AppBrand!", Localized.AppBrand);
+        prompt = prompt.Replace("!AgentName!", "Assistant P");
+        prompt = prompt.Replace("!LocateID!", Localized._LocaleId_);
+        prompt = prompt.Replace("!AppVersion!", Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "1.0.0.0");
+        prompt = prompt.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
+        prompt = prompt.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
+        prompt = prompt.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
+        prompt = prompt.Replace("!ProjectName!", _projectName ?? "None");
+
+        string memoryText = MemoryManager.GetFormattedMemoryText() ?? string.Empty;
+        prompt = prompt.Replace("!MemoryText!", memoryText);
+
+        StringBuilder skillBuilder = new();
+        foreach (string skillName in SkillRegistry.GetLoadedSkills().Order(StringComparer.OrdinalIgnoreCase))
+        {
+            string? skillContent = _skillManager.LoadSkillContent(skillName);
+            if (skillContent is not null)
+            {
+                skillBuilder.AppendLine($"## 已加载的 Skill: {skillName}\n\n{skillContent}");
+            }
+        }
+
+        return prompt.Replace("!SkillText!", skillBuilder.ToString());
+    }
+
+    private async Task RefreshSystemPromptAsync()
+    {
+        var systemMessage = new AIChatMessage(ChatRole.System, await BuildSystemPromptAsync());
+        int systemMessageIndex = _chatHistory.FindIndex(message => message.Role == ChatRole.System);
+        if (systemMessageIndex >= 0)
+        {
+            _chatHistory[systemMessageIndex] = systemMessage;
+        }
+        else
+        {
+            _chatHistory.Insert(0, systemMessage);
+        }
+    }
+
     private async Task SendMessageAsync()
     {
         if (_isReplying)
@@ -793,21 +867,10 @@ public partial class AssistanceChatView : ContentView
 
         if (!_chatHistory.Any())
         {
-            using var fs = string.IsNullOrWhiteSpace(_projectName) ? await FileSystem.OpenAppPackageFileAsync("AIAgent\\system_outsideProject.md") : await FileSystem.OpenAppPackageFileAsync("AIAgent\\system.md");
-            using var sr = new StreamReader(fs);
-            var str = await sr.ReadToEndAsync();
-            str = str.Replace("!AppBrand!", Localized.AppBrand);
-            str = str.Replace("!AgentName!", "Assistant P");
-            str = str.Replace("!LocateID!", Localized._LocaleId_);
-            str = str.Replace("!AppVersion!", Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "1.0.0.0");
-            str = str.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
-            str = str.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
-            str = str.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
-            str = str.Replace("!ProjectName!", _projectName ?? "None");
-
-
-            _chatHistory.Add(new AIChatMessage(ChatRole.System, str));
+            _chatHistory.Add(new AIChatMessage(ChatRole.System, await BuildSystemPromptAsync()));
         }
+
+        SkillRegistry.CurrentSessionId = _sessionId.ToString("N");
 
         // ----- 保存附件文件 -----
         List<ChatAttachmentSnapshot>? savedAttachments = null;
@@ -933,11 +996,13 @@ public partial class AssistanceChatView : ContentView
 
         _isReplying = true;
         AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        SkillRegistry.IsStreaming = true;
         _cts = new CancellationTokenSource();
 
         await StreamAndAppendAssistantResponseAsync(input);
 
         _isReplying = false;
+        SkillRegistry.IsStreaming = false;
         AISendButton.Text = Localized.AIAssistant_ChatView_Send;
         AISendButton.IsEnabled = true;
         _cts?.Dispose();
@@ -1338,23 +1403,31 @@ public partial class AssistanceChatView : ContentView
 
         try
         {
-            var popup = new AIReplyCopyPopup(message.Message)
+            if (message.IsUser)
             {
-                Background = Colors.Transparent
-            };
-            await CommunityToolkit.Maui.Extensions.PopupExtensions.ShowPopupAsync(
-                Window.Navigation,
-                popup,
-                new PopupOptions
+                await Clipboard.SetTextAsync(message.Message);
+            }
+            else
+            {
+                var popup = new AIReplyCopyPopup(message.Message)
                 {
-                    Shape = new RoundRectangle
+                    Background = Colors.Transparent
+                };
+                await CommunityToolkit.Maui.Extensions.PopupExtensions.ShowPopupAsync(
+                    Window.Navigation,
+                    popup,
+                    new PopupOptions
                     {
-                        CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()),
-                        Stroke = Colors.Transparent,
-                        BackgroundColor = Color.FromArgb("#262D3D"),
-                        StrokeThickness = 0,
-                    },
-                });
+                        Shape = new RoundRectangle
+                        {
+                            CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()),
+                            Stroke = Colors.Transparent,
+                            BackgroundColor = Color.FromArgb("#262D3D"),
+                            StrokeThickness = 0,
+                        },
+                    });
+            }
+
         }
         catch (Exception ex)
         {
@@ -1416,6 +1489,7 @@ public partial class AssistanceChatView : ContentView
                 IsUser = message.IsUser,
                 ReasoningText = message.ReasoningText,
                 ToolCallsText = message.ToolCallsText,
+                ContentSegments = CloneContentSegments(message.ContentSegments) ?? [],
                 HasFeedbackSubmitted = message.HasFeedbackSubmitted,
                 IsFirstTurn = isFirstRun
             };
@@ -1436,14 +1510,28 @@ public partial class AssistanceChatView : ContentView
                     item.ContentViews.Add(card.View);
                 }
 
-                if (!string.IsNullOrWhiteSpace(message.ToolCallsText))
+                if (message.ContentSegments?.Count > 0)
+                {
+                    foreach (ChatContentSegmentSnapshot segment in message.ContentSegments)
+                    {
+                        if (segment.Kind == ChatContentSegmentKinds.ToolCall)
+                        {
+                            var card = new ToolCallCardView(segment.Text, segment.ResultText);
+                            item.ContentViews.Add(card.View);
+                        }
+                        else if (segment.Kind == ChatContentSegmentKinds.Text && !string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            item.ContentViews.Add(Markdown2XAML.Convert(segment.Text));
+                        }
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(message.ToolCallsText))
                 {
                     var card = new ToolCallCardView(message.ToolCallsText);
-                    card.ToggleExpanded(); // collapsed by default on load
                     item.ContentViews.Add(card.View);
                 }
 
-                if (!string.IsNullOrWhiteSpace(message.Message))
+                if (message.ContentSegments?.Count is not > 0 && !string.IsNullOrWhiteSpace(message.Message))
                 {
                     View mdView = Markdown2XAML.Convert(message.Message);
                     item.ContentViews.Add(mdView);
@@ -1475,10 +1563,36 @@ public partial class AssistanceChatView : ContentView
 
         // 重建 _chatHistory 中带附件的用户消息为多模态消息
         RebuildHistoryWithAttachments(session, mediaDir);
+        RestoreLoadedSkillsFromHistory();
 
         if (_messages.Count == 0)
         {
             AddAssistantWelcomeMessage();
+        }
+    }
+
+    private void RestoreLoadedSkillsFromHistory()
+    {
+        string? systemPrompt = _chatHistory.FirstOrDefault(message => message.Role == ChatRole.System)?.Text;
+        if (string.IsNullOrEmpty(systemPrompt))
+        {
+            return;
+        }
+
+        const string heading = "## 已加载的 Skill:";
+        foreach (string line in systemPrompt.Split('\n'))
+        {
+            string trimmedLine = line.Trim();
+            if (!trimmedLine.StartsWith(heading, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string skillName = trimmedLine[heading.Length..].Trim();
+            if (_skillManager.SkillExists(skillName))
+            {
+                SkillRegistry.LoadSkill(skillName);
+            }
         }
     }
 
@@ -1593,6 +1707,7 @@ public partial class AssistanceChatView : ContentView
             IsUser = x.IsUser,
             ReasoningText = x.ReasoningText,
             ToolCallsText = x.ToolCallsText,
+            ContentSegments = CloneContentSegments(x.ContentSegments),
             HasFeedbackSubmitted = x.HasFeedbackSubmitted,
             Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
             {
@@ -1610,6 +1725,33 @@ public partial class AssistanceChatView : ContentView
         }).ToList();
 
         AssistanceChatSessionStore.UpdateSession(_projectPath, _sessionId, title, messages, history);
+    }
+
+    private static List<ChatContentSegmentSnapshot>? CloneContentSegments(IEnumerable<ChatContentSegmentSnapshot>? segments)
+    {
+        return segments?.Select(segment => new ChatContentSegmentSnapshot
+        {
+            Kind = segment.Kind,
+            Text = segment.Text,
+            ResultText = segment.ResultText,
+        }).ToList();
+    }
+
+    private static void AppendPendingTextSegment(
+        ICollection<ChatContentSegmentSnapshot> segments,
+        StringBuilder pendingText)
+    {
+        if (pendingText.Length == 0)
+        {
+            return;
+        }
+
+        segments.Add(new ChatContentSegmentSnapshot
+        {
+            Kind = ChatContentSegmentKinds.Text,
+            Text = pendingText.ToString(),
+        });
+        pendingText.Clear();
     }
 
     private string BuildSessionTitle()
@@ -1824,26 +1966,78 @@ public partial class AssistanceChatView : ContentView
         return string.IsNullOrWhiteSpace(fromPayload) ? string.Empty : fromPayload;
     }
 
-    private static bool TryUpdateToolCallState(ChatResponseUpdate update, IDictionary<string, ToolCallDisplayState> toolCallsById, ref int anonymousToolCallCounter, out string displayText)
+    private static bool TryUpdateToolCallState(
+        ChatResponseUpdate update,
+        IDictionary<string, ToolCallDisplayState> toolCallsById,
+        ref int anonymousToolCallCounter,
+        out string displayText,
+        out IReadOnlyList<ToolCallDisplayState> changedStates)
     {
         displayText = string.Empty;
-        bool changed = false;
+        List<ToolCallDisplayState> changed = [];
 
         foreach (ToolCallFragment fragment in ExtractToolCallFragments(update))
         {
-            if (ApplyToolCallFragment(toolCallsById, fragment, ref anonymousToolCallCounter))
+            if (ApplyToolCallFragment(toolCallsById, fragment, ref anonymousToolCallCounter, out ToolCallDisplayState state)
+                && !changed.Contains(state))
             {
-                changed = true;
+                changed.Add(state);
             }
         }
 
-        if (!changed)
+        changedStates = changed;
+        if (changed.Count == 0)
         {
             return false;
         }
 
         displayText = BuildToolCallDisplayText(toolCallsById.Values);
         return true;
+    }
+
+    private static bool TryUpdateToolCallResultState(
+        ChatResponseUpdate update,
+        IDictionary<string, ToolCallDisplayState> toolCallsById,
+        out IReadOnlyList<ToolCallDisplayState> changedStates)
+    {
+        List<ToolCallDisplayState> changed = [];
+        if (update.Contents is null)
+        {
+            changedStates = changed;
+            return false;
+        }
+
+        foreach (FunctionResultContent resultContent in update.Contents.OfType<FunctionResultContent>())
+        {
+            string key = resultContent.CallId;
+            if (!toolCallsById.TryGetValue(key, out ToolCallDisplayState? state))
+            {
+                state = new ToolCallDisplayState
+                {
+                    Key = key,
+                    CallId = resultContent.CallId,
+                    Order = toolCallsById.Count + 1,
+                };
+                toolCallsById[key] = state;
+            }
+
+            string result = ConvertObjectToDisplayText(resultContent.Result);
+            if (resultContent.Exception is not null)
+            {
+                result = string.IsNullOrWhiteSpace(result)
+                    ? resultContent.Exception.Message
+                    : $"{result}{Environment.NewLine}{resultContent.Exception.Message}";
+            }
+
+            if (!string.Equals(state.Result, result, StringComparison.Ordinal))
+            {
+                state.Result = result;
+                changed.Add(state);
+            }
+        }
+
+        changedStates = changed;
+        return changed.Count > 0;
     }
 
     private static IEnumerable<ToolCallFragment> ExtractToolCallFragments(ChatResponseUpdate update)
@@ -2059,7 +2253,11 @@ public partial class AssistanceChatView : ContentView
         return true;
     }
 
-    private static bool ApplyToolCallFragment(IDictionary<string, ToolCallDisplayState> toolCallsById, ToolCallFragment fragment, ref int anonymousToolCallCounter)
+    private static bool ApplyToolCallFragment(
+        IDictionary<string, ToolCallDisplayState> toolCallsById,
+        ToolCallFragment fragment,
+        ref int anonymousToolCallCounter,
+        out ToolCallDisplayState state)
     {
         string key = fragment.CallId;
         if (string.IsNullOrWhiteSpace(key))
@@ -2068,15 +2266,17 @@ public partial class AssistanceChatView : ContentView
             key = $"anonymous-{anonymousToolCallCounter}";
         }
 
-        if (!toolCallsById.TryGetValue(key, out ToolCallDisplayState? state))
+        if (!toolCallsById.TryGetValue(key, out ToolCallDisplayState? existingState))
         {
-            state = new ToolCallDisplayState
+            existingState = new ToolCallDisplayState
             {
+                Key = key,
                 CallId = fragment.CallId,
                 Order = toolCallsById.Count + 1,
             };
-            toolCallsById[key] = state;
+            toolCallsById[key] = existingState;
         }
+        state = existingState;
 
         bool changed = false;
         if (!string.IsNullOrWhiteSpace(fragment.Name) && !string.Equals(state.Name, fragment.Name, StringComparison.Ordinal))
@@ -3026,6 +3226,8 @@ public partial class AssistanceChatView : ContentView
 
     private sealed class ToolCallDisplayState
     {
+        public string Key { get; init; } = string.Empty;
+
         public int Order { get; init; }
 
         public string CallId { get; init; } = string.Empty;
@@ -3033,6 +3235,8 @@ public partial class AssistanceChatView : ContentView
         public string Name { get; set; } = string.Empty;
 
         public string Arguments { get; set; } = string.Empty;
+
+        public string Result { get; set; } = string.Empty;
     }
 
     private readonly struct ToolCallFragment
@@ -3081,7 +3285,10 @@ public partial class AssistanceChatView : ContentView
         StringBuilder reasoningBuilder = new();
         var converter = new Markdown2XAML.StreamConverter();
         ThinkingCardView? thinkingCard = null;
-        ToolCallCardView? toolCallCard = null;
+        Dictionary<string, ToolCallCardView> toolCallCardsByKey = new(StringComparer.Ordinal);
+        Dictionary<string, ChatContentSegmentSnapshot> toolCallSegmentsByKey = new(StringComparer.Ordinal);
+        StringBuilder pendingTextSegment = new();
+        string? terminalContentSegment = null;
         View? partialView = null;
         try
         {
@@ -3096,96 +3303,240 @@ public partial class AssistanceChatView : ContentView
                     Sender = "Assistant P",
                     Message = "",
                     IsUser = false,
+                    ContentSegments = [],
                 };
                 _messages.Add(streamingItem);
 
-                Dictionary<string, ToolCallDisplayState> toolCallsById = new(StringComparer.Ordinal);
-                int anonymousToolCallCounter = 0;
-                await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, _cts.Token))
+                bool restartForContextChange;
+                do
                 {
-                    LogDiagnostic($"Chunk: {JsonSerializer.Serialize(update)}");
-                    string textChunk = !string.IsNullOrEmpty(update.Text)
-                        ? update.Text
-                        : ExtractTextFromContents(update);
-                    if (string.IsNullOrEmpty(textChunk))
+                    restartForContextChange = false;
+                    var skillsAtRequestStart = SkillRegistry.GetLoadedSkills().ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    long memoryRevisionAtRequestStart = MemoryManager.Revision;
+                    Dictionary<string, ToolCallDisplayState> toolCallsById = new(StringComparer.Ordinal);
+                    int anonymousToolCallCounter = 0;
+                    using var attemptCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+                    string currentSessionId = _sessionId.ToString("N");
+                    void CancelForMemoryChange() => attemptCancellation.Cancel();
+                    void CancelForSkillChange(string sessionId)
                     {
-                        textChunk = ExtractContentChunk(update);
+                        if (string.Equals(sessionId, currentSessionId, StringComparison.OrdinalIgnoreCase))
+                            attemptCancellation.Cancel();
                     }
 
-                    string reasoningChunk = ExtractReasoningChunk(update);
-
-                    bool toolCallChanged = TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText);
-
-                    // Skip if nothing to process
-                    if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged)
-                        continue;
-
-                    // Capture values for main-thread dispatch
-                    string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
-                    string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
-                    string capturedToolCalls = toolCallsText;
-
-                    if (!string.IsNullOrEmpty(textChunk))
+                    MemoryManager.Changed += CancelForMemoryChange;
+                    SkillRegistry.Changed += CancelForSkillChange;
+                    try
                     {
-                        textBuilder.Append(textChunk);
-                        capturedText = textBuilder.ToString();
-                    }
-                    if (!string.IsNullOrEmpty(reasoningChunk))
-                    {
-                        reasoningBuilder.Append(reasoningChunk);
-                        capturedReasoning = reasoningBuilder.ToString();
-                    }
-
-                    MainThread.BeginInvokeOnMainThread(() =>
-                    {
-                        streamingItem.Message = capturedText;
-
-                        foreach (View view in converter.Feed(textChunk))
-                            streamingItem.ContentViews.Add(view);
-
-                        var newPartialView = converter.CurrentPartialView;
-                        if (!ReferenceEquals(newPartialView, partialView))
+                        await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, attemptCancellation.Token))
                         {
-                            if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                                streamingItem.ContentViews.Remove(partialView);
-                            partialView = newPartialView;
-                            if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
-                                streamingItem.ContentViews.Add(partialView);
+                            if (MemoryManager.Revision != memoryRevisionAtRequestStart
+                                || SkillRegistry.GetLoadedSkills().Any(skill => !skillsAtRequestStart.Contains(skill)))
+                            {
+                                restartForContextChange = true;
+                                break;
+                            }
+
+                            LogDiagnostic($"Chunk: {JsonSerializer.Serialize(update)}");
+                            string textChunk = !string.IsNullOrEmpty(update.Text)
+                                ? update.Text
+                                : ExtractTextFromContents(update);
+                            if (string.IsNullOrEmpty(textChunk))
+                            {
+                                textChunk = ExtractContentChunk(update);
+                            }
+
+                            string reasoningChunk = ExtractReasoningChunk(update);
+
+                        bool toolCallChanged = TryUpdateToolCallState(
+                            update,
+                            toolCallsById,
+                            ref anonymousToolCallCounter,
+                            out string toolCallsText,
+                            out IReadOnlyList<ToolCallDisplayState> changedToolCalls);
+                        bool toolResultChanged = TryUpdateToolCallResultState(
+                            update,
+                            toolCallsById,
+                            out IReadOnlyList<ToolCallDisplayState> changedToolResults);
+
+                        // Skip if nothing to process
+                        if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged && !toolResultChanged)
+                            continue;
+
+                        // Capture values for main-thread dispatch
+                        string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
+                        string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
+                        string capturedToolCalls = toolCallsText;
+
+                        if (!string.IsNullOrEmpty(textChunk))
+                        {
+                            textBuilder.Append(textChunk);
+                            pendingTextSegment.Append(textChunk);
+                            capturedText = textBuilder.ToString();
                         }
-                        // --- Reasoning: create/update thinking card ---
                         if (!string.IsNullOrEmpty(reasoningChunk))
                         {
-                            streamingItem.ReasoningText = capturedReasoning;
-                            if (thinkingCard is null)
-                            {
-                                thinkingCard = new ThinkingCardView(capturedReasoning);
-                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
-                            }
-                            else
-                            {
-                                thinkingCard.UpdateText(capturedReasoning);
-                            }
+                            reasoningBuilder.Append(reasoningChunk);
+                            capturedReasoning = reasoningBuilder.ToString();
                         }
 
-                        // --- Tool calls: create/update tool call card ---
-                        if (toolCallChanged)
+                        List<(string Key, string Text)> capturedToolCallUpdates = changedToolCalls
+                            .Select(state => (state.Key, BuildToolCallDisplayText([state])))
+                            .ToList();
+                        List<(string Key, string Text, string Result)> capturedToolResultUpdates = changedToolResults
+                            .Select(state => (state.Key, BuildToolCallDisplayText([state]), state.Result))
+                            .ToList();
+
+                        foreach ((string key, string text) in capturedToolCallUpdates)
                         {
-                            streamingItem.ToolCallsText = capturedToolCalls;
-                            if (toolCallCard is null)
+                            if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
                             {
-                                toolCallCard = new ToolCallCardView(capturedToolCalls);
-                                InsertViewBeforePartial(streamingItem.ContentViews, partialView, toolCallCard.View);
+                                AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
+                                segment = new ChatContentSegmentSnapshot
+                                {
+                                    Kind = ChatContentSegmentKinds.ToolCall,
+                                    Text = text,
+                                };
+                                toolCallSegmentsByKey[key] = segment;
+                                streamingItem.ContentSegments.Add(segment);
                             }
                             else
                             {
-                                toolCallCard.UpdateText(capturedToolCalls);
+                                segment.Text = text;
                             }
                         }
 
-                        // 流式输出内容更新后自动滚动到底部
-                        ScrollToEnd();
-                    });
+                        foreach ((string key, string text, string result) in capturedToolResultUpdates)
+                        {
+                            if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
+                            {
+                                AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
+                                segment = new ChatContentSegmentSnapshot
+                                {
+                                    Kind = ChatContentSegmentKinds.ToolCall,
+                                    Text = text,
+                                };
+                                toolCallSegmentsByKey[key] = segment;
+                                streamingItem.ContentSegments.Add(segment);
+                            }
+
+                            segment.ResultText = result;
+                        }
+
+                            MainThread.BeginInvokeOnMainThread(() =>
+                            {
+                            streamingItem.Message = capturedText;
+
+                            foreach (View view in converter.Feed(textChunk))
+                                streamingItem.ContentViews.Add(view);
+
+                            var newPartialView = converter.CurrentPartialView;
+                            if (!ReferenceEquals(newPartialView, partialView))
+                            {
+                                if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                                    streamingItem.ContentViews.Remove(partialView);
+                                partialView = newPartialView;
+                                if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
+                                    streamingItem.ContentViews.Add(partialView);
+                            }
+                            // --- Reasoning: create/update thinking card ---
+                            if (!string.IsNullOrEmpty(reasoningChunk))
+                            {
+                                streamingItem.ReasoningText = capturedReasoning;
+                                if (thinkingCard is null)
+                                {
+                                    thinkingCard = new ThinkingCardView(capturedReasoning);
+                                    InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
+                                }
+                                else
+                                {
+                                    thinkingCard.UpdateText(capturedReasoning);
+                                }
+                            }
+
+                            // --- Tool calls: create/update tool call card ---
+                            if (toolCallChanged)
+                            {
+                                streamingItem.ToolCallsText = capturedToolCalls;
+                                foreach ((string key, string text) in capturedToolCallUpdates)
+                                {
+                                    if (toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? existingCard))
+                                    {
+                                        existingCard.UpdateText(text);
+                                        continue;
+                                    }
+
+                                    FlushStreamingState(streamingItem, converter, ref partialView);
+                                    converter = new Markdown2XAML.StreamConverter();
+
+                                    var card = new ToolCallCardView(text);
+                                    toolCallCardsByKey[key] = card;
+                                    streamingItem.ContentViews.Add(card.View);
+                                }
+                            }
+
+                            if (toolResultChanged)
+                            {
+                                foreach ((string key, string text, string result) in capturedToolResultUpdates)
+                                {
+                                    if (!toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? card))
+                                    {
+                                        FlushStreamingState(streamingItem, converter, ref partialView);
+                                        converter = new Markdown2XAML.StreamConverter();
+
+                                        card = new ToolCallCardView(text);
+                                        toolCallCardsByKey[key] = card;
+                                        streamingItem.ContentViews.Add(card.View);
+                                    }
+
+                                    card.UpdateResult(result);
+                                }
+                            }
+
+                            // 流式输出内容更新后自动滚动到底部
+                            ScrollToEnd();
+                            });
+                        }
+                    }
+                    catch (OperationCanceledException) when (!_cts.IsCancellationRequested
+                        && (MemoryManager.Revision != memoryRevisionAtRequestStart
+                            || SkillRegistry.GetLoadedSkills().Any(skill => !skillsAtRequestStart.Contains(skill))))
+                    {
+                        restartForContextChange = true;
+                    }
+                    finally
+                    {
+                        MemoryManager.Changed -= CancelForMemoryChange;
+                        SkillRegistry.Changed -= CancelForSkillChange;
+                    }
+
+                    restartForContextChange |= MemoryManager.Revision != memoryRevisionAtRequestStart
+                        || SkillRegistry.GetLoadedSkills().Any(skill => !skillsAtRequestStart.Contains(skill));
+                    if (restartForContextChange)
+                    {
+                        _cts.Token.ThrowIfCancellationRequested();
+                        await RefreshSystemPromptAsync();
+
+                        await MainThread.InvokeOnMainThreadAsync(() =>
+                        {
+                            streamingItem.Message = string.Empty;
+                            streamingItem.ReasoningText = string.Empty;
+                            streamingItem.ToolCallsText = string.Empty;
+                            streamingItem.ContentViews.Clear();
+                            streamingItem.ContentSegments.Clear();
+                        });
+
+                        textBuilder.Clear();
+                        reasoningBuilder.Clear();
+                        pendingTextSegment.Clear();
+                        converter = new Markdown2XAML.StreamConverter();
+                        thinkingCard = null;
+                        toolCallCardsByKey.Clear();
+                        toolCallSegmentsByKey.Clear();
+                        partialView = null;
+                    }
                 }
+                while (restartForContextChange);
 
                 // Flush remaining converter content on main thread
                 await MainThread.InvokeOnMainThreadAsync(() =>
@@ -3201,6 +3552,7 @@ public partial class AssistanceChatView : ContentView
                     ScrollToEnd();
                 });
 
+                AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
                 assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
                 streamingItem.Message = assistantText;
             }
@@ -3208,6 +3560,7 @@ public partial class AssistanceChatView : ContentView
         catch (OperationCanceledException)
         {
             assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Cancelled}";
+            terminalContentSegment = Localized.AIAssistant_ChatView_ChatFail_Cancelled;
             if (streamingItem is not null)
             {
                 FlushStreamingState(streamingItem, converter, ref partialView);
@@ -3227,6 +3580,7 @@ public partial class AssistanceChatView : ContentView
         {
             Log(ex, $"Finish request '{userInputForLog ?? "(regenerate)"}'", this);
             assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
+            terminalContentSegment = $"{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
             if (streamingItem is not null)
             {
                 FlushStreamingState(streamingItem, converter, ref partialView);
@@ -3240,6 +3594,23 @@ public partial class AssistanceChatView : ContentView
                     Margin = new Thickness(0, 4, 0, 0),
                 });
                 ScrollToEnd();
+            }
+        }
+
+        if (streamingItem is not null)
+        {
+            AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
+            if (toolCallSegmentsByKey.Count == 0)
+            {
+                streamingItem.ContentSegments.Clear();
+            }
+            else if (!string.IsNullOrEmpty(terminalContentSegment))
+            {
+                streamingItem.ContentSegments.Add(new ChatContentSegmentSnapshot
+                {
+                    Kind = ChatContentSegmentKinds.Text,
+                    Text = terminalContentSegment,
+                });
             }
         }
 
@@ -3305,11 +3676,13 @@ public partial class AssistanceChatView : ContentView
         // 重新发送
         _isReplying = true;
         AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        SkillRegistry.IsStreaming = true;
         _cts = new CancellationTokenSource();
 
         await StreamAndAppendAssistantResponseAsync();
 
         _isReplying = false;
+        SkillRegistry.IsStreaming = false;
         AISendButton.Text = Localized.AIAssistant_ChatView_Send;
         AISendButton.IsEnabled = true;
         _cts?.Dispose();
@@ -3335,11 +3708,13 @@ public partial class AssistanceChatView : ContentView
         // 从截断处的用户消息重新发送
         _isReplying = true;
         AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        SkillRegistry.IsStreaming = true;
         _cts = new CancellationTokenSource();
 
         await StreamAndAppendAssistantResponseAsync();
 
         _isReplying = false;
+        SkillRegistry.IsStreaming = false;
         AISendButton.Text = Localized.AIAssistant_ChatView_Send;
         AISendButton.IsEnabled = true;
         _cts?.Dispose();
@@ -3585,6 +3960,7 @@ public partial class AssistanceChatView : ContentView
                 IsUser = m.IsUser,
                 ReasoningText = m.ReasoningText,
                 ToolCallsText = m.ToolCallsText,
+                ContentSegments = CloneContentSegments(m.ContentSegments),
                 HasFeedbackSubmitted = m.HasFeedbackSubmitted,
                 Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
                 {
@@ -3719,6 +4095,144 @@ public partial class AssistanceChatView : ContentView
         };
     }
 
+    /// <summary>
+    /// 在聊天界面中显示脚本命令授权请求，提供允许/拒绝按钮供用户决策。
+    /// 必须在 UI 线程上调用，或确保通过 <see cref="MainThread.BeginInvokeOnMainThread"/> 调度。
+    /// </summary>
+    /// <param name="context">授权上下文，包含命令详情、路径、URL 等信息。</param>
+    /// <param name="allowRemember">是否显示"记住决策"选项。</param>
+    /// <returns>用户选择的授权决策结果。</returns>
+    public Task<AuthorizationResult> ShowAuthorizationRequestAsync(AuthorizationContext context, bool allowRemember)
+    {
+        var tcs = new TaskCompletionSource<AuthorizationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("🔒 脚本命令需要您的授权确认");
+        sb.AppendLine();
+
+        // 命令名称
+        string cmdName = context.CommandInfo?.Name ?? "未知";
+        sb.AppendLine($"📌 命令：{cmdName}");
+
+        // 目标路径
+        if (!string.IsNullOrEmpty(context.TargetPath))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"📁 目标路径：{context.TargetPath}");
+
+            string statusIcon = context.PathSafetyStatus switch
+            {
+                PathSafety.Safe => "✅ 项目目录内 - 安全",
+                PathSafety.OutsideProject => "⚠️ 项目目录外 - 有风险",
+                PathSafety.PathTraversal => "🚫 检测到路径遍历 - 危险",
+                PathSafety.Unresolved => "❓ 路径来自变量，无法静态验证",
+                _ => "未知",
+            };
+            sb.AppendLine($"🔍 路径状态：{statusIcon}");
+        }
+
+        // 目标 URL
+        if (!string.IsNullOrEmpty(context.TargetUrl))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"🌐 目标 URL：{context.TargetUrl}");
+        }
+
+        // 混淆警告
+        if (!string.IsNullOrEmpty(context.ObfuscationWarning))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"⚠️ 安全警告：{context.ObfuscationWarning}");
+            sb.AppendLine($"威胁级别：{context.ThreatLevel}");
+        }
+
+        // 创建系统消息条目
+        var item = new ChatMessageItem
+        {
+            Sender = "🔒 系统安全",
+            Message = string.Empty,
+            IsUser = false,
+            IsFirstTurn = false,
+        };
+
+        // 消息文本
+        item.ContentViews.Add(new Label
+        {
+            Text = sb.ToString().TrimEnd(),
+            FontSize = 13,
+            TextColor = Color.FromArgb("#FFE0E0E0"),
+            LineBreakMode = LineBreakMode.WordWrap,
+        });
+
+        // 操作按钮面板
+        var actionPanel = new VerticalStackLayout { Spacing = 8, Margin = new Thickness(0, 10, 0, 0) };
+
+        void SetResultAndCleanup(AuthorizationResult r)
+        {
+            // 清理：移除消息（在 UI 线程上执行）
+            MainThread.BeginInvokeOnMainThread(() => _ = _messages.Remove(item));
+            tcs.TrySetResult(r);
+        }
+
+        // 创建按钮统一风格
+        static Button MakeButton(string text, string bgColor, double width = 140)
+        {
+            return new Button
+            {
+                Text = text,
+                BackgroundColor = Color.FromArgb(bgColor),
+                TextColor = Colors.White,
+                CornerRadius = 4,
+                HeightRequest = 34,
+                FontSize = 13,
+                WidthRequest = width,
+                Padding = new Thickness(8, 0),
+            };
+        }
+
+        var allowBtn = MakeButton("✅ 允许", "#4EC9B0");
+        allowBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.Allow);
+
+        var denyBtn = MakeButton("❌ 拒绝", "#C04040");
+        denyBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.Deny);
+
+        if (allowRemember)
+        {
+            var allowRememberBtn = MakeButton("✅ 允许并记住", "#1E6F5C");
+            allowRememberBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.AllowAndRemember);
+
+            var denyRememberBtn = MakeButton("❌ 拒绝并记住", "#8B0000");
+            denyRememberBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.DenyAndRemember);
+
+            actionPanel.Children.Add(new HorizontalStackLayout
+            {
+                Spacing = 10,
+                HorizontalOptions = LayoutOptions.Center,
+                Children = { allowBtn, allowRememberBtn },
+            });
+            actionPanel.Children.Add(new HorizontalStackLayout
+            {
+                Spacing = 10,
+                HorizontalOptions = LayoutOptions.Center,
+                Children = { denyBtn, denyRememberBtn },
+            });
+        }
+        else
+        {
+            actionPanel.Children.Add(new HorizontalStackLayout
+            {
+                Spacing = 10,
+                HorizontalOptions = LayoutOptions.Center,
+                Children = { allowBtn, denyBtn },
+            });
+        }
+
+        item.ContentViews.Add(actionPanel);
+        _messages.Add(item);
+
+        return tcs.Task;
+    }
+
 }
 
 
@@ -3764,6 +4278,8 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     /// 通过 BindableLayout 驱动 UI 渲染。
     /// </summary>
     public ObservableCollection<View> ContentViews { get; } = new();
+
+    internal List<ChatContentSegmentSnapshot> ContentSegments { get; set; } = [];
 
     private string _message = string.Empty;
 

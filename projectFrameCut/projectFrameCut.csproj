@@ -159,9 +159,10 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
-		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
+		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
 		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>

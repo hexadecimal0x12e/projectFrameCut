@@ -7,6 +7,7 @@ using System.Management.Automation.Language;
 using System.Text;
 using System.Text.RegularExpressions;
 using projectFrameCut.Shared;
+using LocalizedResources;
 
 namespace projectFrameCut.ScriptEngine
 {
@@ -361,7 +362,7 @@ namespace projectFrameCut.ScriptEngine
                     obfuscations.Add(new ObfuscationDetail
                     {
                         Pattern = "ExcessiveParseErrors",
-                        Description = $"脚本包含 {parseErrors.Length} 个解析错误，可能存在混淆",
+                        Description = Localized.ScriptEngine_Filter_Obfs_ExcessiveParseErrors(parseErrors.Length),
                         Severity = 2,
                         LineNumber = 1,
                     });
@@ -374,7 +375,7 @@ namespace projectFrameCut.ScriptEngine
                 obfuscations.Add(new ObfuscationDetail
                 {
                     Pattern = "ParseFailure",
-                    Description = "无法解析脚本 AST，可能存在严重混淆",
+                    Description = Localized.ScriptEngine_Filter_Obfs_ParseFailure,
                     Severity = 3,
                     LineNumber = 1,
                 });
@@ -495,42 +496,42 @@ namespace projectFrameCut.ScriptEngine
         private static string BuildSummary(ScriptAnalysisResult result)
         {
             if (result.ThreatLevel == ThreatLevel.None)
-                return "脚本正常，未检测到可疑模式。";
+                return Localized.ScriptEngine_Filter_SummaryNone;
 
             var parts = new List<string>();
             if (result.Flags.Contains(ScriptFlag.EncodedCommandParameter))
-                parts.Add("包含编码命令参数");
+                parts.Add(Localized.ScriptEngine_Filter_FlagEncodedCmd);
             if (result.Flags.Contains(ScriptFlag.Base64EncodedCommand))
-                parts.Add("包含 Base64 编码命令");
+                parts.Add(Localized.ScriptEngine_Filter_FlagBase64);
             if (result.Flags.Contains(ScriptFlag.ExcessiveBacktickUsage))
-                parts.Add("反引号使用异常");
+                parts.Add(Localized.ScriptEngine_Filter_FlagBacktick);
             if (result.Flags.Contains(ScriptFlag.StringConcatenation))
-                parts.Add("命令名由字符串拼接构造");
+                parts.Add(Localized.ScriptEngine_Filter_FlagStringConcat);
             if (result.Flags.Contains(ScriptFlag.SuspiciousInvocation))
-                parts.Add("动态调用危险命令");
+                parts.Add(Localized.ScriptEngine_Filter_FlagSuspiciousInvoke);
             if (result.Flags.Contains(ScriptFlag.WinApiInvocation))
-                parts.Add("包含 WinAPI 调用");
+                parts.Add(Localized.ScriptEngine_Filter_FlagWinApi);
             if (result.Flags.Contains(ScriptFlag.AssemblyLoading))
-                parts.Add("动态加载程序集");
+                parts.Add(Localized.ScriptEngine_Filter_FlagAssemblyLoad);
             if (result.Flags.Contains(ScriptFlag.HiddenWindowExecution))
-                parts.Add("隐藏窗口执行");
+                parts.Add(Localized.ScriptEngine_Filter_FlagHiddenWindow);
             if (result.Flags.Contains(ScriptFlag.DotNetReflection))
-                parts.Add("访问未知 .NET 类型");
+                parts.Add(Localized.ScriptEngine_Filter_FlagDotNetReflect);
             if (result.Flags.Contains(ScriptFlag.SensitiveTypeAccess))
-                parts.Add("访问敏感系统类型");
+                parts.Add(Localized.ScriptEngine_Filter_FlagSensitiveType);
             if (result.Flags.Contains(ScriptFlag.DynamicTypeAccess))
-                parts.Add("动态构造类型名");
+                parts.Add(Localized.ScriptEngine_Filter_FlagDynamicType);
 
             var prefix = result.ThreatLevel switch
             {
-                ThreatLevel.Low => "注意",
-                ThreatLevel.Medium => "警告",
-                ThreatLevel.High => "高度警惕",
-                ThreatLevel.Critical => "危险",
-                _ => "信息",
+                ThreatLevel.Low => Localized.ScriptEngine_Filter_ThreatPrefix_Low,
+                ThreatLevel.Medium => Localized.ScriptEngine_Filter_ThreatPrefix_Medium,
+                ThreatLevel.High => Localized.ScriptEngine_Filter_ThreatPrefix_High,
+                ThreatLevel.Critical => Localized.ScriptEngine_Filter_ThreatPrefix_Critical,
+                _ => Localized.ScriptEngine_Filter_ThreatPrefix_None,
             };
 
-            return $"[{prefix}] 检测到 {parts.Count} 个安全问题：{string.Join("；", parts)}。";
+            return Localized.ScriptEngine_Filter_SummaryFormat(prefix, parts.Count, string.Join("；", parts));
         }
 
         // ──────────────────────────────────────────────────────────
@@ -822,7 +823,7 @@ namespace projectFrameCut.ScriptEngine
                 detail = new ObfuscationDetail
                 {
                     Pattern = "EncodedCommandParameter",
-                    Description = $"检测到编码命令参数（第 {line} 行），可用于执行任意代码",
+                    Description = Localized.ScriptEngine_Filter_Obfs_EncodedCmdParam(line),
                     Severity = 4,
                     LineNumber = line,
                 };
@@ -850,7 +851,7 @@ namespace projectFrameCut.ScriptEngine
                 details.Add(new ObfuscationDetail
                 {
                     Pattern = "Base64Decode",
-                    Description = $"检测到 Base64 解码调用（第 {line} 行），通常用于编码执行",
+                    Description = Localized.ScriptEngine_Filter_Obfs_Base64Decode(line),
                     Severity = 4,
                     LineNumber = line,
                 });
@@ -867,7 +868,7 @@ namespace projectFrameCut.ScriptEngine
                     details.Add(new ObfuscationDetail
                     {
                         Pattern = "InlineBase64",
-                        Description = $"检测到内联长 Base64 字符串（第 {line} 行），可能用于编码执行",
+                        Description = Localized.ScriptEngine_Filter_Obfs_InlineBase64(line),
                         Severity = 3,
                         LineNumber = line,
                     });
@@ -906,7 +907,7 @@ namespace projectFrameCut.ScriptEngine
                 detail = new ObfuscationDetail
                 {
                     Pattern = "ExcessiveBacktick",
-                    Description = $"反引号占比异常（{ratio:P1}），可能用于分隔命令字符绕过检测",
+                    Description = Localized.ScriptEngine_Filter_Obfs_ExcessiveBacktick($"{ratio:P1}"),
                     Severity = ratio > 0.15 ? 4 : 3,
                     LineNumber = line,
                 };
@@ -936,7 +937,7 @@ namespace projectFrameCut.ScriptEngine
                     details.Add(new ObfuscationDetail
                     {
                         Pattern = "CommandNameConcatenation",
-                        Description = $"命令名由字符串拼接构造（第 {line} 行），试图绕过命令名检测",
+                        Description = Localized.ScriptEngine_Filter_Obfs_CmdNameConcat(line),
                         Severity = 3,
                         LineNumber = line,
                     });
@@ -972,7 +973,7 @@ namespace projectFrameCut.ScriptEngine
                         details.Add(new ObfuscationDetail
                         {
                             Pattern = "SuspiciousIex",
-                            Description = $"危险的 Invoke-Expression 调用（第 {line} 行），参数为动态表达式",
+                            Description = Localized.ScriptEngine_Filter_Obfs_SuspiciousIex(line),
                             Severity = 5,
                             LineNumber = line,
                         });
@@ -1010,7 +1011,7 @@ namespace projectFrameCut.ScriptEngine
                     details.Add(new ObfuscationDetail
                     {
                         Pattern = $"WinAPI_{name}",
-                        Description = $"检测到 WinAPI 调用 {name}（第 {line} 行），可能用于注入操作",
+                        Description = Localized.ScriptEngine_Filter_Obfs_WinApi(name, line),
                         Severity = 5,
                         LineNumber = line,
                     });
@@ -1037,7 +1038,7 @@ namespace projectFrameCut.ScriptEngine
                 details.Add(new ObfuscationDetail
                 {
                     Pattern = "AssemblyLoadByteArray",
-                    Description = $"从字节数组动态加载程序集（第 {line} 行），通常用于加载未签名代码",
+                    Description = Localized.ScriptEngine_Filter_Obfs_AssemblyLoadByteArray(line),
                     Severity = 5,
                     LineNumber = line,
                 });
@@ -1064,7 +1065,7 @@ namespace projectFrameCut.ScriptEngine
                                 details.Add(new ObfuscationDetail
                                 {
                                     Pattern = "AddTypeInlineCode",
-                                    Description = $"Add-Type 包含内联 C# 代码（第 {line} 行），可能执行任意代码",
+                                    Description = Localized.ScriptEngine_Filter_Obfs_AddTypeInlineCode(line),
                                     Severity = 4,
                                     LineNumber = line,
                                 });
@@ -1088,7 +1089,7 @@ namespace projectFrameCut.ScriptEngine
                 detail = new ObfuscationDetail
                 {
                     Pattern = "HiddenWindow",
-                    Description = $"检测到隐藏窗口执行（第 {line} 行），常见于隐蔽执行",
+                    Description = Localized.ScriptEngine_Filter_Obfs_HiddenWindow(line),
                     Severity = 3,
                     LineNumber = line,
                 };
@@ -1132,7 +1133,7 @@ namespace projectFrameCut.ScriptEngine
                     details.Add(new ObfuscationDetail
                     {
                         Pattern = "DangerousDotNetAccess",
-                        Description = $"访问危险 .NET 类型 {typeName}::{memberName}（第 {line} 行），可操作用户数据或系统",
+                        Description = Localized.ScriptEngine_Filter_Obfs_DangerousDotNet(typeName, memberName, line),
                         Severity = 5,
                         LineNumber = line,
                     });
@@ -1143,7 +1144,7 @@ namespace projectFrameCut.ScriptEngine
                     details.Add(new ObfuscationDetail
                     {
                         Pattern = "UnknownDotNetAccess",
-                        Description = $"访问未知 .NET 类型 {typeName}::{memberName}（第 {line} 行），需用户确认",
+                        Description = Localized.ScriptEngine_Filter_Obfs_UnknownDotNet(typeName, memberName, line),
                         Severity = 3,
                         LineNumber = line,
                     });
@@ -1182,7 +1183,7 @@ namespace projectFrameCut.ScriptEngine
                             details.Add(new ObfuscationDetail
                             {
                                 Pattern = "DynamicTypeNameVariable",
-                                Description = $"通过变量动态获取类型（第 {line} 行），无法静态验证类型安全",
+                                Description = Localized.ScriptEngine_Filter_Obfs_DynamicTypeName(line),
                                 Severity = 5,
                                 LineNumber = line,
                             });
@@ -1218,7 +1219,7 @@ namespace projectFrameCut.ScriptEngine
                 details.Add(new ObfuscationDetail
                 {
                     Pattern = "LateBindingReflection",
-                    Description = $"后期绑定反射调用 {access.Member}（第 {line} 行），可动态执行任意代码",
+                    Description = Localized.ScriptEngine_Filter_Obfs_LateBindingReflection(access.Member.ToString(), line),
                     Severity = 5,
                     LineNumber = line,
                 });
@@ -1359,9 +1360,50 @@ namespace projectFrameCut.ScriptEngine
 
             // 展开表达式（复杂表达式，无法静态解析）
             if (argument is ConvertExpressionAst || argument is InvokeMemberExpressionAst)
-                return $"<表达式>";
+                return $"<Expression>";
 
             return argument.Extent?.Text;
+        }
+
+        /// <summary>
+        /// 检测脚本中是否直接引用了 <c>$page</c> 对象变量
+        /// （如 <c>$page</c>、<c>$page.Property</c>、<c>$page.Method()</c>），
+        /// 用于 <c>Security_Script_AllowAccessPageObject</c> 安全策略的访问控制。
+        /// 使用 AST 解析进行精确匹配，避免正则误报。
+        /// </summary>
+        public bool HasPageVariableAccess(string script)
+        {
+            if (string.IsNullOrWhiteSpace(script))
+                return false;
+
+            try
+            {
+                var ast = Parser.ParseInput(script, out _, out _);
+                if (ast == null)
+                    return false;
+
+                // 查找所有 VariableExpressionAst 节点（对应于 $xxx 变量引用）
+                var variableRefs = ast.FindAll(n => n is VariableExpressionAst, true);
+                foreach (VariableExpressionAst varExpr in variableRefs)
+                {
+                    var name = varExpr.VariablePath.UserPath;
+                    // 去掉作用域限定符（如 $script:page → page）
+                    var colonIdx = name.LastIndexOf(':');
+                    if (colonIdx >= 0)
+                        name = name[(colonIdx + 1)..];
+
+                    if (string.Equals(name, "page", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                return false;
+            }
+            catch
+            {
+                // AST 解析失败时回退到简单的正则检测
+                return Regex.IsMatch(script, @"\$page\b", RegexOptions.IgnoreCase)
+                    || Regex.IsMatch(script, @"\$\w+:page\b", RegexOptions.IgnoreCase);
+            }
         }
 
         /// <summary>从脚本中定位第 N 个字符所在的行号（1-based）。</summary>

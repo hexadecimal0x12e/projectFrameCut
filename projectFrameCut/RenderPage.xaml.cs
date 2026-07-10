@@ -37,12 +37,14 @@ using projectFrameCut.Render.Benchmark;
 
 
 
+
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
 #elif WINDOWS
 using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+using Woohoo.Platform.Windows.Taskbar;
 
 #endif
 
@@ -820,6 +822,8 @@ public partial class RenderPage : ContentPage
             // The configured accelerators (from accels.json) are ready to use.
             AcceleratorsManager.IsRendering = true;
             if (!AcceleratorsManager.Accelerators.Any()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate);
 #endif
             var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
@@ -944,6 +948,10 @@ public partial class RenderPage : ContentPage
                         HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}fps";
                     }
                 });
+
+#if WINDOWS
+                TaskbarManager.Instance.SetProgressValue((int)(p * 100), 100);
+#endif
             };
 
             builder?.OnPreviewGenerated += async (s, e) =>
@@ -1047,6 +1055,7 @@ public partial class RenderPage : ContentPage
             GC.WaitForPendingFinalizers();
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             GCSettings.LargeObjectHeapCompactionMode = origMode;
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
 #else
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -1169,7 +1178,7 @@ public partial class RenderPage : ContentPage
 
 
 
-    #endregion
+#endregion
 
     private async Task PerformPostRenderAction()
     {
