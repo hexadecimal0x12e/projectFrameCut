@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -112,7 +113,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ClassicSpeedVarianceProvider", "Classic Speed"),
                 Description = EffectBundleHelper.L("Description_Effect_ClassicSpeedVarianceProvider", "Apply a constant speed ratio for the whole clip."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/classicSpeedVarianceProvider.png"))
             };
         }
     }

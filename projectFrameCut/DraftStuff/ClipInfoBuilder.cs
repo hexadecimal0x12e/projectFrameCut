@@ -3647,12 +3647,12 @@ namespace projectFrameCut.DraftStuff
         private static string GetEffectTypeName(EffectTarget target)
         {
             StringBuilder result = new();
-            if (target.HasFlag(EffectTarget.Video)) result.Append("视频");
-            if (target.HasFlag(EffectTarget.Audio)) result.Append("音频");
-            if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append("变速");
-            if (target.HasFlag(EffectTarget.Mixture)) result.Append("混合");
-            if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append("调色");
-            if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(" | 关键帧");
+            if (target.HasFlag(EffectTarget.Video)) result.Append(Localized.EffectType_Video);
+            if (target.HasFlag(EffectTarget.Audio)) result.Append(Localized.EffectType_Audio);
+            if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append(Localized.EffectType_SpeedVariance);
+            if (target.HasFlag(EffectTarget.Mixture)) result.Append(Localized.EffectType_Mixture);
+            if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append(Localized.EffectType_ColorAdjustment);
+            if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(Localized.EffectType_KeyFramed);
             return result.ToString();
         }
 

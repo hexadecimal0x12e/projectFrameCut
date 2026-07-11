@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -111,7 +112,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Name = EffectBundleHelper.L("DisplayName_Mixture_BlendMode", "Blend Mode"),
                 Description = EffectBundleHelper.L("Description_Mixture_BlendMode",
                     "Composites the clip using a blend mode (Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten, Difference)."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/blendModeMixture.png"))
             };
         }
     }

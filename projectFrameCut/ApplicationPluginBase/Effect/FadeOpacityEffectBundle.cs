@@ -5,6 +5,7 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using projectFrameCut.Services;
 using System;
 using System.Collections.Generic;
 
@@ -95,7 +96,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_FadeOpacity", "Fade Opacity"),
                 Description = EffectBundleHelper.L("Description_Effect_FadeOpacity", "Apply a uniform opacity multiplier to the frame."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/fadeOpacity.png"))
             };
         }
     }

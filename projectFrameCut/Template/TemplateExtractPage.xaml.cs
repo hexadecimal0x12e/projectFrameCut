@@ -1177,7 +1177,7 @@ public partial class TemplateExtractPage : ContentPage
             ScopePicker.ItemsSource = GetScopeOptions();
 
             _scriptContent = "";
-            ScriptFileNameLabel.Text = "未选择文件";
+            ScriptFileNameLabel.Text = Localized.TemplateExtractPage_NoFileSelected;
             ScriptEditor.Text = "";
         }
         else

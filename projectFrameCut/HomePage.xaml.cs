@@ -1007,10 +1007,10 @@ public partial class HomePage : ContentPage
                             }
                             break;
                         }
-                        catch (COMException comEx)
+                        catch (Exception ex)
                         {
                             attempt++;
-                            Log(comEx, $"COMException while loading DraftPage attempt {attempt}", this);
+                            Log(ex, $"Exception while loading DraftPage attempt {attempt}", this);
                             if (attempt >= maxRetries)
                             {
                                 throw;

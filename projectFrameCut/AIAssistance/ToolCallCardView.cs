@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace projectFrameCut.AIAssistance;
 
@@ -110,7 +111,7 @@ public class ToolCallCardView
 
         _resultLabel = new Label
         {
-            Text = resultText,
+            Text = resultText.Length > 1000 ? string.Concat(resultText.AsSpan(0, 1000), $"{Environment.NewLine}[Result truncated]") : resultText,
             FontSize = 11,
             FontFamily = "MarkdownCodeBlock",
             LineBreakMode = LineBreakMode.WordWrap,
@@ -181,7 +182,7 @@ public class ToolCallCardView
     {
         void Update()
         {
-            _resultLabel.Text = result;
+            _resultLabel.Text = result.Length > 1000 ? string.Concat(result.AsSpan(0, 1000), $"{Environment.NewLine}[Result truncated]") : result;
             _resultSection.IsVisible = !string.IsNullOrWhiteSpace(result);
         }
 

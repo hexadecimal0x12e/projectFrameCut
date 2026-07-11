@@ -6,6 +6,7 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using projectFrameCut.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -309,7 +310,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return new EffectBundleDisplayItem
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ColorAdjustment", "Color Adjustment"),
-                Description = EffectBundleHelper.L("Description_Effect_ColorAdjustment", "Comprehensive color adjustment with brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, and opacity controls.")
+                Description = EffectBundleHelper.L("Description_Effect_ColorAdjustment", "Comprehensive color adjustment with brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, and opacity controls."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/colorAdjustment.png"))
             };
         }
     }

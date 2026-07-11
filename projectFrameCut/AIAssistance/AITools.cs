@@ -9,10 +9,10 @@ using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.ScriptEngine;
 using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
@@ -147,12 +149,30 @@ namespace projectFrameCut.AIAssistance
                 }, "set_effect_bundle_fields","Update an existing effect bundle on a clip using its SettableFields. Provide the clip id, bundle id, and a dictionary of field id -> value. Use get_draft_info to find bundle ids and get_effect_bundle_info to discover effect types."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
-                AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model."),
-                AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
-                    await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
-                        ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),
-                    "browse_webpage",
-                    "Open a webpage in a rendered browser, wait for dynamic content, and return its readable text. The user must authorize each new domain."),
+
+                AIFunctionFactory.Create(async (string url, bool detailed = true, int maximumCharacters = 30000) =>
+                {
+                    var service = WebBrowsingService.Current;
+                    if (service is null)
+                        return "Error: webpage browsing is not available in the current chat view.";
+                    if (detailed)
+                    {
+                        var content = await service.BrowseStructuredAsync(url, maximumCharacters);
+                        if (content is null)
+                            return "Error: failed to browse the webpage.";
+                        return JsonSerializer.Serialize(content, new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                        });
+                    }
+                    else
+                    {
+                        return await service.BrowseAsync(url, maximumCharacters);
+                    }
+                }, "browse_webpage", "Open a webpage in a rendered browser, wait for dynamic content, and return the page's content. If detailed is true, this will return a structured JSON including: title, url, text, links (array of {url, text}), and images (array of {url, alt}); else, return the page's content as plain text. Use 'detailed' when you need to programmatically process links or images rather than just read text. The user must authorize each new domain."),
+
                 AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) scripting engine which could interact with the whole system. See your system prompt fore more rules, usages and descriptions."),
                 AIFunctionFactory.Create(ResetInternalPowerShell, "reset_internal_pwsh_environment", "Reset the internal PowerShell scripting environment. If you found issue on scripting, try this. This will clear all variables, functions, and all files in workspace, and this command cannot be undone."),
 
@@ -165,6 +185,7 @@ namespace projectFrameCut.AIAssistance
                 {
                     return MemoryManager.ReadMemory(key);
                 }, "read_memory", "Read previously stored user memories. If 'key' is provided, read that specific memory; if 'key' is not provided, read all stored memories. Use this to recall user preferences and information that were saved with 'write_memory'."),
+
             };
 
             if (allowSkill)
@@ -239,12 +260,26 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment, including their settable fields.", serializerOptions),
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
-                AIFunctionFactory.Create(RunSubAgent, "run_sub_agent","Run a sub-agent with the specified system-prompt and a message, then return the result from the model."),
                 AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
                     await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
                         ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),
                     "browse_webpage",
-                    "Open a webpage in a rendered browser, wait for dynamic content, and return its readable text. The user must authorize each new domain."),
+                    "Open a webpage in a rendered browser, wait for dynamic content, and return the page's readable text content, along with extracted hyperlinks and image URLs (as structured markdown). The user must authorize each new domain."),
+                AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
+                {
+                    var service = WebBrowsingService.Current;
+                    if (service is null)
+                        return "Error: webpage browsing is not available in the current chat view.";
+                    var content = await service.BrowseStructuredAsync(url, maximumCharacters);
+                    if (content is null)
+                        return "Error: failed to browse the webpage.";
+                    return JsonSerializer.Serialize(content, new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    });
+                }, "browse_webpage_structured",
+                    "Open a webpage in a rendered browser, wait for dynamic content, and return the page's content as structured JSON including: title, url, text, links (array of {url, text}), and images (array of {url, alt}). Use this when you need to programmatically process links or images rather than just read text. The user must authorize each new domain."),
 
                 AIFunctionFactory.Create((string key, string content) =>
                 {
@@ -377,26 +412,6 @@ namespace projectFrameCut.AIAssistance
                 return "Success: Internal PowerShell environment has been reset.";
             }
             return "No project is loaded, so no internal PowerShell environment to reset.";
-        }
-
-        static async Task<string> RunSubAgent(string System, string Message)
-        {
-            var client = AssistanceChatView.CreateChatClient();
-            List<AIChatMessage> _chatHistory = new List<AIChatMessage>
-            {
-                new AIChatMessage(ChatRole.System,
-                    $"""
-                    你是由Assistant P发起的一个子Agent，Assistant P是一个视频编辑AI助手，协助用户进行视频编辑相关的任务。你需要根据用户提供的信息和要求，完成相应的任务，并将结果返回给Assistant P。
-                    下面是Assistant P给你提供的系统提示词：
-                    {System}
-
-                    请你根据以上提示词和用户的消息，完成相应的任务，并将结果返回给Assistant P。请确保你的回答简洁明了，直接针对用户的需求，不要包含任何与任务无关的信息。
-                    """),
-                new AIChatMessage(ChatRole.User, Message)
-            };
-
-            ChatResponse? rsp = await (client?.GetResponseAsync(_chatHistory) ?? Task.FromResult<ChatResponse?>(null!));
-            return rsp?.Text ?? "Model does not return any thing.";
         }
 
         static async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural, int Width = 1024, int Height = 1024)

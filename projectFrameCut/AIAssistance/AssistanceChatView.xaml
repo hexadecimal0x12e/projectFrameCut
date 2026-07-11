@@ -6,7 +6,7 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:this="clr-namespace:projectFrameCut.AIAssistance"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
-    <Grid RowDefinitions="*,Auto,Auto,Auto" RowSpacing="8" Padding="8">
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" RowSpacing="8" Padding="8">
         <CollectionView Grid.Row="0"
                         x:Name="AIChatHistoryView"
                         SelectionMode="None"
@@ -187,8 +187,98 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
+        <!-- Sub-agent sessions -->
+        <Border Grid.Row="1"
+                x:Name="SubAgentPanel"
+                IsVisible="False"
+                Stroke="{AppThemeBinding Light=#FFD0D8E0, Dark=#FF30384A}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 8"
+                Padding="0"
+                BackgroundColor="{AppThemeBinding Light=#FFF5F8FC, Dark=#FF1A2230}">
+            <VerticalStackLayout Spacing="0">
+                <Grid x:Name="SubAgentPanelHeader" Padding="8,5"
+                      BackgroundColor="{AppThemeBinding Light=#FFE0E8F0, Dark=#FF28303F}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="SubAgentPanelHeader_Tapped"/>
+                    </Grid.GestureRecognizers>
+                    <Label x:Name="SubAgentToggleIcon"
+                           Text="&#x25B6;"
+                           FontSize="9"
+                           Margin="0,0,5,0"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFAAAAAA}"/>
+                    <Label x:Name="SubAgentPanelTitle"
+                           Grid.Column="1"
+                           Text="Sub-Agents (0)"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF445566, Dark=#FF8899BB}"/>
+                    <Label x:Name="SubAgentPanelIndicator"
+                           Grid.Column="2"
+                           Text="..."
+                           FontSize="10"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF888888, Dark=#FF777777}"/>
+                </Grid>
+                <CollectionView x:Name="SubAgentListView"
+                                IsVisible="False"
+                                MaximumHeightRequest="200"
+                                SelectionMode="None"
+                                Margin="4,2">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8,5"
+                                    Margin="0,1"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 5"
+                                    BackgroundColor="{AppThemeBinding Light=#FFFFFFFF, Dark=#FF202838}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="SubAgentItem_Tapped"/>
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="7">
+                                    <Border Grid.RowSpan="2"
+                                            WidthRequest="8"
+                                            HeightRequest="8"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 4"
+                                            BackgroundColor="{Binding StatusColor}"
+                                            VerticalOptions="Center"/>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light=#FF333333, Dark=#FFDDDDDD}"/>
+                                    <Label Grid.Column="1"
+                                           Grid.Row="1"
+                                           Text="{Binding DetailText}"
+                                           FontSize="10"
+                                           TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFAAAAAA}"/>
+                                    <Label Grid.Column="2"
+                                           Grid.RowSpan="2"
+                                           Text="{Binding ActionText}"
+                                           FontSize="10"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#FF667799, Dark=#FF99AACC}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Border>
+
         <!-- Bottom info bar -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Label FontSize="12"
                    TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}"
                    HorizontalOptions="Center"
@@ -196,12 +286,12 @@
         </Grid>
 
         <!-- Selected files preview -->
-        <VerticalStackLayout Grid.Row="2" x:Name="SelectedFilesPreview"
+        <VerticalStackLayout Grid.Row="3" x:Name="SelectedFilesPreview"
                              IsVisible="False" Spacing="4" Margin="0,0,0,4">
         </VerticalStackLayout>
 
         <!-- Input area -->
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <Button Grid.Column="0"
                     x:Name="AIAttachButton"
                     FontFamily="Icons"
@@ -226,7 +316,7 @@
 
         <!-- Temporary off-screen host used by the AI webpage browsing tool. -->
         <WebView x:Name="WebBrowserHost"
-                 Grid.RowSpan="4"
+                 Grid.RowSpan="5"
                  WidthRequest="1"
                  HeightRequest="1"
                  Opacity="0.01"

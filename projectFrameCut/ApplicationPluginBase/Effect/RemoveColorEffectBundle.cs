@@ -5,6 +5,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -294,7 +295,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_RemoveColor", "Remove Color"),
                 Description = EffectBundleHelper.L("Description_Effect_RemoveColor", "Remove a specific color from the image based on tolerance."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_effect_remove_color")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/removeColor.png"))
             };
         }
     }

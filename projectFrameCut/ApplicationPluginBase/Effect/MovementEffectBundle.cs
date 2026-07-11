@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -167,7 +168,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Movement", "Movement"),
                 Description = EffectBundleHelper.L("Description_Effect_Movement", "Move an element from the start point to the end point."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add"),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/movement.png")),
                 VideoThumbnail = null
             };
         }

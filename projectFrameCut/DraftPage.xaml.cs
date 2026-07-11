@@ -5765,10 +5765,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         TaskCompletionSource<Dictionary<string, AuthorizationResult>>? pendingAuthTcs = null;
         IReadOnlyList<string>? pendingCmdNames = null;
 
-        var btnAllow = new Button { Text = "✅ 允许全部", BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnAllowRemember = new Button { Text = "✅ 允许并记住", BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDeny = new Button { Text = "❌ 拒绝全部", BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDenyRemember = new Button { Text = "❌ 拒绝并记住", BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnAllow = new Button { Text = Localized.ScriptEngine_Auth_Allow, BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnAllowRemember = new Button { Text = Localized.ScriptEngine_Auth_AllowRemember, BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDeny = new Button { Text = Localized.ScriptEngine_Auth_Deny, BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDenyRemember = new Button { Text = Localized.ScriptEngine_Auth_DenyRemember, BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
 
         var authPanel = new Border
         {
@@ -5783,7 +5783,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Spacing = 8,
                 Children =
                 {
-                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle ?? "⚡ 命令授权请求", FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle, FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
                     new ScrollView { Content = authMessageLabel, MaximumHeightRequest = 150 },
                     new HorizontalStackLayout
                     {
@@ -5804,26 +5804,26 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             if (!string.IsNullOrEmpty(args.ObfuscationWarning))
             {
-                sb.AppendLine($"⚠️ 安全警告：{args.ObfuscationWarning}");
-                sb.AppendLine($"威胁级别：{args.ThreatLevel}");
+                sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{args.ObfuscationWarning}");
+                sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{args.ThreatLevel?.ToString() ?? Localized._Unknown}");
                 sb.AppendLine();
             }
 
             if (args.CommandNames.Count > 0)
             {
-                sb.AppendLine("以下命令需要授权：");
+                sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
                 for (int i = 0; i < args.CommandNames.Count; i++)
                 {
                     var name = args.CommandNames[i];
                     var ctx = args.Commands.Count > i ? args.Commands[i] : null;
-                    sb.Append($"\n  • {name}");
-                    if (ctx?.TargetPath != null) sb.Append($"\n    路径：{ctx.TargetPath}");
-                    if (ctx?.TargetUrl != null) sb.Append($"\n    URL：{ctx.TargetUrl}");
+                    sb.Append($"\n  • {Localized.ScriptEngine_Auth_CommandLabel}{name}");
+                    if (ctx?.TargetPath != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
+                    if (ctx?.TargetUrl != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
                 }
             }
             else
             {
-                sb.Append("此脚本需要授权确认。");
+                sb.Append(Localized.ScriptEngine_Auth_RequestHeader);
             }
 
             // 更新 UI 并存储 TCS
@@ -9195,14 +9195,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 })
             });
 
-            RunningTaskToolbarItem = new ToolbarItem
-            {
-                Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
-                Order = ToolbarItemOrder.Primary,
-                Priority = 0,
-                Command = ManageJobsCommand
-            };
-            ToolbarItems.Add(RunningTaskToolbarItem);
+            //RunningTaskToolbarItem = new ToolbarItem
+            //{
+            //    Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
+            //    Order = ToolbarItemOrder.Primary,
+            //    Priority = 0,
+            //    Command = ManageJobsCommand
+            //};
+            //ToolbarItems.Add(RunningTaskToolbarItem);
 
             ToolbarItems.Add(new ToolbarItem
             {
@@ -9525,25 +9525,32 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     // 第一层：询问是否允许执行此命令
                     var allowed = await page.DisplayAlertAsync(
-                        "PowerShell 命令授权",
-                        $"脚本尝试执行命令：{commandInfo.Name}\n\n来源：{commandOrigin}\n\n是否允许此操作？",
-                        "允许", "拒绝");
+                        Localized.ScriptEngine_Auth_DialogTitle,
+                        BuildDetailedAuthMessage(new AuthorizationContext
+                        {
+                            CommandInfo = commandInfo,
+                            CommandOrigin = commandOrigin,
+                        }),
+                        Localized.ScriptEngine_Auth_Allow,
+                        Localized.ScriptEngine_Auth_Deny);
 
                     if (allowed)
                     {
                         // 第二层：询问是否记住此决策
                         var remember = await page.DisplayAlertAsync(
-                            "记住决策",
-                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
-                            "记住并允许", "仅本次允许");
+                            Localized._Info,
+                            Localized.ScriptEngine_Auth_SureRemember,
+                            Localized.ScriptEngine_Auth_RememberAllow_Yes,
+                            Localized.ScriptEngine_Auth_RememberAllow_No);
                         result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
                     }
                     else
                     {
                         var remember = await page.DisplayAlertAsync(
-                            "记住决策",
-                            $"是否在此会话中记住此决策，不再询问对此命令的授权？",
-                            "记住并拒绝", "仅本次拒绝");
+                            Localized._Info,
+                            Localized.ScriptEngine_Auth_SureRemember,
+                            Localized.ScriptEngine_Auth_RememberDeny_Yes,
+                            Localized.ScriptEngine_Auth_RememberDeny_No);
                         result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
                     }
                 }
@@ -9688,49 +9695,39 @@ public partial class DraftPage : ContentPage, IDraftPage
     private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
     {
         var sb = new System.Text.StringBuilder();
-        if (!string.IsNullOrWhiteSpace(ctx.CommandInfo?.Name)) sb.AppendLine($"命令：{ctx.CommandInfo.Name}").AppendLine();
+        sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
+        sb.AppendLine();
+        sb.AppendLine($"{Localized.ScriptEngine_Auth_CommandLabel}{ctx.CommandInfo?.Name ?? Localized._Unknown}");
 
         // 文件路径信息
         if (!string.IsNullOrEmpty(ctx.TargetPath))
         {
-            sb.AppendLine($"目标路径：{ctx.TargetPath}");
-            sb.AppendLine($"路径状态：{ctx.PathSafetyStatus switch
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_PathStatusLabel}{ctx.PathSafetyStatus switch
             {
-                PathSafety.Safe => "✅ 在项目目录内",
-                PathSafety.OutsideProject => "⚠️ 在项目目录之外",
-                PathSafety.PathTraversal => "🚫 检测到路径遍历",
-                PathSafety.Unresolved => "❓ 路径来自变量，无法静态验证",
-                _ => "未知",
+                PathSafety.Safe => Localized.ScriptEngine_Auth_PathSafe,
+                PathSafety.OutsideProject => Localized.ScriptEngine_Auth_PathOutsideProject,
+                PathSafety.PathTraversal => Localized.ScriptEngine_Auth_PathTraversal,
+                PathSafety.Unresolved => Localized.ScriptEngine_Auth_PathUnresolved,
+                _ => Localized._Unknown,
             }}");
-
-            if (ctx.PathSafetyStatus == PathSafety.OutsideProject ||
-                ctx.PathSafetyStatus == PathSafety.PathTraversal)
-            {
-                sb.AppendLine("⚠️ 该操作将访问项目目录外的文件，请谨慎确认。");
-            }
         }
 
         // URL 信息
         if (!string.IsNullOrEmpty(ctx.TargetUrl))
         {
-            sb.AppendLine($"""
-                           🌐 目标 URL：{ctx.TargetUrl}
-                           ⚠️ 该命令将发起网络请求，并且可能造成信息外泄或者资源变动风险。
-                           ⚠️ 请确认目标地址可信。
-                           """);
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
         }
 
         // 混淆警告
         if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
         {
-            sb.AppendLine($"""
-                           ⚠️ 安全警告：{ctx.ObfuscationWarning}
-                           ⚠️ 该命令包含可疑模式 (等级 {ctx.ThreatLevel})，请确认操作来源可信。
-                           """);
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{ctx.ObfuscationWarning}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{ctx.ThreatLevel?.ToString() ?? Localized._Unknown}");
         }
-
-        sb.AppendLine();
-        sb.AppendLine("是否允许此操作？");
 
         return sb.ToString();
     }

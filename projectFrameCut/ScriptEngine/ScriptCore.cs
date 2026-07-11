@@ -112,7 +112,7 @@ namespace projectFrameCut.ScriptEngine
         {
             // ---- 安全检查：是否允许执行脚本 ----
             if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true))
-                throw new InvalidOperationException("脚本执行已被安全策略禁用。请在「设置 → 安全」中启用脚本执行。");
+                throw new InvalidOperationException(Localized.ScriptEngine_ScriptDisabled);
 
             // ---- 安全检查：$page 对象访问控制 ----
             if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowAccessPageObject", false)
@@ -120,7 +120,7 @@ namespace projectFrameCut.ScriptEngine
             {
                 throw new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
-                    "访问页面对象（$page）已被安全策略禁止。请在「设置 → 安全」中调整“允许脚本访问页面对象”设置。");
+                    Localized.ScriptEngine_PageAccessDisabled);
             }
 
             // ---- 预分析 ----
@@ -161,7 +161,7 @@ namespace projectFrameCut.ScriptEngine
         {
             // ---- 安全检查：是否允许执行脚本 ----
             if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true))
-                throw new InvalidOperationException("脚本执行已被安全策略禁用。请在「设置 → 安全」中启用脚本执行。");
+                throw new InvalidOperationException(Localized.ScriptEngine_ScriptDisabled);
 
             // ---- 安全检查：$page 对象访问控制 ----
             if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowAccessPageObject", false)
@@ -169,7 +169,7 @@ namespace projectFrameCut.ScriptEngine
             {
                 throw new NotAllowedCommandException(
                     NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
-                    "访问页面对象（$page）已被安全策略禁止。请在「设置 → 安全」中调整“允许脚本访问页面对象”设置。");
+                    Localized.ScriptEngine_PageAccessDisabled);
             }
 
             // ---- 预分析 + 预授权 ----
@@ -179,7 +179,7 @@ namespace projectFrameCut.ScriptEngine
             {
                 // 有事件订阅者 → 执行预授权（将决策缓存，ShouldRun 只查缓存不阻塞）
                 if (!await PreAuthorizeScriptAsync(script))
-                    return Localized.ScriptEngine_Auth_UserRejectedOperation ?? "脚本执行已被用户取消。";
+                    return Localized.ScriptEngine_Auth_UserRejectedOperation;
             }
             else
             {
@@ -329,7 +329,7 @@ namespace projectFrameCut.ScriptEngine
             {
                 var cmdName = ctx.CommandInfo?.Name ?? "";
                 if (string.IsNullOrEmpty(cmdName))
-                    cmdName = $"未知命令(路径:{ctx.TargetPath ?? "—"})";
+                    cmdName = $"{Localized._Unknown} ({Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath ?? "—"})";
                 if (!commandNames.ContainsKey(cmdName))
                     commandNames[cmdName] = ctx;
             }
@@ -341,7 +341,7 @@ namespace projectFrameCut.ScriptEngine
                 // 从 PendingCommandParameters 中查找命令名
                 var param = pendingParams?.FirstOrDefault(p =>
                     p.TargetPath == ctx.TargetPath && p.TargetUrl == ctx.TargetUrl);
-                return param?.CommandName ?? "未知命令";
+                return param?.CommandName ?? Localized._Unknown;
             }).ToList();
 
             AuthorizationRequested?.Invoke(this,

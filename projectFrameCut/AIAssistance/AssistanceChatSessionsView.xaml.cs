@@ -53,7 +53,7 @@ public partial class AssistanceChatSessionsView : ContentView
     {
         var all = AssistanceChatSessionStore.GetSessions(_projectPath);
         _allSessions.Clear();
-        foreach (AssistanceChatSession session in all)
+        foreach (AssistanceChatSession session in all.Where(c => !c.IsSubAgent))
         {
             _allSessions.Add(new SessionListItem
             {

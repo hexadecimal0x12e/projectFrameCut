@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -106,7 +107,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ZoomIn", "Zoom In"),
                 Description = EffectBundleHelper.L("Description_Effect_ZoomIn", "Zoom in from the source frame size to the target size over time."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/zoomIn.png"))
             };
         }
     }

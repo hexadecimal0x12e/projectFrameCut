@@ -25,10 +25,13 @@ using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using Path = System.IO.Path;
 using projectFrameCut.ScriptEngine;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Base;
 
 public partial class AssistanceChatView : ContentView
 {
-    private const int SessionTitleMaxLength = 24;
+    private const string SessionTitlePromptPath = "AIAgent\\titleMaker.md";
+    private const string AgentName = "Assistant P";
     private readonly ObservableCollection<ChatMessageItem> _messages = [];
     private readonly List<AIChatMessage> _chatHistory = [];
     private readonly IChatClient? _chatClient;
@@ -38,7 +41,30 @@ public partial class AssistanceChatView : ContentView
     private bool _isReplying;
     private CancellationTokenSource? _cts;
     private readonly SkillManager _skillManager;
+    private bool _isSubAgent;
+    private string _subagentRole = "";
     private readonly WebBrowsingService _webBrowsingService;
+    private string _sessionTitle = Localized.AIAssistant_NewChatDefaultTitle;
+    private Task? _titleGenerationTask;
+
+    // ===== Multi-Agent Support =====
+
+    /// <summary>此 Agent 的唯一标识。</summary>
+    public string AgentId { get; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>父 Agent 的 ID（如果此 Agent 是子 Agent）。</summary>
+    public string? ParentAgentId { get; private set; }
+
+    /// <summary>Agent 的显示标题。</summary>
+    public string? AgentTitle { get; set; }
+
+    /// <summary>已关闭的子 Agent 会话列表（持久化）。</summary>
+    private readonly List<ClosedSubAgentSnapshot> _closedSubAgentSessions = [];
+    private readonly ObservableCollection<SubAgentListItem> _subAgentItems = [];
+    private bool _isSubAgentPanelExpanded;
+
+    /// <summary>串行化传入消息处理的信号量，避免并发处理冲突。</summary>
+    private readonly SemaphoreSlim _messageGate = new(1, 1);
 
     /// <summary>
     /// 平台级别的 IME 追踪：当 IME 输入法刚刚结束文字组合（例如中文按回车取消/确认，日文按回车确定转换）时，
@@ -82,16 +108,18 @@ public partial class AssistanceChatView : ContentView
         Log("AssistanceChatView created with default constructor (no sessionId, no projectPath, no projectName)", "error");
     }
 
-    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null)
+    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null, bool isSubAgent = false)
     {
         InitializeComponent();
         _webBrowsingService = new WebBrowsingService(WebBrowserHost, AuthorizeWebDomainAsync);
         _projectPath = projectPath;
         _projectName = projectName;
         _skillManager = SkillManager.ForProject(projectPath);
+        _isSubAgent = isSubAgent;
         ToolCallFactories = aIFunctionsFactory;
         LogDiagnostic($"Loading to project {_projectName} ({_projectPath}) with session {sessionId}");
         AIChatHistoryView.ItemsSource = _messages;
+        SubAgentListView.ItemsSource = _subAgentItems;
         _messages.CollectionChanged += Messages_CollectionChanged;
         _chatClient = CreateChatClient();
 
@@ -101,26 +129,49 @@ public partial class AssistanceChatView : ContentView
 
         AssistanceChatSession session = AssistanceChatSessionStore.GetOrCreate(_projectPath, sessionId);
         _sessionId = session.SessionId;
+        session.IsSubAgent = _isSubAgent;
         // 设置当前会话 ID，使 SkillRegistry 工具可以正确追踪加载状态
         SkillRegistry.CurrentSessionId = _sessionId.ToString("N");
         LoadSession(session);
+
+        // 所有 Agent 都注册到 Router，用于消息路由验证
+        AgentMessageRouter.Instance.RegisterAgent(this, parentAgentId: null);
+        AgentMessageRouter.Instance.AgentUnregistered += OnAgentUnregistered;
     }
 
     protected override void OnParentSet()
     {
         base.OnParentSet();
         if (Parent is null)
+        {
             _webBrowsingService.Dispose();
+            AgentMessageRouter.Instance.AgentUnregistered -= OnAgentUnregistered;
+            AgentMessageRouter.Instance.UnregisterAgent(AgentId);
+        }
     }
 
-    private async Task<bool> AuthorizeWebDomainAsync(Uri uri)
+    private async Task<(bool allow, bool remember)> AuthorizeWebDomainAsync(Uri uri)
     {
-        return await MainThread.InvokeOnMainThreadAsync(() =>
-            DisplayAlertAsync(
-                "Allow webpage access?",
-                $"The AI wants to open {uri.Host}.\n\nAllow this domain for the rest of this app session?",
-                "Allow",
-                "Deny"));
+        return await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            var option = await DisplayActionSheetAsync(
+                Localized.AIAssistant_WebBrowse_AllowAccess(AgentName, uri.Host),
+                "", // in MultiWindowItem can hide cancel button by set it to blank string
+                null,
+                Localized.ScriptEngine_Auth_RememberAllow_Yes,
+                Localized.ScriptEngine_Auth_RememberAllow_No,
+                Localized.ScriptEngine_Auth_RememberDeny_Yes,
+                Localized.ScriptEngine_Auth_RememberDeny_No);
+            return option switch
+            {
+                var t when t == Localized.ScriptEngine_Auth_RememberAllow_Yes => (true, true),
+                var t when t == Localized.ScriptEngine_Auth_RememberAllow_No => (true, false),
+                var t when t == Localized.ScriptEngine_Auth_RememberDeny_No => (false, false),
+                var t when t == Localized.ScriptEngine_Auth_RememberDeny_Yes => (false, true),
+                var t when t == Localized._Cancel => await AuthorizeWebDomainAsync(uri),
+                _ => (false, false)
+            };
+        });
     }
 
     private async void AISendButton_Clicked(object? sender, EventArgs e)
@@ -791,7 +842,7 @@ public partial class AssistanceChatView : ContentView
             : Localized.AIAssistant_ChatView_WelcomeText;
         var item = new ChatMessageItem
         {
-            Sender = "Assistant P",
+            Sender = AgentName,
             Message = text,
             IsUser = false,
             IsFirstTurn = true,
@@ -810,16 +861,37 @@ public partial class AssistanceChatView : ContentView
         string prompt = await reader.ReadToEndAsync();
 
         prompt = prompt.Replace("!AppBrand!", Localized.AppBrand);
-        prompt = prompt.Replace("!AgentName!", "Assistant P");
+        prompt = prompt.Replace("!AgentName!", AgentName);
         prompt = prompt.Replace("!LocateID!", Localized._LocaleId_);
         prompt = prompt.Replace("!AppVersion!", Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "1.0.0.0");
-        prompt = prompt.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
-        prompt = prompt.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
-        prompt = prompt.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
-        prompt = prompt.Replace("!ProjectName!", _projectName ?? "None");
+
+        string contextPath = "";
+        if (_isSubAgent)
+        {
+            contextPath = "AIAgent\\context_subAgent.md";
+
+        }
+        else if (string.IsNullOrWhiteSpace(_projectName))
+        {
+            contextPath = "AIAgent\\context_outsideProject.md";
+        }
+        else
+        {
+            contextPath = "AIAgent\\context.md";
+        }
+
+        using Stream ctxStream = await FileSystem.OpenAppPackageFileAsync(contextPath);
+        using var ctxReader = new StreamReader(ctxStream);
+        string context = await ctxReader.ReadToEndAsync();
+
+        context = context.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
+        context = context.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
+        context = context.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
+        context = context.Replace("!ProjectName!", _projectName ?? "No working project");
+        context = context.Replace("!SubAgentRole!", _subagentRole ?? "");
 
         string memoryText = MemoryManager.GetFormattedMemoryText() ?? string.Empty;
-        prompt = prompt.Replace("!MemoryText!", memoryText);
+        context = context.Replace("!MemoryText!", memoryText);
 
         StringBuilder skillBuilder = new();
         foreach (string skillName in SkillRegistry.GetLoadedSkills().Order(StringComparer.OrdinalIgnoreCase))
@@ -831,7 +903,22 @@ public partial class AssistanceChatView : ContentView
             }
         }
 
-        return prompt.Replace("!SkillText!", skillBuilder.ToString());
+        context = context.Replace("!SkillText!", skillBuilder.ToString());
+
+        var final =
+            $"""
+            {prompt}
+
+            ---
+
+            {context}
+
+            {SettingsManager.GetSetting("AISettings_ExtraPrompt", "")}
+            """;
+
+        LogDiagnostic($"System prompt built:{Environment.NewLine}{final}");
+
+        return final;
     }
 
     private async Task RefreshSystemPromptAsync()
@@ -909,13 +996,15 @@ public partial class AssistanceChatView : ContentView
         }
 
         _messages.Add(messageItem);
+        StringBuilder messageBuilder = new();
 
         // ----- 构建 AI 历史（多模态）-----
         var contents = new List<AIContent>();
-        StringBuilder fileTextBuilder = new();
 
         if (savedAttachments is not null && savedAttachments.Count > 0)
         {
+            messageBuilder.AppendLine("<attachments>");
+            messageBuilder.AppendLine("<!-- Remarks: The following lines are the user's attachments, which may include images and other files. -->");
             string mediaDir = GetSessionMediaDirectory();
             foreach (ChatAttachmentSnapshot attachment in savedAttachments)
             {
@@ -929,29 +1018,44 @@ public partial class AssistanceChatView : ContentView
                         // 图片：作为 DataContent（base64 image_url）发送，AI 可直接识别
                         byte[] fileBytes = await File.ReadAllBytesAsync(fullPath);
                         contents.Add(new DataContent(fileBytes.AsMemory(), attachment.MimeType));
+                        try
+                        {
+                            var image = new Picture8bpp(fullPath);
+                            (var width, var height) = image.GetDimensions();
+                            messageBuilder.AppendLine($"""    <image name="{attachment.FileName}" size="{width}x{height}" />""");
+                        }
+                        catch
+                        {
+                            messageBuilder.AppendLine($"""    <image name="{attachment.FileName}" size="unknown" />""");
+                        }
                     }
                     else
                     {
                         // 非图片文件：读取文本内容嵌入消息文本中。
                         // DataContent 对非图片类型在 OpenAI API 中不被支持，
                         // 因此改为在用户消息中以内联文本形式提供文件内容。
-                        fileTextBuilder.AppendLine($"--- {attachment.FileName} ---");
 
-                        bool isTextual = attachment.MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
-                            || attachment.MimeType is "application/json" or "application/xml";
+                        bool isTextual = attachment.MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) || attachment.MimeType is "application/json" or "application/xml" || Path.GetExtension(fullPath) is ".txt" or ".csv" or ".json" or ".xml" or ".cs" or ".js" or ".html" or ".css";
 
                         if (isTextual)
                         {
                             string text = await File.ReadAllTextAsync(fullPath);
-                            fileTextBuilder.AppendLine(text);
+                            messageBuilder.AppendLine(
+                                //lang=xml
+                                $"""
+                                    <text name="{attachment.FileName}" path="{fullPath}">
+                                        <![CDATA[
+                                {text}
+                                        ]]>
+                                    </text>
+                                """);
+
                         }
                         else
                         {
-                            // 二进制文件（PDF、Office 文档等）：标注文件名，让 AI 知晓
-                            fileTextBuilder.AppendLine($"[Binary file, {FormatFileSize(attachment.FileSize)}]");
+                            messageBuilder.AppendLine($"""    <binary name="{attachment.FileName}" path="{fullPath}" />""");
                         }
 
-                        fileTextBuilder.AppendLine($"--- End of {attachment.FileName} ---");
                     }
                 }
                 catch (Exception ex)
@@ -959,25 +1063,23 @@ public partial class AssistanceChatView : ContentView
                     LogDiagnostic($"Failed to read attachment '{attachment.FileName}' for AI: {ex.Message}");
                 }
             }
+            messageBuilder.AppendLine("</attachments>");
         }
 
-        // 将非图片附件的文件文本与用户输入合并为一个 TextContent
-        if (fileTextBuilder.Length > 0)
+        if (!string.IsNullOrWhiteSpace(input))
         {
-            string fileContext = fileTextBuilder.ToString().TrimEnd();
-            if (hasText)
+            if (savedAttachments is not null && savedAttachments.Count > 0)
             {
-                contents.Insert(0, new TextContent(fileContext + "\n\n" + input));
+                messageBuilder.AppendLine("<!-- Remarks: Starting with the following line, is the user's input message, which may include text and references to attachments. -->");
+                messageBuilder.AppendLine();
             }
-            else
-            {
-                contents.Insert(0, new TextContent(fileContext));
-            }
+            messageBuilder.AppendLine(input);
+
         }
-        else if (hasText)
-        {
-            contents.Add(new TextContent(input));
-        }
+
+
+        contents.Add(new TextContent(messageBuilder.ToString()));
+
 
         if (contents.Count > 0)
         {
@@ -1000,6 +1102,7 @@ public partial class AssistanceChatView : ContentView
         _cts = new CancellationTokenSource();
 
         await StreamAndAppendAssistantResponseAsync(input);
+        StartSessionTitleGeneration(messageItem);
 
         _isReplying = false;
         SkillRegistry.IsStreaming = false;
@@ -1083,10 +1186,7 @@ public partial class AssistanceChatView : ContentView
                 var image = new Image
                 {
                     Source = ImageSource.FromFile(fullPath),
-                    WidthRequest = 250,
-                    HeightRequest = 320,
                     MaximumWidthRequest = 250,
-                    MaximumHeightRequest = 320,
                     Aspect = Aspect.AspectFit,
                     Margin = new Thickness(0, 0, 0, 4),
                     HorizontalOptions = LayoutOptions.Start,
@@ -1100,7 +1200,6 @@ public partial class AssistanceChatView : ContentView
                     Stroke = Color.FromArgb("#30CCCCCC"),
                     HorizontalOptions = LayoutOptions.Start,
                     MaximumWidthRequest = 250,
-                    MaximumHeightRequest = 320,
                     Content = image,
                 };
 
@@ -1475,6 +1574,7 @@ public partial class AssistanceChatView : ContentView
 
     private void LoadSession(AssistanceChatSession session)
     {
+        _sessionTitle = session.Title;
         _messages.Clear();
         _chatHistory.Clear();
 
@@ -1494,7 +1594,7 @@ public partial class AssistanceChatView : ContentView
                 IsFirstTurn = isFirstRun
             };
 
-            // 恢复附件元数据以便 PersistSession 和 BuildSessionTitle 使用
+            // 恢复附件元数据以便 PersistSession 序列化
             if (message.Attachments?.Count > 0)
             {
                 item.Attachments = message.Attachments;
@@ -1565,10 +1665,19 @@ public partial class AssistanceChatView : ContentView
         RebuildHistoryWithAttachments(session, mediaDir);
         RestoreLoadedSkillsFromHistory();
 
+        // 恢复已关闭的子 Agent 会话
+        _closedSubAgentSessions.Clear();
+        foreach (var closed in session.ClosedSubAgentSessions)
+        {
+            _closedSubAgentSessions.Add(closed);
+        }
+
         if (_messages.Count == 0)
         {
             AddAssistantWelcomeMessage();
         }
+
+        RefreshSubAgentPanel();
     }
 
     private void RestoreLoadedSkillsFromHistory()
@@ -1699,7 +1808,14 @@ public partial class AssistanceChatView : ContentView
 
     private void PersistSession()
     {
-        string title = BuildSessionTitle();
+        AssistanceChatSession? persistedSession = AssistanceChatSessionStore.GetSession(_projectPath, _sessionId);
+        if (persistedSession is not null
+            && !string.Equals(persistedSession.Title, _sessionTitle, StringComparison.Ordinal)
+            && !IsDefaultSessionTitle(persistedSession.Title))
+        {
+            _sessionTitle = persistedSession.Title;
+        }
+
         var messages = _messages.Select(x => new AssistanceChatMessageSnapshot
         {
             Sender = x.Sender,
@@ -1724,7 +1840,7 @@ public partial class AssistanceChatView : ContentView
             Text = x.Text ?? string.Empty,
         }).ToList();
 
-        AssistanceChatSessionStore.UpdateSession(_projectPath, _sessionId, title, messages, history);
+        AssistanceChatSessionStore.UpdateSession(_projectPath, _sessionId, _sessionTitle, messages, history, _closedSubAgentSessions);
     }
 
     private static List<ChatContentSegmentSnapshot>? CloneContentSegments(IEnumerable<ChatContentSegmentSnapshot>? segments)
@@ -1754,34 +1870,80 @@ public partial class AssistanceChatView : ContentView
         pendingText.Clear();
     }
 
-    private string BuildSessionTitle()
+    private void StartSessionTitleGeneration(ChatMessageItem firstUserMessage)
     {
-        // 查找第一条用户消息（有文字或附件的）
-        ChatMessageItem? firstUserMsg = _messages.FirstOrDefault(x => x.IsUser);
-        if (firstUserMsg is null)
+        if (_isSubAgent || _chatClient is null || !IsDefaultSessionTitle(_sessionTitle)
+            || _titleGenerationTask is { IsCompleted: false })
         {
-            return Localized.AIAssistant_ChatView_NewSession;
+            return;
         }
 
-        // 优先使用文字
-        if (!string.IsNullOrWhiteSpace(firstUserMsg.Message))
+        _titleGenerationTask = GenerateSessionTitleAsync(firstUserMessage);
+    }
+
+    private async Task GenerateSessionTitleAsync(ChatMessageItem firstUserMessage)
+    {
+        try
         {
-            string text = firstUserMsg.Message.Trim();
-            if (text.Length <= SessionTitleMaxLength)
-                return text;
-            return text[..SessionTitleMaxLength] + "…";
+            string prompt = await BuildSessionTitlePromptAsync();
+            string conversation = BuildTitleConversation(firstUserMessage);
+            var messages = new List<AIChatMessage>
+            {
+                new(ChatRole.System, prompt),
+                new(ChatRole.User, conversation),
+            };
+
+            ChatResponse response = await _chatClient!.GetResponseAsync(messages);
+            string? generatedTitle = response.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(generatedTitle))
+            {
+                LogDiagnostic($"Session title generation returned an empty response for {_sessionId}.");
+                return;
+            }
+
+            AssistanceChatSession? persistedSession = AssistanceChatSessionStore.GetSession(_projectPath, _sessionId);
+            if (persistedSession is null
+                || !IsDefaultSessionTitle(_sessionTitle)
+                || !string.Equals(persistedSession.Title, _sessionTitle, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _sessionTitle = generatedTitle;
+            PersistSession();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Failed to generate session title for {_sessionId}", this);
+        }
+    }
+
+    private async Task<string> BuildSessionTitlePromptAsync()
+    {
+        using Stream stream = await FileSystem.OpenAppPackageFileAsync(SessionTitlePromptPath);
+        using var reader = new StreamReader(stream);
+        return (await reader.ReadToEndAsync()).Replace("!LocateID!", Localized._LocaleId_);
+    }
+
+    private static string BuildTitleConversation(ChatMessageItem firstUserMessage)
+    {
+        var conversation = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(firstUserMessage.Message))
+        {
+            conversation.AppendLine(firstUserMessage.Message.Trim());
         }
 
-        // 只有附件没有文字的情况
-        if (firstUserMsg.Attachments?.Count > 0)
+        if (firstUserMessage.Attachments?.Count > 0)
         {
-            string names = string.Join(", ", firstUserMsg.Attachments.Select(a => a.FileName));
-            if (names.Length <= SessionTitleMaxLength)
-                return names;
-            return names[..SessionTitleMaxLength] + "…";
+            conversation.AppendLine($"Attachments: {string.Join(", ", firstUserMessage.Attachments.Select(attachment => attachment.FileName))}");
         }
 
-        return Localized.AIAssistant_ChatView_NewSession;
+        return conversation.ToString().Trim();
+    }
+
+    private static bool IsDefaultSessionTitle(string title)
+    {
+        return string.Equals(title, Localized.AIAssistant_NewChatDefaultTitle, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -2900,13 +3062,52 @@ public partial class AssistanceChatView : ContentView
         List<AITool> tools =
         [
             AIFunctionFactory.Create(() => DateTime.Now.ToString("G"), "get_datetime", "Get current date and time."),
-            AIFunctionFactory.Create((string title, string cancel, string[] verbs) => DisplayActionSheetAsync(title, cancel, null, verbs) , "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
+            AIFunctionFactory.Create(HandleActionSheet, "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
             AIFunctionFactory.Create((string title, string message, string True, string False) => DisplayAlertAsync(title, message, True, False) , "display_dialog", "Display a Dialog to ask user for True/False question (Yes/No). Null or blank result means user canceled this dialogue."),
             AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => DisplayPromptAsync(title, message, Localized._OK, Localized._Cancel, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
+
+            AIFunctionFactory.Create(CreateSubAgentAsync, "create_sub_agent",
+                "Create a sub-agent with a specific role to do, and a display title, show it in a new window, and return the sub-agent's ID. "),
+            AIFunctionFactory.Create(SendToSubAgentAsync, "send_to_sub_agent",
+                "Send a message to a specific sub-agent by ID and wait for its response."),
+            AIFunctionFactory.Create(ListSubAgents, "list_sub_agents",
+                "List all active sub-agents with their IDs and titles."),
+            AIFunctionFactory.Create(CloseSubAgentAsync, "close_sub_agent",
+                "Close a sub-agent by its ID. The sub-agent's window will be removed and its conversation history will be saved as a collapsible card in the chat."),
+
             .. ToolCallFactories?.Invoke() ?? [],
         ];
         LogDiagnostic($"Tools:\r\n{string.Join("\r\n", tools.Select(t => JsonSerializer.Serialize(t, new JsonSerializerOptions { WriteIndented = true })))}");
         return tools;
+    }
+
+    private async Task<string> HandleActionSheet(string title, string[] verbs)
+    {
+        var result = await DisplayActionSheetAsync(title, "", null, [.. verbs, Localized.AIAssistant_ChatTool_ActionSheet_InputCustomAnswer(AgentName), Localized.AIAssistant_ChatTool_ActionSheet_TalkAboutThis(AgentName)]);
+        if (result == Localized._Cancel || string.IsNullOrWhiteSpace(result)) //user may accidently closed the dialog
+        {
+            return await HandleActionSheet(title, verbs);
+        }
+        else if (result == Localized.AIAssistant_ChatTool_ActionSheet_InputCustomAnswer(AgentName))
+        {
+            var input = await DisplayPromptAsync(title, Localized.AIAssistant_ChatTool_ActionSheet_InputCustomAnswer_Prompt(AgentName), Localized._OK, Localized._Cancel);
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return await HandleActionSheet(title, verbs);
+            }
+            else
+            {
+                return $"From {AgentName}: User selected to give you a custom answer: '{input}'.";
+            }
+        }
+        else if (result == Localized.AIAssistant_ChatTool_ActionSheet_TalkAboutThis(AgentName))
+        {
+            return $"From {AgentName}: User wants to talk this with you. Stop your conservation, and let user to talk about your idea.";
+        }
+        else
+        {
+            return result;
+        }
     }
 
     private static void SetMessageText(ChatMessageItem item, string text)
@@ -3224,6 +3425,491 @@ public partial class AssistanceChatView : ContentView
         });
     }
 
+    // ======================================================================
+    //  Multi-Agent Support
+    // ======================================================================
+
+    /// <summary>
+    /// 处理来自另一个 Agent 的传入消息：添加到聊天历史，调用 AI 回复，返回响应文本。
+    /// 通过 SemaphoreSlim 串行化，避免与用户输入或其他传入消息并发冲突。
+    /// </summary>
+    internal async Task<string> ReceiveMessageAsync(string fromAgentId, string content)
+    {
+        await _messageGate.WaitAsync();
+        try
+        {
+            if (!_chatHistory.Any())
+            {
+                _chatHistory.Add(new AIChatMessage(ChatRole.System, await BuildSystemPromptAsync()));
+            }
+
+            // 添加传入消息到 UI
+            var incomingItem = new ChatMessageItem
+            {
+                Sender = $"Agent [{fromAgentId[..8]}]",
+                Message = content,
+                IsUser = true,
+            };
+            MainThread.BeginInvokeOnMainThread(() => _messages.Add(incomingItem));
+            _chatHistory.Add(new AIChatMessage(ChatRole.User, content));
+
+            // 流式 AI 回复
+            string response = await StreamAndCaptureResponseAsync();
+
+            return response;
+        }
+        finally
+        {
+            _messageGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 流式获取 AI 回复并返回完整文本（不操作 UI 按钮状态，供 Agent 间通信使用）。
+    /// </summary>
+    private async Task<string> StreamAndCaptureResponseAsync()
+    {
+        // 复用 StreamAndAppendAssistantResponseAsync 的核心流式逻辑，
+        // 需要从中提取出纯流式部分。当前实现直接调用 StreamAndAppendAssistantResponseAsync，
+        // 但跳过 UI 按钮状态变更。
+        string result = string.Empty;
+        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _cts ??= new CancellationTokenSource();
+
+        // 临时重定向 PersistSession，避免在流式完成前持久化
+        await StreamAndAppendAssistantResponseAsync();
+
+        // 获取最后一个助理消息
+        for (int i = _messages.Count - 1; i >= 0; i--)
+        {
+            if (!_messages[i].IsUser)
+            {
+                result = _messages[i].Message;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 创建一个子 Agent，在 MultiWindowView 中展示，并返回其 AgentId。
+    /// </summary>
+    internal async Task<string> CreateSubAgentAsync(string title, string subAgentRole)
+    {
+        var childView = new AssistanceChatView(
+            sessionId: null,
+            aIFunctionsFactory: ToolCallFactories,
+            projectPath: _projectPath,
+            projectName: _projectName,
+            isSubAgent: true);
+
+        childView._subagentRole = subAgentRole;
+        childView.AgentTitle = title;
+
+        AgentMessageRouter.Instance.RegisterAgent(childView, parentAgentId: this.AgentId);
+
+        await ShowAgentInMultiWindowView(childView, title ?? "Sub-Agent");
+        RefreshSubAgentPanel();
+
+        return childView.AgentId;
+    }
+
+    /// <summary>
+    /// 获取此 Agent 的消息列表（供关闭时捕获历史使用）。
+    /// </summary>
+    internal IReadOnlyList<ChatMessageItem> GetMessages() => _messages;
+
+    /// <summary>
+    /// 在 MultiWindowView 或 NavigationPage 中展示子 Agent 窗口。
+    /// </summary>
+    private async Task ShowAgentInMultiWindowView(AssistanceChatView childView, string title)
+    {
+        var hostItem = GetHostWindow();
+        if (hostItem is null)
+            return;
+
+        var multiWindowView = FindParent<MultiWindowView>(hostItem);
+        if (multiWindowView is not null)
+        {
+            var newWindow = new MultiWindowItem
+            {
+                Content = childView,
+                Title = title,
+                IsNavigationVisible = false,
+                WidthRequest = 400,
+                HeightRequest = 500,
+            };
+            newWindow.CloseClicked += (_, e) =>
+            {
+                if (!e.Cancel)
+                {
+                    AgentMessageRouter.Instance.UnregisterAgent(childView.AgentId);
+                }
+            };
+            multiWindowView.AddWindow(newWindow);
+        }
+        else if (hostItem.Window?.Page?.Navigation is INavigation nav)
+        {
+            var cp = new ContentPage
+            {
+                Content = childView,
+                Title = title,
+            };
+            NavigationPage.SetHasNavigationBar(cp, false);
+            await nav.PushAsync(cp);
+        }
+    }
+
+    /// <summary>
+    /// 在 Element 树中向上查找指定类型的父元素。
+    /// </summary>
+    private static T? FindParent<T>(Element element) where T : Element
+    {
+        Element? current = element.Parent;
+        while (current is not null)
+        {
+            if (current is T typed) return typed;
+            current = current.Parent;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 向指定子 Agent 发送消息并等待回复。
+    /// </summary>
+    private async Task<string> SendToSubAgentAsync(string agentId, string message)
+    {
+        var router = AgentMessageRouter.Instance;
+        var childInfo = router.GetAgentInfo(agentId);
+        if (childInfo is null)
+            return $"Error: Agent '{agentId}' not found or has been closed.";
+
+        try
+        {
+            var responseTask = router.SendMessageAsync(this.AgentId, agentId, message);
+            var task = await Task.WhenAny(responseTask, Task.Delay(10 * 60 * 1000));
+            if (task == responseTask)
+            {
+                var data = await responseTask;
+                return string.IsNullOrEmpty(data) ? "The sub-agent did not return any response." : data;
+            }
+            else
+            {
+                return "Error: Operation timeout after 10 minute.";
+            }
+        }
+        catch (TimeoutException)
+        {
+            return "Error: The sub-agent did not respond within the timeout period.";
+        }
+    }
+
+    /// <summary>
+    /// 关闭指定子 Agent，并保存其对话历史以便从会话面板重新打开。
+    /// </summary>
+    private async Task<string> CloseSubAgentAsync(string agentId)
+    {
+        var router = AgentMessageRouter.Instance;
+        var childInfo = router.GetAgentInfo(agentId);
+        if (childInfo is null)
+            return $"Error: Agent '{agentId}' not found or has already been closed.";
+        if (childInfo.ParentAgentId != this.AgentId)
+            return $"Error: Agent '{agentId}' is not a direct sub-agent of this agent.";
+
+        // 捕获对话历史
+        var childView = childInfo.View;
+        var closedSession = CaptureClosedSubAgentSession(childView);
+
+        // 保存到父会话的已关闭 Agent 列表
+        _closedSubAgentSessions.Add(closedSession);
+
+        // 关闭窗口
+        var hostItem = childView.GetHostWindow();
+        if (hostItem is not null)
+        {
+            if (hostItem.Parent is MultiWindowView mwv)
+                mwv.CloseWindow(hostItem, force: true);
+            else
+                hostItem.Close(force: true);
+        }
+        router.UnregisterAgent(agentId);
+
+        PersistSession();
+        RefreshSubAgentPanel();
+        return $"Sub-agent '{agentId}' has been closed. Its conversation history has been saved.";
+    }
+
+    /// <summary>
+    /// 捕获子 Agent 的对话消息为快照。
+    /// </summary>
+    private ClosedSubAgentSnapshot CaptureClosedSubAgentSession(AssistanceChatView childView)
+    {
+        var messages = childView.GetMessages()
+            .Where(m => !string.IsNullOrWhiteSpace(m.Message) || (m.Attachments?.Count > 0))
+            .Select(m => new AssistanceChatMessageSnapshot
+            {
+                Sender = m.Sender,
+                Message = m.Message,
+                IsUser = m.IsUser,
+                ReasoningText = m.ReasoningText,
+                ToolCallsText = m.ToolCallsText,
+                ContentSegments = CloneContentSegments(m.ContentSegments),
+                Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                {
+                    FileName = a.FileName,
+                    MimeType = a.MimeType,
+                    FileSize = a.FileSize,
+                    StoredRelativePath = a.StoredRelativePath,
+                }).ToList(),
+            })
+            .ToList();
+
+        return new ClosedSubAgentSnapshot
+        {
+            AgentId = childView.AgentId,
+            Title = childView.AgentTitle ?? "Sub-Agent",
+            SubAgentRole = childView._subagentRole,
+            SourceSessionId = childView._sessionId,
+            Messages = messages,
+            ClosedAt = DateTime.UtcNow,
+        };
+    }
+
+    private void RefreshSubAgentPanel()
+    {
+        _subAgentItems.Clear();
+
+        var closedAgentIds = new HashSet<string>(
+            _closedSubAgentSessions.Select(session => session.AgentId),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (agentId, title) in AgentMessageRouter.Instance.GetChildAgents(AgentId))
+        {
+            if (closedAgentIds.Contains(agentId))
+            {
+                continue;
+            }
+
+            int messageCount = AgentMessageRouter.Instance.GetAgentInfo(agentId)?.View.GetMessages().Count ?? 0;
+            _subAgentItems.Add(new SubAgentListItem(agentId, title, true, messageCount, null));
+        }
+
+        foreach (ClosedSubAgentSnapshot session in _closedSubAgentSessions
+            .OrderByDescending(session => session.ClosedAt))
+        {
+            _subAgentItems.Add(new SubAgentListItem(
+                session.AgentId,
+                session.Title,
+                false,
+                session.Messages.Count,
+                session));
+        }
+
+        bool hasItems = _subAgentItems.Count > 0;
+        SubAgentPanel.IsVisible = hasItems;
+        SubAgentPanelTitle.Text = $"Sub-Agents ({_subAgentItems.Count})";
+        if (!hasItems)
+        {
+            _isSubAgentPanelExpanded = false;
+        }
+
+        SubAgentListView.IsVisible = hasItems && _isSubAgentPanelExpanded;
+        SubAgentToggleIcon.Text = _isSubAgentPanelExpanded ? "▼" : "▶";
+        SubAgentPanelIndicator.IsVisible = !_isSubAgentPanelExpanded;
+    }
+
+    private void SubAgentPanelHeader_Tapped(object? sender, TappedEventArgs e)
+    {
+        _isSubAgentPanelExpanded = !_isSubAgentPanelExpanded;
+        SubAgentListView.IsVisible = _isSubAgentPanelExpanded;
+        SubAgentToggleIcon.Text = _isSubAgentPanelExpanded ? "▼" : "▶";
+        SubAgentPanelIndicator.IsVisible = !_isSubAgentPanelExpanded;
+    }
+
+    private async void SubAgentItem_Tapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is not BindableObject { BindingContext: SubAgentListItem item })
+        {
+            return;
+        }
+
+        if (item.IsActive)
+        {
+            FocusSubAgentWindow(item.AgentId);
+            return;
+        }
+
+        await RecreateSubAgentSessionAsync(item);
+    }
+
+    private void FocusSubAgentWindow(string agentId)
+    {
+        AgentInfo? agentInfo = AgentMessageRouter.Instance.GetAgentInfo(agentId);
+        MultiWindowItem? agentWindow = agentInfo?.View.GetHostWindow();
+        MultiWindowView? multiWindowView = agentWindow is null ? null : FindParent<MultiWindowView>(agentWindow);
+        if (agentWindow is not null && multiWindowView is not null)
+        {
+            multiWindowView.BringToFront(agentWindow);
+        }
+    }
+
+    private async Task RecreateSubAgentSessionAsync(SubAgentListItem item)
+    {
+        if (item.ClosedSnapshot is null)
+        {
+            return;
+        }
+
+        var childView = new AssistanceChatView(
+            sessionId: null,
+            aIFunctionsFactory: ToolCallFactories,
+            projectPath: _projectPath,
+            projectName: _projectName,
+            isSubAgent: true)
+        {
+            AgentTitle = item.Title,
+        };
+        childView._subagentRole = item.ClosedSnapshot.SubAgentRole;
+        await childView.RestoreClosedSubAgentSessionAsync(item.ClosedSnapshot);
+
+        AgentMessageRouter.Instance.RegisterAgent(childView, parentAgentId: AgentId);
+        await ShowAgentInMultiWindowView(childView, item.Title);
+
+        _closedSubAgentSessions.Remove(item.ClosedSnapshot);
+        PersistSession();
+        RefreshSubAgentPanel();
+    }
+
+    private async Task RestoreClosedSubAgentSessionAsync(ClosedSubAgentSnapshot snapshot)
+    {
+        CopyClosedSubAgentAttachments(snapshot);
+
+        var session = new AssistanceChatSession
+        {
+            SessionId = _sessionId,
+            IsSubAgent = true,
+        };
+        session.Messages.AddRange(snapshot.Messages.Select(CloneMessageSnapshot));
+        session.History.Add(new AssistanceChatHistorySnapshot
+        {
+            Role = ChatRole.System,
+            Text = await BuildSystemPromptAsync(),
+        });
+        session.History.AddRange(snapshot.Messages.Select(message => new AssistanceChatHistorySnapshot
+        {
+            Role = message.IsUser ? ChatRole.User : ChatRole.Assistant,
+            Text = message.Message,
+        }));
+
+        LoadSession(session);
+        PersistSession();
+    }
+
+    private void CopyClosedSubAgentAttachments(ClosedSubAgentSnapshot snapshot)
+    {
+        if (snapshot.SourceSessionId == Guid.Empty || string.IsNullOrWhiteSpace(_projectPath))
+        {
+            return;
+        }
+
+        string sourceMediaDirectory = Path.Combine(_projectPath, "chats", snapshot.SourceSessionId.ToString("N"));
+        string targetMediaDirectory = GetSessionMediaDirectory();
+        foreach (ChatAttachmentSnapshot attachment in snapshot.Messages
+            .SelectMany(message => message.Attachments ?? []))
+        {
+            string fileName = Path.GetFileName(attachment.StoredRelativePath);
+            string sourcePath = Path.Combine(sourceMediaDirectory, fileName);
+            if (!File.Exists(sourcePath))
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(targetMediaDirectory);
+            string targetPath = Path.Combine(targetMediaDirectory, fileName);
+            if (!File.Exists(targetPath))
+            {
+                File.Copy(sourcePath, targetPath);
+            }
+        }
+    }
+
+    private static AssistanceChatMessageSnapshot CloneMessageSnapshot(AssistanceChatMessageSnapshot message)
+    {
+        return new AssistanceChatMessageSnapshot
+        {
+            Sender = message.Sender,
+            Message = message.Message,
+            IsUser = message.IsUser,
+            ReasoningText = message.ReasoningText,
+            ToolCallsText = message.ToolCallsText,
+            ContentSegments = CloneContentSegments(message.ContentSegments),
+            HasFeedbackSubmitted = message.HasFeedbackSubmitted,
+            Attachments = message.Attachments?.Select(attachment => new ChatAttachmentSnapshot
+            {
+                FileName = attachment.FileName,
+                MimeType = attachment.MimeType,
+                FileSize = attachment.FileSize,
+                StoredRelativePath = attachment.StoredRelativePath,
+            }).ToList(),
+        };
+    }
+
+    private void OnAgentUnregistered(object? sender, AgentInfo agentInfo)
+    {
+        if (!string.Equals(agentInfo.ParentAgentId, AgentId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_closedSubAgentSessions.All(session =>
+                !string.Equals(session.AgentId, agentInfo.AgentId, StringComparison.OrdinalIgnoreCase)))
+            {
+                _closedSubAgentSessions.Add(CaptureClosedSubAgentSession(agentInfo.View));
+                PersistSession();
+            }
+
+            RefreshSubAgentPanel();
+        });
+    }
+
+    private sealed class SubAgentListItem(
+        string agentId,
+        string title,
+        bool isActive,
+        int messageCount,
+        ClosedSubAgentSnapshot? closedSnapshot)
+    {
+        public string AgentId { get; } = agentId;
+        public string Title { get; } = title;
+        public bool IsActive { get; } = isActive;
+        public int MessageCount { get; } = messageCount;
+        public ClosedSubAgentSnapshot? ClosedSnapshot { get; } = closedSnapshot;
+        public string DetailText => $"{(IsActive ? "Active" : "Closed")} - {MessageCount} messages";
+        public string ActionText => IsActive ? "Focus" : "Reopen";
+        public string StatusColor => IsActive ? "#FF4CAF50" : "#FF888888";
+    }
+
+    /// <summary>
+    /// 列出所有活跃的子 Agent。
+    /// </summary>
+    private string ListSubAgents()
+    {
+        var children = AgentMessageRouter.Instance.GetChildAgents(this.AgentId);
+        if (children.Count == 0)
+            return "No active sub-agents.";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Active sub-agents:");
+        foreach (var (agentId, title) in children)
+        {
+            sb.AppendLine($"- {agentId}: {title}");
+        }
+        return sb.ToString();
+    }
+
     private sealed class ToolCallDisplayState
     {
         public string Key { get; init; } = string.Empty;
@@ -3300,7 +3986,7 @@ public partial class AssistanceChatView : ContentView
             {
                 streamingItem = new ChatMessageItem
                 {
-                    Sender = "Assistant P",
+                    Sender = AgentName,
                     Message = "",
                     IsUser = false,
                     ContentSegments = [],
@@ -3348,153 +4034,153 @@ public partial class AssistanceChatView : ContentView
 
                             string reasoningChunk = ExtractReasoningChunk(update);
 
-                        bool toolCallChanged = TryUpdateToolCallState(
-                            update,
-                            toolCallsById,
-                            ref anonymousToolCallCounter,
-                            out string toolCallsText,
-                            out IReadOnlyList<ToolCallDisplayState> changedToolCalls);
-                        bool toolResultChanged = TryUpdateToolCallResultState(
-                            update,
-                            toolCallsById,
-                            out IReadOnlyList<ToolCallDisplayState> changedToolResults);
+                            bool toolCallChanged = TryUpdateToolCallState(
+                                update,
+                                toolCallsById,
+                                ref anonymousToolCallCounter,
+                                out string toolCallsText,
+                                out IReadOnlyList<ToolCallDisplayState> changedToolCalls);
+                            bool toolResultChanged = TryUpdateToolCallResultState(
+                                update,
+                                toolCallsById,
+                                out IReadOnlyList<ToolCallDisplayState> changedToolResults);
 
-                        // Skip if nothing to process
-                        if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged && !toolResultChanged)
-                            continue;
+                            // Skip if nothing to process
+                            if (string.IsNullOrEmpty(textChunk) && string.IsNullOrEmpty(reasoningChunk) && !toolCallChanged && !toolResultChanged)
+                                continue;
 
-                        // Capture values for main-thread dispatch
-                        string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
-                        string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
-                        string capturedToolCalls = toolCallsText;
+                            // Capture values for main-thread dispatch
+                            string capturedText = textBuilder.Length > 0 ? textBuilder.ToString() : "";
+                            string capturedReasoning = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : "";
+                            string capturedToolCalls = toolCallsText;
 
-                        if (!string.IsNullOrEmpty(textChunk))
-                        {
-                            textBuilder.Append(textChunk);
-                            pendingTextSegment.Append(textChunk);
-                            capturedText = textBuilder.ToString();
-                        }
-                        if (!string.IsNullOrEmpty(reasoningChunk))
-                        {
-                            reasoningBuilder.Append(reasoningChunk);
-                            capturedReasoning = reasoningBuilder.ToString();
-                        }
-
-                        List<(string Key, string Text)> capturedToolCallUpdates = changedToolCalls
-                            .Select(state => (state.Key, BuildToolCallDisplayText([state])))
-                            .ToList();
-                        List<(string Key, string Text, string Result)> capturedToolResultUpdates = changedToolResults
-                            .Select(state => (state.Key, BuildToolCallDisplayText([state]), state.Result))
-                            .ToList();
-
-                        foreach ((string key, string text) in capturedToolCallUpdates)
-                        {
-                            if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
+                            if (!string.IsNullOrEmpty(textChunk))
                             {
-                                AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
-                                segment = new ChatContentSegmentSnapshot
-                                {
-                                    Kind = ChatContentSegmentKinds.ToolCall,
-                                    Text = text,
-                                };
-                                toolCallSegmentsByKey[key] = segment;
-                                streamingItem.ContentSegments.Add(segment);
+                                textBuilder.Append(textChunk);
+                                pendingTextSegment.Append(textChunk);
+                                capturedText = textBuilder.ToString();
                             }
-                            else
-                            {
-                                segment.Text = text;
-                            }
-                        }
-
-                        foreach ((string key, string text, string result) in capturedToolResultUpdates)
-                        {
-                            if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
-                            {
-                                AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
-                                segment = new ChatContentSegmentSnapshot
-                                {
-                                    Kind = ChatContentSegmentKinds.ToolCall,
-                                    Text = text,
-                                };
-                                toolCallSegmentsByKey[key] = segment;
-                                streamingItem.ContentSegments.Add(segment);
-                            }
-
-                            segment.ResultText = result;
-                        }
-
-                            MainThread.BeginInvokeOnMainThread(() =>
-                            {
-                            streamingItem.Message = capturedText;
-
-                            foreach (View view in converter.Feed(textChunk))
-                                streamingItem.ContentViews.Add(view);
-
-                            var newPartialView = converter.CurrentPartialView;
-                            if (!ReferenceEquals(newPartialView, partialView))
-                            {
-                                if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                                    streamingItem.ContentViews.Remove(partialView);
-                                partialView = newPartialView;
-                                if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
-                                    streamingItem.ContentViews.Add(partialView);
-                            }
-                            // --- Reasoning: create/update thinking card ---
                             if (!string.IsNullOrEmpty(reasoningChunk))
                             {
-                                streamingItem.ReasoningText = capturedReasoning;
-                                if (thinkingCard is null)
+                                reasoningBuilder.Append(reasoningChunk);
+                                capturedReasoning = reasoningBuilder.ToString();
+                            }
+
+                            List<(string Key, string Text)> capturedToolCallUpdates = changedToolCalls
+                                .Select(state => (state.Key, BuildToolCallDisplayText([state])))
+                                .ToList();
+                            List<(string Key, string Text, string Result)> capturedToolResultUpdates = changedToolResults
+                                .Select(state => (state.Key, BuildToolCallDisplayText([state]), state.Result))
+                                .ToList();
+
+                            foreach ((string key, string text) in capturedToolCallUpdates)
+                            {
+                                if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
                                 {
-                                    thinkingCard = new ThinkingCardView(capturedReasoning);
-                                    InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
+                                    AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
+                                    segment = new ChatContentSegmentSnapshot
+                                    {
+                                        Kind = ChatContentSegmentKinds.ToolCall,
+                                        Text = text,
+                                    };
+                                    toolCallSegmentsByKey[key] = segment;
+                                    streamingItem.ContentSegments.Add(segment);
                                 }
                                 else
                                 {
-                                    thinkingCard.UpdateText(capturedReasoning);
+                                    segment.Text = text;
                                 }
                             }
 
-                            // --- Tool calls: create/update tool call card ---
-                            if (toolCallChanged)
+                            foreach ((string key, string text, string result) in capturedToolResultUpdates)
                             {
-                                streamingItem.ToolCallsText = capturedToolCalls;
-                                foreach ((string key, string text) in capturedToolCallUpdates)
+                                if (!toolCallSegmentsByKey.TryGetValue(key, out ChatContentSegmentSnapshot? segment))
                                 {
-                                    if (toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? existingCard))
+                                    AppendPendingTextSegment(streamingItem.ContentSegments, pendingTextSegment);
+                                    segment = new ChatContentSegmentSnapshot
                                     {
-                                        existingCard.UpdateText(text);
-                                        continue;
+                                        Kind = ChatContentSegmentKinds.ToolCall,
+                                        Text = text,
+                                    };
+                                    toolCallSegmentsByKey[key] = segment;
+                                    streamingItem.ContentSegments.Add(segment);
+                                }
+
+                                segment.ResultText = result;
+                            }
+
+                            MainThread.BeginInvokeOnMainThread(() =>
+                            {
+                                streamingItem.Message = capturedText;
+
+                                foreach (View view in converter.Feed(textChunk))
+                                    streamingItem.ContentViews.Add(view);
+
+                                var newPartialView = converter.CurrentPartialView;
+                                if (!ReferenceEquals(newPartialView, partialView))
+                                {
+                                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
+                                        streamingItem.ContentViews.Remove(partialView);
+                                    partialView = newPartialView;
+                                    if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
+                                        streamingItem.ContentViews.Add(partialView);
+                                }
+                                // --- Reasoning: create/update thinking card ---
+                                if (!string.IsNullOrEmpty(reasoningChunk))
+                                {
+                                    streamingItem.ReasoningText = capturedReasoning;
+                                    if (thinkingCard is null)
+                                    {
+                                        thinkingCard = new ThinkingCardView(capturedReasoning);
+                                        InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
                                     }
-
-                                    FlushStreamingState(streamingItem, converter, ref partialView);
-                                    converter = new Markdown2XAML.StreamConverter();
-
-                                    var card = new ToolCallCardView(text);
-                                    toolCallCardsByKey[key] = card;
-                                    streamingItem.ContentViews.Add(card.View);
-                                }
-                            }
-
-                            if (toolResultChanged)
-                            {
-                                foreach ((string key, string text, string result) in capturedToolResultUpdates)
-                                {
-                                    if (!toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? card))
+                                    else
                                     {
+                                        thinkingCard.UpdateText(capturedReasoning);
+                                    }
+                                }
+
+                                // --- Tool calls: create/update tool call card ---
+                                if (toolCallChanged)
+                                {
+                                    streamingItem.ToolCallsText = capturedToolCalls;
+                                    foreach ((string key, string text) in capturedToolCallUpdates)
+                                    {
+                                        if (toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? existingCard))
+                                        {
+                                            existingCard.UpdateText(text);
+                                            continue;
+                                        }
+
                                         FlushStreamingState(streamingItem, converter, ref partialView);
                                         converter = new Markdown2XAML.StreamConverter();
 
-                                        card = new ToolCallCardView(text);
+                                        var card = new ToolCallCardView(text);
                                         toolCallCardsByKey[key] = card;
                                         streamingItem.ContentViews.Add(card.View);
                                     }
-
-                                    card.UpdateResult(result);
                                 }
-                            }
 
-                            // 流式输出内容更新后自动滚动到底部
-                            ScrollToEnd();
+                                if (toolResultChanged)
+                                {
+                                    foreach ((string key, string text, string result) in capturedToolResultUpdates)
+                                    {
+                                        if (!toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? card))
+                                        {
+                                            FlushStreamingState(streamingItem, converter, ref partialView);
+                                            converter = new Markdown2XAML.StreamConverter();
+
+                                            card = new ToolCallCardView(text);
+                                            toolCallCardsByKey[key] = card;
+                                            streamingItem.ContentViews.Add(card.View);
+                                        }
+
+                                        card.UpdateResult(result);
+                                    }
+                                }
+
+                                // 流式输出内容更新后自动滚动到底部
+                                ScrollToEnd();
                             });
                         }
                     }
@@ -3618,7 +4304,7 @@ public partial class AssistanceChatView : ContentView
         {
             var item = new ChatMessageItem
             {
-                Sender = "Assistant P",
+                Sender = AgentName,
                 Message = assistantText,
                 IsUser = false,
             };
@@ -4107,49 +4793,49 @@ public partial class AssistanceChatView : ContentView
         var tcs = new TaskCompletionSource<AuthorizationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sb = new StringBuilder();
-        sb.AppendLine("🔒 脚本命令需要您的授权确认");
+        sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
         sb.AppendLine();
 
         // 命令名称
-        string cmdName = context.CommandInfo?.Name ?? "未知";
-        sb.AppendLine($"📌 命令：{cmdName}");
+        string cmdName = context.CommandInfo?.Name ?? Localized._Unknown;
+        sb.AppendLine($"{Localized.ScriptEngine_Auth_CommandLabel}{cmdName}");
 
         // 目标路径
         if (!string.IsNullOrEmpty(context.TargetPath))
         {
             sb.AppendLine();
-            sb.AppendLine($"📁 目标路径：{context.TargetPath}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetPathLabel}{context.TargetPath}");
 
             string statusIcon = context.PathSafetyStatus switch
             {
-                PathSafety.Safe => "✅ 项目目录内 - 安全",
-                PathSafety.OutsideProject => "⚠️ 项目目录外 - 有风险",
-                PathSafety.PathTraversal => "🚫 检测到路径遍历 - 危险",
-                PathSafety.Unresolved => "❓ 路径来自变量，无法静态验证",
-                _ => "未知",
+                PathSafety.Safe => Localized.ScriptEngine_Auth_PathSafe,
+                PathSafety.OutsideProject => Localized.ScriptEngine_Auth_PathOutsideProject,
+                PathSafety.PathTraversal => Localized.ScriptEngine_Auth_PathTraversal,
+                PathSafety.Unresolved => Localized.ScriptEngine_Auth_PathUnresolved,
+                _ => Localized._Unknown,
             };
-            sb.AppendLine($"🔍 路径状态：{statusIcon}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_PathStatusLabel}{statusIcon}");
         }
 
         // 目标 URL
         if (!string.IsNullOrEmpty(context.TargetUrl))
         {
             sb.AppendLine();
-            sb.AppendLine($"🌐 目标 URL：{context.TargetUrl}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetUrlLabel}{context.TargetUrl}");
         }
 
         // 混淆警告
         if (!string.IsNullOrEmpty(context.ObfuscationWarning))
         {
             sb.AppendLine();
-            sb.AppendLine($"⚠️ 安全警告：{context.ObfuscationWarning}");
-            sb.AppendLine($"威胁级别：{context.ThreatLevel}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{context.ObfuscationWarning}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{context.ThreatLevel?.ToString() ?? Localized._Unknown}");
         }
 
         // 创建系统消息条目
         var item = new ChatMessageItem
         {
-            Sender = "🔒 系统安全",
+            Sender = Localized.ScriptEngine_Auth_SystemSecurity,
             Message = string.Empty,
             IsUser = false,
             IsFirstTurn = false,
@@ -4190,18 +4876,18 @@ public partial class AssistanceChatView : ContentView
             };
         }
 
-        var allowBtn = MakeButton("✅ 允许", "#4EC9B0");
+        var allowBtn = MakeButton(Localized.ScriptEngine_Auth_Allow, "#4EC9B0");
         allowBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.Allow);
 
-        var denyBtn = MakeButton("❌ 拒绝", "#C04040");
+        var denyBtn = MakeButton(Localized.ScriptEngine_Auth_Deny, "#C04040");
         denyBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.Deny);
 
         if (allowRemember)
         {
-            var allowRememberBtn = MakeButton("✅ 允许并记住", "#1E6F5C");
+            var allowRememberBtn = MakeButton(Localized.ScriptEngine_Auth_AllowRemember, "#1E6F5C");
             allowRememberBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.AllowAndRemember);
 
-            var denyRememberBtn = MakeButton("❌ 拒绝并记住", "#8B0000");
+            var denyRememberBtn = MakeButton(Localized.ScriptEngine_Auth_DenyRemember, "#8B0000");
             denyRememberBtn.Clicked += (_, _) => SetResultAndCleanup(AuthorizationResult.DenyAndRemember);
 
             actionPanel.Children.Add(new HorizontalStackLayout

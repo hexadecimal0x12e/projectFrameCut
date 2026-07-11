@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Asset;
+﻿using LocalizedResources;
+using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System.IO.Compression;
@@ -619,7 +620,7 @@ internal static class TemplatePackageIO
         var pjfcPath = Path.Combine(templateDir, $"{templateId:N}.pjfcTemplate");
 
         if (!File.Exists(pjfcPath))
-            throw new FileNotFoundException("模板包文件不存在，可能需要重新导入。", pjfcPath);
+            throw new FileNotFoundException(Localized.TemplateExtractPage_FileNotFound, pjfcPath);
 
         var extractDir = Path.Combine(FileSystem.CacheDirectory, $"template_use_{Guid.NewGuid():N}");
         Directory.CreateDirectory(extractDir);

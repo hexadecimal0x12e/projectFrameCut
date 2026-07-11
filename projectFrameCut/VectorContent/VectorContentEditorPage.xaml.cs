@@ -85,6 +85,8 @@ internal class PersistedVectorHistory
 /// </summary>
 public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChanged, IHistoryGraphProvider
 {
+    private const string ComponentDragProperty = "VectorComponentId";
+
     // ═══════════════════════════════════════════════════════════
     // Injected state
     // ═══════════════════════════════════════════════════════════
@@ -344,6 +346,50 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
         OnPropertyChanged(nameof(CanUngroupComponent));
         OnPropertyChanged(nameof(CanGroupOrUngroup));
         OnPropertyChanged(nameof(GroupButtonText));
+    }
+
+    private void OnComponentDragStarting(object? sender, DragStartingEventArgs e)
+    {
+        if (sender is VisualElement ve && ve.BindingContext is VectorComponentItem item)
+        {
+            e.Data.Properties[ComponentDragProperty] = item.Id.ToString("D");
+        }
+    }
+
+    private void OnComponentDrop(object? sender, DropEventArgs e)
+    {
+        if (sender is not VisualElement ve
+            || ve.BindingContext is not VectorComponentItem target
+            || !e.Data.Properties.TryGetValue(ComponentDragProperty, out var sourceValue)
+            || sourceValue is not string sourceIdText
+            || !Guid.TryParse(sourceIdText, out var sourceId))
+        {
+            return;
+        }
+
+        var source = Components.FirstOrDefault(item => item.Id == sourceId);
+        if (source is null || source == target)
+            return;
+
+        int sourceIndex = Components.IndexOf(source);
+        int targetIndex = Components.IndexOf(target);
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
+            return;
+
+        PushUndoSnapshot(Localized.VectorContentEditorView_History_DefaultAction);
+
+        _editingComponents.Remove(source.Source);
+        _editingComponents.Insert(targetIndex, source.Source);
+        for (int i = 0; i < _editingComponents.Count; i++)
+        {
+            var item = Components.First(component => component.Source == _editingComponents[i]);
+            item.LayerIndex = i;
+        }
+
+        Components.Move(sourceIndex, targetIndex);
+
+        RebuildComponentClips();
+        _ = RefreshInteractivePreviewsAsync();
     }
 
     /// <summary>由 VectorComponentItem.IsChecked 通知，更新多选集合。 </summary>
@@ -3044,17 +3090,17 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
     private static PropertyPanelBuilder CreateGroupPropertyPanelBuilder(ComponentGroup group)
     {
         var builder = new PropertyPanelBuilder();
-        builder.AddCollapsibleSection("组属性", b =>
+        builder.AddCollapsibleSection(Localized.VectorContentEditorView_Components_GroupProperties, b =>
         {
             b.AddSlider("RelativeX", "X:", 0.0, 1.0, group.Parameters.GetFloat("RelativeX", 0.5f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
             b.AddSlider("RelativeY", "Y:", 0.0, 1.0, group.Parameters.GetFloat("RelativeY", 0.5f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("Width", "宽度:", 0.0, 2.0, group.Parameters.GetFloat("Width", 0.3f),
+            b.AddSlider("Width", Localized.VectorContentEditorView_Property_Width, 0.0, 2.0, group.Parameters.GetFloat("Width", 0.3f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("Height", "高度:", 0.0, 2.0, group.Parameters.GetFloat("Height", 0.3f),
+            b.AddSlider("Height", Localized.VectorContentEditorView_Property_Height, 0.0, 2.0, group.Parameters.GetFloat("Height", 0.3f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("Rotation", "旋转:", -3.1416, 3.1416, group.Parameters.GetFloat("Rotation", 0.0f),
+            b.AddSlider("Rotation", Localized.VectorContentEditorView_Property_Rotation, -3.1416, 3.1416, group.Parameters.GetFloat("Rotation", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
         }, defaultExpanded: true);
         return builder;
@@ -3127,6 +3173,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
         if (_defaultLayoutApplied) return;
         if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0) return;
         if (!MainMultiWindowView.Children.Contains(ComponentsWindow) ||
+            !MainMultiWindowView.Children.Contains(AddComponentWindow) ||
             !MainMultiWindowView.Children.Contains(EditorWindow) ||
             !MainMultiWindowView.Children.Contains(TimelineWindow) ||
             !MainMultiWindowView.Children.Contains(PropertiesWindow) ||
@@ -3151,8 +3198,11 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
         double timelineH = Math.Max(180, totalH - editorH - Gap);
         double rightH = Math.Max(160, Math.Round((totalH - Gap) / 2.0));
 
-        // Red box — left rail (full height)
-        SetWindowBounds(ComponentsWindow, 0, 0, leftW, totalH);
+        // Left rail — existing components and new component selector.
+        double leftComponentsH = Math.Max(180, Math.Round((totalH - Gap) * 0.62));
+        double leftAddComponentH = Math.Max(140, totalH - leftComponentsH - Gap);
+        SetWindowBounds(ComponentsWindow, 0, 0, leftW, leftComponentsH);
+        SetWindowBounds(AddComponentWindow, 0, leftComponentsH + Gap, leftW, leftAddComponentH);
 
         // Center top — editor
         SetWindowBounds(EditorWindow,

@@ -2461,6 +2461,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             element.ExtraData = new();
             return element;
         }, name: "Vector Composition");
+
+        await _draftPage.HidePopup(true);
     }
 
     private static uint ResolveTimelineFrameCount(uint sourceFrames, double sourceSecondPerFrame, uint targetFrameRate)

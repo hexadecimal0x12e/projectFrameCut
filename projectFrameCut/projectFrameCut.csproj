@@ -141,8 +141,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Update="Localize\**\*" Visible="false" />
-		<!--removing the annoying refs from Solution resource manager-->
+		<!-- hide huge generated locate.sg.cs to stop Roslyn (devhub.exe) analyse it, and eating extreme large amount of memory -->
+		<Compile Update="Localize\locate.sg.cs" Visible="false" />
+		<!-- removing the annoying refs from Solution resource manager within pwsh sdk-->
 		<None Update="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
 	</ItemGroup>
 

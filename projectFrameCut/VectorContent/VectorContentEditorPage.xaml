@@ -5,7 +5,7 @@
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:ie="clr-namespace:projectFrameCut.InteractableEditor"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
-             xmlns:loc="clr-namespace:LocalizedResources"
+             xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.DraftStuff.VectorContentEditorPage"
              x:DataType="local:VectorContentEditorPage"
              BackgroundColor="#1a1a1a">
@@ -13,56 +13,56 @@
     <ContentPage.MenuBarItems>
 
         <!-- ═══ Project menu ═══ -->
-        <MenuBarItem Text="{loc:Localized Key=VectorContentEditorView_Title_Composition}">
-            <MenuFlyoutItem Text="{loc:Localized Key=_Save}" Command="{Binding SaveCommand}">
+        <MenuBarItem Text="{l:Localized Key=VectorContentEditorView_Title_Composition}">
+            <MenuFlyoutItem Text="{l:Localized Key=_Save}" Command="{Binding SaveCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="S" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem Text="{loc:Localized Key=VectorContentEditorView_Import}" Command="{Binding ImportSvgCommand}" />
-            <MenuFlyoutItem Text="{loc:Localized Key=VectorContentEditorView_ExportShapes}" Command="{Binding ExportJsonCommand}" />
-            <MenuFlyoutItem Text="{loc:Localized Key=VectorContentEditorView_ExportSVG}" Command="{Binding ExportSvgCommand}"
+            <MenuFlyoutItem Text="{l:Localized Key=VectorContentEditorView_Import}" Command="{Binding ImportSvgCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=VectorContentEditorView_ExportShapes}" Command="{Binding ExportJsonCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=VectorContentEditorView_ExportSVG}" Command="{Binding ExportSvgCommand}"
                             IsEnabled="{Binding HasSelectedComponent}" />
         </MenuBarItem>
 
         <!-- ═══ Edit menu ═══ -->
-        <MenuBarItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit}">
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="Z" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Redo}" Command="{Binding RedoCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Redo}" Command="{Binding RedoCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="Y" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Copy}" Command="{Binding CopyCommand}"
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" Command="{Binding CopyCommand}"
                             IsEnabled="{Binding HasSelectedComponent}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Cut}" Command="{Binding CutCommand}"
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" Command="{Binding CutCommand}"
                             IsEnabled="{Binding HasSelectedComponent}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="X" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Paste}" Command="{Binding PasteCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Paste}" Command="{Binding PasteCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="V" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_Duplicate}" Command="{Binding DuplicateCommand}"
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Duplicate}" Command="{Binding DuplicateCommand}"
                             IsEnabled="{Binding HasSelectedComponent}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
@@ -70,13 +70,13 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ShowHistoryCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ShowHistoryCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" Key="H" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator />
-            <MenuFlyoutItem Text="{loc:Localized Key=DraftPage_ContextMenu_Delete}" Command="{Binding RemoveComponentCommand}"
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_ContextMenu_Delete}" Command="{Binding RemoveComponentCommand}"
                             IsEnabled="{Binding HasSelectedComponent}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="Delete" />
@@ -100,23 +100,24 @@
                         ZIndex="0"
                         x:FieldModifier="public">
 
-        <!-- ═══ RED BOX: Vector Composition / Components / Add Shape ═══ -->
+        <!-- ═══ LEFT TOP: Existing Components ═══ -->
         <mw:MultiWindowItem x:Name="ComponentsWindow"
-                            Title="{loc:Localized Key=VectorContentEditorView_Title_Composition}"
+                            Title="{l:Localized Key=VectorContentEditorView_Components}"
                             IsClosable="False"
                             IsPopOutVisible="True"
                             IsResizable="True"
                             WidthRequest="260"
-                            HeightRequest="600">
-            <ScrollView>
-                <VerticalStackLayout Spacing="10" Padding="10">
-                    <!-- ── Component List ── -->
-                    <Label Text="{loc:Localized Key=VectorContentEditorView_Components}" FontSize="14" FontAttributes="Bold"
-                            TextColor="#D1D5DB" Margin="0,6,0,0" />
+                            HeightRequest="360">
+            <Grid Padding="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="32"/>
+                </Grid.RowDefinitions>
+                <ScrollView Grid.Row="0">
                     <CollectionView x:Name="ComponentsListView"
                                     ItemsSource="{Binding Components}"
                                     SelectionMode="None"
-                                    HeightRequest="200">
+                                    VerticalOptions="Fill">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="local:VectorComponentItem">
                                 <Border Padding="8,6" Margin="0,2"
@@ -135,6 +136,10 @@
                                     </Border.Triggers>
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnComponentItemTapped" />
+                                        <DragGestureRecognizer CanDrag="True"
+                                                                DragStarting="OnComponentDragStarting" />
+                                        <DropGestureRecognizer AllowDrop="True"
+                                                                Drop="OnComponentDrop" />
                                     </Border.GestureRecognizers>
                                     <Grid ColumnDefinitions="24,*,Auto,36" ColumnSpacing="8">
                                         <Label Text="{Binding ShapeIcon}"
@@ -183,70 +188,77 @@
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                         <CollectionView.EmptyView>
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_NoComponentsHint}"
+                            <Label Text="{l:Localized Key=VectorContentEditorView_NoComponentsHint}"
                                     FontSize="12" TextColor="#555555"
                                     HorizontalOptions="Center"
                                     Margin="0,20,0,0" />
                         </CollectionView.EmptyView>
                     </CollectionView>
+                </ScrollView>
+                <!-- Component action buttons -->
+                <HorizontalStackLayout Spacing="8" VerticalOptions="End" Grid.Row="1">
+                    <Button Text="{Binding GroupButtonText}"
+                            Command="{Binding GroupComponentsCommand}"
+                            IsEnabled="{Binding CanGroupOrUngroup}"
+                            BackgroundColor="#2A4A3A" TextColor="#86EFAC"
+                            FontSize="12" Padding="10,4"
+                            CornerRadius="4" />
+                </HorizontalStackLayout>
+            </Grid>
+        </mw:MultiWindowItem>
 
-                    <!-- Component action buttons -->
-                    <HorizontalStackLayout Spacing="8" VerticalOptions="End">
-                        <Button Text="{Binding GroupButtonText}"
-                                Command="{Binding GroupComponentsCommand}"
-                                IsEnabled="{Binding CanGroupOrUngroup}"
-                                BackgroundColor="#2A4A3A" TextColor="#86EFAC"
-                                FontSize="12" Padding="10,4"
-                                CornerRadius="4" />
-                    </HorizontalStackLayout>
-
-                    <!-- ── Shape Gallery (add panel) ── -->
-                    <Label Text="{loc:Localized Key=VectorContentEditorView_AddShape}" FontSize="14" FontAttributes="Bold"
-                            TextColor="#D1D5DB" Margin="0,10,0,0" />
-
-                    <FlexLayout Direction="Row" Wrap="Wrap"
-                                JustifyContent="Start"
-                                AlignItems="Start">
-                        <BindableLayout.ItemsSource>
-                            <Binding Path="ShapeGalleryItems" />
-                        </BindableLayout.ItemsSource>
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="local:ShapeGalleryItem">
-                                <Border WidthRequest="72" HeightRequest="72"
-                                        Margin="3" Padding="4"
-                                        StrokeShape="RoundRectangle 6"
-                                        StrokeThickness="1"
-                                        Stroke="#3a3a3a"
-                                        BackgroundColor="#252525">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.AddComponentCommand}"
-                                                              CommandParameter="{Binding TypeName}" />
-                                    </Border.GestureRecognizers>
-                                    <VerticalStackLayout VerticalOptions="Center"
-                                                         HorizontalOptions="Center"
-                                                         Spacing="2">
-                                        <Label Text="{Binding Icon}"
-                                                FontFamily="Icons"
-                                                FontSize="24"
-                                                HorizontalOptions="Center" />
-                                        <Label Text="{Binding DisplayName}"
-                                                FontSize="8"
-                                                TextColor="#9CA3AF"
-                                                HorizontalOptions="Center"
-                                                LineBreakMode="TailTruncation"
-                                                MaximumWidthRequest="64" />
-                                    </VerticalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </FlexLayout>
-                </VerticalStackLayout>
+        <!-- ═══ LEFT BOTTOM: New Component selector ═══ -->
+        <mw:MultiWindowItem x:Name="AddComponentWindow"
+                            Title="{l:Localized Key=VectorContentEditorView_AddShape}"
+                            IsClosable="False"
+                            IsPopOutVisible="True"
+                            IsResizable="True"
+                            WidthRequest="260"
+                            HeightRequest="240">
+            <ScrollView>
+                <FlexLayout Direction="Row" Wrap="Wrap"
+                            JustifyContent="Start"
+                            AlignItems="Start"
+                            Padding="7">
+                    <BindableLayout.ItemsSource>
+                        <Binding Path="ShapeGalleryItems" />
+                    </BindableLayout.ItemsSource>
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="local:ShapeGalleryItem">
+                            <Border WidthRequest="72" HeightRequest="72"
+                                    Margin="3" Padding="4"
+                                    StrokeShape="RoundRectangle 6"
+                                    StrokeThickness="1"
+                                    Stroke="#3a3a3a"
+                                    BackgroundColor="#252525">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.AddComponentCommand}"
+                                                          CommandParameter="{Binding TypeName}" />
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout VerticalOptions="Center"
+                                                     HorizontalOptions="Center"
+                                                     Spacing="2">
+                                    <Label Text="{Binding Icon}"
+                                            FontFamily="Icons"
+                                            FontSize="24"
+                                            HorizontalOptions="Center" />
+                                    <Label Text="{Binding DisplayName}"
+                                            FontSize="8"
+                                            TextColor="#9CA3AF"
+                                            HorizontalOptions="Center"
+                                            LineBreakMode="TailTruncation"
+                                            MaximumWidthRequest="64" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
             </ScrollView>
         </mw:MultiWindowItem>
 
         <!-- ═══ CENTER: InteractableEditor (interactive clip positioning) ═══ -->
         <mw:MultiWindowItem x:Name="EditorWindow"
-                            Title="{loc:Localized Key=VectorContentEditorView_Title_Editor}"
+                            Title="{l:Localized Key=VectorContentEditorView_Title_Editor}"
                             IsClosable="False"
                             IsPopOutVisible="True"
                             IsResizable="True">
@@ -255,7 +267,7 @@
 
         <!-- ═══ YELLOW BOX: Timeline ═══ -->
         <mw:MultiWindowItem x:Name="TimelineWindow"
-                            Title="{loc:Localized Key=VectorContentEditorView_Title_Timeline}"
+                            Title="{l:Localized Key=VectorContentEditorView_Title_Timeline}"
                             IsClosable="False"
                             IsPopOutVisible="True"
                             IsResizable="True"
@@ -299,7 +311,7 @@
 
         <!-- ═══ GREEN BOX: Property editor ═══ -->
         <mw:MultiWindowItem x:Name="PropertiesWindow"
-                            Title="{loc:Localized Key=VectorContentEditorView_Title_Properties}"
+                            Title="{l:Localized Key=VectorContentEditorView_Title_Properties}"
                             IsClosable="False"
                             IsPopOutVisible="True"
                             IsResizable="True"
@@ -308,11 +320,11 @@
             <ScrollView>
                 <VerticalStackLayout Spacing="8" Padding="10">
                     <Grid>
-                        <Label Text="{loc:Localized Key=VectorContentEditorView_Properties}" FontSize="14" FontAttributes="Bold"
+                        <Label Text="{l:Localized Key=VectorContentEditorView_Properties}" FontSize="14" FontAttributes="Bold"
                                 HorizontalOptions="Start" VerticalOptions="Center"
                                 TextColor="#D1D5DB" />
 
-                        <Button Text="{loc:Localized Key=_Remove}"
+                        <Button Text="{l:Localized Key=_Remove}"
                                 Command="{Binding RemoveComponentCommand}"
                                 IsEnabled="{Binding HasSelectedComponent}"
                                 IsVisible="{Binding HasSelectedComponent}"
@@ -324,10 +336,10 @@
 
                     <!-- No component selected placeholder -->
                     <VerticalStackLayout Spacing="4" Margin="0,20,0,0" IsVisible="{Binding HasSelectedComponent, Converter={toolkit:InvertedBoolConverter}}">
-                        <Label Text="{loc:Localized Key=VectorContentEditorView_SelectComponentHint}"
+                        <Label Text="{l:Localized Key=VectorContentEditorView_SelectComponentHint}"
                                 FontSize="13" TextColor="#555555"
                                 HorizontalOptions="Center" />
-                        <Label Text="{loc:Localized Key=VectorContentEditorView_SelectComponentHint2}"
+                        <Label Text="{l:Localized Key=VectorContentEditorView_SelectComponentHint2}"
                                 FontSize="11" TextColor="#444444"
                                 HorizontalOptions="Center" />
                     </VerticalStackLayout>
@@ -338,15 +350,15 @@
 
                         <!-- Name & Duration -->
                         <VerticalStackLayout Spacing="4">
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_Name}" FontSize="11" TextColor="#9CA3AF" />
+                            <Label Text="{l:Localized Key=VectorContentEditorView_Name}" FontSize="11" TextColor="#9CA3AF" />
                             <Entry Text="{Binding SelectedComponent.DisplayName}"
                                     FontSize="13" TextColor="#E5E7EB"
                                     BackgroundColor="#2a2a2a"
-                                    Placeholder="{loc:Localized Key=VectorContentEditorView_ComponentNamePlaceholder}" />
+                                    Placeholder="{l:Localized Key=VectorContentEditorView_ComponentNamePlaceholder}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="4">
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_DurationInFrames}" FontSize="11" TextColor="#9CA3AF" />
+                            <Label Text="{l:Localized Key=VectorContentEditorView_DurationInFrames}" FontSize="11" TextColor="#9CA3AF" />
                             <Entry Text="{Binding SelectedComponent.DurationInFrames}"
                                     FontSize="13" TextColor="#E5E7EB"
                                     BackgroundColor="#2a2a2a"
@@ -364,7 +376,7 @@
 
         <!-- ═══ BLUE BOX: Animation Tracks ═══ -->
         <mw:MultiWindowItem x:Name="AnimationTracksWindow"
-                            Title="{loc:Localized Key=VectorContentEditorView_Title_AnimationTracks}"
+                            Title="{l:Localized Key=VectorContentEditorView_Title_AnimationTracks}"
                             IsClosable="False"
                             IsPopOutVisible="True"
                             IsResizable="True"
@@ -372,7 +384,7 @@
                             HeightRequest="400">
             <ScrollView Orientation="Vertical">
                 <VerticalStackLayout Padding="10">
-                    <Label Text="{loc:Localized Key=VectorContentEditorView_Title_AnimationTracks}" FontSize="12" FontAttributes="Bold"
+                    <Label Text="{l:Localized Key=VectorContentEditorView_Title_AnimationTracks}" FontSize="12" FontAttributes="Bold"
                             TextColor="#D1D5DB" Margin="0,4,0,0" />
 
                     <CollectionView ItemsSource="{Binding SelectedComponent.Tracks}"
@@ -397,14 +409,14 @@
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                         <CollectionView.EmptyView>
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_NoTracksHint}"
+                            <Label Text="{l:Localized Key=VectorContentEditorView_NoTracksHint}"
                                     FontSize="11" TextColor="#555555"
                                     HorizontalOptions="Center"
                                     Margin="0,10,0,0" />
                         </CollectionView.EmptyView>
                     </CollectionView>
 
-                    <Button Text="{loc:Localized Key=VectorContentEditorView_RemoveTrack}"
+                    <Button Text="{l:Localized Key=VectorContentEditorView_RemoveTrack}"
                             Command="{Binding RemoveTrackCommand}"
                             IsEnabled="{Binding CanRemoveTrack}"
                             BackgroundColor="#4A3030" TextColor="#FCA5A5"
@@ -418,13 +430,13 @@
                         <BoxView HeightRequest="1" BackgroundColor="#333333"
                                     Margin="0,4,0,0" />
 
-                        <Label Text="{loc:Localized Key=VectorContentEditorView_Keyframe}" FontSize="12" FontAttributes="Bold"
+                        <Label Text="{l:Localized Key=VectorContentEditorView_Keyframe}" FontSize="12" FontAttributes="Bold"
                                 TextColor="#FDE68A" />
 
                         <!-- Time -->
                         <VerticalStackLayout Spacing="2">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
-                                <Label Text="{loc:Localized Key=VectorContentEditorView_Time}" FontSize="11" TextColor="#9CA3AF"
+                                <Label Text="{l:Localized Key=VectorContentEditorView_Time}" FontSize="11" TextColor="#9CA3AF"
                                         VerticalOptions="Center" Grid.Column="0"
                                         WidthRequest="32" />
                                 <Slider Minimum="0" Maximum="1"
@@ -439,7 +451,7 @@
 
                         <!-- Value -->
                         <VerticalStackLayout Spacing="2">
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_Value}" FontSize="11" TextColor="#9CA3AF" />
+                            <Label Text="{l:Localized Key=VectorContentEditorView_Value}" FontSize="11" TextColor="#9CA3AF" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                 <Entry Text="{Binding SelectedKeyFrame.Value}"
                                         FontSize="13" TextColor="#E5E7EB"
@@ -460,7 +472,7 @@
 
                         <!-- Easing -->
                         <VerticalStackLayout Spacing="2">
-                            <Label Text="{loc:Localized Key=VectorContentEditorView_Easing}" FontSize="11" TextColor="#9CA3AF" />
+                            <Label Text="{l:Localized Key=VectorContentEditorView_Easing}" FontSize="11" TextColor="#9CA3AF" />
                             <Picker ItemsSource="{Binding AllEasingModes}"
                                     SelectedItem="{Binding SelectedKeyFrame.Easing}"
                                     FontSize="12" TextColor="#E5E7EB"
@@ -470,7 +482,7 @@
                         </VerticalStackLayout>
 
                         <!-- Delete -->
-                        <Button Text="{loc:Localized Key=VectorContentEditorView_DeleteKeyframe}"
+                        <Button Text="{l:Localized Key=VectorContentEditorView_DeleteKeyframe}"
                                 Command="{Binding DeleteKeyFrameCommand}"
                                 IsEnabled="{Binding HasSelectedKeyFrame}"
                                 BackgroundColor="#4A3030" TextColor="#FCA5A5"
@@ -480,7 +492,7 @@
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="6" Margin="0,8,0,0">
-                        <Label Text="{loc:Localized Key=VectorContentEditorView_AddAnimationTrack}" FontSize="12"
+                        <Label Text="{l:Localized Key=VectorContentEditorView_AddAnimationTrack}" FontSize="12"
                                 TextColor="#9CA3AF" />
 
                         <Picker ItemsSource="{Binding AvailableFieldIds}"
@@ -488,7 +500,7 @@
                                 FontSize="12" TextColor="#E5E7EB"
                                 BackgroundColor="#2a2a2a" />
 
-                        <Button Text="{loc:Localized Key=VectorContentEditorView_AddTrack}"
+                        <Button Text="{l:Localized Key=VectorContentEditorView_AddTrack}"
                                 Command="{Binding AddTrackCommand}"
                                 IsEnabled="{Binding CanAddTrack}"
                                 BackgroundColor="#2A4A2A"
@@ -502,7 +514,7 @@
 
         <!-- ═══ HISTORY: History/Undo panel — content is set programmatically ═══ -->
         <mw:MultiWindowItem x:Name="HistorySubWindow"
-                            Title="{loc:Localized Key=DraftPage_MenuBar_Edit_History}"
+                            Title="{l:Localized Key=DraftPage_MenuBar_Edit_History}"
                             IsClosable="True"
                             IsPopOutVisible="True"
                             IsResizable="True"

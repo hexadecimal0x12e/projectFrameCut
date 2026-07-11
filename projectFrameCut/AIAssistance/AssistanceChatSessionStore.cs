@@ -1,4 +1,4 @@
-namespace projectFrameCut.AIAssistance;
+﻿namespace projectFrameCut.AIAssistance;
 
 using Microsoft.Extensions.AI;
 using System.Diagnostics;
@@ -15,6 +15,10 @@ internal sealed class AssistanceChatSession
     public List<AssistanceChatMessageSnapshot> Messages { get; } = [];
 
     public List<AssistanceChatHistorySnapshot> History { get; } = [];
+
+    public List<ClosedSubAgentSnapshot> ClosedSubAgentSessions { get; } = [];
+
+    public bool IsSubAgent { get; set; }
 
     public string LastPreview
     {
@@ -220,7 +224,7 @@ internal static class AssistanceChatSessionStore
         }
     }
 
-    public static void UpdateSession(string? projectPath, Guid sessionId, string title, IEnumerable<AssistanceChatMessageSnapshot> messages, IEnumerable<AssistanceChatHistorySnapshot> history)
+    public static void UpdateSession(string? projectPath, Guid sessionId, string title, IEnumerable<AssistanceChatMessageSnapshot> messages, IEnumerable<AssistanceChatHistorySnapshot> history, List<ClosedSubAgentSnapshot>? closedSubAgents = null)
     {
         lock (Gate)
         {
@@ -232,6 +236,11 @@ internal static class AssistanceChatSessionStore
             session.Messages.AddRange(messages);
             session.History.Clear();
             session.History.AddRange(history);
+            if (closedSubAgents is not null)
+            {
+                session.ClosedSubAgentSessions.Clear();
+                session.ClosedSubAgentSessions.AddRange(closedSubAgents);
+            }
             SaveSessionLocked(normalizedProjectPath, session);
             RaiseChanged();
         }
@@ -409,6 +418,39 @@ internal static class AssistanceChatSessionStore
             }
         }
 
+        if (snapshot.ClosedSubAgentSessions is not null)
+        {
+            foreach (var closed in snapshot.ClosedSubAgentSessions)
+            {
+                var cloned = new ClosedSubAgentSnapshot
+                {
+                    AgentId = closed.AgentId,
+                    Title = closed.Title,
+                    SubAgentRole = closed.SubAgentRole,
+                    SourceSessionId = closed.SourceSessionId,
+                    Messages = closed.Messages?.Select(m => new AssistanceChatMessageSnapshot
+                    {
+                        Sender = m.Sender,
+                        Message = m.Message,
+                        IsUser = m.IsUser,
+                        ReasoningText = m.ReasoningText,
+                        ToolCallsText = m.ToolCallsText,
+                        ContentSegments = CloneContentSegments(m.ContentSegments),
+                        HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+                        Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                        {
+                            FileName = a.FileName,
+                            MimeType = a.MimeType,
+                            FileSize = a.FileSize,
+                            StoredRelativePath = a.StoredRelativePath,
+                        }).ToList(),
+                    }).ToList() ?? [],
+                    ClosedAt = closed.ClosedAt,
+                };
+                session.ClosedSubAgentSessions.Add(cloned);
+            }
+        }
+
         return session;
     }
 
@@ -440,6 +482,31 @@ internal static class AssistanceChatSessionStore
             {
                 Role = ToRoleText(x.Role),
                 Text = x.Text,
+            }).ToList(),
+            ClosedSubAgentSessions = session.ClosedSubAgentSessions.Select(c => new ClosedSubAgentSnapshot
+            {
+                AgentId = c.AgentId,
+                Title = c.Title,
+                SubAgentRole = c.SubAgentRole,
+                SourceSessionId = c.SourceSessionId,
+                Messages = c.Messages?.Select(m => new AssistanceChatMessageSnapshot
+                {
+                    Sender = m.Sender,
+                    Message = m.Message,
+                    IsUser = m.IsUser,
+                    ReasoningText = m.ReasoningText,
+                    ToolCallsText = m.ToolCallsText,
+                    ContentSegments = CloneContentSegments(m.ContentSegments),
+                    HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+                    Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                    {
+                        FileName = a.FileName,
+                        MimeType = a.MimeType,
+                        FileSize = a.FileSize,
+                        StoredRelativePath = a.StoredRelativePath,
+                    }).ToList(),
+                }).ToList(),
+                ClosedAt = c.ClosedAt,
             }).ToList(),
         };
     }
@@ -550,6 +617,8 @@ internal static class AssistanceChatSessionStore
         public List<AssistanceChatMessageSnapshot>? Messages { get; init; }
 
         public List<AssistanceChatHistoryDiskSnapshot>? History { get; init; }
+
+        public List<ClosedSubAgentSnapshot>? ClosedSubAgentSessions { get; init; }
     }
 
     private sealed class AssistanceChatHistoryDiskSnapshot

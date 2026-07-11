@@ -130,7 +130,7 @@
                            Completed="TagInputEntry_Completed" />
                     <Button Grid.Column="1"
                             x:Name="AddTagButton"
-                            Text="添加"
+                            Text="{l:Localized Key=TemplateExtractPage_Step4_AddTag}"
                             Clicked="AddTag_Clicked" />
                 </Grid>
                 <FlexLayout x:Name="TagsContainer"

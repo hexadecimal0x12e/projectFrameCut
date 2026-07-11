@@ -5,6 +5,7 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using projectFrameCut.Services;
 using System;
 using System.Collections.Generic;
 
@@ -123,7 +124,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Crop", "Crop"),
                 Description = EffectBundleHelper.L("Description_Effect_Crop", "Crop frame area and optionally rotate the crop region."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/crop.png"))
             };
         }
     }

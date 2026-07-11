@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -104,7 +105,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Name = EffectBundleHelper.L("DisplayName_Mixture_ClassicOverlay", "Classic Overlay"),
                 Description = EffectBundleHelper.L("Description_Mixture_ClassicOverlay",
                     "Classic alpha-blend overlay. Blends each frame onto the layer below using standard alpha compositing."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/classicOverlayMixture.png"))
             };
         }
     }
