@@ -109,7 +109,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         return mvproc.GenerateOnce;
                     }
-                    
+
                 case BindableArgumentEffectType.OneInputResultGenerator:
                     if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
@@ -212,7 +212,9 @@ namespace projectFrameCut.Render.Rendering
 
             var clip = new TextClip
             {
-                Id = Guid.Empty, Name = "", LayerIndex = 0,
+                Id = Guid.Empty,
+                Name = "",
+                LayerIndex = 0,
                 TextEntries = new List<TextEntry>
                 {
                     new TextEntry

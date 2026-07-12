@@ -76,7 +76,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                         }
                     }
-                    else if(clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
+                    else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
                     {
                         frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
                     }
@@ -203,7 +203,7 @@ namespace projectFrameCut.Render.Rendering
                         else if (effect is IMixture or ISpeedVarianceProvider //these will be processed later; skip here
                                         or ITextEffect or IContinuousTextEffect) //these are processed inside TextClip
                         {
-                            
+
                         }
                         else
                         {

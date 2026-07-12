@@ -335,6 +335,8 @@ public partial class DiagnosticSettingPage : ContentPage
             - config: {internalFFmpegCfg}
             - Codecs: 
             {string.Join("\r\n", codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
+            - Binding verification result: 
+            {ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{b.FunctionName} of {b.LibraryName} fails: {b.Message}\r\n")}
             """ : "");
     }
 
@@ -464,7 +466,7 @@ public partial class DiagnosticSettingPage : ContentPage
             {
                 deviceModel = UIKit.UIDevice.CurrentDevice.Model ?? "Unknown";
             }
-            catch {  }
+            catch { }
 
             try
             {
@@ -492,13 +494,13 @@ public partial class DiagnosticSettingPage : ContentPage
                     }
                 }
             }
-            catch {  }
+            catch { }
 
             try
             {
                 totalMemory = Foundation.NSProcessInfo.ProcessInfo.PhysicalMemory;
             }
-            catch {  }
+            catch { }
 
             string gpuName = "Unknown";
             try

@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Processing.Resizing;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -1177,19 +1177,44 @@ namespace projectFrameCut.Render.Compose
 
         private static bool HasValidChannels(IPicture pic)
         {
+            ObjectDisposedException.ThrowIf(pic.Disposed, pic);
             if (pic is Picture8bpp p8)
             {
-                if (p8.r is null || p8.g is null || p8.b is null) return false;
-                if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels) return false;
-                if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
+                if (p8.r is null || p8.g is null || p8.b is null)
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture8bpp channels (null)");
+                    return false;
+                }
+                if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels)
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture8bpp channels (length mismatch)");
+                    return false;
+                }
+                if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels))
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture8bpp alpha channel (null or length mismatch)");
+                    return false;
+                }
                 return true;
             }
 
             if (pic is Picture16bpp p16)
             {
-                if (p16.r is null || p16.g is null || p16.b is null) return false;
-                if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels) return false;
-                if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
+                if (p16.r is null || p16.g is null || p16.b is null)
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture16bpp channels (null)");
+                    return false;
+                }
+                if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels)
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture16bpp channels (length mismatch)");
+                    return false;
+                }
+                if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels))
+                {
+                    Log("ClassicOverlayMixture: Invalid Picture16bpp alpha channel (null or length mismatch)");
+                    return false;
+                }
                 return true;
             }
 
@@ -1235,7 +1260,7 @@ namespace projectFrameCut.Render.Compose
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ClassicOverlayMixture";
         public EffectTarget Target => EffectTarget.Mixture;
-        public List<string> ParametersNeeded { get; } = [ "AccuracyMode" ];
+        public List<string> ParametersNeeded { get; } = ["AccuracyMode"];
         public Dictionary<string, string> ParametersType { get; } = new()
         {
             { "AccuracyMode", "string" }

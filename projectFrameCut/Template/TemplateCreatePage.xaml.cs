@@ -521,7 +521,7 @@ public partial class TemplateCreatePage : ContentView
             var draftRoot = Path.Combine(MauiProgram.DataPath, "My Drafts");
             Directory.CreateDirectory(draftRoot);
             var projectDir = Path.Combine(draftRoot, projectName + ".pjfc");
-            if(projectDir.Length > HomePage.GetMaxPathLength())
+            if (projectDir.Length > HomePage.GetMaxPathLength())
             {
                 await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
                 return;

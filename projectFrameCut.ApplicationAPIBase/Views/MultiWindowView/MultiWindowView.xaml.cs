@@ -1504,75 +1504,75 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             switch (mode)
             {
                 case WindowArrangeMode.Cascade:
-                {
-                    var windowWidth = Math.Max(220, area.Width * 0.68);
-                    var windowHeight = Math.Max(160, area.Height * 0.68);
-                    var stepX = Math.Max(24, area.Width * 0.05);
-                    var stepY = Math.Max(24, area.Height * 0.05);
-                    var maxOffsetX = Math.Max(0, area.Width - windowWidth - gap);
-                    var maxOffsetY = Math.Max(0, area.Height - windowHeight - gap);
-
-                    for (int i = 0; i < windows.Count; i++)
                     {
-                        var x = area.X + gap + Math.Min(i * stepX, maxOffsetX);
-                        var y = area.Y + gap + Math.Min(i * stepY, maxOffsetY);
-                        SetWindowBounds(windows[i], new Rect(x, y, windowWidth, windowHeight), clearSnapState: true);
-                        BringToFront(windows[i]);
+                        var windowWidth = Math.Max(220, area.Width * 0.68);
+                        var windowHeight = Math.Max(160, area.Height * 0.68);
+                        var stepX = Math.Max(24, area.Width * 0.05);
+                        var stepY = Math.Max(24, area.Height * 0.05);
+                        var maxOffsetX = Math.Max(0, area.Width - windowWidth - gap);
+                        var maxOffsetY = Math.Max(0, area.Height - windowHeight - gap);
+
+                        for (int i = 0; i < windows.Count; i++)
+                        {
+                            var x = area.X + gap + Math.Min(i * stepX, maxOffsetX);
+                            var y = area.Y + gap + Math.Min(i * stepY, maxOffsetY);
+                            SetWindowBounds(windows[i], new Rect(x, y, windowWidth, windowHeight), clearSnapState: true);
+                            BringToFront(windows[i]);
+                        }
+                        break;
                     }
-                    break;
-                }
                 case WindowArrangeMode.Horizontal:
-                {
-                    var count = windows.Count;
-                    var cellWidth = area.Width / count;
-                    for (int i = 0; i < count; i++)
                     {
-                        var x = area.X + i * cellWidth + gap;
-                        var y = area.Y + gap;
-                        var width = Math.Max(120, cellWidth - (gap * 2));
-                        var height = Math.Max(100, area.Height - (gap * 2));
-                        SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
-                        BringToFront(windows[i]);
+                        var count = windows.Count;
+                        var cellWidth = area.Width / count;
+                        for (int i = 0; i < count; i++)
+                        {
+                            var x = area.X + i * cellWidth + gap;
+                            var y = area.Y + gap;
+                            var width = Math.Max(120, cellWidth - (gap * 2));
+                            var height = Math.Max(100, area.Height - (gap * 2));
+                            SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
+                            BringToFront(windows[i]);
+                        }
+                        break;
                     }
-                    break;
-                }
                 case WindowArrangeMode.Vertical:
-                {
-                    var count = windows.Count;
-                    var cellHeight = area.Height / count;
-                    for (int i = 0; i < count; i++)
                     {
-                        var x = area.X + gap;
-                        var y = area.Y + i * cellHeight + gap;
-                        var width = Math.Max(120, area.Width - (gap * 2));
-                        var height = Math.Max(100, cellHeight - (gap * 2));
-                        SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
-                        BringToFront(windows[i]);
+                        var count = windows.Count;
+                        var cellHeight = area.Height / count;
+                        for (int i = 0; i < count; i++)
+                        {
+                            var x = area.X + gap;
+                            var y = area.Y + i * cellHeight + gap;
+                            var width = Math.Max(120, area.Width - (gap * 2));
+                            var height = Math.Max(100, cellHeight - (gap * 2));
+                            SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
+                            BringToFront(windows[i]);
+                        }
+                        break;
                     }
-                    break;
-                }
                 default:
-                {
-                    var count = windows.Count;
-                    var cols = (int)Math.Ceiling(Math.Sqrt(count));
-                    var rows = (int)Math.Ceiling(count / (double)cols);
-                    var cellWidth = area.Width / cols;
-                    var cellHeight = area.Height / rows;
-
-                    for (int i = 0; i < count; i++)
                     {
-                        var row = i / cols;
-                        var col = i % cols;
-                        var x = area.X + col * cellWidth + gap;
-                        var y = area.Y + row * cellHeight + gap;
-                        var width = Math.Max(140, cellWidth - (gap * 2));
-                        var height = Math.Max(110, cellHeight - (gap * 2));
+                        var count = windows.Count;
+                        var cols = (int)Math.Ceiling(Math.Sqrt(count));
+                        var rows = (int)Math.Ceiling(count / (double)cols);
+                        var cellWidth = area.Width / cols;
+                        var cellHeight = area.Height / rows;
 
-                        SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
-                        BringToFront(windows[i]);
+                        for (int i = 0; i < count; i++)
+                        {
+                            var row = i / cols;
+                            var col = i % cols;
+                            var x = area.X + col * cellWidth + gap;
+                            var y = area.Y + row * cellHeight + gap;
+                            var width = Math.Max(140, cellWidth - (gap * 2));
+                            var height = Math.Max(110, cellHeight - (gap * 2));
+
+                            SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
+                            BringToFront(windows[i]);
+                        }
+                        break;
                     }
-                    break;
-                }
             }
         }
 
@@ -1599,7 +1599,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </remarks>
         /// <param name="children"></param>
         /// <exception cref="InvalidOperationException">when the window is not a <see cref="MultiWindowItem"/>.</exception>
-        [Obsolete("This method is for compatibility purposes only. Use AddWindow(MultiWindowItem) instead to add a window to this multi-window view.",false)]
+        [Obsolete("This method is for compatibility purposes only. Use AddWindow(MultiWindowItem) instead to add a window to this multi-window view.", false)]
         public void Add(IView children)
         {
             if (children is MultiWindowItem item)

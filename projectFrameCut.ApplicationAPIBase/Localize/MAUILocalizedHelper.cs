@@ -23,12 +23,12 @@ namespace projectFrameCut.ApplicationAPIBase.Localize
 
             try
             {
-                var key = APIBaseLocalizedResources.Localized.DynamicLookup(Key,$"Unknown localized string {Key}");
+                var key = APIBaseLocalizedResources.Localized.DynamicLookup(Key, $"Unknown localized string {Key}");
                 return key;
             }
             catch (Exception)
             {
-                return $"@{Key}"; 
+                return $"@{Key}";
             }
         }
 
@@ -38,6 +38,6 @@ namespace projectFrameCut.ApplicationAPIBase.Localize
         }
     }
 
-    
+
 
 }

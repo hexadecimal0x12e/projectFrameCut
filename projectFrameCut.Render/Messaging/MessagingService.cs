@@ -12,9 +12,9 @@ namespace projectFrameCut.Render.Messaging
 
         public object? Call(string targetId, string command, object[] args)
         {
-            if(users.TryGetValue(targetId, out var user))
+            if (users.TryGetValue(targetId, out var user))
             {
-                if(user.Callbacks.TryGetValue(command, out var method))
+                if (user.Callbacks.TryGetValue(command, out var method))
                 {
                     return method.Invoke(args);
                 }
@@ -47,7 +47,7 @@ namespace projectFrameCut.Render.Messaging
 
         public void UnRegisterCallBack(string callbackId, string callbackCommand)
         {
-            if(users.TryGetValue(callbackId, out var user))
+            if (users.TryGetValue(callbackId, out var user))
             {
                 user.Callbacks.Remove(callbackCommand);
             }
@@ -56,11 +56,11 @@ namespace projectFrameCut.Render.Messaging
         class MessagingUsers
         {
             public string Id { get; set; }
-            public Dictionary<string, Func<object[],object?>> Callbacks { get; set; }
+            public Dictionary<string, Func<object[], object?>> Callbacks { get; set; }
         }
     }
 
 
 
-    
+
 }

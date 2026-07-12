@@ -1,4 +1,4 @@
-using CommunityToolkit.Maui.Alerts;
+﻿using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Storage;
 using System;
@@ -26,6 +26,13 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static string GetAppPackageFileSync(params string[] paths)
+        {
+            if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.Combine(paths));
+            return GetAppPackageFileSync(string.Join(Path.PathSeparator, paths));
+        }
+
+
         public static string GetAppPackageFileSync(string path)
         {
             if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);

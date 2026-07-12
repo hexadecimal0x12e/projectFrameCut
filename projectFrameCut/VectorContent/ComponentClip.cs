@@ -966,7 +966,7 @@ public partial class VectorComponentWrapperClip : IClip
     /// <see cref="InteractableEditor.InteractableEditor.SetClipsFromDraftPage"/>.
     /// </summary>
     public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(IEnumerable<VectorComponentWrapperClip> clips, Action<ClipElementUI> clipSetter)
-        =>  clips.ToDictionary(c => c.Id, 
+        => clips.ToDictionary(c => c.Id,
             clip =>
             {
                 var ui = CreateClipElementUI(clip);

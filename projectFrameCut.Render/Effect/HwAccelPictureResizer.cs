@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Processing.Resizing;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -159,7 +159,7 @@ namespace projectFrameCut.Render.Effect
             return (r, g, b, a, aFromPool, source.HasAlphaChannel);
         }
 
-                [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<ushort> Resize(IPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var resizeComputer = GetResizeComputer();
@@ -183,7 +183,9 @@ namespace projectFrameCut.Render.Effect
                     source.Width, source.Height, destW, destH);
                 result = new Picture16bpp(destW, destH)
                 {
-                    r = r16.R, g = r16.G, b = r16.B,
+                    r = r16.R,
+                    g = r16.G,
+                    b = r16.B,
                     a = hasAlpha ? r16.A : null,
                     HasAlphaChannel = hasAlpha
                 };
@@ -198,7 +200,7 @@ namespace projectFrameCut.Render.Effect
             }
             return result!;
         }
-                [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<byte> Resize(IPicture<byte> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var resizeComputer = GetResizeComputer();
@@ -222,7 +224,9 @@ namespace projectFrameCut.Render.Effect
                     source.Width, source.Height, destW, destH);
                 result = new Picture8bpp(destW, destH)
                 {
-                    r = r8.R, g = r8.G, b = r8.B,
+                    r = r8.R,
+                    g = r8.G,
+                    b = r8.B,
                     a = hasAlpha ? r8.A : null,
                     HasAlphaChannel = hasAlpha
                 };
@@ -237,7 +241,7 @@ namespace projectFrameCut.Render.Effect
             }
             return result!;
         }
-                [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IHDRPicture<ushort> Resize(IHDRPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
             var resizeComputer = GetResizeComputer();
@@ -263,7 +267,9 @@ namespace projectFrameCut.Render.Effect
                 int dstPixels = checked(destW * destH);
                 result = new HDRPicture16bpp(destW, destH)
                 {
-                    r = r16.R, g = r16.G, b = r16.B,
+                    r = r16.R,
+                    g = r16.G,
+                    b = r16.B,
                     a = hasAlpha ? r16.A : null,
                     HasAlphaChannel = hasAlpha,
                     MaximumBrightness = source.MaximumBrightness,

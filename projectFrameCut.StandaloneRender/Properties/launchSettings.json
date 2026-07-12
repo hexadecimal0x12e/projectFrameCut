@@ -14,7 +14,7 @@
     },
     "Benchmark": {
       "commandName": "Project",
-      "commandLineArgs": " bench -multiAccelerator=true -acceleratorDeviceIds=all -renderByLayer=true -prepareInWorker=true"
+      "commandLineArgs": " bench -multiAccelerator=true -acceleratorDeviceIds=all -boostMode=true -enableThreadAffinity=false -maxParallelThreads=32"
     }
   }
 }

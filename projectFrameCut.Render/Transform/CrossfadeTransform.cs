@@ -1,4 +1,4 @@
-using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -43,7 +43,7 @@ namespace projectFrameCut.Render.Transform
         {
             IPicture? result = null;
 
-            if(prevPic.BitPerPixel == 16 || nextPic.BitPerPixel == 16)
+            if (prevPic.BitPerPixel == 16 || nextPic.BitPerPixel == 16)
             {
                 if (prevPic.ToBitPerPixel(16) is IPicture<ushort> p16 && nextPic.ToBitPerPixel(16) is IPicture<ushort> n16)
                 {

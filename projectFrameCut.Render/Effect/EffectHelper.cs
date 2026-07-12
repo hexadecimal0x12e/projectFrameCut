@@ -58,7 +58,7 @@ namespace projectFrameCut.Render.Effect
                     haveMixture = true;
                     mixture = m;
                 }
-                else if(e is ISourceReplacementEffect s)
+                else if (e is ISourceReplacementEffect s)
                 {
                     if (haveAlternativeSource) throw new InvalidOperationException("Multiple SourceReplacement effects found.");
                     haveAlternativeSource = true;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 #if WINDOWS
 using System.Security.Principal;
@@ -16,7 +16,7 @@ namespace projectFrameCut.Services
 
         public static bool IsRunningAsAdministrator()
         {
-            if(isAdmin is not null) return isAdmin.Value;
+            if (isAdmin is not null) return isAdmin.Value;
 #if WINDOWS
             var bcdeditProc = Process.Start(new ProcessStartInfo
             {

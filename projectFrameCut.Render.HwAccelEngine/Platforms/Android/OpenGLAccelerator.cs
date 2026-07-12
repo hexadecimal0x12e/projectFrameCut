@@ -2075,8 +2075,10 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 {
                     NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                     {
-                        ShaderSource = shader, Inputs = new float[][] { rPad },
-                        WidthRequest = 50, HeightRequest = 50,
+                        ShaderSource = shader,
+                        Inputs = new float[][] { rPad },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
                         JobID = "RotationComputer",
                         OutputElementType = GLComputeView.OutputElementType.Float32
                     };
@@ -2295,8 +2297,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 void main()
                 {
                     uint i = gl_GlobalInvocationID.x;
-                    if (i >= uint({{srcLen}})) { outputData[i] = 0.0; outputData[i+{{srcLen}}] = 0.0; outputData[i+{{srcLen*2}}] = 0.0; outputData[i+{{srcLen*3}}] = 0.0; return; }
-                    float r = inputData[i], g = inputData[i+{{srcLen}}], b = inputData[i+{{srcLen*2}}], a = inputData[i+{{srcLen*3}}];
+                    if (i >= uint({{srcLen}})) { outputData[i] = 0.0; outputData[i+{{srcLen}}] = 0.0; outputData[i+{{srcLen * 2}}] = 0.0; outputData[i+{{srcLen * 3}}] = 0.0; return; }
+                    float r = inputData[i], g = inputData[i+{{srcLen}}], b = inputData[i+{{srcLen * 2}}], a = inputData[i+{{srcLen * 3}}];
 
                     // 1. Brightness
                     float bf = {{brightness}} - 1.0;
@@ -2370,7 +2372,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
                     // 10. Opacity
                     outputData[i] = r; outputData[i+{{srcLen}}] = g;
-                    outputData[i+{{srcLen*2}}] = b; outputData[i+{{srcLen*3}}] = a * {{opacity}};
+                    outputData[i+{{srcLen * 2}}] = b; outputData[i+{{srcLen * 3}}] = a * {{opacity}};
                 }
                 """;
 

@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Effect;
+﻿using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -608,9 +608,16 @@ namespace projectFrameCut.Render.Effect
             if (computer is null)
                 return new ColorAdjustmentEffect_IPicture
                 {
-                    Brightness = Brightness, Contrast = Contrast, Saturation = Saturation,
-                    Hue = Hue, Gamma = Gamma, Vibrance = Vibrance,
-                    Temperature = Temperature, Invert = Invert, Grayscale = Grayscale, Opacity = Opacity
+                    Brightness = Brightness,
+                    Contrast = Contrast,
+                    Saturation = Saturation,
+                    Hue = Hue,
+                    Gamma = Gamma,
+                    Vibrance = Vibrance,
+                    Temperature = Temperature,
+                    Invert = Invert,
+                    Grayscale = Grayscale,
+                    Opacity = Opacity
                 }.Process(source, null);
 
             var sw = Stopwatch.StartNew();

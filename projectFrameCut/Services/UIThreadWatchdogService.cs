@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +16,12 @@ namespace projectFrameCut.Services
         private readonly ILogger<UIThreadWatchdogService> _logger;
         private CancellationTokenSource? _cancellationTokenSource;
         private Task? _watchdogTask;
-        
+
         // 配置参数
         private readonly int _checkIntervalMs;  // 检查间隔(毫秒)
         private readonly int _responseTimeoutMs;  // 响应超时阈值(毫秒)
         private readonly int _maxFreezeCount;  // 触发卡死事件前的连续超时次数
-        
+
         // 当前状态
         private int _consecutiveFreezeCount = 0;
         private volatile bool _isThreadFrozen = false;
@@ -54,8 +54,8 @@ namespace projectFrameCut.Services
         /// </summary>
         public int ConsecutiveFreezeCount => _consecutiveFreezeCount;
 
-        public UIThreadWatchdogService(ILogger<UIThreadWatchdogService> logger, 
-            int checkIntervalMs = 500, 
+        public UIThreadWatchdogService(ILogger<UIThreadWatchdogService> logger,
+            int checkIntervalMs = 500,
             int responseTimeoutMs = 3000,
             int maxFreezeCount = 3)
         {
@@ -63,7 +63,7 @@ namespace projectFrameCut.Services
             _checkIntervalMs = checkIntervalMs;
             _responseTimeoutMs = responseTimeoutMs;
             _maxFreezeCount = maxFreezeCount;
-            
+
             Logger.Log($"UIThreadWatchdogService inited.");
         }
 
@@ -94,7 +94,7 @@ namespace projectFrameCut.Services
             }
 
             _cancellationTokenSource.Cancel();
-            
+
             if (_watchdogTask != null)
             {
                 try
@@ -122,7 +122,7 @@ namespace projectFrameCut.Services
                     {
                         var stopwatch = Stopwatch.StartNew();
                         var responseReceived = new TaskCompletionSource<bool>();
-                        
+
                         // 向UI线程发送一个轻量级任务
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
@@ -134,14 +134,14 @@ namespace projectFrameCut.Services
                         // 等待响应，使用超时机制
                         var responseTask = responseReceived.Task;
                         var delayTask = Task.Delay(_responseTimeoutMs, cancellationToken);
-                        
+
                         var completedTask = await Task.WhenAny(responseTask, delayTask);
 
                         if (completedTask == responseTask)
                         {
                             // UI线程及时响应
                             var responseTime = stopwatch.ElapsedMilliseconds;
-                            
+
                             if (responseTime <= _responseTimeoutMs)
                             {
                                 // 线程恢复正常
@@ -176,7 +176,7 @@ namespace projectFrameCut.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(ex,"check UI frozen",this);
+                        Logger.Log(ex, "check UI frozen", this);
                         await Task.Delay(_checkIntervalMs, cancellationToken);
                     }
                 }
@@ -189,8 +189,8 @@ namespace projectFrameCut.Services
 
         protected virtual void OnThreadFrozen(int freezeCount)
         {
-            ThreadFrozen?.Invoke(this, new UIThreadFrozenEventArgs 
-            { 
+            ThreadFrozen?.Invoke(this, new UIThreadFrozenEventArgs
+            {
                 FreezeCount = freezeCount,
                 FrozenTime = DateTime.UtcNow
             });
@@ -203,7 +203,7 @@ namespace projectFrameCut.Services
 
         public void Dispose()
         {
-            Stop().Wait(5000); 
+            Stop().Wait(5000);
             _cancellationTokenSource?.Dispose();
             GC.SuppressFinalize(this);
         }

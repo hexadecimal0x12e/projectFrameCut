@@ -6,7 +6,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
 {
     public partial class HeaderSpan : Span
     {
-        public static BindableProperty HeaderLevelProperty = BindableProperty.Create(nameof(HeaderLevel), typeof(HeaderLevel), typeof(HeaderSpan), HeaderLevel.None,propertyChanged: HandleHeaderLevelChanged);
+        public static BindableProperty HeaderLevelProperty = BindableProperty.Create(nameof(HeaderLevel), typeof(HeaderLevel), typeof(HeaderSpan), HeaderLevel.None, propertyChanged: HandleHeaderLevelChanged);
 
         public HeaderLevel HeaderLevel
         {

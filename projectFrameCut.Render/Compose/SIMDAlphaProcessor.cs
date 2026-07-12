@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -153,13 +153,14 @@ namespace projectFrameCut.Render.Compose
             int simdCount = Vector<float>.Count;
             int i = 0;
 
+            // Allocate temp buffers once outside loop to avoid CA2014 stack overflow risk
+            Span<float> tempR = stackalloc float[simdCount];
+            Span<float> tempG = stackalloc float[simdCount];
+            Span<float> tempB = stackalloc float[simdCount];
+
             // Process in SIMD chunks
             for (; i <= count - simdCount; i += simdCount)
             {
-                Span<float> tempR = stackalloc float[simdCount];
-                Span<float> tempG = stackalloc float[simdCount];
-                Span<float> tempB = stackalloc float[simdCount];
-
                 for (int j = 0; j < simdCount; j++)
                 {
                     tempR[j] = r[i + j];
@@ -287,7 +288,7 @@ namespace projectFrameCut.Render.Compose
         {
             if (r == null || g == null || b == null || destination == null)
                 throw new ArgumentNullException();
-            if (count < 0 || sourceOffset + count > r.Length || sourceOffset + count > g.Length || 
+            if (count < 0 || sourceOffset + count > r.Length || sourceOffset + count > g.Length ||
                 sourceOffset + count > b.Length || destOffset + count > destination.Length)
                 throw new ArgumentOutOfRangeException(nameof(count));
 
@@ -301,13 +302,14 @@ namespace projectFrameCut.Render.Compose
             int simdCount = Vector<float>.Count;
             int i = 0;
 
+            // Allocate temp buffers once outside loop to avoid CA2014 stack overflow risk
+            Span<float> tempR = stackalloc float[simdCount];
+            Span<float> tempG = stackalloc float[simdCount];
+            Span<float> tempB = stackalloc float[simdCount];
+
             // Process in SIMD chunks
             for (; i <= count - simdCount; i += simdCount)
             {
-                Span<float> tempR = stackalloc float[simdCount];
-                Span<float> tempG = stackalloc float[simdCount];
-                Span<float> tempB = stackalloc float[simdCount];
-
                 for (int j = 0; j < simdCount; j++)
                 {
                     tempR[j] = r[sourceOffset + i + j];

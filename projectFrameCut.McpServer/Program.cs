@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using projectFrameCut.McpCore;
@@ -74,7 +74,7 @@ public partial class Program
             Console.Error.WriteLine($"No mode defined. Add 'http' or 'stdio' in params.");
             return;
         }
-        if(string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
+        if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
         {
             Console.Error.WriteLine($"Project root '{projectRoot}' does not exist.");
             return;

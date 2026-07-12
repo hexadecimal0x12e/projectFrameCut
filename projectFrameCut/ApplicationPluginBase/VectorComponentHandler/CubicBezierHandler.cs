@@ -32,10 +32,14 @@ public class CubicBezierHandler : BaseVectorComponentHandler
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()
         {
-            ["X1"] = 0.1f, ["Y1"] = 0.3f,
-            ["X2"] = 0.3f, ["Y2"] = 0.7f,
-            ["X3"] = 0.7f, ["Y3"] = 0.3f,
-            ["X4"] = 0.9f, ["Y4"] = 0.7f,
+            ["X1"] = 0.1f,
+            ["Y1"] = 0.3f,
+            ["X2"] = 0.3f,
+            ["Y2"] = 0.7f,
+            ["X3"] = 0.7f,
+            ["Y3"] = 0.3f,
+            ["X4"] = 0.9f,
+            ["Y4"] = 0.7f,
         };
 
     public override IReadOnlyList<ShapeHandleDescriptor> CreateHandles(IVectorComponent component)

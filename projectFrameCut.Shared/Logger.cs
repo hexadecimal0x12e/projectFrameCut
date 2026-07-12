@@ -24,7 +24,7 @@ namespace projectFrameCut.Shared
             string senderStr = "Unknown sender";
             if (sender != null)
             {
-                if(sender is string StringSender) senderStr = StringSender;
+                if (sender is string StringSender) senderStr = StringSender;
                 else senderStr = sender.GetType().FullName ?? "Unknown sender";
             }
             if (string.IsNullOrWhiteSpace(message)) message = "do undefined action";
@@ -103,7 +103,7 @@ StackTrace:
             if (string.IsNullOrWhiteSpace(innerExceptionInfo)) innerExceptionInfo = "None";
             if (!includeMessage)
             {
-                return 
+                return
 $"""
 StackTrace:
 {ex.StackTrace}

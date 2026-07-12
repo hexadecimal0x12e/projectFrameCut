@@ -30,9 +30,12 @@ public class QuadraticBezierHandler : BaseVectorComponentHandler
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()
         {
-            ["X1"] = 0.1f, ["Y1"] = 0.1f,
-            ["X2"] = 0.5f, ["Y2"] = 0.9f,
-            ["X3"] = 0.9f, ["Y3"] = 0.1f,
+            ["X1"] = 0.1f,
+            ["Y1"] = 0.1f,
+            ["X2"] = 0.5f,
+            ["Y2"] = 0.9f,
+            ["X3"] = 0.9f,
+            ["Y3"] = 0.1f,
         };
 
     public override IReadOnlyList<ShapeHandleDescriptor> CreateHandles(IVectorComponent component)

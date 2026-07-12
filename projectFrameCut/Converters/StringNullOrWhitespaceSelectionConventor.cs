@@ -12,7 +12,7 @@ public class StringNullOrWhitespaceSelectionConventor : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if(!string.IsNullOrWhiteSpace(NullOrWhitespaceOrEmptyText) )
+        if (!string.IsNullOrWhiteSpace(NullOrWhitespaceOrEmptyText))
         {
             if (value is not string s1 || string.IsNullOrWhiteSpace(s1) || string.IsNullOrEmpty(s1)) return NullOrWhitespaceOrEmptyText;
             return NormalText;
@@ -37,7 +37,7 @@ public class StringNullOrWhitespaceObjectSelectionConventor : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if(OnNullOrWhitespaceOrEmpty is not null )
+        if (OnNullOrWhitespaceOrEmpty is not null)
         {
             if (value is not string s1 || string.IsNullOrWhiteSpace(s1) || string.IsNullOrEmpty(s1)) return OnNullOrWhitespaceOrEmpty;
             return OnNormal;

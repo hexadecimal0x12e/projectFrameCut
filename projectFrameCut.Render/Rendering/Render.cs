@@ -59,6 +59,8 @@ namespace projectFrameCut.Render.Rendering
         public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
         public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
         public int ThrottleThreshold { get => field > 0 ? field : Math.Max(MaxThreads * 4, MaxThreads + 8); set; }
+        public bool BlockPreparingBeforeRendering { get; set; } = false;
+        public bool DisableAllThrottleOptions { get; set; } = false;
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
@@ -238,7 +240,7 @@ namespace projectFrameCut.Render.Rendering
                 sw.Stop();
                 TrackPrepareElapsed(sw.Elapsed);
                 FramePrepareElapsed[idx] = sw.Elapsed;
-                if (LogRenderState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
+                if (LogRenderState || BlockPreparingBeforeRendering) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
             Log($"[Preparer] All frames are ready.");
@@ -502,10 +504,68 @@ namespace projectFrameCut.Render.Rendering
                 IsBackground = true
             };
             preparer.Start();
+
+            if (BlockPreparingBeforeRendering)
+            {
+                Log($"[Render] Blocking until preparer finishes before starting rendering.");
+                preparer.Join();
+                if (token.IsCancellationRequested)
+                {
+                    ReleaseResources();
+                    return;
+                }
+            }
+
             var workerThreadAffinity = ResolveWorkerThreadAffinity();
             if (workerThreadAffinity.Mask.HasValue)
             {
                 Log($"Using thread affinity for worker threads ({workerThreadAffinity.Description}).");
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+            void worker(uint targetFrame)
+            {
+                IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.Compositing, $"Render worker #{targetFrame}");
+                try
+                {
+                    FlushBlankFramesBefore(targetFrame, token);
+                    RenderAFrame(targetFrame, token);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"rendering frame {targetFrame}", this);
+
+#if DEBUG
+                    throw;
+#else
+                        ex.Data["OrigStacktrace"] = ex.StackTrace;
+                        exceptions.Enqueue(ex);
+#endif
+                }
+                finally
+                {
+                    IRenderContext.ClearWorkerState();
+                    Interlocked.Decrement(ref ThreadWorking);
+                    try
+                    {
+                        _threadLimiter.Release();
+                    }
+                    catch { }
+                }
+            }
+
+            if (DisableAllThrottleOptions)
+            {
+                Log("Throttling disabled for both preparer and render workers. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
+
+
+                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                {
+                    Interlocked.Increment(ref ThreadWorking);
+                    StartWorkerThread($"Render worker #{i}", () => worker((uint)i), workerThreadAffinity.Mask);
+                });
+
+                goto done;
             }
 
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
@@ -553,7 +613,6 @@ namespace projectFrameCut.Render.Rendering
                     && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
                     && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
-
                 if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? preparedCount : Math.Min(preparedCount, availableSlots);
@@ -609,40 +668,7 @@ namespace projectFrameCut.Render.Rendering
                         }
 
                         Interlocked.Increment(ref ThreadWorking);
-
-                        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-                        void worker()
-                        {
-                            IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.Compositing, $"Render worker #{targetFrame}");
-                            try
-                            {
-                                FlushBlankFramesBefore(targetFrame, token);
-                                RenderAFrame(targetFrame, token);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log(ex, $"rendering frame {targetFrame}", this);
-
-#if DEBUG
-                                throw;
-#else
-                                ex.Data["OrigStacktrace"] = ex.StackTrace;
-                                exceptions.Enqueue(ex);
-#endif
-                            }
-                            finally
-                            {
-                                IRenderContext.ClearWorkerState();
-                                Interlocked.Decrement(ref ThreadWorking);
-                                try
-                                {
-                                    _threadLimiter.Release();
-                                }
-                                catch { }
-                            }
-                        }
-
-                        StartWorkerThread($"Render worker #{targetFrame}", worker, workerThreadAffinity.Mask);
+                        StartWorkerThread($"Render worker #{targetFrame}", () => worker(targetFrame), workerThreadAffinity.Mask);
                     }
 
                 }
@@ -672,6 +698,7 @@ namespace projectFrameCut.Render.Rendering
                 ReleaseResources();
                 return;
             }
+        done:
             Log($"[Preparer] All frames are prepared and waiting for render done...");
 
             int waitCount = 0;
@@ -814,6 +841,25 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
+            if (DisableAllThrottleOptions)
+            {
+                Log("Throttling disabled for worker-decoded render. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
+                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                {
+                    Interlocked.Increment(ref ThreadWorking);
+                    new Thread(() =>
+                    {
+                        worker((uint)i);
+                    })
+                    {
+                        Name = $"Worker-Decode render #{i}",
+                        IsBackground = false,
+                        Priority = ThreadPriority.Highest
+                    }.Start();
+                });
+                goto done;
+            }
+
             int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
             double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
             if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
@@ -914,6 +960,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
+        done:
             int waitCount = 0;
             while (Volatile.Read(ref ThreadWorking) > 0 && waitCount < 1000)
             {
@@ -1084,6 +1131,13 @@ namespace projectFrameCut.Render.Rendering
                 IsBackground = true
             };
             preparer.Start();
+
+            if(BlockPreparingBeforeRendering)
+            {
+                Log($"[Render] Blocking until preparer finishes before starting rendering.");
+                preparer.Join();
+                if (token.IsCancellationRequested) { ReleaseResources(); return; }
+            }
 
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
             await Task.Delay(50, token);
@@ -1644,7 +1698,7 @@ namespace projectFrameCut.Render.Rendering
             else if (item is IImmutableContentClip immutableContent)
             {
                 string immutableCacheKey = $"__immutable_{item.Id}_{clipTargetWidth}_{clipTargetHeight}_{ppb}";
-                frame = ImmutableContentCache.GetOrAdd(immutableCacheKey, _ =>
+                var cacheFrame = ImmutableContentCache.GetOrAdd(immutableCacheKey, _ =>
                 {
                     IPicture f;
                     if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
@@ -1660,6 +1714,8 @@ namespace projectFrameCut.Render.Rendering
                     LogDiagnostic($"Cached immutable content for clip {item.Id} with key {immutableCacheKey}");
                     return f;
                 });
+                // Clone shared immutable frame so callers can safely dispose their copy
+                frame = cacheFrame.Clone();
             }
             else if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
             {

@@ -31,15 +31,15 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 5;
+        public static int CurrentAppLevelPluginAPIVersion => 6;
 
         /// <summary>
         /// The root of app's data.
         /// </summary>
-        public static string AppDataRoot 
-        { 
-            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; } 
-            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; } 
+        public static string AppDataRoot
+        {
+            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; }
+            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; }
         } = "";
 
         /// <summary>

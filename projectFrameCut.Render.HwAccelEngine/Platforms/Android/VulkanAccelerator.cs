@@ -1,4 +1,4 @@
-using Microsoft.Maui.ApplicationModel;
+﻿using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -1630,7 +1630,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             return VulkanComputerRunner.EnqueueCompute(async () =>
             {
                 var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(shader, new float[][] { rP }, OutputElementType.Float32);
-                async Task<float[]> RunCh(float[] ch) {
+                async Task<float[]> RunCh(float[] ch)
+                {
                     acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
                     var raw = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
                     if (raw.Length == dstLen) return raw;
@@ -1699,14 +1700,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             return VulkanComputerRunner.EnqueueCompute(async () =>
             {
                 var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(hShader, new float[][] { rIn }, OutputElementType.Float32);
-                async Task<float[]> RunH(float[] ch) {
+                async Task<float[]> RunH(float[] ch)
+                {
                     acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
                     return (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
                 }
                 var rT = await RunH(rIn); var gT = await RunH(gIn); var bT = await RunH(bIn); var aT = await RunH(aIn);
 
                 var (acc2, handler2, vkView2) = await VulkanComputerRunner.CreateAcceleratorAsync(vShader, new float[][] { rT }, OutputElementType.Float32);
-                async Task<float[]> RunV(float[] ch) {
+                async Task<float[]> RunV(float[] ch)
+                {
                     acc2.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler2, acc2);
                     return (float[])await vkView2.RunComputeAsync(OutputElementType.Float32);
                 }
@@ -1748,8 +1751,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
                 void main() {
                     uint idx = gl_GlobalInvocationID.x;
-                    if (idx >= {{srcLen}}) { o[idx]=0.0; o[idx+{{srcLen}}]=0.0; o[idx+{{srcLen*2}}]=0.0; o[idx+{{srcLen*3}}]=0.0; return; }
-                    float r=i[idx], g=i[idx+{{srcLen}}], b=i[idx+{{srcLen*2}}], a=i[idx+{{srcLen*3}}];
+                    if (idx >= {{srcLen}}) { o[idx]=0.0; o[idx+{{srcLen}}]=0.0; o[idx+{{srcLen * 2}}]=0.0; o[idx+{{srcLen * 3}}]=0.0; return; }
+                    float r=i[idx], g=i[idx+{{srcLen}}], b=i[idx+{{srcLen * 2}}], a=i[idx+{{srcLen * 3}}];
                     float bf = {{brightness}} - 1.0;
                     r = bf>=0.0 ? r+({{maxV}}-r)*bf : r*(1.0+bf);
                     g = bf>=0.0 ? g+({{maxV}}-g)*bf : g*(1.0+bf);
@@ -1784,7 +1787,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     if({{invertF}}>0.5) { r={{maxV}}-r; g={{maxV}}-g; b={{maxV}}-b; }
                     float lum=0.2126*r+0.7152*g+0.0722*b, gs={{grayscale}}>=1.0?1.0:1.0-{{grayscale}};
                     o[idx]=lum+gs*(r-lum); o[idx+{{srcLen}}]=lum+gs*(g-lum);
-                    o[idx+{{srcLen*2}}]=lum+gs*(b-lum); o[idx+{{srcLen*3}}]=a*{{opacity}};
+                    o[idx+{{srcLen * 2}}]=lum+gs*(b-lum); o[idx+{{srcLen * 3}}]=a*{{opacity}};
                 }
                 """;
 

@@ -11,7 +11,7 @@ namespace projectFrameCut.Services
         private readonly Func<string, string, string> _contactor;
         private readonly Random _rnd;
 
-        public RandomNameGenerator(IEnumerable<string> adjectives = null, IEnumerable<string> nouns = null, Func<string, string, string> contactor = null,  int? seed = null)
+        public RandomNameGenerator(IEnumerable<string> adjectives = null, IEnumerable<string> nouns = null, Func<string, string, string> contactor = null, int? seed = null)
         {
             _adjectives = (adjectives?.ToList() ?? DefaultAdjectives.ToList());
             _nouns = (nouns?.ToList() ?? DefaultNouns.ToList());
@@ -33,7 +33,7 @@ namespace projectFrameCut.Services
                 attempts++;
             }
 
-            return _contactor(a,n);
+            return _contactor(a, n);
         }
 
         public IEnumerable<string> GenerateUnique(int count)

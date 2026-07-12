@@ -77,7 +77,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public string FontPath { get; set; } = string.Empty;
-        private const int MaxTextFrameCacheEntries = 16;
+        private const int MaxTextFrameCacheEntries = 1024;
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<long, IPicture> textFrameCache = new();
 
@@ -249,7 +249,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         return true;
                     }
                     textFrameCache.Remove(cacheKey);
-                    try { cachedFrame.Dispose(true); } catch { }
+                    try { cachedFrame.Dispose(force: false); } catch { }
                 }
             }
             picture = null!;
@@ -265,7 +265,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
                 {
-                    try { oldFrame.Dispose(true); } catch { }
+                    try { oldFrame.Dispose(force: false); } catch { }
                 }
 
                 picture.CanBeDisposed = false;
@@ -285,7 +285,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             foreach (var frame in textFrameCache.Values)
             {
-                try { frame.Dispose(true); } catch { }
+                try { frame.Dispose(force: false); } catch { }
             }
             textFrameCache.Clear();
         }

@@ -128,7 +128,7 @@ public partial class ScriptTemplateCreatePage : ContentPage
                 Subtitle = SubtitleEntry.Text?.Trim() ?? "",
                 CreatedAt = DateTime.UtcNow,
                 Revision = 1,
-                Tags = [.._tags],
+                Tags = [.. _tags],
                 Readme = ReadmeEditor.Text?.Trim()
             };
 

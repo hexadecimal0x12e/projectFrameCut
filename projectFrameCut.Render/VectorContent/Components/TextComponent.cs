@@ -119,16 +119,16 @@ public class TextComponent : IVectorComponent
 
         float relX = AnimationFrames.EvaluateField("RelativeX", normalizedProgress, Parameters.GetFloat("RelativeX", 0.5f));
         float relY = AnimationFrames.EvaluateField("RelativeY", normalizedProgress, Parameters.GetFloat("RelativeY", 0.5f));
-        float rot  = AnimationFrames.EvaluateField("Rotation", normalizedProgress, Parameters.GetFloat("Rotation", 0f));
-        int layer  = (int)AnimationFrames.EvaluateField("LayerIndex", normalizedProgress, Parameters.GetFloat("LayerIndex", Index));
+        float rot = AnimationFrames.EvaluateField("Rotation", normalizedProgress, Parameters.GetFloat("Rotation", 0f));
+        int layer = (int)AnimationFrames.EvaluateField("LayerIndex", normalizedProgress, Parameters.GetFloat("LayerIndex", Index));
 
         foreach (var element in picture.Elements)
         {
             // Store component position in BaseX/Y, NOT RelativeX/Y
             // (RelativeX/Y carry the typesetting-engine cursor position)
-            element.BaseX      = relX;
-            element.BaseY      = relY;
-            element.Rotation   = rot;
+            element.BaseX = relX;
+            element.BaseY = relY;
+            element.Rotation = rot;
             element.LayerIndex = layer;
             yield return element;
         }
@@ -145,9 +145,9 @@ public class TextComponent : IVectorComponent
         // RelativeX is set by the typesetting engine to the glyph's cursor
         // position — we MUST NOT overwrite it.  Instead we store the component
         // position in BaseX/BaseY so the two offsets compose correctly.
-        element.BaseX      = AnimationFrames.EvaluateField("RelativeX", progress, Parameters.GetFloat("RelativeX", 0.5f));
-        element.BaseY      = AnimationFrames.EvaluateField("RelativeY", progress, Parameters.GetFloat("RelativeY", 0.5f));
-        element.Rotation   = AnimationFrames.EvaluateField("Rotation", progress, Parameters.GetFloat("Rotation", 0f));
+        element.BaseX = AnimationFrames.EvaluateField("RelativeX", progress, Parameters.GetFloat("RelativeX", 0.5f));
+        element.BaseY = AnimationFrames.EvaluateField("RelativeY", progress, Parameters.GetFloat("RelativeY", 0.5f));
+        element.Rotation = AnimationFrames.EvaluateField("Rotation", progress, Parameters.GetFloat("Rotation", 0f));
         element.LayerIndex = (int)AnimationFrames.EvaluateField("LayerIndex", progress, Parameters.GetFloat("LayerIndex", Index));
     }
 

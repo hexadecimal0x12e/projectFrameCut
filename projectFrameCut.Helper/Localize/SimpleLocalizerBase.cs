@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +14,7 @@ public static class SimpleLocalizer_Helper
     /// <param name="locateCode">The locate Name set for this locate. Optional, default to the <code>System.Globalization.CultureInfo.CurrentUICulture.Name</code></param>
     /// <exception cref="InvalidOperationException">no any locate available</exception>
     public static ISimpleLocalizerBase_Helper Init(string? locateCode = null)
-    { 
+    {
         if (locateCode == null)
         {
             locateCode = System.Globalization.CultureInfo.CurrentUICulture.Name;
@@ -22,7 +22,7 @@ public static class SimpleLocalizer_Helper
         if (!ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(locateCode, out var localizer))
         {
             localizer = ISimpleLocalizerBase_Helper.GetMapping().First().Value;
-            if(localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
+            if (localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
             else IsFallbackMatchedLocalization = true;
         }
 
