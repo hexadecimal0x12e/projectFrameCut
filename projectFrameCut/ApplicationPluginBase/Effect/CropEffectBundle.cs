@@ -124,7 +124,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Crop", "Crop"),
                 Description = EffectBundleHelper.L("Description_Effect_Crop", "Crop frame area and optionally rotate the crop region."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/crop.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "crop.png"))
             };
         }
     }

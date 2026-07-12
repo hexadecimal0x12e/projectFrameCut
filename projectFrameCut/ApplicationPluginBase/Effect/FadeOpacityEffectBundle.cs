@@ -96,7 +96,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_FadeOpacity", "Fade Opacity"),
                 Description = EffectBundleHelper.L("Description_Effect_FadeOpacity", "Apply a uniform opacity multiplier to the frame."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/fadeOpacity.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "fadeOpacity.png"))
             };
         }
     }

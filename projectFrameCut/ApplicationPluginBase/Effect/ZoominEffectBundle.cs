@@ -1,4 +1,5 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -107,7 +108,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ZoomIn", "Zoom In"),
                 Description = EffectBundleHelper.L("Description_Effect_ZoomIn", "Zoom in from the source frame size to the target size over time."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/zoomIn.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
+                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "zoomin.mp4"))
             };
         }
     }

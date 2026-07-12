@@ -295,7 +295,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_RemoveColor", "Remove Color"),
                 Description = EffectBundleHelper.L("Description_Effect_RemoveColor", "Remove a specific color from the image based on tolerance."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/removeColor.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "removeColor.png"))
             };
         }
     }

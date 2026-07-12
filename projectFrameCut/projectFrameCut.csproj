@@ -32,7 +32,7 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>8</ApplicationVersion>
+		<ApplicationVersion>9</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -47,8 +47,8 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<WindowsPackageType>MSIX</WindowsPackageType>
 
-		<AssemblyVersion>1.5.0.0</AssemblyVersion>
-		<FileVersion>1.5.0.0</FileVersion>
+		<AssemblyVersion>1.6.0.0</AssemblyVersion>
+		<FileVersion>1.6.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut Application</Description>
@@ -129,9 +129,7 @@
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
-
-		<!--For which assembles included, see Resources\Assembly\about.txt-->
-		<Reference Include="Resources\Assembly\*.dll" />
+		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
 
 	<PropertyGroup>
@@ -143,8 +141,9 @@
 	<ItemGroup>
 		<!-- hide huge generated locate.sg.cs to stop Roslyn (devhub.exe) analyse it, and eating extreme large amount of memory -->
 		<Compile Update="Localize\locate.sg.cs" Visible="false" />
-		<!-- removing the annoying refs from Solution resource manager within pwsh sdk-->
+		<!-- removing the annoying refs from Solution resource manager -->
 		<None Update="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
+		<None Remove="$(UserHome)\.nuget\packages\kawazu\*\contentFiles\**\*" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -180,7 +179,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" ExcludeAssets="native" /> <!-- Microsoft.PowerShell.Native has a native lib which was not compactable with android, so we exclude it -->
-		<AndroidLibrary Include="Resources\Assembly\fishnet-1.1.0.aar" />
+		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">
@@ -191,13 +190,13 @@
 		</Compile>
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
-		<AndroidKeyStore>False</AndroidKeyStore>
-	</PropertyGroup>
-
 	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
 		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+		<AndroidKeyStore>False</AndroidKeyStore>
+	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
 		<AndroidKeyStore>True</AndroidKeyStore>
@@ -205,7 +204,7 @@
 		<AndroidSigningKeyAlias>123456</AndroidSigningKeyAlias>
 		<AndroidSigningKeyPass>123456</AndroidSigningKeyPass>
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
-		<AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
 	</PropertyGroup>
 
 
@@ -352,7 +351,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<MauiImage Include="Resources\Raw\EffectSample\blur.png" />
 		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 #if ANDROID
 using Java.Util;
 using Android.OS;
@@ -49,7 +49,7 @@ namespace projectFrameCut.Platforms.Android
 
         public static CultureInfo GetDeviceCultureInfo()
         {
-            var tag = GetDeviceLanguageTag(); 
+            var tag = GetDeviceLanguageTag();
             try
             {
                 var locateName = tag.Split('-').First() switch //yes, on android there is something like 'en-CN', wtf???

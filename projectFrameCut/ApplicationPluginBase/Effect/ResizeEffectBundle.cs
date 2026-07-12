@@ -109,7 +109,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Resize", "Resize"),
                 Description = EffectBundleHelper.L("Description_Effect_Resize", "Resize the frame output width and height."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/resize.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "resize.png"))
             };
         }
     }

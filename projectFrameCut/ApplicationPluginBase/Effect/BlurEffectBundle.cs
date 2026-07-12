@@ -120,7 +120,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Blur", "Blur"),
                 Description = EffectBundleHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/blur.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "blur.png"))
             };
         }
     }

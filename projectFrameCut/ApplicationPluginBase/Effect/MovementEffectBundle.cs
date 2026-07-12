@@ -52,8 +52,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public EffectType TypeOfEffect => EffectType.ContinuousEffect;
 
-        public EffectTarget Target => EffectTarget.Video;
-
+        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInNewEffectSelector; // movement can be replaced by ProgressPlacer;
+                                                                                                         // it will be removed in 1.7.0.0
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Movement";
 
@@ -168,7 +168,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Movement", "Movement"),
                 Description = EffectBundleHelper.L("Description_Effect_Movement", "Move an element from the start point to the end point."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/movement.png")),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "movement.png")),
                 VideoThumbnail = null
             };
         }

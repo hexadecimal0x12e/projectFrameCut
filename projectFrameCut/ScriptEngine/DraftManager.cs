@@ -40,44 +40,55 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecord()
         {
-            if (RequiresUIThread && !MainThread.IsMainThread)
+            // ProcessRecordImpl 必须保留在 PowerShell 管道线程中运行，
+            // 否则 WriteObject/WriteError/ShouldProcess 会违反 PSCmdlet 线程约束。
+            ProcessRecordImpl();
+        }
+
+        /// <summary>
+        /// 仅将 UI/模型操作调度到 UI 线程；调用方仍在管道线程中，
+        /// 可以安全地调用 WriteObject、WriteError 和 ShouldProcess。
+        /// </summary>
+        protected T InvokeOnUIThread<T>(Func<T> action)
+        {
+            if (!RequiresUIThread || MainThread.IsMainThread)
+                return action();
+
+            T result = default!;
+            Exception? captured = null;
+            using var ev = new ManualResetEventSlim(false);
+
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                // 将工作同步调度到 UI 线程
-                Exception? captured = null;
-                using var ev = new ManualResetEventSlim(false);
-
-                MainThread.BeginInvokeOnMainThread(() =>
+                try
                 {
-                    try
-                    {
-                        ProcessRecordImpl();
-                    }
-                    catch (Exception ex)
-                    {
-                        captured = ex;
-                    }
-                    finally
-                    {
-                        ev.Set();
-                    }
-                });
-
-                ev.Wait();
-
-                if (captured != null)
-                {
-                    Log($"[DraftManager] Cannot process record, the 'captured' is a null value.");
-                    ThrowTerminatingError(new ErrorRecord(
-                        captured,
-                        "UIThreadCmdletError",
-                        ErrorCategory.InvalidOperation,
-                        null));
+                    result = action();
                 }
-            }
-            else
+                catch (Exception ex)
+                {
+                    captured = ex;
+                }
+                finally
+                {
+                    ev.Set();
+                }
+            });
+
+            ev.Wait();
+
+            if (captured is not null)
+                throw captured;
+
+            return result;
+        }
+
+        protected void InvokeOnUIThread(Action action)
+        {
+            InvokeOnUIThread(() =>
             {
-                ProcessRecordImpl();
-            }
+                action();
+                return true;
+            });
         }
 
         // ─── 辅助方法 ───────────────────────────────────────────
@@ -321,9 +332,13 @@ namespace projectFrameCut.ScriptEngine
 
             try
             {
-                var clip = page.CreateAndAddClip(StartX, Width, Track,
-                    labelText: clipName);
-                WriteObject(NewClipObject(clip));
+                var output = InvokeOnUIThread(() =>
+                {
+                    var clip = page.CreateAndAddClip(StartX, Width, Track,
+                        labelText: clipName);
+                    return NewClipObject(clip);
+                });
+                WriteObject(output);
             }
             catch (Exception ex)
             {
@@ -355,21 +370,25 @@ namespace projectFrameCut.ScriptEngine
 
             try
             {
-                var clip = page.CreateAndAddClip(StartX, Width, Track,
-                    labelText: clipName,
-                    relativeStart: SourceStart,
-                    maxFrames: MaxFrames);
-
-                clip.SourcePath = fullPath;
-                clip.ClipType = ClipElementUI.DetermineClipMode(fullPath);
-
-                if (clip.ClipType == ClipMode.VideoClip ||
-                    clip.ClipType == ClipMode.AudioClip)
+                var output = InvokeOnUIThread(() =>
                 {
-                    clip.UpdateSourceDuration();
-                }
+                    var clip = page.CreateAndAddClip(StartX, Width, Track,
+                        labelText: clipName,
+                        relativeStart: SourceStart,
+                        maxFrames: MaxFrames);
 
-                WriteObject(NewClipObject(clip));
+                    clip.SourcePath = fullPath;
+                    clip.ClipType = ClipElementUI.DetermineClipMode(fullPath);
+
+                    if (clip.ClipType == ClipMode.VideoClip ||
+                        clip.ClipType == ClipMode.AudioClip)
+                    {
+                        clip.UpdateSourceDuration();
+                    }
+
+                    return NewClipObject(clip);
+                });
+                WriteObject(output);
             }
             catch (Exception ex)
             {
@@ -400,9 +419,13 @@ namespace projectFrameCut.ScriptEngine
 
             try
             {
-                var clip = page.CreateFromAsset(asset, Track, StartX);
-                clip.DisplayName = clipName;
-                WriteObject(NewClipObject(clip));
+                var output = InvokeOnUIThread(() =>
+                {
+                    var clip = page.CreateFromAsset(asset, Track, StartX);
+                    clip.DisplayName = clipName;
+                    return NewClipObject(clip);
+                });
+                WriteObject(output);
             }
             catch (Exception ex)
             {
@@ -458,45 +481,47 @@ namespace projectFrameCut.ScriptEngine
             if (!ShouldProcess($"Clip '{clip.DisplayName}' ({Id})", "Set properties"))
                 return;
 
-            // 逐个应用提供的参数
-            if (Name is not null)
-                clip.DisplayName = Name;
-
-            if (StartX.HasValue)
+            var output = InvokeOnUIThread(() =>
             {
-                clip.origX = StartX.Value;
-                clip.layoutX = StartX.Value;
-                // Update visual position
-                var absX = page!.FrameToPixel((uint)StartX.Value);
-                clip.Clip.TranslationX = absX;
-            }
+                // 逐个应用提供的参数
+                if (Name is not null)
+                    clip.DisplayName = Name;
 
-            if (Width.HasValue)
-            {
-                clip.origLength = Width.Value;
-                clip.Clip.WidthRequest = Width.Value;
-            }
+                if (StartX.HasValue)
+                {
+                    clip.origX = StartX.Value;
+                    clip.layoutX = StartX.Value;
+                    var absX = page!.FrameToPixel((uint)StartX.Value);
+                    clip.Clip.TranslationX = absX;
+                }
 
-            if (Track.HasValue && Track.Value != clip.origTrack)
-            {
-                MoveToTrack(page!, clip, Track.Value);
-            }
+                if (Width.HasValue)
+                {
+                    clip.origLength = Width.Value;
+                    clip.Clip.WidthRequest = Width.Value;
+                }
 
-            if (SourcePath is not null)
-            {
-                clip.SourcePath = System.IO.Path.GetFullPath(SourcePath);
-                var mode = ClipElementUI.DetermineClipMode(clip.SourcePath);
-                if (mode != ClipMode.Special)
-                    clip.ClipType = mode;
-            }
+                if (Track.HasValue && Track.Value != clip.origTrack)
+                    MoveToTrack(page!, clip, Track.Value);
 
-            if (TargetX.HasValue) clip.TargetX = TargetX.Value;
-            if (TargetY.HasValue) clip.TargetY = TargetY.Value;
-            if (TargetWidth.HasValue) clip.TargetWidth = TargetWidth.Value;
-            if (TargetHeight.HasValue) clip.TargetHeight = TargetHeight.Value;
+                if (SourcePath is not null)
+                {
+                    clip.SourcePath = System.IO.Path.GetFullPath(SourcePath);
+                    var mode = ClipElementUI.DetermineClipMode(clip.SourcePath);
+                    if (mode != ClipMode.Special)
+                        clip.ClipType = mode;
+                }
 
-            if (PassThru)
-                WriteObject(NewClipObject(clip));
+                if (TargetX.HasValue) clip.TargetX = TargetX.Value;
+                if (TargetY.HasValue) clip.TargetY = TargetY.Value;
+                if (TargetWidth.HasValue) clip.TargetWidth = TargetWidth.Value;
+                if (TargetHeight.HasValue) clip.TargetHeight = TargetHeight.Value;
+
+                return PassThru ? NewClipObject(clip) : null;
+            });
+
+            if (output is not null)
+                WriteObject(output);
         }
 
         private static void MoveToTrack(DraftPage page, ClipElementUI clip, int newTrack)
@@ -541,35 +566,34 @@ namespace projectFrameCut.ScriptEngine
 
             try
             {
-                // 从选中集合移除
-                // (RemoveClipFromSelection 是 private，但 Clips.TryRemove 会触发后续清理)
-
-                // 从轨道可视化布局移除
-                if (clip.origTrack is not null &&
-                    page!.Tracks.TryGetValue(clip.origTrack.Value, out var trackLayout))
+                InvokeOnUIThread(() =>
                 {
-                    trackLayout.Children.Remove(clip.Clip);
-                }
-
-                // 从 Clips 字典移除
-                page!.Clips.TryRemove(clip.Id, out _);
-
-                // 清理引用此 clip 的 Transform
-                var clipIdStr = clip.Id.ToString();
-                var transformsToRemove = page.Clips.Values
-                    .Where(c => c.ClipType == ClipMode.TransformClip &&
-                                (c.SourcePath == clipIdStr || c.ExtraData?.ContainsKey(clipIdStr) == true))
-                    .ToList();
-
-                foreach (var t in transformsToRemove)
-                {
-                    if (t.origTrack is not null &&
-                        page.Tracks.TryGetValue(t.origTrack.Value, out var tLayout))
+                    // 从轨道可视化布局移除
+                    if (clip.origTrack is not null &&
+                        page!.Tracks.TryGetValue(clip.origTrack.Value, out var trackLayout))
                     {
-                        tLayout.Children.Remove(t.Clip);
+                        trackLayout.Children.Remove(clip.Clip);
                     }
-                    page.Clips.TryRemove(t.Id, out _);
-                }
+
+                    page!.Clips.TryRemove(clip.Id, out _);
+
+                    // 清理引用此 clip 的 Transform
+                    var clipIdStr = clip.Id.ToString();
+                    var transformsToRemove = page.Clips.Values
+                        .Where(c => c.ClipType == ClipMode.TransformClip &&
+                                    (c.SourcePath == clipIdStr || c.ExtraData?.ContainsKey(clipIdStr) == true))
+                        .ToList();
+
+                    foreach (var t in transformsToRemove)
+                    {
+                        if (t.origTrack is not null &&
+                            page.Tracks.TryGetValue(t.origTrack.Value, out var tLayout))
+                        {
+                            tLayout.Children.Remove(t.Clip);
+                        }
+                        page.Clips.TryRemove(t.Id, out _);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -745,7 +769,7 @@ namespace projectFrameCut.ScriptEngine
                     var resultPath = Path.Combine(page.WorkingPath, "assets", Guid.NewGuid().ToString() + Path.GetExtension(fullPath));
                     File.Copy(fullPath, resultPath, true);
                     var asset = AssetDatabase.Create(resultPath, Name, AssetItem.GetAssetType(resultPath));
-                    if(asset is null)
+                    if (asset is null)
                     {
                         WriteError(new ErrorRecord(
                             new InvalidOperationException("Failed to create asset, and the source file may be invalid. Try reading the media's info via Get-MediaInfo."),
@@ -855,8 +879,12 @@ namespace projectFrameCut.ScriptEngine
             if (!ShouldProcess($"Add track {trackId}"))
                 return;
 
-            page.AddATrack(trackId);
-            WriteObject(NewTrackObject(page, trackId));
+            var output = InvokeOnUIThread(() =>
+            {
+                page.AddATrack(trackId);
+                return NewTrackObject(page, trackId);
+            });
+            WriteObject(output);
         }
     }
 

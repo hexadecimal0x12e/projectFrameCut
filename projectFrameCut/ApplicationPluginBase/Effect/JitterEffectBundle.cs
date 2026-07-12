@@ -1,4 +1,5 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -29,7 +30,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Jitter";
-        
+
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
         public List<Guid>? BindedInputIds { get; set; }
@@ -137,7 +138,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Jitter", "Jitter"),
                 Description = EffectBundleHelper.L("Description_Effect_Jitter", "Apply random frame-to-frame positional jitter."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/jitter.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
+                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "jittter.mp4"))
             };
         }
 

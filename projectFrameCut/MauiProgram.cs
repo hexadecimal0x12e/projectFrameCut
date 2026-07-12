@@ -722,12 +722,14 @@ namespace projectFrameCut
 
             try
             {
-                string? nativeLibDirOverride = null;
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+
                 try
                 {
                     if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
                     {
 #if WINDOWS
+                        string? nativeLibDirOverride = null;
                         var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
                         if (pluginId == "external")
                         {
@@ -759,73 +761,45 @@ namespace projectFrameCut
                                 Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
                             }
                         }
-#elif ANDROID
-                        nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-#endif
-                    }
-                }
-                catch { }
-#if ANDROID
-                FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
-                JavaSystem.LoadLibrary("c");
-#elif WINDOWS
-                FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-#endif
-                ffmpeg.RootPath = FFmpegRoot;
-                Log($"FFmpeg library root path: {ffmpeg.RootPath}");
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                try
-                {
-                    if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
-                    {
-                        if (OperatingSystem.IsWindows())
+                        if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
                         {
-                            ffmpegFailMessage = ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}");
+                            ffmpeg.RootPath = nativeLibDirOverride;
                         }
                         else
                         {
-                            Log($"FFmpeg fail to load. {ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")}");
+                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
                         }
-
+#elif ANDROID
+                        ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
                     }
                     else
                     {
-                        FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
-                    }
-                }
-                catch
-                {
-                    try
-                    {
-                        DynamicallyLoadedBindings.FunctionResolver = FunctionResolverFactory.Create();
-                        DynamicallyLoadedBindings.InitializeInternal();
-                        try
+                        if (OperatingSystem.IsWindows())
                         {
-                            FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
                         }
-                        catch { }
-                    }
-                    catch (Exception ex)
-                    {
-                        ffmpegFailMessage = $"FFmpeg fail to load. {ex.ToString()}";
                     }
                 }
-                finally
-                {
-                    try
-                    {
+                catch { }
+                FFmpegRoot = ffmpeg.RootPath;
+                Log($"FFmpeg library root path: {FFmpegRoot}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
 
-                    }
-                    catch { }
+                try
+                {
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
+                }
+                catch (Exception ex)
+                {
+                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
                 }
 
             }
             catch (Exception ex)
             {
                 Log(ex, "init ffmpeg", CreateMauiApp);
-                ffmpegFailMessage = ex.Message;
+                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
             }
 
             try

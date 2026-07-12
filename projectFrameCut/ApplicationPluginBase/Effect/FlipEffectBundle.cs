@@ -96,7 +96,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Flip", "Flip"),
                 Description = EffectBundleHelper.L("Description_Effect_Flip", "Flip the frame horizontally and/or vertically."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/flip.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "flip.png"))
             };
         }
     }

@@ -3173,7 +3173,7 @@ namespace projectFrameCut.DraftStuff
 
                         //they can't be reordered
                         if (bundleInstance.TypeOfEffect is EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement) goto remove_btn;
-                        
+
 
                         // 计算当前输入锚点选中项（用于 Picker 默认值和确保当前选中项不被过滤掉）
                         Guid resolvedInAnchorId;

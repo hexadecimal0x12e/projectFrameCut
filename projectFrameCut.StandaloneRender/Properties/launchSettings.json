@@ -11,6 +11,10 @@
     "Parallel Instrumentation": {
       "commandName": "Project",
       "commandLineArgs": " render  \"-project=C:\\Users\\user\\Documents\\projectFrameCut\\My Drafts\\Untitled Project 123.pjfc\" \"-output=C:\\Users\\user\\Documents\\Untitled Project 42-cliTest-{CurrentTime}.mov\" \"-output_options=2560,1440,60,AV_PIX_FMT_YUV420P,libx264\" \"-assetDbFile=C:\\Users\\user\\Documents\\projectFrameCut\\My Assets\\.database\\database.json\" \"-maxParallelThreads=64\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=1\" \"-FFmpegLibraryPath=E:\\Download\\ffmpeg-8.1-full_build-shared\\bin\"  \"-VideoFrameDiskCacheRoot=d:\\vfdc\" -oneByOneRender=false"
+    },
+    "Benchmark": {
+      "commandName": "Project",
+      "commandLineArgs": " bench -multiAccelerator=true -acceleratorDeviceIds=all -renderByLayer=true -prepareInWorker=true"
     }
   }
 }

@@ -38,7 +38,7 @@ namespace projectFrameCut.ViewModels
             get =>
                 _name == "!!CreateButton!!" ?
 #if WINDOWS || MACCATALYST
-                Localized.HomePage_CreateAProject_Hint 
+                Localized.HomePage_CreateAProject_Hint
 #else
                 Localized.HomePage_CreateAProject_Hint_Tap
 #endif
@@ -67,14 +67,14 @@ namespace projectFrameCut.ViewModels
                     }
                     if (!File.Exists(_thumbPath) && new FileInfo(_thumbPath).Length <= 16)
                     {
-                        return ImageHelper.LoadFromAsset("icon_unknown_png");
+                        return null;
                     }
                     return ImageSource.FromFile(_thumbPath);
                 }
                 catch (Exception ex)
                 {
                     //Log(ex, $"Get thumb for {_thumbPath}", this); //this is okay for not logging
-                    return ImageHelper.LoadFromAsset("icon_unknown_png");
+                    return null;
                 }
             }
         }

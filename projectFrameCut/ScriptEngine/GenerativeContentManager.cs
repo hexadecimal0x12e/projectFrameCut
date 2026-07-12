@@ -117,13 +117,13 @@ namespace projectFrameCut.ScriptEngine
 
                 var result = GenerativeContentManager.RunSynchronously(() =>
                     AIHelper.GenerateImageAsync(Prompt, new ImageGenerationOptions
-                {
-                    Width = Width,
-                    Height = Height,
-                    Style = Style,
-                    Quality = Quality,
-                    NegativePrompt = NegativePrompt
-                }));
+                    {
+                        Width = Width,
+                        Height = Height,
+                        Style = Style,
+                        Quality = Quality,
+                        NegativePrompt = NegativePrompt
+                    }));
 
                 if (!result.Success || string.IsNullOrWhiteSpace(result.ImageUrl))
                 {
@@ -195,12 +195,12 @@ namespace projectFrameCut.ScriptEngine
 
                 var result = GenerativeContentManager.RunSynchronously(() =>
                     AIHelper.GenerateVideoAsync(Prompt, new VideoGenerationOptions
-                {
-                    Width = Width,
-                    Height = Height,
-                    Duration = Duration,
-                    GenerateAudio = GenerateAudio
-                }));
+                    {
+                        Width = Width,
+                        Height = Height,
+                        Duration = Duration,
+                        GenerateAudio = GenerateAudio
+                    }));
 
                 if (!result.Success || string.IsNullOrWhiteSpace(result.VideoUrl))
                 {

@@ -112,7 +112,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Name = EffectBundleHelper.L("DisplayName_Mixture_BlendMode", "Blend Mode"),
                 Description = EffectBundleHelper.L("Description_Mixture_BlendMode",
                     "Composites the clip using a blend mode (Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten, Difference)."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/blendModeMixture.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "blendModeMixture.png"))
             };
         }
     }

@@ -39,7 +39,7 @@ public readonly struct ShapeHandleDescriptor
     /// <summary>
     /// Optional: if provided, this function is called to get a custom view to display for the handle.
     /// </summary>
-    public Func<View>? HandleGetter { get; init; } 
+    public Func<View>? HandleGetter { get; init; }
 }
 
 /// <summary>

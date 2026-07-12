@@ -103,7 +103,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Sharpen", "Sharpen"),
                 Description = EffectBundleHelper.L("Description_Effect_Sharpen", "Increase local contrast to make frame details more crisp."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/sharpen.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "sharpen.png"))
             };
         }
     }

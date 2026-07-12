@@ -130,7 +130,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, rawEntries);
 
             if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            {
+                if (cachedFrame.BitPerPixel != targetPPB)
+                    return cachedFrame.ToBitPerPixel(targetPPB);
                 return cachedFrame;
+            }
 
             var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
 
@@ -150,8 +154,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
-            CacheRenderedFrame(cacheKey, sourcePicture);
-            return sourcePicture;
+            var resultPicture = sourcePicture.BitPerPixel != targetPPB
+                ? sourcePicture.ToBitPerPixel(targetPPB)
+                : sourcePicture;
+            resultPicture.CanBeDisposed = false;
+            CacheRenderedFrame(cacheKey, resultPicture);
+            return resultPicture;
         }
 
         public TextClip()

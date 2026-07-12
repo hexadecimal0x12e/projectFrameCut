@@ -56,6 +56,10 @@ namespace projectFrameCut.LivePreview
             {
                 LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
             }
+            foreach (var item in Clips)
+            {
+                item.ReInit(8);
+            }
             var layers = Timeline.GetFramesInOneFrame(
                 Clips,
                 frameIndex,

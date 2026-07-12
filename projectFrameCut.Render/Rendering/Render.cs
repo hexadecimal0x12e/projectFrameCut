@@ -95,7 +95,7 @@ namespace projectFrameCut.Render.Rendering
         public ConcurrentDictionary<uint, TimeSpan> FrameDirtyTime { get; } = new();
         public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
 
-        public bool running { get; private set; } = false;
+        private bool running { get; set; } = false;
 
         ConcurrentDictionary<Guid, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<string, IPicture> ImmutableContentCache = new();
@@ -149,7 +149,7 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if(builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
+            if (builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
             var clipsForFrame = new List<IClip>(Clips.Length);
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
@@ -401,7 +401,7 @@ namespace projectFrameCut.Render.Rendering
         #region render
         public async Task GoRender(CancellationToken token)
         {
-            
+
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             if (ClipNeedForFrame.IsEmpty || Duration <= 0)
             {
@@ -927,7 +927,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void RenderPreparedFrameByLayer(uint targetFrame, CancellationToken token)
         {
-            
+
 
             PreparedFlag.TryRemove(targetFrame, out _);
 
@@ -1303,7 +1303,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private void RenderAFrame(uint targetFrame, CancellationToken token)
         {
-            
+
             if (targetFrame >= StartFrame + Duration)
             {
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
@@ -1388,7 +1388,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void RenderOneFrameSync(uint targetFrame, CancellationToken token)
         {
-            
+
             if (targetFrame >= StartFrame + Duration)
             {
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
@@ -1459,7 +1459,7 @@ namespace projectFrameCut.Render.Rendering
         /// </returns>
         public IPicture? RenderSpecificFrame(uint frameIndex, CancellationToken token)
         {
-            
+
 
             if (frameIndex < StartFrame || frameIndex >= StartFrame + Duration)
             {
@@ -2050,7 +2050,15 @@ namespace projectFrameCut.Render.Rendering
                 return;
             }
 
-            builder?.Append(frameIndex, result);
+            if (builder is VideoBuilder b)
+            {
+                b.Append(frameIndex, result);
+            }
+            else // intended behavior in bench mode or when builder is null: dispose the result to avoid memory leak
+            {
+                result.Dispose();
+            }
+
             Interlocked.Increment(ref Finished);
             sw.Stop();
             if (LogProcessStack)
@@ -2320,7 +2328,7 @@ namespace projectFrameCut.Render.Rendering
         /// </summary>
         private void TryAssembleAndSubmitFrame(uint frame, FrameLayerCompletion completion)
         {
-            
+
 
             IPicture? merged = null;
             try

@@ -2048,10 +2048,10 @@ public sealed class DynamicPreview : IDisposable
 
         if (skippedSegmentCount > 0)
         {
-            Log($"Vector preview: skipped {skippedSegmentCount} oversize segment(s) exceeding device limit of {deviceLimit}.","error");
+            Log($"Vector preview: skipped {skippedSegmentCount} oversize segment(s) exceeding device limit of {deviceLimit}.", "error");
         }
 
-        if(skippedSegmentCount >= sortedElements.Count())
+        if (skippedSegmentCount >= sortedElements.Count())
         {
             throw new ArgumentOutOfRangeException($"all vector segment exceeds device limit of {deviceLimit}. Please check your source, or disable Vector dynamic previewing function.");
         }

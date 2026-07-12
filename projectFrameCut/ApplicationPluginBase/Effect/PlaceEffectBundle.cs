@@ -96,7 +96,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Place", "Place"),
                 Description = EffectBundleHelper.L("Description_Effect_Place", "Move the frame to a target position on the canvas."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/place.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "place.png"))
             };
         }
     }

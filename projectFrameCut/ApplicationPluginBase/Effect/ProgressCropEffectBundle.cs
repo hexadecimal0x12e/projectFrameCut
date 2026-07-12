@@ -1,10 +1,11 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.InteractableEditor;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
@@ -120,7 +121,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Crop", "Crop"),
                 Description = EffectBundleHelper.L("Description_Effect_Crop", "Crop frame area, optionally rotate it, and keyframe the crop rectangle."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/progressCrop.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
+                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "progresscrop.mp4"))
             };
         }
 

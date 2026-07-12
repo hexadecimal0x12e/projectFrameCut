@@ -1,0 +1,7 @@
+﻿<Project>
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<MauiVersion>10.0.71</MauiVersion>
+  </PropertyGroup>
+</Project>

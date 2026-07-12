@@ -105,7 +105,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Name = EffectBundleHelper.L("DisplayName_Mixture_ClassicOverlay", "Classic Overlay"),
                 Description = EffectBundleHelper.L("Description_Mixture_ClassicOverlay",
                     "Classic alpha-blend overlay. Blends each frame onto the layer below using standard alpha compositing."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/classicOverlayMixture.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "classicOverlayMixture.png"))
             };
         }
     }

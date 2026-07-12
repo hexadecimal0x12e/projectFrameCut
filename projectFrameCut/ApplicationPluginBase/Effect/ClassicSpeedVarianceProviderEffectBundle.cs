@@ -113,7 +113,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ClassicSpeedVarianceProvider", "Classic Speed"),
                 Description = EffectBundleHelper.L("Description_Effect_ClassicSpeedVarianceProvider", "Apply a constant speed ratio for the whole clip."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/classicSpeedVarianceProvider.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "classicSpeedVarianceProvider.png"))
             };
         }
     }

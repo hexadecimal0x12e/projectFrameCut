@@ -1281,11 +1281,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
         PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
 
-        if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
-            & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
+        try
         {
-            MainMultiWindowView.BringToFront(PropertiesSubwindow);
-            _hasAppliedDefaultMainMultiWindowLayout = true;
+            if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
+                & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
+            {
+                MainMultiWindowView.BringToFront(PropertiesSubwindow);
+                _hasAppliedDefaultMainMultiWindowLayout = true;
+            }
+        }
+        catch (COMException ex)
+        {
+            Log(ex, "ApplyDefaultMainMultiWindowLayout SnapWindow", this);
         }
     }
 

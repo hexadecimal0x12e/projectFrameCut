@@ -247,7 +247,7 @@ namespace projectFrameCut.ScriptEngine
                 {
                     throw new NotAllowedCommandException(NotAllowedCommandException.DeniedReason.DisallowedByInternalRules, Localized.ScriptEngine_NotAllowedBecauseHighThreatLevel(analysis.Summary));
                 }
-                else if(analysis.ThreatLevel >= ThreatLevel.Medium)
+                else if (analysis.ThreatLevel >= ThreatLevel.Medium)
                 {
                     // 不在分析阶段调用 Handler（避免阻塞），存储信息供 PreAuthorizeScriptAsync 使用
                     _authWarning = analysis.Summary;

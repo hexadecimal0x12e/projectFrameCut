@@ -160,6 +160,39 @@ namespace projectFrameCut.InteractableEditor
             var clipWidth = clip.Clip.WidthRequest > 0
                 ? clip.Clip.WidthRequest
                 : (clip.origLength > 0 ? clip.origLength : clip.Clip.Width);
+            // Subtract handle widths (30px each) to match the actual content column width
+            var availableWidth = Math.Max(1, clipWidth - 60);
+
+            // Get original image dimensions for correct aspect ratio tiling
+            var (origWidth, origHeight) = new Picture8bpp(sourcePath).GetDimensions();
+            var scaleFactor = thumbHeight / (double)origHeight;
+            var imageWidth = Math.Max(1, (int)Math.Round(origWidth * scaleFactor));
+
+            // Calculate how many tiles are needed to fill the available width (+1 to ensure no gap when clipped)
+            var countOfTiles = Math.Max(1, (int)(availableWidth / imageWidth) + 1);
+
+            var tiledLayout = new HorizontalStackLayout
+            {
+                HeightRequest = thumbHeight,
+                InputTransparent = true,
+                VerticalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Start,
+                Spacing = 0,
+                Padding = 0,
+            };
+
+            for (int i = 0; i < countOfTiles; i++)
+            {
+                tiledLayout.Children.Add(new Image
+                {
+                    Source = ImageSource.FromFile(sourcePath),
+                    Aspect = Aspect.AspectFit,
+                    HeightRequest = thumbHeight,
+                    WidthRequest = imageWidth,
+                    InputTransparent = true,
+                    VerticalOptions = LayoutOptions.Fill,
+                });
+            }
 
             var container = new Grid
             {
@@ -171,15 +204,14 @@ namespace projectFrameCut.InteractableEditor
                 IsClippedToBounds = true,
             };
 
-            container.Children.Add(new Image
+            container.Children.Add(tiledLayout);
+            container.Children.Add(new Label
             {
-                Source = ImageSource.FromFile(sourcePath),
-                Aspect = Aspect.AspectFill,
-                HeightRequest = thumbHeight,
-                WidthRequest = clipWidth,
-                InputTransparent = true,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
+                Text = clip.DisplayName ?? clip.Id.ToString(),
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                BackgroundColor = Color.FromRgba("#80808080"),
+                MaxLines = 1,
             });
 
             return container;

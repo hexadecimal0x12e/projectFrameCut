@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using CommunityToolkit.Maui.Views;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -89,7 +90,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ProgressPlacer", "Progress Placer"),
                 Description = EffectBundleHelper.L("Description_Effect_ProgressPlacer", "Animate clip position, size via keyframes."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/progressPlacer.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
+                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "progressplace.mp4"))
             };
         }
 

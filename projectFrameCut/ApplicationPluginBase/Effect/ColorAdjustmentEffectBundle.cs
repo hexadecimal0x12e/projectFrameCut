@@ -311,7 +311,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_ColorAdjustment", "Color Adjustment"),
                 Description = EffectBundleHelper.L("Description_Effect_ColorAdjustment", "Comprehensive color adjustment with brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, and opacity controls."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/colorAdjustment.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "colorAdjustment.png"))
             };
         }
     }

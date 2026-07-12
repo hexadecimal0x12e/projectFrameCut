@@ -504,7 +504,7 @@ namespace projectFrameCut.ScriptEngine
             // ---- 2. 项目自有 cmdlet 始终放行 ----
             if (commandInfo is CmdletInfo clt && ScriptCore.InternalCmdlets.Any(c => c.ImplementingType == clt.ImplementingType))
             {
-                if(!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowModifyProject", true) && clt.Verb.ToLower() is "set" or "remove" or "copy")
+                if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_Script_AllowModifyProject", true) && clt.Verb.ToLower() is "set" or "remove" or "copy")
                 {
                     reason = new NotAllowedCommandException(
                         NotAllowedCommandException.DeniedReason.DisallowedByRuleOfUser,
@@ -805,7 +805,7 @@ namespace projectFrameCut.ScriptEngine
             /// <summary>内部安全规则禁止了此命令。</summary>
             DisallowedByInternalRules,
             /// <summary>命令无法解析或不符合预期的格式，导致无法进行授权决策。</summary>
-            CannotParseCommand, 
+            CannotParseCommand,
         }
     }
 }

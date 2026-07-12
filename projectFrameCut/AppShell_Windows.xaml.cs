@@ -35,7 +35,7 @@
         {
             var currentPage = AppShell.instance.CurrentPage;
 
-            if(!Shell.GetNavBarIsVisible(currentPage))
+            if (!Shell.GetNavBarIsVisible(currentPage))
             {
                 App.HideNavBar();
             }
@@ -54,10 +54,10 @@
                 case Type t when t == typeof(CreatePage):
                     App.MainNavView?.SelectedItem = App.createItem;
                     break;
-                case Type t when t.Name.Contains("Template",StringComparison.InvariantCultureIgnoreCase):
+                case Type t when t.Name.Contains("Template", StringComparison.InvariantCultureIgnoreCase):
                     App.MainNavView?.SelectedItem = App.templateItem;
                     break;
-                case Type t when t.Name.Contains("Setting",StringComparison.InvariantCultureIgnoreCase):
+                case Type t when t.Name.Contains("Setting", StringComparison.InvariantCultureIgnoreCase):
                     App.MainNavView?.SelectedItem = App.settingItem;
                     break;
                 default:

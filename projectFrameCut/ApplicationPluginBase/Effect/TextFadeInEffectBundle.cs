@@ -75,7 +75,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_TextFadeIn", "Text Fade In"),
                 Description = EffectBundleHelper.L("Description_Effect_TextFadeIn", "Fades in text from transparent to fully visible over time."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/textFadeIn.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "textFadeIn.png"))
             };
         }
     }

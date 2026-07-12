@@ -819,7 +819,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         // ---- 原有 JSON 模板逻辑 ----
         if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
         {
-            if(templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
+            if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
             {
                 jsonTemplate = new JSONBasedTemplateStructure
                 {
@@ -1119,7 +1119,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     /// <summary>
     /// 应用脚本模板：用户填入变量 → 注入 PowerShell 运行空间 → 执行脚本。
     /// </summary>
-    private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string,string?>? inputValues = null)
+    private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
     {
         string? tempExtractDir = null;
         try

@@ -57,6 +57,8 @@ namespace projectFrameCut.ScriptEngine
         Invalid,
         /// <summary>路径来自变量或表达式，无法静态解析。</summary>
         Unresolved,
+        /// <summary>路径指向应用程序数据目录，禁止访问。</summary>
+        NotAllowToAccess
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -566,6 +568,18 @@ namespace projectFrameCut.ScriptEngine
                     results.Add(info);
             }
 
+            // 阻断：检测到任何命令尝试访问应用数据目录 → 直接抛出异常，不进入授权流程
+            foreach (var blocked in results)
+            {
+                if (blocked.PathSafetyStatus == PathSafety.NotAllowToAccess)
+                {
+                    Logger.Log($"[CommandFilter] 命令 '{blocked.CommandName}' 尝试访问应用数据目录，已阻断: {blocked.TargetPath}");
+                    throw new NotAllowedCommandException(
+                        NotAllowedCommandException.DeniedReason.DisallowedByInternalRules,
+                        $"命令 '{blocked.CommandName}' 尝试访问应用程序数据目录（{blocked.TargetPath}），已被安全策略禁止。");
+                }
+            }
+
             return results;
         }
 
@@ -746,12 +760,8 @@ namespace projectFrameCut.ScriptEngine
             if (string.IsNullOrWhiteSpace(targetPath))
                 return PathSafety.Invalid;
 
-            if (string.IsNullOrWhiteSpace(WorkingPath) || string.IsNullOrWhiteSpace(MauiProgram.DataPath))
+            if (string.IsNullOrWhiteSpace(WorkingPath) || string.IsNullOrWhiteSpace(MauiProgram.DataPath) || string.IsNullOrWhiteSpace(MauiProgram.BasicDataPath))
                 return PathSafety.Unresolved;
-
-            // 检查路径遍历攻击（.. 导致的跳转）
-            if (targetPath.Contains(".."))
-                return PathSafety.PathTraversal;
 
             try
             {
@@ -759,10 +769,14 @@ namespace projectFrameCut.ScriptEngine
                 var basePath = Path.GetFullPath(WorkingPath);
                 var workspacePath = Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace"));
                 var userDataPath = Path.GetFullPath(MauiProgram.DataPath);
+                var appDataPath = Path.GetFullPath(MauiProgram.BasicDataPath);
 
                 // 确保 basePath 以目录分隔符结尾，防止前缀误匹配
                 if (!basePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
                     basePath += Path.DirectorySeparatorChar;
+
+                if (fullPath.StartsWith(appDataPath, StringComparison.OrdinalIgnoreCase))
+                    return PathSafety.NotAllowToAccess;
 
                 // 检查路径遍历：规范化路径是否在 basePath 内
                 if (fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) || fullPath.StartsWith(userDataPath, StringComparison.OrdinalIgnoreCase) || fullPath.StartsWith(workspacePath, StringComparison.OrdinalIgnoreCase))

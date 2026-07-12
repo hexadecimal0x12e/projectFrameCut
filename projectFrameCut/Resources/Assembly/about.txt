@@ -1,9 +1,0 @@
-Kawazu.dll, LibNMeCab.dll and LibNMeCab.IpaDicBin.dll
-Get from the nuget package for Kawazu inside.
-Project: https://github.com/Cutano/Kawazu/
-
----
-
-fishnet-1.1.0.aar
-Project: https://github.com/Kyant0/Fishnet
-for 'fishnet-1.1.0.aar', it's got in the project's Maven Central.

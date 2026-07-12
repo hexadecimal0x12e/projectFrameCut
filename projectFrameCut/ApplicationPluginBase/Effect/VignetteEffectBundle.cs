@@ -113,7 +113,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Name = EffectBundleHelper.L("DisplayName_Effect_Vignette", "Vignette"),
                 Description = EffectBundleHelper.L("Description_Effect_Vignette", "Darken image edges to emphasize the center area."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/vignette.png"))
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "vignette.png"))
             };
         }
     }

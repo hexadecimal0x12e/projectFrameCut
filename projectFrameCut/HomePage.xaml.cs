@@ -504,7 +504,7 @@ public partial class HomePage : ContentPage
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
-    }       
+    }
 
     public static string GetInvalidFileNameWarn()
     {
@@ -930,6 +930,9 @@ public partial class HomePage : ContentPage
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
                 }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
+                DraftPage? createdPage = null;
+                bool pageCreationCancelled = false;
+                await Dispatcher.DispatchAsync(async () =>
                 {
                     int maxRetries = 5;
                     int attempt = 0;
@@ -937,7 +940,7 @@ public partial class HomePage : ContentPage
                     {
                         try
                         {
-                            page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
+                            var p = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
                             {
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
@@ -964,13 +967,13 @@ public partial class HomePage : ContentPage
                                 var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
                                 if (resolution.Split('x', 2).Length >= 2)
                                 {
-                                    page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
-                                    page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
+                                    p.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
+                                    p.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
                                 }
                                 else
                                 {
-                                    page.DefaultPreviewWidth = 1280;
-                                    page.DefaultPreviewHeight = 720;
+                                    p.DefaultPreviewWidth = 1280;
+                                    p.DefaultPreviewHeight = 720;
                                 }
                             }
 #if WINDOWS
@@ -982,17 +985,17 @@ public partial class HomePage : ContentPage
                                 Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated effects will be unavailable.");
                             }
 #endif
-                            await page.PostInit();
+                            await p.PostInit();
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
                                 try
                                 {
-                                    plugin.InjectUI(page);
+                                    plugin.InjectUI(p);
                                     var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
-                                    var items = plugin.GetMenuItems(page);
+                                    var items = plugin.GetMenuItems(p);
                                     var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
                                     items.ForEach(c => sub.Add(c));
-                                    page.ExtensionsMenuBar.Add(sub);
+                                    p.ExtensionsMenuBar.Add(sub);
 
                                 }
                                 catch (Exception ex)
@@ -1000,11 +1003,12 @@ public partial class HomePage : ContentPage
                                     Log(ex, $"plugin {plugin.Name} InjectUI", this);
                                     if (!await DisplayAlertAsync(Localized._Warn, Localized.HomePage_InitPlugin_Fail(plugin.Name, ex), Localized.HomePage_SourceNotFound_Continue, Localized._Cancel))
                                     {
-                                        page = null;
+                                        pageCreationCancelled = true;
                                         return;
                                     }
                                 }
                             }
+                            createdPage = p;
                             break;
                         }
                         catch (Exception ex)
@@ -1019,7 +1023,13 @@ public partial class HomePage : ContentPage
                             continue;
                         }
                     }
+                });
+                if (pageCreationCancelled)
+                {
+                    page = null;
+                    return;
                 }
+                page = createdPage;
 
                 foreach (var item in PluginManager.LoadedPlugins)
                 {

@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -11,145 +12,348 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.Benchmark
 {
+    /// <summary>
+    /// 生成丰富的测试项目结构，用于渲染管线性能基准测试。
+    /// 包含多种 Clip 类型、多层合成、效果处理等场景。
+    /// </summary>
     public static class BenchmarkSourceGenerator
     {
+        /// <summary>
+        /// 生成一个复杂的测试草稿结构，覆盖以下渲染路径：
+        ///   - SolidColorClip（纯色填充）
+        ///   - TextClip（矢量文字渲染）
+        ///   - 多层叠加合成（Layer 0 / 1 / 2 / SubTrack）
+        ///   - 连续效果（ZoomIn）
+        ///   - 普通效果（FadeOpacity）
+        ///   - Clip 重叠过渡区域
+        /// </summary>
         public static IClip[] GetDraftStructure()
         {
-            const int relativeWidth = 1920;
-            const int relativeHeight = 1080;
-            const float frameTime = 1f / 30f;
+            const int width = 1920;
+            const int height = 1080;
+            const float frameTime = 1f / 30f; // 30 fps
+            const uint totalFrames = 300;      // 10 秒
 
-            static object J(object value) => JsonSerializer.SerializeToElement(value, value.GetType());
+            const string pluginId = "projectFrameCut.Render.Plugins.InternalPluginBase";
 
-            static Dictionary<string, object> Params(params (string Key, object Value)[] items)
+            var clips = new List<IClip>(capacity: 16)
             {
-                var dict = new Dictionary<string, object>(StringComparer.Ordinal);
-                foreach (var (key, value) in items)
-                {
-                    dict[key] = J(value);
-                }
-                return dict;
-            }
-
-            static EffectAndMixtureJSONStructure Effect(
-                string typeName,
-                string name,
-                int index,
-                Dictionary<string, object>? parameters,
-                int relW,
-                int relH)
-                => new()
-                {
-                    FromPlugin = projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID,
-                    TypeName = typeName,
-                    Name = name,
-                    Index = index,
-                    Enabled = true,
-                    RelativeWidth = relW,
-                    RelativeHeight = relH,
-                    Parameters = parameters,
-                };
-
-            List<IClip> clips =
-            [
-                // 背景：纯色 + 裁剪/缩放 + 连续缩放(ZoomIn)
+                // ────────────────────────────────────────────────────────
+                //  1. 背景层 (SubTrack, LayerIndex >= 10000)
+                //     ExtendToWholeDraft = true → 自动扩展到整个草稿
+                // ────────────────────────────────────────────────────────
                 new SolidColorClip
                 {
                     Id = Guid.NewGuid(),
-                    Name = "Benchmark Solid BG",
+                    Name = "Background",
+                    LayerIndex = 10000,
+                    Duration = totalFrames,
+                    R = (ushort)(0x2C * 257),
+                    G = (ushort)(0x3E * 257),
+                    B = (ushort)(0x50 * 257), // #2C3E50
+                    ExtendToWholeDraft = true,
+                    FrameTime = frameTime,
+                },
+
+                // ────────────────────────────────────────────────────────
+                //  2. 主内容层 (Layer 0) — 多段纯色切换，模拟幻灯片
+                //     段之间有少量重叠以测试合成器在过渡帧上的行为
+                // ────────────────────────────────────────────────────────
+                new SolidColorClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Red Segment",
                     LayerIndex = 0,
                     StartFrame = 0,
-                    RelativeStartFrame = 0,
-                    Duration = 900,
+                    Duration = 100,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    R = (ushort)(0xE7 * 257),
+                    G = (ushort)(0x4C * 257),
+                    B = (ushort)(0x3C * 257), // #E74C3C
                     FrameTime = frameTime,
-                    SecondPerFrameRatio = 1f,
-                    R = 5000,
-                    G = 9000,
-                    B = 14000,
-                    A = 1.0f,
-                    targetWidth = relativeWidth,
-                    targetHeight = relativeHeight,
-                    Effects =
-                    [
-                        Effect("Crop", "Crop center-ish", 1, Params(("StartX", 120), ("StartY", 60), ("Width", 1680), ("Height", 960)), relativeWidth, relativeHeight),
-                        Effect("Resize", "Resize back", 2, Params(("Width", relativeWidth), ("Height", relativeHeight), ("PreserveAspectRatio", true)), relativeWidth, relativeHeight),
-                        Effect("ZoomIn", "ZoomIn slight", 3, Params(("TargetX", 1200), ("TargetY", 675)), relativeWidth, relativeHeight),
-                    ]
                 },
-
-                // 叠加文字：多段文字 + 抖动(Jitter) + 位置(Place) + 缩放(Resize)
-                new TextClip
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Benchmark Text Overlay",
-                    LayerIndex = 1,
-                    StartFrame = 0,
-                    RelativeStartFrame = 0,
-                    Duration = 900,
-                    FrameTime = frameTime,
-                    SecondPerFrameRatio = 1f,
-                    TextEntries =
-                    [
-                        new TextEntry { Text = "projectFrameCut Benchmark", X = 80, Y = 80, FontName = "Arial", FontSize = 72, FillR = 65535, FillG = 65535, FillB = 65535, FillA = 1.0f },
-                        new TextEntry { Text = "SolidColorClip + Effects", X = 90, Y = 180, FontName = "Arial", FontSize = 44, FillR = 65535, FillG = 50000, FillB = 20000, FillA = 1.0f },
-                    ],
-                    Effects =
-                    [
-                        Effect("Resize", "Downscale text", 1, Params(("Width", 1600), ("Height", 900), ("PreserveAspectRatio", true)), relativeWidth, relativeHeight),
-                        Effect("Place", "Place to corner", 2, Params(("StartX", 40), ("StartY", 30)), relativeWidth, relativeHeight),
-                        Effect("Jitter", "Jitter mild", 3, Params(("MaxOffsetX", 6), ("MaxOffsetY", 4), ("Seed", 42)), relativeWidth, relativeHeight),
-                    ]
-                },
-
-                // 色键块：纯绿 -> RemoveColor(抠绿) -> Place（可用于测试透明叠加链路）
                 new SolidColorClip
                 {
                     Id = Guid.NewGuid(),
-                    Name = "Benchmark Keyed Solid",
-                    LayerIndex = 2,
-                    StartFrame = 120,
-                    RelativeStartFrame = 0,
-                    Duration = 420,
+                    Name = "Green Segment",
+                    LayerIndex = 0,
+                    StartFrame = 90,  // 与前一段 10 帧重叠 → 测试叠化/合成
+                    Duration = 120,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    R = (ushort)(0x2E * 257),
+                    G = (ushort)(0xCC * 257),
+                    B = (ushort)(0x71 * 257), // #2ECC71
                     FrameTime = frameTime,
-                    SecondPerFrameRatio = 1f,
-                    R = 0,
-                    G = 65535,
-                    B = 0,
-                    A = 1.0f,
-                    targetWidth = 900,
-                    targetHeight = 500,
-                    Effects =
-                    [
-                        Effect("RemoveColor", "Key out green", 1, Params(("R", (ushort)0), ("G", (ushort)65535), ("B", (ushort)0), ("A", (ushort)65535), ("Tolerance", (ushort)1500)), relativeWidth, relativeHeight),
-                        Effect("Place", "Place mid", 2, Params(("StartX", 520), ("StartY", 340)), relativeWidth, relativeHeight),
-                        Effect("Jitter", "Jitter strong", 3, Params(("MaxOffsetX", 20), ("MaxOffsetY", 12), ("Seed", 7)), relativeWidth, relativeHeight),
-                    ]
+                },
+                new SolidColorClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Blue Segment",
+                    LayerIndex = 0,
+                    StartFrame = 195, // 与前一段 15 帧重叠
+                    Duration = 110,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    R = (ushort)(0x34 * 257),
+                    G = (ushort)(0x98 * 257),
+                    B = (ushort)(0xDB * 257), // #3498DB
+                    FrameTime = frameTime,
                 },
 
-                // 第二段文字：更大的字 + ZoomIn + Crop（让效果栈更丰富）
+                // ────────────────────────────────────────────────────────
+                //  3. 文字层 (Layer 1) — 多段文字叠加，其中部分带效果
+                // ────────────────────────────────────────────────────────
+
+                // 片头标题 — 无效果
                 new TextClip
                 {
                     Id = Guid.NewGuid(),
-                    Name = "Benchmark Text Center",
+                    Name = "Title Overlay",
                     LayerIndex = 1,
-                    StartFrame = 360,
-                    RelativeStartFrame = 0,
-                    Duration = 420,
+                    StartFrame = 5,
+                    Duration = 85,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
                     FrameTime = frameTime,
-                    SecondPerFrameRatio = 1f,
                     TextEntries =
-                    [
-                        new TextEntry { Text = "基准测试", X = 520, Y = 420, FontName = "HarmonyOS_Sans_SC_Regular", FontSize = 120, FillR = 65535, FillG = 40000, FillB = 8000, FillA = 1.0f },
-                        new TextEntry { Text = "ZoomIn / Crop / Resize", X = 500, Y = 560, FontName = "HarmonyOS_Sans_SC_Regular", FontSize = 52, FillR = 50000, FillG = 65535, FillB = 50000, FillA = 1.0f },
-                    ],
-                    Effects =
-                    [
-                        Effect("Crop", "Crop band", 1, Params(("StartX", 200), ("StartY", 200), ("Width", 1520), ("Height", 680)), relativeWidth, relativeHeight),
-                        Effect("ZoomIn", "ZoomIn medium", 2, Params(("TargetX", 900), ("TargetY", 506)), relativeWidth, relativeHeight),
-                        Effect("Resize", "Resize to full", 3, Params(("Width", relativeWidth), ("Height", relativeHeight), ("PreserveAspectRatio", true)), relativeWidth, relativeHeight),
-                    ]
+                [
+                    new TextEntry
+                    {
+                        Text = "FrameCut",
+                        FontName = string.Empty,
+                        FontSize = 72,
+                        X = width / 2f,
+                        Y = height / 2f - 60,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)1f, FillG = (ushort)1f, FillB = (ushort)1f, FillA = 1f,
+                    },
+                    new TextEntry
+                    {
+                        Text = "Render Benchmark",
+                        FontName = string.Empty,
+                        FontSize = 36,
+                        X = width / 2f,
+                        Y = height / 2f + 20,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)(0.8f * 65535), FillG = (ushort)(0.8f * 65535), FillB = (ushort)(0.8f * 65535), FillA = 0.8f,
+                    },
+                ],
                 },
-            ];
+
+                // 场景二 — 带 FadeOpacity 效果
+                new TextClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Scene 2 Overlay",
+                    LayerIndex = 1,
+                    StartFrame = 100,
+                    Duration = 90,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    FrameTime = frameTime,
+                    TextEntries =
+                [
+                    new TextEntry
+                    {
+                        Text = "Performance Test",
+                        FontName = string.Empty,
+                        FontSize = 64,
+                        X = width / 2f,
+                        Y = height / 2f - 30,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)1f, FillG = (ushort)1f, FillB = (ushort)1f, FillA = 1f,
+                    },
+                    new TextEntry
+                    {
+                        Text = "Measuring render throughput...",
+                        FontName = string.Empty,
+                        FontSize = 28,
+                        X = width / 2f,
+                        Y = height / 2f + 40,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)(0.7f * 65535), FillG = (ushort)(0.7f * 65535), FillB = (ushort)(0.7f * 65535), FillA = 0.6f,
+                    },
+                ],
+                    Effects =
+                [
+                    new EffectAndMixtureJSONStructure
+                    {
+                        TypeName = "FadeOpacity",
+                        FromPlugin = pluginId,
+                        Enabled = true,
+                        Index = 1,
+                        Parameters = new Dictionary<string, object>
+                        {
+                            { "Opacity", 0.7f },
+                        },
+                    },
+                ],
+                },
+
+                // 场景三 — 带 ZoomIn 连续效果
+                new TextClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Scene 3 Overlay",
+                    LayerIndex = 1,
+                    StartFrame = 200,
+                    Duration = 100,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    FrameTime = frameTime,
+                    TextEntries =
+                [
+                    new TextEntry
+                    {
+                        Text = "Results",
+                        FontName = string.Empty,
+                        FontSize = 72,
+                        X = width / 2f,
+                        Y = height / 2f - 50,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535), FillB = (ushort)(1f * 65535), FillA = 1f ,
+                    },
+                    new TextEntry
+                    {
+                        Text = "Benchmark Complete",
+                        FontName = string.Empty,
+                        FontSize = 32,
+                        X = width / 2f,
+                        Y = height / 2f + 30,
+                        Alignment = TextAlignment.Center,
+                        FillR = (ushort)(0.8f * 65535), FillG = (ushort)(0.8f * 65535), FillB = (ushort)(0.8f * 65535), FillA = 0.7f,
+                    },
+                ],
+                    Effects =
+                [
+                    new EffectAndMixtureJSONStructure
+                    {
+                        TypeName = "ZoomIn",
+                        FromPlugin = pluginId,
+                        IsContinuousEffect = true,
+                        Enabled = true,
+                        Index = 1,
+                        Parameters = new Dictionary<string, object>
+                        {
+                            { "TargetX", width },
+                            { "TargetY", height },
+                        },
+                    },
+                ],
+                },
+
+                // ────────────────────────────────────────────────────────
+                //  4. HUD / 装饰层 (Layer 2) — 持续显示的元素
+                // ────────────────────────────────────────────────────────
+
+                // 底部信息条
+                new TextClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "HUD Info",
+                    LayerIndex = 2,
+                    StartFrame = 0,
+                    Duration = totalFrames,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    FrameTime = frameTime,
+                    TextEntries =
+                [
+                    new TextEntry
+                    {
+                        Text = "FrameCut Benchmark v3.0  |  1920×1080  |  30fps",
+                        FontName = string.Empty,
+                        FontSize = 16,
+                        X = 20,
+                        Y = height - 30,
+                        Alignment = TextAlignment.Left,
+                        FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535), FillB = (ushort)(1f * 65535), FillA = 0.4f,
+                    },
+                ],
+                },
+
+                // 顶部装饰线
+                new SolidColorClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Top Divider",
+                    LayerIndex = 2,
+                    StartFrame = 0,
+                    Duration = totalFrames,
+                    TargetWidth = width,
+                    TargetHeight = 3,
+                    TargetX = 0,
+                    TargetY = 0,
+                    R = (ushort)(0xE7 * 257),
+                    G = (ushort)(0x4C * 257),
+                    B = (ushort)(0x3C * 257),
+                    A = 0.6f,
+                    FrameTime = frameTime,
+                },
+
+                // 底部装饰线
+                new SolidColorClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Bottom Divider",
+                    LayerIndex = 2,
+                    StartFrame = 0,
+                    Duration = totalFrames,
+                    TargetWidth = width,
+                    TargetHeight = 3,
+                    TargetX = 0,
+                    TargetY = height - 3,
+                    R = (ushort)(0x34 * 257),
+                    G = (ushort)(0x98 * 257),
+                    B = (ushort)(0xDB * 257),
+                    A = 0.6f,
+                    FrameTime = frameTime,
+                },
+
+                // 右上角帧计数器装饰
+                new TextClip
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Frame Counter",
+                    LayerIndex = 2,
+                    StartFrame = 0,
+                    Duration = totalFrames,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    TargetX = 0,
+                    TargetY = 0,
+                    FrameTime = frameTime,
+                    TextEntries =
+                [
+                    new TextEntry
+                    {
+                        Text = "Frame",
+                        FontName = string.Empty,
+                        FontSize = 14,
+                        X = width - 80,
+                        Y = 12,
+                        Alignment = TextAlignment.Right,
+                        FillR =(ushort)(1f * 65535), FillG =(ushort)(1f * 65535), FillB =(ushort)(1f * 65535), FillA = 0.35f,
+                    },
+                ],
+                }
+            };
 
             return clips.ToArray();
         }

@@ -16925,7 +16925,7 @@ Do you want to create a proxy for "{name}"?
     string ISimpleLocalizerBase.DraftPage_JobRunning(int count) => DraftPage_JobRunning(count);
     /// <summary>
     /// Get the localized string for DraftPage_JobRunning in en-US (like '
-    /// {count} tasks are running
+    /// {count} tasks are Running
     /// ')
     /// </summary>
     public static string DraftPage_JobRunning(int count) => $"{count} tasks are running";
@@ -17464,7 +17464,7 @@ Do you want to create a proxy for "{name}"?
     string ISimpleLocalizerBase.DraftPage_NoJobRunning => DraftPage_NoJobRunning;
     /// <summary>
     /// Get the localized string for DraftPage_NoJobRunning in en-US (like '
-    /// No running tasks
+    /// No Running tasks
     /// ')
     /// </summary>
     public static string DraftPage_NoJobRunning => $"No running tasks";
@@ -17723,7 +17723,7 @@ Are you sure you want to cancel the task "{name}"?{Environment.NewLine}This may 
     string ISimpleLocalizerBase.DraftPage_Tasks_NoneTasks => DraftPage_Tasks_NoneTasks;
     /// <summary>
     /// Get the localized string for DraftPage_Tasks_NoneTasks in en-US (like '
-    /// No tasks are currently running.
+    /// No tasks are currently Running.
     /// ')
     /// </summary>
     public static string DraftPage_Tasks_NoneTasks => $"No tasks are currently running.";
@@ -17763,7 +17763,7 @@ Are you sure you want to cancel the task "{name}"?{Environment.NewLine}This may 
     string ISimpleLocalizerBase.DraftPage_Tasks_Status_Running => DraftPage_Tasks_Status_Running;
     /// <summary>
     /// Get the localized string for DraftPage_Tasks_Status_Running in en-US (like '
-    /// Task is running
+    /// Task is Running
     /// ')
     /// </summary>
     public static string DraftPage_Tasks_Status_Running => $"Task is running";
@@ -18259,7 +18259,7 @@ Settings for "{name}"
     string ISimpleLocalizerBase.HomePage_AdminWarn() => HomePage_AdminWarn();
     /// <summary>
     /// Get the localized string for HomePage_AdminWarn in en-US (like '
-    /// Warning: You are running {AppBrand} with administrator privileges.
+    /// Warning: You are Running {AppBrand} with administrator privileges.
     /// For the vast majority of scenarios, you do not need to run {AppBrand} as an administrator. This may lead to potential security risks (especially from plugins).
     /// If one or more plugins you installed instructed you to do this, immediately close the application and use antivirus software to scan your device.
     /// For security reasons, all non-built-in plugins have not been loaded during this startup. Exit the application, then restart {AppBrand} with normal user privileges to re-enable plugin functionality.
@@ -18267,7 +18267,7 @@ Settings for "{name}"
     /// ')
     /// </summary>
     /// <remarks>
-    /// Security warning about running application with administrator privileges
+    /// Security warning about Running application with administrator privileges
     /// </remarks>
     public static string HomePage_AdminWarn() => $"Warning: You are running {AppBrand} with administrator privileges.{Environment.NewLine}For the vast majority of scenarios, you do not need to run {AppBrand} as an administrator. This may lead to potential security risks (especially from plugins).{Environment.NewLine}If one or more plugins you installed instructed you to do this, immediately close the application and use antivirus software to scan your device.{Environment.NewLine}For security reasons, all non-built-in plugins have not been loaded during this startup. Exit the application, then restart {AppBrand} with normal user privileges to re-enable plugin functionality.{Environment.NewLine}For more details, please refer to the documentation.";
     
@@ -19182,7 +19182,7 @@ The version of {AppBrand} ({targetVersion}) used by your project "{projectName}"
     string ISimpleLocalizerBase.PluginEngine_DisabledBecauseAdmin => PluginEngine_DisabledBecauseAdmin;
     /// <summary>
     /// Get the localized string for PluginEngine_DisabledBecauseAdmin in en-US (like '
-    /// Since you are running projectFrameCut as an administrator, all non-built-in plugins have not been loaded during this startup for security reasons. Exit the application, then launch {AppBrand} with a normal user account to re-enable plugin functionality. For more details, please refer to the documentation.
+    /// Since you are Running projectFrameCut as an administrator, all non-built-in plugins have not been loaded during this startup for security reasons. Exit the application, then launch {AppBrand} with a normal user account to re-enable plugin functionality. For more details, please refer to the documentation.
     /// ')
     /// </summary>
     public static string PluginEngine_DisabledBecauseAdmin => $"Since you are running projectFrameCut as an administrator, all non-built-in plugins have not been loaded during this startup for security reasons. Exit the application, then launch {AppBrand} with a normal user account to re-enable plugin functionality. For more details, please refer to the documentation.";
@@ -21162,7 +21162,7 @@ The current font "{fontName}" may not support some characters: {preview}{suffix}
     /// ')
     /// </summary>
     /// <remarks>
-    /// Memory refers to running memory
+    /// Memory refers to Running memory
     /// </remarks>
     public static string iDevicesAPI_MemoryNotEnough => $"Your device has insufficient memory, which may cause the program to encounter issues. Please save all data as soon as possible to avoid data loss due to flash crashes.";
     
@@ -35273,7 +35273,7 @@ $""""
     /// ')
     /// </summary>
     /// <remarks>
-    /// Memory refers to running memory
+    /// Memory refers to Running memory
     /// </remarks>
     public static string iDevicesAPI_MemoryNotEnough => $"デバイスのメモリが不足しています。プログラムに問題が発生する可能性があります。データの損失を防ぐため、できるだけ早くすべてのデータを保存してください。";
     
@@ -49652,7 +49652,7 @@ $""""
     /// ')
     /// </summary>
     /// <remarks>
-    /// Used &apos;mémoire vive&apos; to specify running memory as opposed to storage memory
+    /// Used &apos;mémoire vive&apos; to specify Running memory as opposed to storage memory
     /// </remarks>
     public static string iDevicesAPI_MemoryNotEnough => $"Votre appareil manque de mémoire vive, ce qui peut entraîner des problèmes avec le programme. Veuillez sauvegarder toutes les données dès que possible pour éviter toute perte due à des plantages soudains.";
     

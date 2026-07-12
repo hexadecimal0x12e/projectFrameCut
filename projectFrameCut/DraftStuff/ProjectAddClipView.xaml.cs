@@ -1,4 +1,4 @@
-using projectFrameCut.ViewModels;
+﻿using projectFrameCut.ViewModels;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -6,7 +6,7 @@ public partial class ProjectAddClipView : ContentView
 {
     private readonly ProjectAddClipViewModel _viewModel = null!;
     private readonly DraftPage _page = null!;
-    
+
     private readonly int ItemSize = 180;
     private readonly int ItemSpacing = 8;
 
@@ -17,7 +17,7 @@ public partial class ProjectAddClipView : ContentView
         _viewModel = new ProjectAddClipViewModel(ref draftPage);
         BindingContext = _viewModel;
         _viewModel.SetDrawingView(DrawingCanvas);
-        ParentChanged += (s,e) => (BindingContext as ProjectAddClipViewModel)?.LoadTransforms();
+        ParentChanged += (s, e) => (BindingContext as ProjectAddClipViewModel)?.LoadTransforms();
         MainTabView.OnTabSwitched += MainTabView_OnTabSwitched;
         var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
         OrderOptionPicker.SelectedIndex = orderOpt switch
@@ -47,7 +47,7 @@ public partial class ProjectAddClipView : ContentView
                 }
             default:
                 {
-                    OrderOptionPicker.IsVisible = false;    
+                    OrderOptionPicker.IsVisible = false;
                     break;
                 }
         }
@@ -62,7 +62,7 @@ public partial class ProjectAddClipView : ContentView
                 }
             default:
                 {
-                    SearchInputEntry.IsVisible = true;    
+                    SearchInputEntry.IsVisible = true;
                     break;
                 }
         }
