@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.TemplateSystem
 {
@@ -10,6 +11,11 @@ namespace projectFrameCut.Render.TemplateSystem
     /// </summary>
     public static class JSONBasedTemplateHelper
     {
+        private static readonly JsonSerializerOptions _defaultSerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = false,
+            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+        };
         public static JSONBasedTemplateStructure ExportTemplate(
             ProjectJSONStructure project,
             DraftStructureJSON draft,
@@ -24,8 +30,8 @@ namespace projectFrameCut.Render.TemplateSystem
             var clonedDraft = DeepClone(draft);
 
             var vars = new Dictionary<string, string?>();
-            clonedDraft.Clips = BuildTemplatedElements(clonedDraft.Clips, "clip", options.ClipFieldsToExtract, vars, options).Cast<object>().ToArray();
-            clonedDraft.SoundTracks = BuildTemplatedElements(clonedDraft.SoundTracks, "track", options.TrackFieldsToExtract, vars, options).Cast<object>().ToArray();
+            clonedDraft.Clips = BuildTemplatedElements(clonedDraft.Clips, "clip", options.ClipFieldsToExtract, vars, options);
+            clonedDraft.SoundTracks = BuildTemplatedSoundtrackElements(clonedDraft.SoundTracks, "track", options.TrackFieldsToExtract, vars, options);
 
             return new JSONBasedTemplateStructure
             {
@@ -61,8 +67,8 @@ namespace projectFrameCut.Render.TemplateSystem
             var proj = DeepClone(template.Project);
             var draft = DeepClone(template.Draft);
 
-            draft.Clips = FillElements(draft.Clips, values, template.Variables, options).Cast<object>().ToArray();
-            draft.SoundTracks = FillElements(draft.SoundTracks, values, template.Variables, options).Cast<object>().ToArray();
+            draft.Clips = FillElements(draft.Clips, values, template.Variables, options);
+            draft.SoundTracks = FillSoundtrackElements(draft.SoundTracks, values, template.Variables, options);
 
             return new MaterializedProjectDraft
             {
@@ -79,22 +85,22 @@ namespace projectFrameCut.Render.TemplateSystem
             return FillTemplate(template, values, options).Project;
         }
 
-        private static IEnumerable<JsonElement> BuildTemplatedElements(
-            object[] source,
+        private static ClipDraftDTO[] BuildTemplatedElements(
+            ClipDraftDTO[] source,
             string elementPrefix,
             IEnumerable<string> fields,
             IDictionary<string, string?> vars,
             DraftTemplateBuildOptions options)
         {
-            var result = new List<JsonElement>();
+            var result = new List<ClipDraftDTO>();
             int index = 0;
 
-            foreach (var element in NormalizeObjectArray(source))
+            foreach (var element in source ?? [])
             {
-                var node = JsonNode.Parse(element.GetRawText()) as JsonObject;
+                var node = JsonSerializer.SerializeToNode(element) as JsonObject;
                 if (node == null)
                 {
-                    result.Add(element.Clone());
+                    result.Add(element);
                     index++;
                     continue;
                 }
@@ -109,29 +115,88 @@ namespace projectFrameCut.Render.TemplateSystem
                     node[field] = BuildPlaceholder(variableKey, options);
                 }
 
-                result.Add(JsonSerializer.SerializeToElement(node));
+                var modified = node.Deserialize<ClipDraftDTO>(_defaultSerializerOptions);
+                result.Add(modified ?? element);
                 index++;
             }
 
-            return result;
+            return [.. result];
         }
 
-        private static IEnumerable<JsonElement> FillElements(
-            object[] source,
+        private static SoundtrackDTO[] BuildTemplatedSoundtrackElements(
+            SoundtrackDTO[] source,
+            string elementPrefix,
+            IEnumerable<string> fields,
+            IDictionary<string, string?> vars,
+            DraftTemplateBuildOptions options)
+        {
+            var result = new List<SoundtrackDTO>();
+            int index = 0;
+
+            foreach (var element in source ?? [])
+            {
+                var node = JsonSerializer.SerializeToNode(element) as JsonObject;
+                if (node == null)
+                {
+                    result.Add(element);
+                    index++;
+                    continue;
+                }
+
+                foreach (var field in fields)
+                {
+                    if (string.IsNullOrWhiteSpace(field)) continue;
+                    if (!node.TryGetPropertyValue(field, out var current)) continue;
+
+                    var variableKey = $"{elementPrefix}{index}.{field}";
+                    vars[variableKey] = JsonNodeToVariableString(current);
+                    node[field] = BuildPlaceholder(variableKey, options);
+                }
+
+                var modified = node.Deserialize<SoundtrackDTO>(_defaultSerializerOptions);
+                result.Add(modified ?? element);
+                index++;
+            }
+
+            return [.. result];
+        }
+
+        private static ClipDraftDTO[] FillElements(
+            ClipDraftDTO[] source,
             IReadOnlyDictionary<string, string?> values,
             IReadOnlyDictionary<string, string?> defaults,
             DraftTemplateFillOptions options)
         {
-            var result = new List<JsonElement>();
+            var result = new List<ClipDraftDTO>();
 
-            foreach (var element in NormalizeObjectArray(source))
+            foreach (var element in source ?? [])
             {
-                var node = JsonNode.Parse(element.GetRawText());
+                var node = JsonSerializer.SerializeToNode(element);
                 ReplacePlaceholders(node, values, defaults, options);
-                result.Add(JsonSerializer.SerializeToElement(node));
+                var filled = node.Deserialize<ClipDraftDTO>(_defaultSerializerOptions);
+                result.Add(filled ?? element);
             }
 
-            return result;
+            return [.. result];
+        }
+
+        private static SoundtrackDTO[] FillSoundtrackElements(
+            SoundtrackDTO[] source,
+            IReadOnlyDictionary<string, string?> values,
+            IReadOnlyDictionary<string, string?> defaults,
+            DraftTemplateFillOptions options)
+        {
+            var result = new List<SoundtrackDTO>();
+
+            foreach (var element in source ?? [])
+            {
+                var node = JsonSerializer.SerializeToNode(element);
+                ReplacePlaceholders(node, values, defaults, options);
+                var filled = node.Deserialize<SoundtrackDTO>(_defaultSerializerOptions);
+                result.Add(filled ?? element);
+            }
+
+            return [.. result];
         }
 
         private static void ReplacePlaceholders(
@@ -249,21 +314,6 @@ namespace projectFrameCut.Render.TemplateSystem
             if (node is JsonValue v && v.TryGetValue<string>(out var s)) return s;
             if (node is JsonValue v2 && v2.TryGetValue<bool>(out var b)) return b ? "true" : "false";
             return node.ToJsonString();
-        }
-
-        private static IEnumerable<JsonElement> NormalizeObjectArray(object[] source)
-        {
-            foreach (var item in source ?? Array.Empty<object>())
-            {
-                if (item is JsonElement je)
-                {
-                    yield return je.Clone();
-                }
-                else if (item != null)
-                {
-                    yield return JsonSerializer.SerializeToElement(item, item.GetType());
-                }
-            }
         }
 
         private static T DeepClone<T>(T source)

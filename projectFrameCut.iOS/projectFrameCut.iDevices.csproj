@@ -74,16 +74,17 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.50" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.1.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
 		<PackageReference Include="OpenAI" Version="2.8.0" />
+		<PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.3" />
 		
 		<Reference Include="..\projectFrameCut\Resources\Assembly\*.dll"/>
 
@@ -107,6 +108,8 @@
 		<Compile Include="..\projectFrameCut\InteractableEditor\**\*.cs" Exclude="..\projectFrameCut\InteractableEditor\*.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Services\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\ScriptEngine\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\VectorContent\**\*.cs" Exclude="..\projectFrameCut\VectorContent\*.xaml.cs"  Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Template\**\*.cs" Exclude="..\projectFrameCut\Template\**\*.xaml.cs"  Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 
@@ -114,6 +117,7 @@
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.HwAccelContracts\projectFrameCut.Render.HwAccelContracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />

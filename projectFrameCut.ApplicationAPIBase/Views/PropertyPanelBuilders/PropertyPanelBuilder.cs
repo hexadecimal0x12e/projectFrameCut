@@ -108,6 +108,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             };
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
             children.Add(label);
+            SetAutomationID(label, string.IsNullOrWhiteSpace(Id) ? "Text" : Id);
             return this;
         }
         /// <summary>
@@ -121,6 +122,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             var l = label.LabelConfigure();
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, l);
             children.Add(l);
+            SetAutomationID(l, string.IsNullOrWhiteSpace(Id) ? "Text" : Id);
             return this;
         }
         /// <summary>
@@ -143,7 +145,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             grid.Children.Add(right);
             Grid.SetColumn(right, 1);
             children.Add(grid);
-            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
+            SetAutomationID(right, string.IsNullOrWhiteSpace(Id) ? "Text" : Id);
             return this;
         }
         /// <summary>
@@ -165,13 +168,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             grid.Children.Add(right);
             Grid.SetColumn(right, 1);
             children.Add(grid);
-            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, right);
             return this;
         }
 
         public PropertyPanelBuilder AddText(Label label, string Id = "", Action<Label>? LabelSetter = null)
         {
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            SetAutomationID(label, string.IsNullOrWhiteSpace(Id) ? "Text" : Id);
             LabelSetter?.Invoke(label);
             children.Add(label);
             return this;
@@ -229,6 +233,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             children.Add(grid);
             Components.Add(Id, entry);
+            SetAutomationID(grid, Id);
             return this;
         }
 
@@ -267,6 +272,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(checkbox, 1);
             children.Add(grid);
             Components.Add(Id, checkbox);
+            SetAutomationID(grid, Id);
             return this;
         }
         /// <summary>
@@ -305,6 +311,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(swtch, 1);
             children.Add(grid);
             Components.Add(Id, swtch);
+            SetAutomationID(grid, Id);
             return this;
         }
 
@@ -354,6 +361,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(picker, 1);
             children.Add(grid);
             Components.Add(Id, picker);
+            SetAutomationID(grid, Id);
             return this;
         }
 
@@ -406,6 +414,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(slider, 1);
             children.Add(grid);
             Components.Add(Id, slider);
+            SetAutomationID(grid, Id);
             return this;
         }
 
@@ -471,6 +480,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
                 }
 
                 EntrySetter?.Invoke(entry);
+                SetAutomationID(entry, fullId);
                 Components.Add(fullId, entry);
                 return entry;
             }
@@ -524,6 +534,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(entryContainer, 1);
 
             children.Add(grid);
+            SetAutomationID(grid, Id);
             return this;
         }
 
@@ -615,6 +626,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             wrapper.Children.Add(contentLayout);
 
             children.Add(wrapper);
+            SetAutomationID(wrapper, headerText);
             return this;
         }
 
@@ -638,6 +650,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
             children.Add(button);
             Components.Add(Id, button);
+            SetAutomationID(button, Id);
             return this;
         }
 
@@ -660,6 +673,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             button.Clicked += OnClick;
             children.Add(button);
             Components.Add(Id, button);
+            SetAutomationID(button, Id);
             return this;
         }
 
@@ -768,6 +782,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             children.Add(card);
             Components.Add(Id, card);
+            SetAutomationID(card, Id);
             return this;
         }
 
@@ -775,8 +790,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         {
             var cb = new PropertyPanelChildrenBuilder(this);
             childrenMaker(cb);
-            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
-            children.Add(cb.ToVerticalLayout());
+            var v = cb.ToVerticalLayout();
+            children.Add(v);
+            SetAutomationID(v, id);
             return this;
         }
 
@@ -800,6 +816,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         {
             if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
             children.Add(child);
+            SetAutomationID(child, id);
             return this;
         }
         /// <summary>
@@ -838,6 +855,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Grid.SetColumn(child, 1);
             children.Add(grid);
             if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
+            SetAutomationID(child, string.IsNullOrWhiteSpace(id) ? "Custom control" : id);
             return this;
         }
 
@@ -874,6 +892,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             Components.Add(Id, view);
             children.Add(view);
             Properties[Id] = defaultValue;
+            SetAutomationID(view, Id);
             return this;
         }
 
@@ -910,7 +929,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             grid.Children.Add(label);
             grid.Children.Add(child);
             Grid.SetColumn(child, 1);
-            children.Add(grid); Components.Add(Id, child);
+            children.Add(grid);
+            Components.Add(Id, child);
+            SetAutomationID(child, Id);
             return this;
         }
 
@@ -1094,15 +1115,60 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         }
 
         /// <summary>
+        /// Replace the current <see cref="Properties"/> dictionary with the provided one, optionally firing <see cref="PropertyChanged"/> events for each property change.
+        /// </summary>
+        /// <param name="properties">The new properties to set.</param>
+        /// <param name="firePropertyChanged">Whether to fire <see cref="PropertyChanged"/> events for each property change.</param>
+        /// <returns>The current <see cref="PropertyPanelBuilder"/> instance.</returns>
+        public PropertyPanelBuilder WithProperties(Dictionary<string, object> properties, bool firePropertyChanged = true)
+        {
+            foreach (var kvp in properties.ToList())
+            {
+                if (Properties.ContainsKey(kvp.Key))
+                {
+                    var old = Properties[kvp.Key];
+                    if (old != kvp.Value)
+                    {
+                        Properties[kvp.Key] = kvp.Value;
+                        if (firePropertyChanged)
+                        {
+                            _InvokeInternal(new pppcea(kvp.Key, kvp.Value, old));
+                        }
+                    }
+                }
+                else
+                {
+                    Properties.Add(kvp.Key, kvp.Value);
+                    if (firePropertyChanged)
+                    {
+                        _InvokeInternal(new pppcea(kvp.Key, kvp.Value, null));
+                    }
+                }
+            }
+
+            foreach (var item in Properties.Keys.Except(properties.Keys).ToList())
+            {
+                var old = Properties.Remove(item);
+                if (firePropertyChanged)
+                {
+                    _InvokeInternal(new pppcea(item, null, old));
+                }
+            }
+
+            return this;
+        }
+
+        /// <summary>
         /// Get the final <seealso cref="VerticalStackLayout"/> of the panel created by this builder.
         /// </summary>
         public Layout Build()
         {
-            if(!valid) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
+            if (!valid) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             var layout = new VerticalStackLayout
             {
                 Spacing = 10,
-                Padding = new Thickness(10)
+                Padding = new Thickness(10),
+                BindingContext = this
             };
             foreach (var item in children)
             {
@@ -1115,13 +1181,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// Get the final <seealso cref="Layout"/> of the panel created by this builder.
         /// </summary>
         /// <param name="layout">The source layout you'd like to use.</param>
-        public Layout Build(Layout layout)
+        public Layout Build(Layout layout, bool allowUpdateBindingContext = true)
         {
             if (!valid) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             foreach (var item in children)
             {
                 layout.Children.Add(item);
             }
+            if (allowUpdateBindingContext) layout.BindingContext = this;
             return layout;
         }
 
@@ -1130,6 +1197,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             var scrollView = new ScrollView
             {
                 Content = Build(),
+                BindingContext = this
             };
             Configurer?.Invoke(scrollView);
             return scrollView;
@@ -1139,6 +1207,77 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         {
             PropertyChanged?.Invoke(this, e);
         }
+
+        private void SetAutomationID(View control, string Id)
+        {
+            SetAutomationID(control, $"{control.GetType().Name}-{Id}", Id, true);
+            SetChildAutomationIDs(control, Id);
+        }
+
+        private void SetAutomationID(View control, string automationId, string Id, bool warnIfAlreadySet)
+        {
+            if (string.IsNullOrWhiteSpace(control.AutomationId))
+            {
+                //LogDiagnostic($"Set AutomationID for {control.GetType().Name}: {automationId}");
+                control.AutomationId = automationId;
+            }
+            else if (warnIfAlreadySet)
+            {
+                Log($"[PropertyPanelBuilder] Warning: The control '{control.GetType().Name}' with Id '{Id}' already has an AutomationId set, and this could break the ability for 'Assistant P' to access the PropertyPanel.", "warn");
+            }
+        }
+
+        private void SetChildAutomationIDs(View control, string parentId)
+        {
+            var children = GetAutomationChildren(control).ToArray();
+            for (int i = 0; i < children.Length; i++)
+            {
+                var child = children[i];
+                var childAutomationId = string.IsNullOrWhiteSpace(child.AutomationId)
+                    ? CreateChildAutomationId(parentId, child, i, children)
+                    : child.AutomationId;
+
+                SetAutomationID(child, childAutomationId, parentId, false);
+                SetChildAutomationIDs(child, childAutomationId);
+            }
+        }
+
+        private static string CreateChildAutomationId(string parentId, View child, int index, View[] siblings)
+        {
+            if (child is Label && index == 0)
+                return $"{parentId}-header";
+
+            if (child is not Label && siblings.Length == 2 && siblings.Any(s => s is Label))
+                return $"{parentId}-value";
+
+            return $"{child.GetType().Name}-{parentId}-{index}";
+        }
+
+        private static IEnumerable<View> GetAutomationChildren(View control)
+        {
+            if (control is Layout layout)
+            {
+                return layout.Children.OfType<View>();
+            }
+
+            if (control is ContentView { Content: View contentViewContent })
+            {
+                return [contentViewContent];
+            }
+
+            if (control is ScrollView { Content: View scrollViewContent })
+            {
+                return [scrollViewContent];
+            }
+
+            if (control is Border { Content: View borderContent })
+            {
+                return [borderContent];
+            }
+
+            return [];
+        }
+
 
         public override bool Equals(object? obj)
         {

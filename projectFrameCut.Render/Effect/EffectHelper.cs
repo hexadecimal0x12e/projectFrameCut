@@ -1,4 +1,4 @@
-
+﻿
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -26,21 +26,23 @@ namespace projectFrameCut.Render.Effect
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
         {
-            var (effects, provider, _) = GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            var (effects, provider, _, _) = GetEffectsInstancesSpeedVarianceAndMixture(Effects);
             return (effects, provider);
         }
 
-        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider, IMixture? Mixture) GetEffectsInstancesSpeedVarianceAndMixture(EffectAndMixtureJSONStructure[]? Effects)
+        public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider, IMixture? Mixture, ISourceReplacementEffect? AlternativeSource) GetEffectsInstancesSpeedVarianceAndMixture(EffectAndMixtureJSONStructure[]? Effects)
         {
             if (Effects is null || Effects.Length == 0)
             {
-                return (Array.Empty<IEffect>(), null, null);
+                return (Array.Empty<IEffect>(), null, null, null);
             }
             List<IEffect> effects = new();
             bool haveSpeedVarProvider = false;
             bool haveMixture = false;
+            bool haveAlternativeSource = false;
             ISpeedVarianceProvider? provider = null;
             IMixture? mixture = null;
+            ISourceReplacementEffect? alternativeSource = null;
             foreach (var item in Effects)
             {
                 var e = PluginManager.CreateEffect(item, ForcePreferToType ?? (item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
@@ -56,13 +58,19 @@ namespace projectFrameCut.Render.Effect
                     haveMixture = true;
                     mixture = m;
                 }
+                else if (e is ISourceReplacementEffect s)
+                {
+                    if (haveAlternativeSource) throw new InvalidOperationException("Multiple SourceReplacement effects found.");
+                    haveAlternativeSource = true;
+                    alternativeSource = s;
+                }
                 else
                 {
                     effects.Add(e);
                 }
             }
 
-            return (effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray(), provider, mixture);
+            return (effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray(), provider, mixture, alternativeSource);
         }
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {

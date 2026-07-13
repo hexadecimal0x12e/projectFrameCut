@@ -252,7 +252,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return available.Count > 0 ? available[0] : AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
         }
 
-        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions]
         [DebuggerNonUserCode()]
         public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
         {

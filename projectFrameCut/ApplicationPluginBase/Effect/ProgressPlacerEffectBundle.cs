@@ -1,15 +1,17 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using CommunityToolkit.Maui.Views;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -44,11 +46,17 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { ProgressListKey, "[]" }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "ProgressList", EffectBundleHelper.StringField("ProgressList", "Position Keyframes", "JSON array of ProgressData keyframe objects", "[]", remarks: "Serialized ProgressData array as JSON string") }
+        };
+
         public List<string> ParametersNeeded => new List<string> { ProgressListKey };
         public Dictionary<string, string> ParametersType => new Dictionary<string, string>
         {
             { ProgressListKey, "string" }
         };
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public IEffectFactory[] Create()
         {
@@ -61,7 +69,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
+                EffectBundleHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
             return panel;
         }
 
@@ -71,13 +79,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_ProgressPlacer", "Progress Placer"),
-                Description = EffectBundleUiHelper.L("Description_Effect_ProgressPlacer", "Animate clip position, size via keyframes."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Name = EffectBundleHelper.L("DisplayName_Effect_ProgressPlacer", "Progress Placer"),
+                Description = EffectBundleHelper.L("Description_Effect_ProgressPlacer", "Animate clip position, size via keyframes."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
+                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "progressplace.mp4"))
             };
         }
 
@@ -105,12 +119,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             panel.AddSlider(
                 $"step_progress_{index}",
-                EffectBundleUiHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
+                EffectBundleHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
                 0d, 1d, item.Index,
                 eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
 
-            panel.AddButton(EffectBundleUiHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
+            panel.AddButton(EffectBundleHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
             {
                 try
                 {
@@ -200,27 +214,27 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             panel.AddSeparator();
 
             panel.AddCollapsibleSection(
-                EffectBundleUiHelper.L("Effect_Placer_Collapsible_Position", "Position"),
+                EffectBundleHelper.L("Effect_Placer_Collapsible_Position", "Position"),
                 contentPanel =>
                 {
-                    EffectBundleUiHelper.AddNumericEntry(
+                    EffectBundleHelper.AddNumericEntry(
                         contentPanel, $"step_x_{index}",
-                        EffectBundleUiHelper.L("_StartX", "X"),
+                        EffectBundleHelper.L("_StartX", "X"),
                         item.Position.TargetX.ToString(), "0");
 
-                    EffectBundleUiHelper.AddNumericEntry(
+                    EffectBundleHelper.AddNumericEntry(
                         contentPanel, $"step_y_{index}",
-                        EffectBundleUiHelper.L("_StartY", "Y"),
+                        EffectBundleHelper.L("_StartY", "Y"),
                         item.Position.TargetY.ToString(), "0");
 
-                    EffectBundleUiHelper.AddNumericEntry(
+                    EffectBundleHelper.AddNumericEntry(
                         contentPanel, $"step_w_{index}",
-                        EffectBundleUiHelper.L("_Width", "W"),
+                        EffectBundleHelper.L("_Width", "W"),
                         item.Position.TargetWidth.ToString(), "1");
 
-                    EffectBundleUiHelper.AddNumericEntry(
+                    EffectBundleHelper.AddNumericEntry(
                         contentPanel, $"step_h_{index}",
-                        EffectBundleUiHelper.L("_Height", "H"),
+                        EffectBundleHelper.L("_Height", "H"),
                         item.Position.TargetHeight.ToString(), "1");
                 });
 

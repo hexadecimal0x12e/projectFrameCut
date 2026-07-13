@@ -28,7 +28,7 @@ public class FontItem : INotifyPropertyChanged
         set => _displayName = value;
     }
 
-    public string? PrimaryLanguageTag => InnerFont?.PrimaryLanguageTag;
+    public string? PrimaryLanguageTag { get; set; }
 
     public string Category { get; set; } = "Unknown";
 

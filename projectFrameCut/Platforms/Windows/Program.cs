@@ -495,11 +495,19 @@ Environment:
 
         public static void RebootApp()
         {
-            var proc = new Process();
-            proc.StartInfo.FileName = "pjfc:";
-            proc.StartInfo.UseShellExecute = true;
-            proc.StartInfo.CreateNoWindow = false;
-            proc.Start();
+            if (!WinUI.App.IsPackaged())
+            {
+                Environment.Exit(0);
+            }
+            else
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"shell:AppsFolder\\{PackageFamilyName}!App",
+                    UseShellExecute = true
+                });
+            }
         }
 
     }

@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Text.Entry;
+﻿using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.ClipsAndTracks.Text;
@@ -77,7 +77,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public string FontPath { get; set; } = string.Empty;
-        private const int MaxTextFrameCacheEntries = 16;
+        private const int MaxTextFrameCacheEntries = 1024;
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<long, IPicture> textFrameCache = new();
 
@@ -130,11 +130,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, rawEntries);
 
             if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            {
+                if (cachedFrame.BitPerPixel != targetPPB)
+                    return cachedFrame.ToBitPerPixel(targetPPB);
                 return cachedFrame;
+            }
 
             var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
 
             var sourcePicture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true, aaMode: ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
+            sourcePicture.CanBeDisposed = false;
             sourcePicture.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -149,13 +154,17 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
-            CacheRenderedFrame(cacheKey, sourcePicture);
-            return sourcePicture;
+            var resultPicture = sourcePicture.BitPerPixel != targetPPB
+                ? sourcePicture.ToBitPerPixel(targetPPB)
+                : sourcePicture;
+            resultPicture.CanBeDisposed = false;
+            CacheRenderedFrame(cacheKey, resultPicture);
+            return resultPicture;
         }
 
         public TextClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -163,7 +172,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
                 TextClipFontRegistry.AddFont(FontPath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         public void Dispose()
@@ -180,6 +189,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public AntiAliasMode? ClipAntiAliasMode { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public static void GetFont(bool force = false) => TextClipFontRegistry.Initialize();
 
@@ -239,7 +249,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         return true;
                     }
                     textFrameCache.Remove(cacheKey);
-                    try { cachedFrame.Dispose(true); } catch { }
+                    try { cachedFrame.Dispose(force: false); } catch { }
                 }
             }
             picture = null!;
@@ -255,7 +265,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
                 {
-                    try { oldFrame.Dispose(true); } catch { }
+                    try { oldFrame.Dispose(force: false); } catch { }
                 }
 
                 picture.CanBeDisposed = false;
@@ -275,7 +285,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             foreach (var frame in textFrameCache.Values)
             {
-                try { frame.Dispose(true); } catch { }
+                try { frame.Dispose(force: false); } catch { }
             }
             textFrameCache.Clear();
         }

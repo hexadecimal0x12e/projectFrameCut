@@ -1,3 +1,4 @@
+﻿using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using System.Collections.ObjectModel;
@@ -18,6 +19,7 @@ public partial class TemplateExtractPage : ContentPage
     private readonly ObservableCollection<TemplateExtractFieldItem> _allFields = [];
     private readonly ObservableCollection<TemplateExtractFieldItem> _filteredFields = [];
     private readonly ObservableCollection<TemplateExtractFieldItem> _configFields = [];
+    private readonly ObservableCollection<ScriptVariableItem> _manualVariables = [];
     private readonly ObservableCollection<TemplateClipItem> _clips = [];
     private static readonly IReadOnlyList<TemplateScope> ScopeValues =
     [
@@ -32,6 +34,9 @@ public partial class TemplateExtractPage : ContentPage
     private bool _isBusy;
     private bool _showNonRecommended;
     private int _currentStep = 1;
+    private readonly ObservableCollection<string> _tags = [];
+    private string _scriptContent = "";
+    private bool _scriptEnabled;
 
     public TemplateExtractPage(ViewModels.ProjectsViewModel projectVm)
     {
@@ -39,6 +44,7 @@ public partial class TemplateExtractPage : ContentPage
         _projectVm = projectVm;
         FieldsCollectionView.ItemsSource = _filteredFields;
         ConfigFieldsCollectionView.ItemsSource = _configFields;
+        ManualVariablesCollectionView.ItemsSource = _manualVariables;
         ClipsCollectionView.ItemsSource = _clips;
         AssetsCollectionView.ItemsSource = _exportAssets;
         ScopePicker.ItemsSource = GetScopeOptions();
@@ -47,9 +53,13 @@ public partial class TemplateExtractPage : ContentPage
         RefreshAssetSelectionStats();
         UpdateStepUI();
         Loaded += TemplateExtractPage_Loaded;
+        TagsContainer.BindingContext = _tags;
     }
 
-    private static List<string> GetScopeOptions() => [Localized.TemplateExtractPage_Scope_Any, Localized.TemplateExtractPage_Scope_Project, Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track];
+    private List<string> GetScopeOptions() =>
+        _scriptEnabled
+        ? [Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track]
+        : [Localized.TemplateExtractPage_Scope_Any, Localized.TemplateExtractPage_Scope_Project, Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track];
 
 
     private TemplateScope GetSelectedScope()
@@ -60,7 +70,18 @@ public partial class TemplateExtractPage : ContentPage
             return TemplateScope.Any;
         }
 
-        return ScopeValues[index];
+        if (_scriptEnabled)
+        {
+            return index switch
+            {
+                1 => TemplateScope.Tracks,
+                _ => TemplateScope.Clips,
+            };
+        }
+        else
+        {
+            return ScopeValues[index];
+        }
     }
 
     private async void TemplateExtractPage_Loaded(object? sender, EventArgs e)
@@ -83,7 +104,6 @@ public partial class TemplateExtractPage : ContentPage
             if (!File.Exists(projectPath) || !File.Exists(timelinePath))
             {
                 await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
-                await Navigation.PopAsync();
                 return;
             }
 
@@ -92,7 +112,6 @@ public partial class TemplateExtractPage : ContentPage
             if (project is null || draft is null)
             {
                 await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
-                await Navigation.PopAsync();
                 return;
             }
 
@@ -789,6 +808,13 @@ public partial class TemplateExtractPage : ContentPage
         {
             _currentStep = 3;
             UpdateStepUI();
+            return;
+        }
+
+        if (_currentStep == 3)
+        {
+            _currentStep = 4;
+            UpdateStepUI();
         }
     }
 
@@ -808,17 +834,24 @@ public partial class TemplateExtractPage : ContentPage
         var isStepOne = _currentStep == 1;
         var isStepTwo = _currentStep == 2;
         var isStepThree = _currentStep == 3;
+        var isStepFour = _currentStep == 4;
         StepOnePanel.IsVisible = isStepOne;
         StepOneFiltersGrid.IsVisible = isStepOne;
         StepTwoPanel.IsVisible = isStepTwo;
         StepThreePanel.IsVisible = isStepThree;
+        StepFourPanel.IsVisible = isStepFour;
         PreviousStepButton.IsVisible = !isStepOne;
-        NextStepButton.IsVisible = !isStepThree;
-        SaveButton.IsVisible = isStepThree;
-        ScopeLabel.IsVisible = isStepThree;
-        ScopePicker.IsVisible = isStepThree;
+        NextStepButton.IsVisible = !isStepFour;
+        SaveButton.IsVisible = isStepFour;
+        ScopeLabel.IsVisible = !isStepOne && !isStepTwo;
+        ScopePicker.IsVisible = !isStepOne && !isStepTwo;
 
         StepHeaderLabel.Text = Localized.DynamicLookup($"TemplateExtractPage_Stage{_currentStep}", $"Stage {_currentStep}");
+
+        if (isStepFour && string.IsNullOrWhiteSpace(TemplateTitleEntry.Text))
+        {
+            TemplateTitleEntry.Text = _projectVm.Name;
+        }
     }
 
     private async void Cancel_Clicked(object sender, EventArgs e)
@@ -833,7 +866,7 @@ public partial class TemplateExtractPage : ContentPage
             return;
         }
 
-        if (_currentStep != 3)
+        if (_currentStep != 4)
         {
             return;
         }
@@ -893,31 +926,85 @@ public partial class TemplateExtractPage : ContentPage
                 };
             }
 
+            // ---- 包含手动添加的变量 ----
+            foreach (var mv in _manualVariables)
+            {
+                var key = mv.VariableName?.Trim();
+                if (string.IsNullOrWhiteSpace(key))
+                    continue;
+
+                vars.TryAdd(key, mv.DefaultValue);
+                if (!variableDefinitions.ContainsKey(key))
+                {
+                    variableDefinitions[key] = new TemplateVariableDefinition
+                    {
+                        Type = mv.Type,
+                        DefaultValue = mv.DefaultValue,
+                        UserFriendlyName = NormalizeOptionalText(mv.DisplayName),
+                        Description = null
+                    };
+                }
+            }
+
             var project = projectClone.Deserialize<ProjectJSONStructure>(DraftPage.DraftJSONOption)
                 ?? throw new InvalidOperationException("Invalid draft");
             var draft = draftClone.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption)
                 ?? throw new InvalidOperationException("Invalid draft");
 
-            var projectName = await DisplayPromptAsync(Localized._Info, Localized.TemplateExtractPage_InputName, Localized._OK, null, _projectVm.Name, 1024, null, _projectVm.Name);
+            var projectName = TemplateTitleEntry.Text?.Trim();
+            var subTitle = TemplateSubtitleEntry.Text?.Trim();
             if (string.IsNullOrWhiteSpace(projectName))
             {
-                await DisplayAlertAsync(Localized._Info, Localized.DraftPage_Tasks_Status_Canceled, Localized._OK);
+                await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_InputName, Localized._OK);
                 return;
             }
 
-
-            var template = new JSONBasedTemplateStructure
+            // 如果启用了脚本且有脚本内容，创建脚本模板；否则创建标准 JSON 模板
+            ITemplateStructure template;
+            if (_scriptEnabled && !string.IsNullOrWhiteSpace(_scriptContent))
             {
+                template = new ScriptBasedTemplateStructure
+                {
+                    TemplateName = projectName,
+                    TemplateVersion = 2,
+                    Scope = GetSelectedScope(),
+                    Project = project,
+                    Draft = draft,
+                    Variables = vars,
+                    VariableDefinitions = variableDefinitions,
+                    CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
+                };
+            }
+            else
+            {
+                template = new JSONBasedTemplateStructure
+                {
+                    TemplateName = projectName,
+                    TemplateVersion = 2,
+                    Scope = GetSelectedScope(),
+                    Project = project,
+                    Draft = draft,
+                    Variables = vars,
+                    VariableDefinitions = variableDefinitions,
+                    CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
+                };
+            }
+
+            var mtd = new TemplateMetadataStructure
+            {
+                SourceTemplateID = template.TemplateID,
                 TemplateName = projectName,
-                TemplateVersion = 1,
+                Subtitle = subTitle ?? "",
+                CreatedAt = DateTime.Now,
                 Scope = GetSelectedScope(),
-                Project = project,
-                Draft = draft,
-                Variables = vars,
-                VariableDefinitions = variableDefinitions
+                CreatedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty),
+                CreatedByUserName = SettingsManager.GetSetting("UserName", "Unknown"),
+                Revision = 0,
+                Tags = [.. _tags],
+                Readme = ReadmeEditor.Text?.Trim()
             };
 
-            var safeName = new string(projectName.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '_').ToArray());
+            var safeName = new string(projectName.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray());
             if (string.IsNullOrWhiteSpace(safeName))
             {
                 safeName = "template";
@@ -954,8 +1041,10 @@ public partial class TemplateExtractPage : ContentPage
                 packageZipPath = await TemplatePackageIO.BuildTemplatePackageAsync(
                     template,
                     selectedAssets,
+                    mtd,
                     _projectVm._projectPath,
-                    DraftPage.DraftJSONOption);
+                    DraftPage.DraftJSONOption,
+                    scriptContent: _scriptContent);
 
                 await using var packageZipStream = File.OpenRead(packageZipPath);
                 var savePath = await FileSystemService.SaveAFile($"{safeName}_{template.TemplateID}.pjfcTemplate", packageZipStream);
@@ -964,6 +1053,7 @@ public partial class TemplateExtractPage : ContentPage
                     await DisplayAlertAsync(Localized._Info, Localized.DraftPage_Tasks_Status_Canceled, Localized._OK);
                     return;
                 }
+                await FileSystemService.ShowFileInFolderAsync(savePath);
             }
             finally
             {
@@ -1068,6 +1158,101 @@ public partial class TemplateExtractPage : ContentPage
         ClipsCollectionView.IsEnabled = !isBusy;
         ShowNonRecommendedSwitch.IsEnabled = !isBusy;
         ScopePicker.IsEnabled = !isBusy;
+        TemplateTitleEntry.IsEnabled = !isBusy;
+        TagInputEntry.IsEnabled = !isBusy;
+        AddTagButton.IsEnabled = !isBusy;
+        ReadmeEditor.IsEnabled = !isBusy;
+        ScriptEnabledSwitch.IsEnabled = !isBusy;
+        SelectScriptButton.IsEnabled = !isBusy && _scriptEnabled;
+        ScriptEditor.IsEnabled = !isBusy && _scriptEnabled;
+    }
+
+    private void ScriptEnabledSwitch_Toggled(object? sender, ToggledEventArgs e)
+    {
+        _scriptEnabled = e.Value;
+        ScriptUploadPanel.IsVisible = _scriptEnabled;
+        if (!_scriptEnabled)
+        {
+            ScopePicker.SelectedIndex = 0;
+            ScopePicker.ItemsSource = GetScopeOptions();
+
+            _scriptContent = "";
+            ScriptFileNameLabel.Text = Localized.TemplateExtractPage_NoFileSelected;
+            ScriptEditor.Text = "";
+        }
+        else
+        {
+            var idx = ScopePicker.SelectedIndex;
+            ScopePicker.ItemsSource = GetScopeOptions();
+
+            if (GetSelectedScope() is TemplateScope.Any or TemplateScope.Project)
+            {
+                ScopePicker.SelectedIndex = 0;
+            }
+            else
+            {
+                ScopePicker.SelectedIndex = idx - 2;
+
+            }
+        }
+    }
+
+    private async void SelectScript_Clicked(object? sender, EventArgs e)
+    {
+        if (_isBusy)
+            return;
+
+        try
+        {
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    [DevicePlatform.WinUI] = new[] { ".ps1" },
+                    [DevicePlatform.Android] = new[] { "application/ps1", "text/plain" }
+                })
+            });
+
+            if (result is null || string.IsNullOrWhiteSpace(result.FullPath))
+                return;
+
+            _scriptContent = await File.ReadAllTextAsync(result.FullPath);
+            ScriptFileNameLabel.Text = result.FileName;
+            ScriptEditor.Text = _scriptContent;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+    }
+
+    private void ScriptEditor_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        _scriptContent = ScriptEditor.Text ?? "";
+    }
+
+    private void OnAddManualVariableClicked(object? sender, EventArgs e)
+    {
+        var baseName = "manualVar";
+        var index = 1;
+        while (_manualVariables.Any(v => string.Equals(v.VariableName, baseName + index, StringComparison.OrdinalIgnoreCase)))
+            index++;
+
+        _manualVariables.Add(new ScriptVariableItem
+        {
+            VariableName = baseName + index,
+            DisplayName = "Variable " + index,
+            DefaultValue = "",
+            SelectedType = "String"
+        });
+    }
+
+    private void OnDeleteManualVariableClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button { BindingContext: ScriptVariableItem item })
+            return;
+
+        _manualVariables.Remove(item);
     }
 
     private void FieldItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1097,9 +1282,46 @@ public partial class TemplateExtractPage : ContentPage
         StatsLabel.Text = Localized.TemplateExtractPage_ClipStatus(count, selectedClipCount, _clips.Count, _allFields.Count);
     }
 
+    private void AddTag_Clicked(object sender, EventArgs e)
+    {
+        AddCurrentTag();
+    }
+
+    private void TagInputEntry_Completed(object sender, EventArgs e)
+    {
+        AddCurrentTag();
+    }
+
+    private void RemoveTag_Clicked(object sender, EventArgs e)
+    {
+        if (sender is not Button { BindingContext: string tag })
+        {
+            return;
+        }
+
+        _tags.Remove(tag);
+    }
+
+    private void AddCurrentTag()
+    {
+        var tagText = TagInputEntry.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(tagText))
+        {
+            return;
+        }
+
+        if (!_tags.Contains(tagText, StringComparer.OrdinalIgnoreCase))
+        {
+            _tags.Add(tagText);
+        }
+
+        TagInputEntry.Text = string.Empty;
+        TagInputEntry.Focus();
+    }
+
     protected override bool OnBackButtonPressed()
     {
-        if(_currentStep > 1)
+        if (_currentStep > 1)
         {
             PreviousStep_Clicked(this, null!);
             return true;

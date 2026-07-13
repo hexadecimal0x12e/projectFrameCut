@@ -17,7 +17,7 @@ public partial class TemplateCreatePage : ContentView
 {
     private readonly ObservableCollection<TemplateVariableItem> _allVariables = [];
     private readonly ObservableCollection<TemplateVariableItem> _filteredVariables = [];
-    private JSONBasedTemplateStructure? _template;
+    private ITemplateStructure? _template;
     private JsonObject _projectNode = new();
     private JsonObject _draftNode = new();
     private readonly Dictionary<string, TemplateVariableDefinition> _variableDefinitions = new(StringComparer.OrdinalIgnoreCase);
@@ -38,7 +38,7 @@ public partial class TemplateCreatePage : ContentView
         RefreshStats();
     }
 
-    public TemplateCreatePage(JSONBasedTemplateStructure template)
+    public TemplateCreatePage(ITemplateStructure template)
     {
         InitializeComponent();
         InlineAssetPicker.IsDoubleTapPreviewEnabled = false;
@@ -64,7 +64,7 @@ public partial class TemplateCreatePage : ContentView
         CancelButton.Text = Localized._Cancel;
     }
 
-    public async Task<Dictionary<string, string?>?> PromptTemplateValuesAsync(JSONBasedTemplateStructure template, string? templateLabel = null)
+    public async Task<Dictionary<string, string?>?> PromptTemplateValuesAsync(ITemplateStructure template, string? templateLabel = null)
     {
         _isTemplateInputMode = true;
         ImportTemplateButton.IsVisible = false;
@@ -130,13 +130,20 @@ public partial class TemplateCreatePage : ContentView
         return loadResult;
     }
 
-    public Task LoadTemplateFromStructureAsync(JSONBasedTemplateStructure template, string sourceLabel)
+    public Task LoadTemplateFromStructureAsync(ITemplateStructure template, string sourceLabel)
     {
         ArgumentNullException.ThrowIfNull(template);
 
         _template = template;
-        _projectNode = JsonSerializer.SerializeToNode(template.Project, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject();
-        _draftNode = JsonSerializer.SerializeToNode(template.Draft, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject();
+
+        // 从两种模板类型中提取 Project / Draft
+        var (project, draft) = GetProjectDraft(template);
+        _projectNode = project is not null
+            ? JsonSerializer.SerializeToNode(project, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject()
+            : new JsonObject();
+        _draftNode = draft is not null
+            ? JsonSerializer.SerializeToNode(draft, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject()
+            : new JsonObject();
 
         _allVariables.Clear();
         _filteredVariables.Clear();
@@ -237,7 +244,7 @@ public partial class TemplateCreatePage : ContentView
 
         ApplyFilter();
 
-        var projectName = _template.Project.ProjectName;
+        var projectName = project?.ProjectName;
         if (string.IsNullOrWhiteSpace(projectName))
         {
             projectName = "Template Project";
@@ -246,6 +253,19 @@ public partial class TemplateCreatePage : ContentView
 
         RefreshStats();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 从 <see cref="ITemplateStructure"/> 中提取 Project/Draft 数据。
+    /// <see cref="ScriptBasedTemplateStructure"/> 和 <see cref="JSONBasedTemplateStructure"/> 都包含这些属性。
+    /// </summary>
+    private static (ProjectJSONStructure? Project, DraftStructureJSON? Draft) GetProjectDraft(ITemplateStructure template)
+    {
+        if (template is JSONBasedTemplateStructure json)
+            return (json.Project, json.Draft);
+        if (template is ScriptBasedTemplateStructure script)
+            return (script.Project, script.Draft);
+        return (null, null);
     }
 
     private static string BuildDefaultProjectName(string baseName)
@@ -488,19 +508,24 @@ public partial class TemplateCreatePage : ContentView
             }
             if (string.IsNullOrWhiteSpace(projectName))
             {
-                await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
                 return;
             }
 
             if (Path.GetInvalidPathChars().Any(projectName.Contains) || Path.GetInvalidFileNameChars().Any(projectName.Contains))
             {
-                await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
                 return;
             }
 
             var draftRoot = Path.Combine(MauiProgram.DataPath, "My Drafts");
             Directory.CreateDirectory(draftRoot);
             var projectDir = Path.Combine(draftRoot, projectName + ".pjfc");
+            if (projectDir.Length > HomePage.GetMaxPathLength())
+            {
+                await DisplayAlertAsync(Localized._Error, HomePage.GetInvalidFileNameWarn(), Localized._OK);
+                return;
+            }
             if (Directory.Exists(projectDir))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
@@ -519,9 +544,9 @@ public partial class TemplateCreatePage : ContentView
             ReplaceAssetReferencesWithResolvedPaths(draftClone, resolvedPackagedAssetPaths);
 
             var project = projectClone.Deserialize<ProjectJSONStructure>(DraftPage.DraftJSONOption)
-            ?? throw new InvalidOperationException("Invalid Project structure。");
+            ?? throw new InvalidOperationException("Invalid Project structure.");
             var draft = draftClone.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption)
-            ?? throw new InvalidOperationException("Invalid Draft structure。");
+            ?? throw new InvalidOperationException("Invalid Draft structure.");
 
             project.ProjectName = projectName;
             project.LastChanged = DateTime.Now;
@@ -661,7 +686,7 @@ public partial class TemplateCreatePage : ContentView
 
     private static List<AssetItem> BuildProjectAssetList(
         IEnumerable<string> assetIds,
-        JSONBasedTemplateStructure template,
+        ITemplateStructure template,
         string projectDir,
         out Dictionary<string, string> resolvedPackagedAssetPaths)
     {

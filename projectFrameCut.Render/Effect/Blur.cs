@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -121,18 +122,30 @@ namespace projectFrameCut.Render.Effect
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-            var resultArr = computer.Compute([r, g, b, a, source.Width, Sigma]);
 
-            if (resultArr.Length != 4 ||
-                resultArr[0] is not float[] rOut ||
-                resultArr[1] is not float[] gOut ||
-                resultArr[2] is not float[] bOut ||
-                resultArr[3] is not float[] aOut)
+            FourChannelResult computeResult;
+            if (computer is IBlurComputer bc)
             {
-                throw new InvalidOperationException("BlurComputer did not return expected channel buffers.");
+                computeResult = bc.ComputeBlur(r, g, b, a, source.Width, Sigma);
+            }
+            else
+            {
+                var resultArr = computer.Compute([r, g, b, a, source.Width, Sigma]);
+
+                if (resultArr.Length != 4 ||
+                    resultArr[0] is not float[] rOut ||
+                    resultArr[1] is not float[] gOut ||
+                    resultArr[2] is not float[] bOut ||
+                    resultArr[3] is not float[] aOut)
+                {
+                    throw new InvalidOperationException("BlurComputer did not return expected channel buffers.");
+                }
+
+                computeResult = new FourChannelResult(rOut, gOut, bOut, aOut);
             }
 
-            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, rOut, gOut, bOut, aOut, sourceHasAlpha);
+            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height,
+                computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
             sw.Stop();
             result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
             {

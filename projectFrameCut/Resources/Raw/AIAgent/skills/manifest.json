@@ -1,0 +1,19 @@
+﻿{
+  "skills": [
+    {
+      "name": "subtitle-generation",
+      "description": "指导如何生成视频字幕的样式、格式和时间轴对齐",
+      "file": "subtitle-generation.md"
+    },
+    {
+      "name": "color-correction",
+      "description": "指导如何进行视频颜色校正，包括白平衡、对比度、饱和度、色轮等参数的调整",
+      "file": "color-correction.md"
+    },
+    {
+      "name": "scripting",
+      "description": "指导如何使用脚本进行自动化操作，实现复杂的任务和流程、批量处理等高级特性",
+      "file": "scripting.md"
+    }
+  ]
+}

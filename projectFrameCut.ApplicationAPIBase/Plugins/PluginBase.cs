@@ -15,6 +15,7 @@ using System.Text.Json.Serialization;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 
 
 namespace projectFrameCut.ApplicationAPIBase.Plugins
@@ -30,15 +31,15 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 5;
+        public static int CurrentAppLevelPluginAPIVersion => 6;
 
         /// <summary>
         /// The root of app's data.
         /// </summary>
-        public static string AppDataRoot 
-        { 
-            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; } 
-            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; } 
+        public static string AppDataRoot
+        {
+            get { if (!Directory.Exists(field)) return FileSystem.AppDataDirectory; return field; }
+            set { if (!string.IsNullOrWhiteSpace(field)) throw new InvalidOperationException("The AppDataRoot could only be set once."); else if (!Directory.Exists(value)) throw new DirectoryNotFoundException(); else field = value; }
         } = "";
 
         /// <summary>
@@ -55,6 +56,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
         /// </summary>
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
+
+        /// <summary>
+        /// Gets a dictionary that maps vector component type names to their corresponding handler creation functions.
+        /// </summary>
+        public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider { get; }
 
         /// <summary>
         /// Get a helper for dynamic preview generation. The key of the dictionary is the type name of the clip or effect that the provider can generate preview for. The value is the provider itself.
@@ -111,6 +117,78 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         {
             return [];
         }
+
+        public static string GetWhatProvided(IApplicationPluginBase pluginBase)
+        {
+            // re-use the base IPluginBase metadata dump
+            var baseInfo = PluginMetadata.GetWhatProvided(pluginBase);
+            // strip the trailing newline so we can append our own sections
+            baseInfo = baseInfo.TrimEnd('\r', '\n');
+
+            StringBuilder sb = new(baseInfo);
+            sb.AppendLine();
+            sb.AppendLine();
+
+            // ----- Effect Bundles -----
+            if (pluginBase.EffectBundleProvider.Any())
+            {
+                sb.AppendLine("EffectBundle:");
+                foreach (var item in pluginBase.EffectBundleProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Text Style Providers -----
+            if (pluginBase.TextClipStyleProvider.Any())
+            {
+                sb.AppendLine("TextClipStyleProvider:");
+                foreach (var item in pluginBase.TextClipStyleProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            if (pluginBase.VectorComponentHandlerProvider.Any())
+            {
+                sb.AppendLine("VectorComponentHandler:");
+                foreach (var item in pluginBase.VectorComponentHandlerProvider)
+                {
+                    sb.AppendLine($"- {item.Key}");
+                }
+            }
+
+            // ----- Clip Dynamic Previews -----
+            if (pluginBase.ClipDynamicPreviewProvider.Any())
+            {
+                sb.AppendLine("ClipDynamicPreviewProvider:");
+                foreach (var item in pluginBase.ClipDynamicPreviewProvider)
+                {
+                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
+                }
+            }
+
+            // ----- Effect Dynamic Previews -----
+            if (pluginBase.EffectDynamicPreviewProvider.Any())
+            {
+                sb.AppendLine("EffectDynamicPreviewProvider:");
+                foreach (var item in pluginBase.EffectDynamicPreviewProvider)
+                {
+                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
+                }
+            }
+
+            // ----- Setting Page -----
+            var dummy = pluginBase;
+            var settingPage = pluginBase.SettingPageProvider(ref dummy);
+            sb.AppendLine(settingPage is not null
+                ? "SettingPage: Yes"
+                : "SettingPage: None");
+
+            return sb.ToString();
+        }
     }
+
+
 
 }

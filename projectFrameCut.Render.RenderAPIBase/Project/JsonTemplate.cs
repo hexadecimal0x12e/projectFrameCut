@@ -11,10 +11,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     public class JSONBasedTemplateStructure : ITemplateStructure
     {
         public int TemplateVersion { get; set; } = 1;
-        public TemplateType TemplateType  => TemplateType.JSON;
+        public TemplateType TemplateType => TemplateType.JSON;
         public TemplateScope Scope { get; set; }
         public Guid TemplateID { get; set; } = Guid.NewGuid();
         public string TemplateName { get; set; } = "Template";
+        public int CreatedInAPIVersion { get; set; } = -1;
 
         /// <summary>
         /// The project part in template form.
@@ -36,9 +37,84 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public Dictionary<string, TemplateVariableDefinition> VariableDefinitions { get; set; } = new Dictionary<string, TemplateVariableDefinition>();
 
-        public bool HaveAsset {get; set; } = false;
+        public bool HaveAsset { get; set; } = false;
 
         public Dictionary<string, string>? AssetHashTable { get; set; } = null;
+
+        /// <summary>
+        /// 片段数量。用于列表展示；从 .pjfcTemplate 加载完整数据时
+        /// 应使用 <see cref="Draft"/> 中的实际片段数。
+        /// </summary>
+        public int ClipCount { get; set; }
+
+        /// <summary>
+        /// 音轨数量。用于列表展示。
+        /// </summary>
+        public int TrackCount { get; set; }
+
+        /// <summary>
+        /// Markdown 格式的 Readme/介绍文档。从 .pjfcTemplate 包中的 metadata.json 读取。
+        /// </summary>
+        public string? Readme { get; set; }
+    }
+
+    /// <summary>
+    /// A simple metadata structure for templates, containing basic information about the template such as its source, scope, name, creator, genre, creation time, revision number, tags, and readme.
+    /// </summary>
+    public record TemplateMetadataStructure
+    {
+        /// <summary>
+        /// Indicates which template this template was derived from, if any. 
+        /// It should be same to <see cref="ITemplateStructure.TemplateID"/>
+        /// </summary>
+        public Guid SourceTemplateID { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// Get the scope of the template, which indicates the applicable range of the template. 
+        /// Should be same to <see cref="ITemplateStructure.Scope"/>
+        /// </summary>
+        public TemplateScope Scope { get; set; }
+
+        /// <summary>
+        /// Name of this template, used for display and template management. It does not affect the content of the template.
+        /// Should be same to <see cref="ITemplateStructure.TemplateName"/>
+        /// </summary>
+        public string TemplateName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The unique identifier of the user who created the template.
+        /// </summary>
+        public Guid CreatedByUser { get; set; } = Guid.Empty;
+
+        /// <summary>
+        /// The username of the user who created the template.
+        /// </summary>
+        public string CreatedByUserName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The subtitle of the template.
+        /// </summary>
+        public string Subtitle { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The UTC timestamp when the template was created.
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Indicates the revision number of the template. This can be used to track changes and updates to the template over time.
+        /// </summary>
+        public int Revision { get; set; } = 1;
+
+        /// <summary>
+        /// User-defined tags for categorizing and searching templates.
+        /// </summary>
+        public List<string> Tags { get; set; } = new();
+
+        /// <summary>
+        /// Markdown-formatted readme/introduction for this template.
+        /// </summary>
+        public string? Readme { get; set; }
     }
 
 

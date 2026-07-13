@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.RenderPage"
@@ -122,10 +122,16 @@
                     <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                     <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
                     <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
-                    <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
-                    <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" IsVisible="False"/>
-                    <Button x:Name="PerformPostRenderActionNowTestButton" Text="Perform Post-Render Action Now (Test)" Clicked="PerformPostRenderActionNowTestButton_Clicked" IsVisible="False"/>
-
+                    <Border x:Name="DebugView" Padding="4">
+                        <VerticalStackLayout>
+                            <Label Text="DEBUG Options" />
+                            <Button x:Name="RenderToVoidButton" Text="Render video, but don't write result to file (benchmarking)" Clicked="RenderToVoidButton_Clicked" />
+                            <Button x:Name="RenderNoWritingButton" Text="Render video to void (testing)" Clicked="RenderNoWritingButton_Clicked" />
+                            <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" />
+                            <Button x:Name="PerformPostRenderActionNowTestButton" Text="Perform Post-Render Action Now" Clicked="PerformPostRenderActionNowTestButton_Clicked" />
+                            <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
+                        </VerticalStackLayout>
+                    </Border>
 
                 </VerticalStackLayout>
             </ScrollView>

@@ -41,6 +41,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public static readonly BindableProperty IsTitleBarVisibleProperty =
             BindableProperty.Create(nameof(IsTitleBarVisible), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnTitleBarVisibilityChanged);
 
+        public static readonly BindableProperty IsInStandaloneWindowModeProperty =
+            BindableProperty.Create(nameof(IsInStandaloneWindowMode), typeof(bool), typeof(MultiWindowItem), false, BindingMode.OneWay);
+
         public string Title
         {
             get => (string)GetValue(TitleProperty);
@@ -128,6 +131,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(IsMinimizedPropertyKey, value);
         }
 
+        public bool IsInStandaloneWindowMode => _isInWindowMode;
+
+#pragma warning disable CS0618
+        [Obsolete("Go forward is an unusual design for stack-based navigation (you can't put back a disappeared things back). Consider using navigation within the window content instead.", false)] // I don't know why I did this hah
+        public bool AllowGoForward
+        {
+            get => (bool)GetValue(AllowGoForwardProperty);
+            set => SetValue(AllowGoForwardProperty, value);
+        }
+
+        public static readonly BindableProperty AllowGoForwardProperty =
+            BindableProperty.Create(nameof(AllowGoForward), typeof(bool), typeof(MultiWindowItem), false);
+#pragma warning restore CS0618 
+
         /// <summary>
         /// A Id to mark this window. Used for comparing.
         /// </summary>
@@ -162,6 +179,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private double _preMaxWidth, _preMaxHeight, _preMaxX, _preMaxY;
         private int _preCol, _preRow, _preColSpan, _preRowSpan;
         private bool _isMaximized = false;
+
+        /// <summary>
+        /// Offset from the window's top-left to the mouse pointer at drag start.
+        /// Captured by PointerGestureRecognizer on the title bar; used to compute
+        /// the absolute pointer position during drag for pointer-driven snap detection.
+        /// </summary>
+        private Point _grabPointerOffset;
+
+        /// <summary>
+        /// When set, the window will restore to these bounds on the next drag start.
+        /// Used by MultiWindowView to save pre-snap bounds so the window can be
+        /// restored to a floating size when the user starts dragging a snapped window.
+        /// </summary>
+        internal Rect? PreSnapBounds { get; set; }
 
         private double _preMinHeight;
 
@@ -201,6 +232,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private TaskCompletionSource<string> _promptTcs;
         private TaskCompletionSource<string> _actionSheetTcs;
 
+        // Popup Template Parts
+        private Grid _popupOverlay;
+        private BoxView _popupBackdrop;
+        private Border _popupContainer;
+
+        // Popup State
+        private MultiWindowItemPopup _currentPopup;
+        private bool _isPopupAnimating;
+
         private readonly System.Collections.Generic.Stack<View> _backStack = new();
         private readonly System.Collections.Generic.Stack<View> _forwardStack = new();
 
@@ -238,6 +278,31 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 var panGesture = new PanGestureRecognizer();
                 panGesture.PanUpdated += OnTitleBarPanUpdated;
                 _titleBarGrid.GestureRecognizers.Add(panGesture);
+
+                // Track the pointer position on the title bar so we know the grab offset
+                // at drag start. This enables pointer-position-driven snap detection.
+                var pointerGesture = new PointerGestureRecognizer();
+                pointerGesture.PointerMoved += (s, pe) =>
+                {
+                    var pos = pe.GetPosition(this);
+                    if (pos.HasValue)
+                    {
+                        _grabPointerOffset = pos.Value;
+                    }
+                };
+                _titleBarGrid.GestureRecognizers.Add(pointerGesture);
+
+                var tapGesture = new TapGestureRecognizer
+                {
+                    NumberOfTapsRequired = 2
+                };
+                tapGesture.Tapped += (s, e) =>
+                {
+                    Maximize();
+                };
+
+                _titleBarGrid.GestureRecognizers.Add(tapGesture);
+
             }
 
             if (_visualRoot != null)
@@ -299,9 +364,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogCancelBtn = GetTemplateChild("DialogCancelBtn") as Button;
             _actionSheetCancelBtn = GetTemplateChild("ActionSheetCancelBtn") as Button;
 
-            if (_dialogOkBtn != null) _dialogOkBtn.Clicked += OnDialogOkClicked;
-            if (_dialogCancelBtn != null) _dialogCancelBtn.Clicked += OnDialogCancelClicked;
-            if (_actionSheetCancelBtn != null) _actionSheetCancelBtn.Clicked += OnActionSheetCancelClicked;
+            _dialogOkBtn?.Clicked += OnDialogOkClicked;
+            _dialogCancelBtn?.Clicked += OnDialogCancelClicked;
+            _actionSheetCancelBtn?.Clicked += OnActionSheetCancelClicked;
+
+            // Popup Parts
+            _popupOverlay = GetTemplateChild("PopupOverlay") as Grid;
+            _popupBackdrop = GetTemplateChild("PopupBackdrop") as BoxView;
+            _popupContainer = GetTemplateChild("PopupContainer") as Border;
 
             // Wire up Resize Handles
             SetupResizeHandle("ResizeTopLeft", OnResizeTopLeft);
@@ -335,7 +405,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _titleBarGrid.GestureRecognizers.Add(gesture);
 
             }
-
         }
 
         private void SetupResizeHandle(string name, EventHandler<PanUpdatedEventArgs> handler)
@@ -370,18 +439,18 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (_isInWindowMode)
             {
-                if (_minimizeBtn != null) _minimizeBtn.IsVisible = false;
-                if (_maximizeBtn != null) _maximizeBtn.IsVisible = false;
-                if (_closeBtn != null) _closeBtn.IsVisible = false;
-                if (_popOutBtn != null) _popOutBtn.IsVisible = false; // Hide popout button in window mode
+                _minimizeBtn?.IsVisible = false;
+                _maximizeBtn?.IsVisible = false;
+                _closeBtn?.IsVisible = false;
+                _popOutBtn?.IsVisible = false; // Hide popout button in window mode
                 return;
             }
 
 
-            if (_minimizeBtn != null) _minimizeBtn.IsVisible = IsMinimizable;
-            if (_maximizeBtn != null) _maximizeBtn.IsVisible = IsMaximizable;
-            if (_closeBtn != null) _closeBtn.IsVisible = IsClosable;
-            if (_popOutBtn != null) _popOutBtn.IsVisible = IsPopOutVisible; // Show based on property
+            _minimizeBtn?.IsVisible = IsMinimizable;
+            _maximizeBtn?.IsVisible = IsMaximizable;
+            _closeBtn?.IsVisible = IsClosable;
+            _popOutBtn?.IsVisible = IsPopOutVisible; // Show based on property
         }
         private void UpdateTitleBarVisibility()
         {
@@ -452,7 +521,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 if (_dialogButtonGrid != null) Grid.SetColumnSpan(_dialogCancelBtn, 1);
             }
 
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = true;
+            _dialogButtonGrid?.IsVisible = true;
             _dialogOverlay.IsVisible = true;
 
             _alertTcs = new TaskCompletionSource<bool>();
@@ -497,7 +566,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _dialogInput.Focus();
             }
 
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = true;
+            _dialogButtonGrid?.IsVisible = true;
             _dialogOverlay.IsVisible = true;
 
             _promptTcs = new TaskCompletionSource<string>();
@@ -521,7 +590,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogTitle.Text = title;
             _dialogMessage.IsVisible = false; // Usually ActionSheet has only title
 
-            if (_actionSheetScroll != null) _actionSheetScroll.IsVisible = true;
+            _actionSheetScroll?.IsVisible = true;
             if (_actionSheetContainer != null)
             {
                 _actionSheetContainer.Children.Clear();
@@ -572,7 +641,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void ResetDialogUI()
         {
-            if (_dialogTitle != null) _dialogTitle.Text = "";
+            _dialogTitle?.Text = "";
             if (_dialogMessage != null)
             {
                 _dialogMessage.Text = "";
@@ -583,9 +652,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _dialogInput.IsVisible = false;
                 _dialogInput.Text = "";
             }
-            if (_actionSheetScroll != null) _actionSheetScroll.IsVisible = false;
-            if (_dialogButtonGrid != null) _dialogButtonGrid.IsVisible = false;
-            if (_actionSheetCancelBtn != null) _actionSheetCancelBtn.IsVisible = false;
+            _actionSheetScroll?.IsVisible = false;
+            _dialogButtonGrid?.IsVisible = false;
+            _actionSheetCancelBtn?.IsVisible = false;
 
             // Reset Grid layout for buttons
             if (_dialogCancelBtn != null) Grid.SetColumnSpan(_dialogCancelBtn, 1);
@@ -595,57 +664,211 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private void OnDialogOkClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_alertTcs != null)
-            {
-                _alertTcs.TrySetResult(true);
-                _alertTcs = null;
-            }
-            if (_promptTcs != null)
-            {
-                _promptTcs.TrySetResult(_dialogInput?.Text);
-                _promptTcs = null;
-            }
+            _alertTcs?.TrySetResult(true);
+            _alertTcs = null;
+            _promptTcs?.TrySetResult(_dialogInput?.Text);
+            _promptTcs = null;
         }
 
         private void OnDialogCancelClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_alertTcs != null)
-            {
-                _alertTcs.TrySetResult(false);
-                _alertTcs = null;
-            }
-            if (_promptTcs != null)
-            {
-                _promptTcs.TrySetResult(null);
-                _promptTcs = null;
-            }
+            _alertTcs?.TrySetResult(false);
+            _alertTcs = null;
+            _promptTcs?.TrySetResult(null);
+            _promptTcs = null;
         }
 
         private void OnActionSheetCancelClicked(object sender, EventArgs e)
         {
             CloseDialog();
-            if (_actionSheetTcs != null)
-            {
-                _actionSheetTcs.TrySetResult(_actionSheetCancelBtn?.Text ?? "Cancel");
-                _actionSheetTcs = null;
-            }
+            _actionSheetTcs?.TrySetResult(_actionSheetCancelBtn?.Text ?? "Cancel");
+            _actionSheetTcs = null;
         }
 
         private void OnActionSheetButtonClicked(string result)
         {
             CloseDialog();
-            if (_actionSheetTcs != null)
-            {
-                _actionSheetTcs.TrySetResult(result);
-                _actionSheetTcs = null;
-            }
+            _actionSheetTcs?.TrySetResult(result);
+            _actionSheetTcs = null;
         }
 
         private void CloseDialog()
         {
-            if (_dialogOverlay != null) _dialogOverlay.IsVisible = false;
+            _dialogOverlay?.IsVisible = false;
         }
+
+        #endregion
+
+        #region Popup
+
+        /// <summary>
+        /// Displays a popup inside this MDI window using the PopupOverlay layer.
+        /// Only one popup can be shown at a time; if a popup is already visible,
+        /// it is closed before the new one opens.
+        /// <para>The PopupOverlay works in both MDI mode and pop-out window mode,
+        /// since it is part of the ControlTemplate root Grid which always fills
+        /// the available content area.</para>
+        /// </summary>
+        /// <param name="popup">The popup configuration to display.</param>
+        /// <returns>A task that completes when the popup is fully opened and animated in.</returns>
+        public async Task ShowPopupAsync(MultiWindowItemPopup popup)
+        {
+            if (popup == null)
+                throw new ArgumentNullException(nameof(popup));
+            if (_isPopupAnimating)
+                return;
+
+            // Close any existing popup first
+            if (_currentPopup != null)
+                await HidePopupAsync(animate: false);
+
+            if (_popupOverlay == null || _popupContainer == null || _popupBackdrop == null)
+                return;
+
+            _currentPopup = popup;
+            _isPopupAnimating = true;
+
+            try
+            {
+                // Configure the overlay backdrop
+                _popupBackdrop.Color = popup.BackgroundColor;
+
+                // Configure the popup container
+                _popupContainer.Content = popup.Content;
+                _popupContainer.VerticalOptions = popup.VerticalOptions;
+                _popupContainer.HorizontalOptions = popup.HorizontalOptions;
+                _popupContainer.BackgroundColor = popup.PopupBackgroundColor
+                    ?? (Application.Current?.RequestedTheme == AppTheme.Dark
+                        ? Color.FromArgb("#252526")
+                        : Colors.White);
+                _popupContainer.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = popup.CornerRadius };
+                _popupContainer.Padding = popup.Padding;
+                _popupContainer.WidthRequest = popup.WidthRequest ?? -1;
+                _popupContainer.HeightRequest = popup.HeightRequest ?? -1;
+
+                // Configure dismiss gesture on backdrop
+                _popupBackdrop.GestureRecognizers.Clear();
+                if (popup.CanBeDismissedByTappingOutsideOfPopup)
+                {
+                    var dismissTap = new TapGestureRecognizer();
+                    dismissTap.Tapped += async (s, e) =>
+                    {
+                        popup.RaiseDismissedByTappingOutside();
+                        await HidePopupAsync();
+                    };
+                    _popupBackdrop.GestureRecognizers.Add(dismissTap);
+                }
+
+                // Show and animate
+                _popupOverlay.IsVisible = true;
+                _popupOverlay.InputTransparent = false;
+                _popupBackdrop.InputTransparent = false;
+
+                await AnimatePopupInAsync();
+
+                popup.RaiseOpened();
+            }
+            finally
+            {
+                _isPopupAnimating = false;
+            }
+        }
+
+        /// <summary>
+        /// Hides the current popup. If <paramref name="popup"/> is specified,
+        /// only hides if it matches the current popup; otherwise hides regardless.
+        /// </summary>
+        /// <param name="popup">Optional specific popup to close. If null, closes any visible popup.</param>
+        /// <param name="animate">Whether to play the close animation. Default true.</param>
+        /// <returns>A task that completes when the popup is fully hidden.</returns>
+        public async Task HidePopupAsync(MultiWindowItemPopup? popup = null, bool animate = true)
+        {
+            if (_currentPopup == null)
+                return;
+            if (popup != null && _currentPopup != popup)
+                return;
+            if (_isPopupAnimating)
+                return;
+
+            _isPopupAnimating = true;
+            var closingPopup = _currentPopup;
+            _currentPopup = null;
+
+            try
+            {
+                if (animate && _popupOverlay != null && _popupOverlay.IsVisible)
+                {
+                    await AnimatePopupOutAsync();
+                }
+
+                // Clean up
+                if (_popupContainer != null)
+                {
+                    _popupContainer.Content = null;
+                    // Reset container to default size/position for next use
+                    _popupContainer.WidthRequest = -1;
+                    _popupContainer.HeightRequest = -1;
+                    _popupContainer.Padding = new Thickness(0);
+                }
+
+                _popupBackdrop?.GestureRecognizers.Clear();
+
+                if (_popupOverlay != null)
+                {
+                    _popupOverlay.IsVisible = false;
+                    _popupOverlay.InputTransparent = true;
+                }
+
+                closingPopup?.RaiseClosed();
+                closingPopup?.DismissedTcs?.TrySetResult(true);
+            }
+            finally
+            {
+                _isPopupAnimating = false;
+            }
+        }
+
+        #region Popup Animations
+
+        private async Task AnimatePopupInAsync()
+        {
+            if (_popupBackdrop == null || _popupContainer == null)
+                return;
+
+            // Initial state
+            _popupBackdrop.Opacity = 0;
+            _popupContainer.Opacity = 0;
+            _popupContainer.Scale = 0.85;
+            _popupContainer.TranslationY = 20;
+
+            // Animate in parallel
+            var backdropTask = _popupBackdrop.FadeTo(1, 200, Easing.CubicOut);
+            var popupTask = Task.WhenAll(
+                _popupContainer.FadeTo(1, 300, Easing.CubicOut),
+                _popupContainer.ScaleTo(1, 300, Easing.SpringOut),
+                _popupContainer.TranslateTo(0, 0, 300, Easing.CubicOut)
+            );
+
+            await Task.WhenAll(backdropTask, popupTask);
+        }
+
+        private async Task AnimatePopupOutAsync()
+        {
+            if (_popupBackdrop == null || _popupContainer == null)
+                return;
+
+            var backdropTask = _popupBackdrop.FadeTo(0, 150, Easing.CubicIn);
+            var popupTask = Task.WhenAll(
+                _popupContainer.FadeTo(0, 150, Easing.CubicIn),
+                _popupContainer.ScaleTo(0.9, 150, Easing.CubicIn),
+                _popupContainer.TranslateTo(0, 10, 150, Easing.CubicIn)
+            );
+
+            await Task.WhenAll(backdropTask, popupTask);
+        }
+
+        #endregion
 
         #endregion
 
@@ -719,11 +942,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             // 2. Capture Window ref
             var win = _hostWindow;
-            _hostWindow = null;
+            _hostWindow = null!;
             _isInWindowMode = false;
 
+            // Force-close any visible popup when transitioning from OS window back to MDI
+            _currentPopup = null!;
+
             // Restore Visual State
-            if (_dockBtn != null) _dockBtn.IsVisible = false;
+            _dockBtn?.IsVisible = false;
 
             // Re-enable internal MDI
             IsDraggable = true;
@@ -733,7 +959,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // Update buttons visibility (restore them)
             UpdatedButtonVisibility();
 
-            if (_resizeGrid != null) _resizeGrid.IsVisible = true;
+            _resizeGrid?.IsVisible = true;
             if (_visualRoot != null)
             {
                 _visualRoot.StrokeThickness = 1; // Default
@@ -824,7 +1050,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 this.HeightRequest = _preMinHeight;
                 IsMinimized = false;
                 // Re-enable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = true;
+                _resizeGrid?.IsVisible = true;
             }
             else
             {
@@ -833,7 +1059,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 this.HeightRequest = 35;
                 IsMinimized = true;
                 // Disable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = false;
+                _resizeGrid?.IsVisible = false;
             }
         }
 
@@ -862,8 +1088,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _isMaximized = false;
 
                 // Re-enable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = true;
-                if (_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 10 };
+                _resizeGrid?.IsVisible = true;
+                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 10 };
             }
             else
             {
@@ -903,8 +1129,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 _isMaximized = true;
 
                 // Disable resize handles
-                if (_resizeGrid != null) _resizeGrid.IsVisible = false;
-                if (_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
+                _resizeGrid?.IsVisible = false;
+                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 0 };
             }
         }
 
@@ -919,7 +1145,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (_isInWindowMode && _hostWindow != null)
             {
-                PerformDock(true);
+                if (force)
+                {
+                    Application.Current?.CloseWindow(_hostWindow);
+                }
+                else
+                {
+                    PerformDock(true);
+                }
             }
 
             if (Parent is Layout layout)
@@ -935,8 +1168,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="CloseWindowOnNativeCloseButtonClicked">
         /// when this argument is true, when you click on the 'close' button on the new native window, the window'll be closed and <see cref="CloseClicked"/> will be invoked.
         /// </param>
-        public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = true)
+        public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = true, bool preserveBindingContext = true, object? newBindingContext = null)
         {
+            if (preserveBindingContext && newBindingContext is not null) throw new InvalidOperationException("Cannot set newBindingContext while using preserveBindingContext");
             if (ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized is not ApplicationAPIBaseLocalizerBase b) b = ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
             if (DeviceInfo.Idiom == DeviceIdiom.Phone)
             {
@@ -1014,32 +1248,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // but handlers delegate to Window (via _isInWindowMode check).
 
             // 2.1 Update internal chrome for Window Mode
-            if (_resizeGrid != null) _resizeGrid.IsVisible = false; // OS handles resizing
+            _resizeGrid?.IsVisible = false; // OS handles resizing
 
-            if (_visualRoot != null)
-            {
-                // Remove rounded corners/border to look like a full window
-                _visualRoot.StrokeThickness = 0;
-                _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
-            }
+            // Remove rounded corners/border to look like a full window
+            _visualRoot?.StrokeThickness = 0;
+            _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 0 };
 
             // Move TitleBarGrid out of visual tree so it can be used in TitleBar control
-            if (_titleBarGrid != null)
+            if (_titleBarGrid?.Parent is Grid parentGrid)
             {
-                if (_titleBarGrid.Parent is Grid parentGrid)
+                _originalTitleBarParent = parentGrid;
+                parentGrid.Children.Remove(_titleBarGrid);
+                if (parentGrid.RowDefinitions.Count > 0)
                 {
-                    _originalTitleBarParent = parentGrid;
-                    parentGrid.Children.Remove(_titleBarGrid);
-                    if (parentGrid.RowDefinitions.Count > 0)
-                    {
-                        parentGrid.RowDefinitions[0].Height = new GridLength(0); // Collapse space
-                    }
+                    parentGrid.RowDefinitions[0].Height = new GridLength(0); // Collapse space
                 }
-                _titleBarGrid.IsVisible = false; // Ensure it's visible for the TitleBar
             }
+            _titleBarGrid?.IsVisible = false; // Ensure it's visible for the TitleBar
 
             // Show Dock Button
-            if (_dockBtn != null) _dockBtn.IsVisible = true;
+            _dockBtn?.IsVisible = true;
 
             // 3. Reset transform and layout properties to fill the new window
             TranslationX = 0;
@@ -1053,28 +1281,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // 4. Create a hosting ContentPage
             this.Background = Colors.Transparent;
 
-            var backbtn = new Button
-            {
-                Text = "◄",
-                VerticalOptions = LayoutOptions.Center,
-#if !WINDOWS || !MACCATALYST
-                WidthRequest = 50,
-#endif
-                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
-            };
-            backbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoBack), source: this));
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoBack);
-            var fwdbtn = new Button
-            {
-                Text = "►",
-                VerticalOptions = LayoutOptions.Center,
-#if !WINDOWS || !MACCATALYST
-                WidthRequest = 50,
-#endif
-                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
-            };
-            fwdbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoForward), source: this));
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_GoForward);
             var dockBtn = new Button
             {
                 Text = "↙",
@@ -1085,13 +1291,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 #endif
                 Command = new Command(() => OnDockTapped(this, EventArgs.Empty))
             };
-            ToolTipProperties.SetText(backbtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
+            ToolTipProperties.SetText(dockBtn, Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
 #if WINDOWS || MACCATALYST
-            var hostingPage = new ContentPage
+            var parentContainer = new ContentPage
             {
                 Content = this,
-                Title = this.Title ?? "Window"
+                Title = "",
+                BindingContext = preserveBindingContext ? (_originalParent as View).BindingContext : newBindingContext
             };
+            NavigationPage.SetHasNavigationBar(parentContainer, false); // Hide default MAUI Navigation Bar
+            var hostingPage = new NavigationPage(parentContainer);
 
             var bar = new TitleBar
             {
@@ -1099,17 +1308,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     dockBtn
                 },
-                LeadingContent = new HorizontalStackLayout
-                {
-                    backbtn,
-                    fwdbtn,
-                    new Label
-                    {
-                        Text = this.Title ?? "Window",
-                        VerticalOptions = LayoutOptions.Center,
-                        Margin = new(8,0,0,0)
-                    }
-                },
+                Title = this.Title
             };
 #else
 
@@ -1126,8 +1325,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                             {
                                 Children =
                                 {
-                                    backbtn,
-                                    fwdbtn,
                                     new Label
                                     {
                                         Text = Title,
@@ -1142,7 +1339,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     },
                     this
                 },
-                Title = this.Title ?? "Window"
+                Title = this.Title ?? "Window",
+                BindingContext = preserveBindingContext ? this.BindingContext : newBindingContext
             };
 #endif
             NavigationPage.SetHasNavigationBar(hostingPage, false); // Hide default MAUI Navigation Bar
@@ -1157,8 +1355,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 IsMinimizable = IsMinimizable,
                 Width = this.Width,
                 Height = this.Height,
-                X = this.TranslationX,
-                Y = this.TranslationY
             };
             _hostWindow = newWindow;
 
@@ -1189,7 +1385,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
                 }
-        };
+            };
 #endif
 
             // 8. Open the window
@@ -1230,7 +1426,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="view"></param>
         public void NavigateTo(View view)
         {
-            if (view == null) return;
+            ArgumentNullException.ThrowIfNull(view, nameof(view));
+
+            if (_hostWindow is not null)
+            {
+                var content = new ContentPage
+                {
+                    Content = view,
+                    Title = view.AutomationId ?? "Page"
+                };
+                NavigationPage.SetHasNavigationBar(content, false);
+                _hostWindow.Page?.Navigation?.PushAsync(content);
+                return;
+            }
 
             // If we have current content, push it to back stack
             if (Content != null)
@@ -1252,6 +1460,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </summary>
         public void GoBack()
         {
+            if (_hostWindow is not null)
+            {
+                if (_hostWindow.Page?.Navigation?.ModalStack.Any() == true) _hostWindow.Page.Navigation.PopModalAsync();
+                else _hostWindow.Page?.Navigation?.PopAsync();
+                return;
+            }
             if (_backStack.Count > 0)
             {
                 if (Content != null)
@@ -1267,10 +1481,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         }
 
         /// <summary>
+        /// Go forward is an unusual operation in .NET MAUI's Navigation stack, but we implement it here for MDI-style navigation. It will only work if the current content was previously navigated back from.
         /// Go forward to the next content if any in the forward stack. 
         /// </summary>
         public void GoForward()
         {
+            if (_hostWindow is not null)
+            {
+                throw new InvalidOperationException("Cannot go forward in standalone window mode, because of .NET MAUI's Navigation stack doesn't allow this. Use NavigateTo instead.");
+            }
             if (_forwardStack.Count > 0)
             {
                 if (Content != null)
@@ -1298,34 +1517,55 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             double width = Width > 0 ? Width : Math.Max(0, WidthRequest);
             double height = Height > 0 ? Height : Math.Max(0, HeightRequest);
-            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height);
+
+            // Compute absolute pointer position relative to the parent container.
+            // During drag, the pointer stays at a constant offset from the window's
+            // top-left (the grab offset captured at pan start).
+            var pointerX = TranslationX + _grabPointerOffset.X;
+            var pointerY = TranslationY + _grabPointerOffset.Y;
+
+            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height, pointerX, pointerY);
         }
 
         private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
         {
-            if (_isMaximized || !IsDraggable) return;
-
+            if (!IsDraggable) return;
             if (Parent is not VisualElement parent) return;
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    // Restore from maximized state before capturing drag position
+                    if (_isMaximized)
+                        Maximize();
+
+                    // Restore from snapped state before capturing drag position
+                    if (PreSnapBounds.HasValue)
+                    {
+                        this.TranslationX = PreSnapBounds.Value.X;
+                        this.TranslationY = PreSnapBounds.Value.Y;
+                        this.WidthRequest = PreSnapBounds.Value.Width;
+                        this.HeightRequest = PreSnapBounds.Value.Height;
+                        PreSnapBounds = null;
+                    }
+
+                    // If PointerGestureRecognizer hasn't fired yet (rare edge case),
+                    // approximate the grab offset at the window's top-center.
+                    if (_grabPointerOffset == default)
+                    {
+                        var w = Width > 0 ? Width : Math.Max(0, WidthRequest);
+                        _grabPointerOffset = new Point(w / 2, 0);
+                    }
+
                     _startX = this.TranslationX;
                     _startY = this.TranslationY;
                     DragStarted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Running:
-                    double proposedX = _startX + e.TotalX;
-                    double proposedY = _startY + e.TotalY;
-
-                    // Calculate bounds
-                    // Assuming the element is aligned Top/Left (LayoutOptions.Start),
-                    // Translation corresponds to the position relative to the parent's generic Top/Left.
-                    double maxX = Math.Max(0, parent.Width - this.Width);
-                    double maxY = Math.Max(0, parent.Height - this.Height);
-
-                    this.TranslationX = Math.Clamp(proposedX, 0, maxX);
-                    this.TranslationY = Math.Clamp(proposedY, 0, maxY);
+                    this.TranslationX = _startX + e.TotalX;
+                    // Clamp Y: prevent any part of the window from being dragged above
+                    // the container's top edge, which would conflict with snap targeting.
+                    this.TranslationY = Math.Max(0, _startY + e.TotalY);
                     Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Completed:
@@ -1506,17 +1746,38 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
     public sealed class WindowBoundsChangedEventArgs : EventArgs
     {
-        public WindowBoundsChangedEventArgs(double x, double y, double width, double height)
+        public WindowBoundsChangedEventArgs(double x, double y, double width, double height, double pointerX = 0, double pointerY = 0)
         {
             X = x;
             Y = y;
             Width = width;
             Height = height;
+            PointerX = pointerX;
+            PointerY = pointerY;
         }
 
+        /// <summary>Window top-left X (TranslationX).</summary>
         public double X { get; }
+
+        /// <summary>Window top-left Y (TranslationY).</summary>
         public double Y { get; }
+
+        /// <summary>Window width.</summary>
         public double Width { get; }
+
+        /// <summary>Window height.</summary>
         public double Height { get; }
+
+        /// <summary>
+        /// Mouse pointer X relative to the parent container.
+        /// Used for pointer-position-driven snap detection (modern OS behavior).
+        /// </summary>
+        public double PointerX { get; }
+
+        /// <summary>
+        /// Mouse pointer Y relative to the parent container.
+        /// Used for pointer-position-driven snap detection (modern OS behavior).
+        /// </summary>
+        public double PointerY { get; }
     }
 }

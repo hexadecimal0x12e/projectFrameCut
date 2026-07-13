@@ -12,6 +12,14 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "_Error",
         "Value": "\u9519\u8BEF",
         "Mode": "ConstString",
@@ -30,6 +38,14 @@
       {
         "Id": "_OK",
         "Value": "\u597D\u7684",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -204,8 +220,68 @@
         "DontTranslate": false
       },
       {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u6E90\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u8BF7\u786E\u8BA4\u6B64\u94FE\u63A5\u662F\u5426\u6307\u5411\u4F60\u60F3\u8BBF\u95EE\u7684\u4F4D\u7F6E\uFF1A\r{link}\r\r\u94FE\u63A5\u53EF\u80FD\u5305\u542B\u9519\u8BEF\u6216\u8005\u8FC7\u65F6\u7684\u5185\u5BB9\uFF0C\u6216\u8005\u5C06\u4F60\u5BFC\u5411\u4E0D\u5B89\u5168\u7684\u4F4D\u7F6E\uFF0C\u8BF7\u8C28\u614E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "MultiWindowView_Close",
         "Value": "\u5173\u95ED",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u7559\u7A7A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u6CA1\u6709\u5176\u4ED6\u53EF\u7528\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u9009\u62E9\u6B64\u533A\u57DF\u8981\u663E\u793A\u7684\u5185\u5BB9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -294,6 +370,70 @@
       {
         "Id": "MultiWindowView_PopOut_NotSupport",
         "Value": "\u4F60\u7684\u8BBE\u5907\u4E0D\u652F\u6301\u591A\u7A97\u53E3\u529F\u80FD\u3002\r\u6B64\u529F\u80FD\u5728\u652F\u6301\u53F0\u524D\u8C03\u5EA6\u7684iPad\u548C\u5927\u90E8\u5206\u5B89\u5353\u5E73\u677F\u4E0A\uFF0C\u4EE5\u53CA\u7535\u8111\u4E0A\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u56DB\u8C61\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u5DE6 \u002B \u53F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u5DE6 1/3 \u002B \u53F3 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u5DE6 2/3 \u002B \u53F3 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u4E09\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u4E0A \u002B \u4E0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u9009\u62E9\u5206\u5C4F\u5E03\u5C40",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -676,6 +816,159 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Warning",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Please confirm that this link points to the location you want to visit:\r{link}\r\rThe link may contain errors or outdated content, or may lead you to an unsafe location. Please be cautious.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Preview",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Source code",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Select Split Screen Layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Cancel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Select the content to display in this area",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Leave blank",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "No other windows available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "Left \u002B Right",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Left 1/3 \u002B Right 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Left 2/3 \u002B Right 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Top \u002B Bottom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Four Quadrants",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Three columns",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -1027,6 +1320,160 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u8ACB\u78BA\u8A8D\u6B64\u9023\u7D50\u662F\u5426\u6307\u5411\u4F60\u60F3\u8A2A\u554F\u7684\u4F4D\u7F6E\uFF1A\r{link}\r\r\u9023\u7D50\u53EF\u80FD\u5305\u542B\u932F\u8AA4\u6216\u8005\u904E\u6642\u7684\u5167\u5BB9\uFF0C\u6216\u8005\u5C07\u4F60\u5C0E\u5411\u4E0D\u5B89\u5168\u7684\u4F4D\u7F6E\uFF0C\u8ACB\u8B39\u614E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u9078\u64C7\u5206\u5272\u756B\u9762\u4F48\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u9078\u64C7\u6B64\u5340\u57DF\u8981\u986F\u793A\u7684\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u7559\u7A7A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u6C92\u6709\u5176\u4ED6\u53EF\u7528\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u5DE6 \u002B \u53F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u5DE6 1/3 \u002B \u53F3 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u5DE6 2/3 \u002B \u53F3 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u4E0A \u002B \u4E0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u56DB\u8C61\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u4E09\u6B04",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u9810\u89BD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u539F\u59CB\u78BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7B80\u77ED",
         "DontTranslate": false
       }
     ],
@@ -1382,6 +1829,159 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u30AD\u30E3\u30F3\u30BB\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u3053\u306E\u30EA\u30F3\u30AF\u304C\u30A2\u30AF\u30BB\u30B9\u3057\u305F\u3044\u5834\u6240\u3092\u6307\u3057\u3066\u3044\u308B\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\r{link}\r\r\u30EA\u30F3\u30AF\u306B\u306F\u8AA4\u3063\u305F\u5185\u5BB9\u3084\u53E4\u3044\u5185\u5BB9\u304C\u542B\u307E\u308C\u3066\u3044\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u3001\u307E\u305F\u306F\u5B89\u5168\u3067\u306A\u3044\u5834\u6240\u306B\u8A98\u5C0E\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u3054\u6CE8\u610F\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u30BD\u30FC\u30B9\u30B3\u30FC\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u5206\u5272\u753B\u9762\u914D\u7F6E\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u53D6\u308A\u6D88\u3057",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u3053\u306E\u9818\u57DF\u306B\u8868\u793A\u3059\u308B\u5185\u5BB9\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u7A7A\u6B04",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u4ED6\u306B\u5229\u7528\u3067\u304D\u308B\u30A6\u30A3\u30F3\u30C9\u30A6\u306F\u3042\u308A\u307E\u305B\u3093",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u5DE6 \u002B \u53F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u5DE61/3 \u53F32/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u5DE62/3 \u53F31/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u4E0A\uFF0B\u4E0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0A\u4E0B\u5206\u5272\u5E03\u5C40",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u56DB\u5206\u5272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u4E09\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -1732,6 +2332,159 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\uCDE8\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\uC774 \uB9C1\uD06C\uAC00 \uBC29\uBB38\uD558\uB824\uB294 \uC704\uCE58\uB97C \uAC00\uB9AC\uD0A4\uB294\uC9C0 \uD655\uC778\uD558\uC138\uC694.\r{link}\r\r\uB9C1\uD06C\uC5D0 \uC624\uB958\uB098 \uB9CC\uB8CC\uB41C \uB0B4\uC6A9\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uAC70\uB098 \uC548\uC804\uD558\uC9C0 \uC54A\uC740 \uC704\uCE58\uB85C \uC548\uB0B4\uD560 \uC218 \uC788\uC73C\uB2C8 \uC8FC\uC758\uD558\uC2ED\uC2DC\uC624.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\uACBD\uACE0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\uBBF8\uB9AC\uBCF4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\uC18C\uC2A4 \uCF54\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\uBD84\uD560 \uD654\uBA74 \uB808\uC774\uC544\uC6C3 \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\uCDE8\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\uC774 \uC601\uC5ED\uC5D0 \uD45C\uC2DC\uD560 \uB0B4\uC6A9 \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\uBE44\uC6CC\uB450\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\uB2E4\uB978 \uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uCC3D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\uC88C \u002B \uC6B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\uC67C\uCABD 1/3 \u002B \uC624\uB978\uCABD 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\uC67C\uCABD 2/3 \u002B \uC624\uB978\uCABD 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\uC704 \u002B \uC544\uB798",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "4\uBD84\uBA74",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "3\uC5F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -2088,6 +2841,160 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Avertissement",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Veuillez confirmer que ce lien pointe vers l\u0027emplacement que vous souhaitez visiter :\r{link}\r\rLe lien peut contenir des erreurs ou du contenu obsol\u00E8te, ou vous diriger vers un emplacement non s\u00E9curis\u00E9. Soyez prudent.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Annuler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Aper\u00E7u",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Code source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "S\u00E9lection de la disposition de l\u0027\u00E9cran partag\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Annuler",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "S\u00E9lectionnez le contenu \u00E0 afficher dans cette zone",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Laisser vide",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "Aucune autre fen\u00EAtre disponible",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "Gauche \u002B Droite",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Gauche 1/3 \u002B Droite 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "2/3 gauche \u002B 1/3 droit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Haut \u002B Bas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Quadrants",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Trois colonnes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -2440,6 +3347,160 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u7F77",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u5106",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u6B64\u9023\u7D50\u679C\u4FC2\u6307\u5411\u6C5D\u6B32\u8A2A\u4E4B\u8655\u5426\uFF1F\r{link}\r\r\u9023\u7D50\u6216\u542B\u8AA4\u8B2C\u6216\u904E\u6642\u4E4B\u5167\u5BB9\uFF0C\u6216\u5C0E\u6C5D\u81F3\u4E0D\u5B89\u5168\u4E4B\u8655\uFF0C\u614E\u4E4B\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u9810\u89BD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u6E90\u6587",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u62E9\u5206\u5C4F\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5206\u5C4F\u5E03\u5C40\u9009\u62E9",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u5EE2\u6B62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u9078\u6B64\u5340\u6B32\u793A\u4E4B\u5167\u5BB9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u7559\u7A7A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u7121\u4ED6\u53EF\u7528\u4E4B\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u5DE6\u53F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u5DE6\u4E09\u5206\u4E4B\u4E00\u517C\u53F3\u4E09\u5206\u4E4B\u4E8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u5DE6\u4E09\u5206\u4E4B\u4E8C\uFF0C\u53F3\u4E09\u5206\u4E4B\u4E00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u4E0A\u4E0E\u4E0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u56DB\u8C61\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u4E09\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }
@@ -2796,6 +3857,160 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0647\u0630\u0627 \u0627\u0644\u0631\u0627\u0628\u0637 \u064A\u0634\u064A\u0631 \u0625\u0644\u0649 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0630\u064A \u062A\u0631\u064A\u062F \u0632\u064A\u0627\u0631\u062A\u0647:\r{link}\r\r\u0642\u062F \u064A\u062D\u062A\u0648\u064A \u0627\u0644\u0631\u0627\u0628\u0637 \u0639\u0644\u0649 \u0645\u062D\u062A\u0648\u0649 \u062E\u0627\u0637\u0626 \u0623\u0648 \u0642\u062F\u064A\u0645\u060C \u0623\u0648 \u0642\u062F \u064A\u0648\u062C\u0647\u0643 \u0625\u0644\u0649 \u0645\u0648\u0642\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u062D\u0630\u0631.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u062A\u062D\u0630\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0625\u0644\u063A\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u0645\u0639\u0627\u064A\u0646\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0635\u062F\u0631\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u0627\u062E\u062A\u064A\u0627\u0631 \u062A\u062E\u0637\u064A\u0637 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0642\u0633\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u0625\u0644\u063A\u0627\u0621",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0630\u064A \u0633\u064A\u062A\u0645 \u0639\u0631\u0636\u0647 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0645\u0646\u0637\u0642\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u0641\u0627\u0631\u063A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0648\u0627\u0641\u0630 \u0623\u062E\u0631\u0649 \u0645\u062A\u0627\u062D\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u064A\u0633\u0627\u0631 \u002B \u064A\u0645\u064A\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u0627\u0644\u062B\u0644\u062B \u0627\u0644\u0623\u064A\u0633\u0631 \u002B \u0627\u0644\u062B\u0644\u062B\u064A\u0646 \u0627\u0644\u0623\u064A\u0645\u0646",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u064A\u0633\u0627\u0631 2/3 \u002B \u064A\u0645\u064A\u0646 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u0623\u0639\u0644\u0649 \u002B \u0623\u0633\u0641\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u0623\u0631\u0628\u0639\u0629 \u0623\u0631\u0628\u0627\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u56DB\u8C61\u9650\u0027 meaning four quadrants",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u062B\u0644\u0627\u062B\u0629 \u0623\u0639\u0645\u062F\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -3150,6 +4365,160 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Warnung",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Bitte best\u00E4tigen Sie, ob dieser Link zu der gew\u00FCnschten Seite f\u00FChrt:\r{link}\r\rDer Link k\u00F6nnte fehlerhafte oder veraltete Inhalte enthalten oder Sie zu einer unsicheren Seite f\u00FChren. Bitte seien Sie vorsichtig.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Vorschau",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Quellcode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Auswahl des Split-Screen-Layouts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Anzuzeigenden Inhalt f\u00FCr diesen Bereich ausw\u00E4hlen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Leer lassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "Keine weiteren Fenster verf\u00FCgbar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "links \u002B rechts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Links 1/3 \u002B Rechts 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Links 2/3 \u002B Rechts 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "oben \u002B unten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Vier Quadranten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Drei Spalten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -3498,6 +4867,160 @@
       {
         "Id": "MultiWindowView_DockPrompt",
         "Value": "Usa el \u0027\u2199\u0027 junto al bot\u00F3n de minimizar para devolver la ventana a su contenedor original.\rCuando cierres directamente esta ventana independiente, se cerrar\u00E1 por completo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Advertencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Por favor, confirma si este enlace dirige a la ubicaci\u00F3n que deseas visitar:\r{link}\r\rEl enlace puede contener informaci\u00F3n incorrecta o desactualizada, o puede llevarte a un lugar no seguro. Ten cuidado.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Vista previa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "C\u00F3digo fuente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Seleccionar dise\u00F1o de pantalla dividida",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Seleccione el contenido que se mostrar\u00E1 en esta \u00E1rea.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Dejar en blanco",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "No hay otras ventanas disponibles",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "Izquierda \u002B Derecha",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Izquierda 1/3 \u002B Derecha 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Izquierda 2/3 \u002B Derecha 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Arriba \u002B Abajo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Cuatro cuadrantes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Tres columnas",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3857,6 +5380,160 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Annulla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Avviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Si prega di confermare che questo link punti alla posizione che si desidera visitare:\r{link}\r\rIl link potrebbe contenere errori o contenuti obsoleti, oppure potrebbe indirizzarti a una posizione non sicura. Si prega di prestare attenzione.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Anteprima",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Codice sorgente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Seleziona layout a schermo diviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Annulla",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Seleziona il contenuto da visualizzare in quest\u0027area.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Lascia vuoto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "Nessun\u0027altra finestra disponibile",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "sinistra \u002B destra",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "1/3 sinistra \u002B 2/3 destra",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "2/3 sinistra \u002B 1/3 destra",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Schermata divisa: due terzi a sinistra, un terzo a destra",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Alto \u002B Basso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Quattro quadranti",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Tre colonne",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -4205,6 +5882,160 @@
       {
         "Id": "MultiWindowView_PopOut_NotSupport",
         "Value": "Twoje urz\u0105dzenie nie obs\u0142uguje funkcji wielu okien.\rTa funkcja jest dost\u0119pna na iPadach obs\u0142uguj\u0105cych Stage Manager, na wi\u0119kszo\u015Bci tablet\u00F3w z Androidem oraz na komputerach.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Anuluj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Prosz\u0119 potwierd\u017A, czy ten link prowadzi do miejsca, kt\u00F3re chcesz odwiedzi\u0107:\r{link}\r\rLink mo\u017Ce zawiera\u0107 b\u0142\u0119dy lub nieaktualne tre\u015Bci, albo prowadzi\u0107 do niebezpiecznej lokalizacji. Prosz\u0119 zachowa\u0107 ostro\u017Cno\u015B\u0107.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Ostrze\u017Cenie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Podgl\u0105d",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Kod \u017Ar\u00F3d\u0142owy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Wybierz uk\u0142ad podzielonego ekranu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Anuluj",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Wybierz tre\u015B\u0107 do wy\u015Bwietlenia w tym obszarze",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Pozostaw puste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "Brak innych dost\u0119pnych okien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "lewa \u002B prawa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Lewa 1/3 \u002B Prawa 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Lewa 2/3 \u002B Prawa 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "G\u00F3ra \u002B D\u00F3\u0142",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Cztery kwadranty",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Trzy kolumny",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4564,6 +6395,160 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Aviso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Por favor, confirme se este link aponta para o local que voc\u00EA deseja acessar:\r{link}\r\rO link pode conter conte\u00FAdo errado ou desatualizado, ou pode lev\u00E1-lo a um local inseguro. Tenha cuidado.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "Visualizar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "c\u00F3digo-fonte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "Selecionar layout de tela dividida",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "Cancelar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Selecione o conte\u00FAdo a ser exibido nesta \u00E1rea.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Deixar em branco",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "N\u00E3o h\u00E1 outras janelas dispon\u00EDveis",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "esquerda \u002B direita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Esquerda 1/3 \u002B Direita 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Esquerda 2/3 \u002B Direita 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "Superior \u002B Inferior",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "Quatro quadrantes",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "Tr\u00EAs colunas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -4918,6 +6903,160 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "\u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435, \u0447\u0442\u043E \u044D\u0442\u0430 \u0441\u0441\u044B\u043B\u043A\u0430 \u0432\u0435\u0434\u0435\u0442 \u043D\u0430 \u043D\u0443\u0436\u043D\u043E\u0435 \u0432\u0430\u043C \u043C\u0435\u0441\u0442\u043E:\r{link}\r\r\u0421\u0441\u044B\u043B\u043A\u0430 \u043C\u043E\u0436\u0435\u0442 \u0441\u043E\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u043E\u0448\u0438\u0431\u043E\u0447\u043D\u0443\u044E \u0438\u043B\u0438 \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0443\u044E \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E, \u043B\u0438\u0431\u043E \u0432\u0435\u0441\u0442\u0438 \u043D\u0430 \u043D\u0435\u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0441\u0430\u0439\u0442. \u0411\u0443\u0434\u044C\u0442\u0435 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u041F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u043A\u043E\u0434",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "\u0412\u044B\u0431\u043E\u0440 \u043C\u0430\u043A\u0435\u0442\u0430 \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u044D\u043A\u0440\u0430\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u0434\u043B\u044F \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F \u0432 \u044D\u0442\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "\u041D\u0435\u0442 \u0434\u0440\u0443\u0433\u0438\u0445 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0445 \u043E\u043A\u043E\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "\u041B\u0435\u0432\u043E \u002B \u041F\u0440\u0430\u0432\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "\u041B\u0435\u0432\u0430\u044F 1/3 \u002B \u041F\u0440\u0430\u0432\u0430\u044F 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "\u041B\u0435\u0432\u0430\u044F 2/3 \u002B \u041F\u0440\u0430\u0432\u0430\u044F 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u0412\u0435\u0440\u0445 \u002B \u041D\u0438\u0437",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "\u0427\u0435\u0442\u044B\u0440\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u043D\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u0422\u0440\u0438 \u043A\u043E\u043B\u043E\u043D\u043A\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -5269,6 +7408,159 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u0130ptal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "Uyar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HyperlinkSpan_SureOpen",
+        "Value": "Emin olmak i\u00E7in bu ba\u011Flant\u0131n\u0131n gitmek istedi\u011Finiz yere y\u00F6nlendirildi\u011Fini onaylay\u0131n\uFF1A\r{link}\r\rBa\u011Flant\u0131 hatal\u0131 veya g\u00FCncelli\u011Fini yitirmi\u015F i\u00E7erik i\u00E7erebilir ya da sizi g\u00FCvenli olmayan bir yere y\u00F6nlendirebilir. L\u00FCtfen dikkatli olun.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "link"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "link",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Preivew",
+        "Value": "\u00D6nizleme",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u7ED3\u679C\u5C3D\u53EF\u80FD\u7684\u7B80\u77ED",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MarkdownToXAML_HtmlCodeblock_Code",
+        "Value": "Kaynak kodu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7FFB\u8BD1\u4E3A\u571F\u8033\u5176\u8BED\uFF1A\u6E90\u4EE3\u7801",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Title",
+        "Value": "B\u00F6l\u00FCnm\u00FC\u015F Ekran D\u00FCzeni Se\u00E7in",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayoutPicker_Cancel",
+        "Value": "\u0130ptal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Title",
+        "Value": "Bu alanda g\u00F6sterilecek i\u00E7eri\u011Fi se\u00E7in",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_Dismiss",
+        "Value": "Bo\u015F b\u0131rak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_ContentChooser_NoWindows",
+        "Value": "Ba\u015Fka kullan\u0131labilir pencere yok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftRight",
+        "Value": "sol \u002B sa\u011F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftThirdRightTwoThirds",
+        "Value": "Sol 1/3 \u002B Sa\u011F 2/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_LeftTwoThirdsRightThird",
+        "Value": "Sol 2/3 \u002B Sa\u011F 1/3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_TopBottom",
+        "Value": "\u00FCst \u002B alt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_FourQuadrant",
+        "Value": "D\u00F6rt Kadran",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MultiWindowView_SnapLayout_ThreeColumns",
+        "Value": "\u00DC\u00E7 s\u00FCtun",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
       }

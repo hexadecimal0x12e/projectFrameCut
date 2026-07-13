@@ -1,54 +1,48 @@
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
+using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
-
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Processing.Converting;
+using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.Drawing.Processing.Converting;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using Color = Microsoft.Maui.Graphics.Color;
+using DatePicker = Microsoft.Maui.Controls.DatePicker;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-
-using projectFrameCut.Render.Compose;
-using DatePicker = Microsoft.Maui.Controls.DatePicker;
-using projectFrameCut.APIClient;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using Color = Microsoft.Maui.Graphics.Color;
-using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.Render.ClipsAndTracks;
-using System.Text.Encodings.Web;
-using System.Text.Json.Serialization.Metadata;
-using System.Text;
-using FFmpeg.AutoGen;
-using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Drawing.Text.FontHelper;
-using System.Text.Json.Serialization;
-using projectFrameCut.Drawing.Base;
-using projectFrameCut.Render.HwAccelEngine;
-using projectFrameCut.Drawing.Text.Entry;
-
-
-
-
-
-
-
-
-
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
+using projectFrameCut.Render.ClipsAndTracks.Text;
+using System.Management.Automation;
 
 
 
@@ -77,36 +71,13 @@ public partial class TestPage : ContentPage
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
 
-        ILGPU.Context context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        List<AcceleratorInfo> listAccels = new();
-        for (uint i = 0; i < devices.Count; i++)
+        // AcceleratorsManager was initialized during plugin load.
+        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
         {
-            var item = devices[(int)i];
-            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+            Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated operations will fall back to software.");
         }
-        if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
-        {
-            var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
-            SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
-            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
-        }
-        var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
-                                .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-        HwAccelEnginePlugin.accelerators = [accelDevice.CreateAccelerator(context)];
 
 #endif
-        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
-
-        TextClipFontRegistry.Initialize();
-        _ = LoadFontPickerAsync();
-
-        TextPicker.SelectedFontChanged += async (s, e) =>
-        {
-            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
-
-        };
     }
 
 
@@ -155,13 +126,13 @@ public partial class TestPage : ContentPage
                     {
                         var noNoise = denoise.Process(e.TotalX);
                         b.TranslationX = noNoise + _origX;
-                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
+                        DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
                         DraggingX.Push(e.TotalX);
                         DenoisedX.Push(noNoise);
                     }
                     else
                     {
-                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
+                        DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
                         b.TranslationX = e.TotalX + _origX;
                         DraggingX.Push(e.TotalX);
                         DenoisedX.Push(0);
@@ -174,6 +145,7 @@ public partial class TestPage : ContentPage
             case GestureStatus.Canceled:
             case GestureStatus.Completed:
                 {
+                    DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
                     var src = DraggingX.ToList();
                     var dn = DenoisedX.ToList();
                     src.Reverse();
@@ -962,54 +934,7 @@ public partial class TestPage : ContentPage
 
     private async void BenchmarkButton_Clicked(object sender, EventArgs e)
     {
-
-#if ANDROID
-        ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
-        ComputerHelper.Init();
-#elif iDevices
-
-#elif WINDOWS
-        var context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
-        {
-            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
-            if (accels == "all")
-            {
-                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
-            }
-            else
-            {
-                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                            .Select(s => int.TryParse(s, out var id) ? id : -1)
-                            .Where(id => id >= 0)
-                            .ToList();
-                projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
-            }
-
-        }
-        else
-        {
-            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
-        }
-
-        if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
-
-#endif
-        await Benchmarker.Start((d, etr) =>
-        {
-            string timeStr = "";
-            if (etr.TotalSeconds > 0)
-            {
-                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
-            }
-            Dispatcher.Dispatch(async () =>
-            {
-                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
-
-            });
-        });
+        await Navigation.PushAsync(new BenchmarkPage());
     }
     #endregion
 
@@ -1074,8 +999,33 @@ public partial class TestPage : ContentPage
 
     private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
     {
-        await DisplayAlert("Info", JsonSerializer.Serialize(ppb.Properties), "ok");
+        if (PpbTestGrid.Content is null) return;
+        ControlTreeHelper h = new(PpbTestGrid.Content);
+        var controls = h.GetAllValues();
+        ControlIdPicker.ItemsSource = controls.Select(c => c.Key).ToList();
+        ControlIdPicker.SelectedIndexChanged += (s, e) =>
+        {
+            if (ControlIdPicker.SelectedItem is string selectedId && h.GetAllItems().TryGetValue(selectedId, out var control) && control is not null)
+            {
+                ControlValueEntry.Text = control?.Value?.ToString() ?? "null";
+                ControlValueEntry.IsReadOnly = !control.IsWritable;
+            }
+        };
+        //await DisplayAlertAsync("PPB Data", string.Join("\n", h.GetAllItems().Where(c => c.Value.IsWritable).Select(c => $"{c.Key}: {c.Value}")) + "\r\n\r\n---\r\n\r\n" + string.Join("\n", h.GetAllItems().Select(c => $"{c.Key}: {c.Value}")), "OK");
     }
+
+    private void SetValueButton_Clicked(System.Object sender, System.EventArgs e)
+    {
+        if (PpbTestGrid.Content is null) return;
+        var selectedId = ControlIdPicker.SelectedItem as string;
+        ControlTreeHelper h = new(PpbTestGrid.Content);
+        if (h.GetAllItems().TryGetValue(selectedId ?? "", out var control) && control is not null && control.IsWritable)
+        {
+            control.Set(ControlValueEntry.Text);
+        }
+
+    }
+
     #endregion
 
     #region runtime
@@ -1225,6 +1175,23 @@ public partial class TestPage : ContentPage
         TextPicker.Title = $"Fonts ({ordered.Count()})";
     }
 
+    private async void LoadFontButton_Clicked(object sender, EventArgs e)
+    {
+        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
+
+        TextClipFontRegistry.Initialize();
+        await LoadFontPickerAsync();
+
+        TextPicker.SelectedFontChanged += async (s, e) =>
+        {
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerFont, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+
+        };
+
+        LoadFontButton.IsEnabled = false;
+    }
+
+
     private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
@@ -1250,6 +1217,185 @@ public partial class TestPage : ContentPage
     }
     #endregion
 
+    #region scripting
+    PowerShell? pwsh = null!;
+    private void ExecteCommandButton_Clicked(object sender, EventArgs e)
+    {
+#if DEBUG
+        pwsh ??= PowerShell.Create();
+        if (!string.IsNullOrWhiteSpace(ScriptInputEntry.Text))
+        {
+            try
+            {
+                pwsh.AddScript(ScriptInputEntry.Text);
+                var results = pwsh.Invoke();
+                ScriptOutputEditor.Text += results.Select(r => r.ToString()).Aggregate((a, b) => a + Environment.NewLine + b);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "exec pwsh command");
+                ScriptOutputEditor.Text += $"{Environment.NewLine}Error: {ex}{Environment.NewLine}";
+            }
+        }
+#else
+        ScriptOutputEditor.Text += $"This is a development stage only feature.";
+
+#endif
+    }
+    private void InvokeNativeFuncButton_Clicked(object sender, EventArgs e)
+    {
+        SysLog(SysLogPriority.Info, "Test message to test libpsl-native");
+    }
+
+
+
+    [DllImport("libpsl-native", CharSet = CharSet.Ansi, EntryPoint = "Native_SysLog")] //testing native call of pwsh
+    private static extern void SysLog(SysLogPriority priority, string message);
+
+    [Flags]
+    private enum SysLogPriority : uint
+    {
+        // Priorities enum values.
+
+        /// <summary>
+        /// System is unusable.
+        /// </summary>
+        Emergency = 0,
+
+        /// <summary>
+        /// Action must be taken immediately.
+        /// </summary>
+        Alert = 1,
+
+        /// <summary>
+        /// Critical conditions.
+        /// </summary>
+        Critical = 2,
+
+        /// <summary>
+        /// Error conditions.
+        /// </summary>
+        Error = 3,
+
+        /// <summary>
+        /// Warning conditions.
+        /// </summary>
+        Warning = 4,
+
+        /// <summary>
+        /// Normal but significant condition.
+        /// </summary>
+        Notice = 5,
+
+        /// <summary>
+        /// Informational.
+        /// </summary>
+        Info = 6,
+
+        /// <summary>
+        /// Debug-level messages.
+        /// </summary>
+        Debug = 7,
+
+        // Facility enum values.
+
+        /// <summary>
+        /// Kernel messages.
+        /// </summary>
+        Kernel = (0 << 3),
+
+        /// <summary>
+        /// Random user-level messages.
+        /// </summary>
+        User = (1 << 3),
+
+        /// <summary>
+        /// Mail system.
+        /// </summary>
+        Mail = (2 << 3),
+
+        /// <summary>
+        /// System daemons.
+        /// </summary>
+        Daemon = (3 << 3),
+
+        /// <summary>
+        /// Authorization messages.
+        /// </summary>
+        Authorization = (4 << 3),
+
+        /// <summary>
+        /// Messages generated internally by syslogd.
+        /// </summary>
+        Syslog = (5 << 3),
+
+        /// <summary>
+        /// Line printer subsystem.
+        /// </summary>
+        Lpr = (6 << 3),
+
+        /// <summary>
+        /// Network news subsystem.
+        /// </summary>
+        News = (7 << 3),
+
+        /// <summary>
+        /// UUCP subsystem.
+        /// </summary>
+        Uucp = (8 << 3),
+
+        /// <summary>
+        /// Clock daemon.
+        /// </summary>
+        Cron = (9 << 3),
+
+        /// <summary>
+        /// Security/authorization messages (private)
+        /// </summary>
+        Authpriv = (10 << 3),
+
+        /// <summary>
+        /// FTP daemon.
+        /// </summary>
+        Ftp = (11 << 3),
+
+        // Reserved for system use
+
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local0 = (16 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local1 = (17 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local2 = (18 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local3 = (19 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local4 = (20 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local5 = (21 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local6 = (22 << 3),
+        /// <summary>
+        /// Reserved for local use.
+        /// </summary>
+        Local7 = (23 << 3),
+    }
+#endregion
+
     #region misc
 
     private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
@@ -1273,21 +1419,66 @@ public partial class TestPage : ContentPage
 
     }
 
-    private async void LoginTestButton_Clicked(object sender, EventArgs e)
+    private async void ShowCMTPopupButton_Clicked(object sender, EventArgs e)
     {
-        AuthService.Logout();
-
-        if (AuthService.IsLoggedIn)
+        await this.ShowPopupAsync(new Label
         {
-            // �ѵ�¼����ʾ�û���Ϣ��ǳ�
-            var user = await AuthService.GetCurrentUserAsync();
-            await DisplayAlertAsync("�ѵ�¼", $"��ǰ�û�: {user.UserName}", "ȷ��");
+            Text = "This is a very important message!"
+        }, new PopupOptions
+        {
+            CanBeDismissedByTappingOutsideOfPopup = true,
+            Shape = new RoundRectangle
+            {
+                CornerRadius = new CornerRadius(20, 20, 20, 20),
+                StrokeThickness = 2,
+                Stroke = Colors.LightGray
+            }
+        });
+    }
+
+    bool isNavPaneVisible = true;
+
+    private void ToggleNavPaneButton_Clicked(object sender, EventArgs e)
+    {
+        if (isNavPaneVisible)
+        {
+            AppShell.instance.HideNavView();
         }
         else
         {
-            // δ��¼���򿪵�¼ҳ��
-            await Navigation.PushAsync(new LoginPage());
+            AppShell.instance.ShowNavView();
         }
+        isNavPaneVisible = !isNavPaneVisible;
+    }
+
+    private async void RenderContentButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var view = XAMLFixer.FixXamlAndGenerateView(XAMLInputEditor.Text);
+            ResultContentView.Content = view;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
+        }
+    }
+
+    private async void RenderMarkdownButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var view = Markdown2XAML.Convert(XAMLInputEditor.Text);
+            ResultContentView.Content = view;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
+        }
+    }
+    private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button { Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
     }
 
     private int windowCount = 0;

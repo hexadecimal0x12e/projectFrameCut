@@ -15,6 +15,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using projectFrameCut.Drawing.Vector.ImportExport;
 
 namespace projectFrameCut.Render.Plugin
 {
@@ -169,6 +170,12 @@ namespace projectFrameCut.Render.Plugin
             {
                 var clip = plugin.ClipCreator(source);
                 clip.ExtraData = source.Deserialize<ClipDraftDTO>()?.MetaData ?? new();
+                if (clip is IVectorContentClip vectorClip)
+                {
+                    vectorClip.ClipAntiAliasMode = source.TryGetProperty("VectorAntiAliasMode", out var aaModeProp) && aaModeProp.ValueKind == JsonValueKind.String
+                        ? Enum.TryParse<AntiAliasMode>(aaModeProp.GetString(), out var parsedMode) && Enum.IsDefined<AntiAliasMode>(parsedMode) ? parsedMode : null
+                        : null;
+                }
                 return clip;
             }
             else

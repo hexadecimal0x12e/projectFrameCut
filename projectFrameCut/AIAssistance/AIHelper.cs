@@ -78,7 +78,7 @@ namespace projectFrameCut.AIAssistance
         public static string[] GetBuiltInModels(string provider, string modelType = "text")
         {
             var config = ModelConfig.GetBuiltInConfig();
-            
+
             return modelType switch
             {
                 "image" => config.GetImageModels(provider).ToArray(),
@@ -147,7 +147,7 @@ namespace projectFrameCut.AIAssistance
             try
             {
                 option ??= CurrentVideoOption;
-                if (string.IsNullOrWhiteSpace(option.BaseAddress) || string.IsNullOrWhiteSpace(option.Key) || string.IsNullOrWhiteSpace(option.Text2VideoModel)|| string.IsNullOrWhiteSpace(option.Image2VideoModel) )
+                if (string.IsNullOrWhiteSpace(option.BaseAddress) || string.IsNullOrWhiteSpace(option.Key) || string.IsNullOrWhiteSpace(option.Text2VideoModel) || string.IsNullOrWhiteSpace(option.Image2VideoModel))
                 {
                     return new VideoGenerationResult { Success = false, ErrorMessage = "AI video generation is not properly configured" };
                 }

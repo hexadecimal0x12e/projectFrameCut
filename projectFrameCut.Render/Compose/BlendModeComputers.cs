@@ -1,3 +1,4 @@
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Numerics;
@@ -5,10 +6,34 @@ using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Compose
 {
-    public class OverlayComputer : IComputer
+    public class OverlayComputer : IComputer, IOverlayComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "Overlay";
+
+        public BlendResult8 Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new byte[pixelCount];
+            var outA = new float[pixelCount];
+            OverlayBlend8Scalar(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
+            return new BlendResult8(outC, outA);
+        }
+
+        public BlendResult16 Overlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            OverlayBlend16Simd(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
+            return new BlendResult16(outC, outA);
+        }
+
+        public BlendResultHdr OverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new float[pixelCount];
+            var outA = new float[pixelCount];
+            OverlayBlendFloat(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
+            return new BlendResultHdr(outC, outA);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -21,17 +46,13 @@ namespace projectFrameCut.Render.Compose
 
             if (bitDepth == 8)
             {
-                var outC = new byte[pixelCount];
-                var outA = new float[pixelCount];
-                OverlayBlend8Scalar(a, b, aAlpha, bAlpha, outC, outA, pixelCount);
-                return [outC, outA];
+                var r = Overlay8(a, b, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
-            else // 16-bit
+            else
             {
-                var outC = new ushort[pixelCount];
-                var outA = new float[pixelCount];
-                OverlayBlend16Simd(a, b, aAlpha, bAlpha, outC, outA, pixelCount);
-                return [outC, outA];
+                var r = Overlay16(a, b, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
         }
 
@@ -116,12 +137,88 @@ namespace projectFrameCut.Render.Compose
                 }
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static void OverlayBlendFloat(float[] a, float[] b, float[] aAlpha, float[] bAlpha,
+            float[] outC, float[] outA, int pixelCount)
+        {
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+                float outAlpha = aA + bA * (1f - aA);
+
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0f;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float aC = a[i] * aA / outAlpha;
+                    float bC = b[i] * bA * (1f - aA) / outAlpha;
+                    outC[i] = Math.Clamp(aC + bC, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+        }
     }
 
-    public class ApproximateComputer : IComputer
+    public class ApproximateComputer : IComputer, IApproximateOverlayComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        public BlendResult8 ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new byte[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
+                else
+                {
+                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
+                    outC[i] = (byte)Math.Clamp(aC + bC, 0f, 255f); outA[i] = outAlpha;
+                }
+            }
+            return new BlendResult8(outC, outA);
+        }
+
+        public BlendResult16 ApproximateOverlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
+                else
+                {
+                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(aC + bC, 0f, 65535f); outA[i] = outAlpha;
+                }
+            }
+            return new BlendResult16(outC, outA);
+        }
+
+        public BlendResultHdr ApproximateOverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new float[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0f; outA[i] = 0f; }
+                else
+                {
+                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
+                    outC[i] = Math.Clamp(aC + bC, 0f, 65535f); outA[i] = outAlpha;
+                }
+            }
+            return new BlendResultHdr(outC, outA);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -134,385 +231,280 @@ namespace projectFrameCut.Render.Compose
 
             if (bitDepth == 8)
             {
-                var outC = new byte[pixelCount];
-                var outA = new float[pixelCount];
-
-                for (int i = 0; i < pixelCount; i++)
-                {
-                    float aA = aAlpha[i];
-                    float bA = bAlpha[i];
-                    float outAlpha = aA + bA * (1f - aA);
-
-                    if (outAlpha < 1e-6f)
-                    {
-                        outC[i] = 0;
-                        outA[i] = 0f;
-                    }
-                    else
-                    {
-                        float aC = a[i] * aA / outAlpha;
-                        float bC = b[i] * bA * (1f - aA) / outAlpha;
-                        float outColor = aC + bC;
-                        outC[i] = (byte)Math.Clamp(outColor, 0f, 255f);
-                        outA[i] = outAlpha;
-                    }
-                }
-
-                return [outC, outA];
+                var r = ApproximateOverlay8(a, b, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
-            else // 16-bit
+            else
             {
-                var outC = new ushort[pixelCount];
-                var outA = new float[pixelCount];
-
-                for (int i = 0; i < pixelCount; i++)
-                {
-                    float aA = aAlpha[i];
-                    float bA = bAlpha[i];
-                    float outAlpha = aA + bA * (1f - aA);
-
-                    if (outAlpha < 1e-6f)
-                    {
-                        outC[i] = 0;
-                        outA[i] = 0f;
-                    }
-                    else
-                    {
-                        float aC = a[i] * aA / outAlpha;
-                        float bC = b[i] * bA * (1f - aA) / outAlpha;
-                        float outColor = aC + bC;
-                        outC[i] = (ushort)Math.Clamp(outColor, 0f, 65535f);
-                        outA[i] = outAlpha;
-                    }
-                }
-
-                return [outC, outA];
+                var r = ApproximateOverlay16(a, b, aAlpha, bAlpha, pixelCount);
+                return [r.Color, r.Alpha];
             }
         }
     }
 
-    public class AddComputer : IComputer
+    public class AddComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "AddMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = Math.Min(a[i] + b[i], 65535f);
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = Math.Min(top[i] + bottom[i], 65535f);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class SubtractComputer : IComputer
+    public class SubtractComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "SubtractMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = Math.Max(b[i] - a[i], 0f);
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = Math.Max(bottom[i] - top[i], 0f);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class MultiplyComputer : IComputer
+    public class MultiplyComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "MultiplyMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = a[i] * b[i] / 65535f;
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = top[i] * bottom[i] / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class ScreenComputer : IComputer
+    public class ScreenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "ScreenMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = 65535f - (65535f - a[i]) * (65535f - b[i]) / 65535f;
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = 65535f - (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class OverlayBlendComputer : IComputer
+    public class OverlayBlendComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "OverlayBlendMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
                     float blended;
-                    if (b[i] < 32768f)
-                        blended = 2f * a[i] * b[i] / 65535f;
-                    else
-                        blended = 65535f - 2f * (65535f - a[i]) * (65535f - b[i]) / 65535f;
-
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    if (bottom[i] < 32768f) blended = 2f * top[i] * bottom[i] / 65535f;
+                    else blended = 65535f - 2f * (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class DarkenComputer : IComputer
+    public class DarkenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "DarkenMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = Math.Min(a[i], b[i]);
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = Math.Min(top[i], bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class LightenComputer : IComputer
+    public class LightenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "LightenMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = Math.Max(a[i], b[i]);
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = Math.Max(top[i], bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 
-    public class DifferenceComputer : IComputer
+    public class DifferenceComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string SupportedEffectOrMixture => "DifferenceMixture";
 
-        public object[] Compute(object[] args)
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var a = (float[])args[0];
-            var b = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
-            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
-
-            var outC = new float[pixelCount];
+            var outC = new ushort[pixelCount];
             var outA = new float[pixelCount];
-
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f) { outC[i] = 0; outA[i] = 0f; }
                 else
                 {
-                    float blended = Math.Abs(a[i] - b[i]);
-                    float result = (blended * aA + b[i] * bA * (1f - aA)) / outAlpha;
-                    outC[i] = Math.Clamp(result, 0f, 65535f);
-                    outA[i] = outAlpha;
+                    float blended = Math.Abs(top[i] - bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f); outA[i] = outAlpha;
                 }
             }
+            return new BlendResult16(outC, outA);
+        }
 
-            return [outC, outA];
+        public object[] Compute(object[] args)
+        {
+            var a = (float[])args[0]; var b = (float[])args[1];
+            var aAlpha = (float[])args[2]; var bAlpha = (float[])args[3];
+            int pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : a.Length;
+            var r = ComputeBlend(a, b, aAlpha, bAlpha, pixelCount);
+            return [r.Color, r.Alpha];
         }
     }
 }

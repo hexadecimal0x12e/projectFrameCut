@@ -120,5 +120,20 @@ namespace projectFrameCut.ApplicationAPIBase.Text
         /// </remarks>
         public ClipPositionTuple GetViewRect(int canvasWidth, int canvasHeight);
 
+        /// <summary>
+        /// Get the settable fields of this effect bundle.
+        /// Can be used to make programmatic changes to the effect bundle's properties.
+        /// </summary>
+        public Dictionary<string, EffectBundleSettableFields> SettableFields { get; }
+
+        /// <summary>
+        /// Handle the change of the settable fields of this effect bundle.
+        /// </summary>
+        /// <param name="field">the field that is being changed</param>
+        /// <param name="value">the new value for the field</param>
+        /// <param name="feedback">feedback message for the change, can be used to provide error messages or other information</param>
+        /// <returns>true if the change was successful, false otherwise</returns>
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback);
+
     }
 }

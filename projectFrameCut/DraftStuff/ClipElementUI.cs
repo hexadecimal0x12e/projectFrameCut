@@ -51,6 +51,8 @@ namespace projectFrameCut.DraftStuff
         public bool IsVerticalResizable { get; set; } = true;
         public bool CanSnapWhilePlacing { get; set; } = true;
         public bool CanSnapWhileResizing { get; set; } = true;
+        public bool AllowFreeScaleResize { get; set; } = false;
+        public bool ShowDefaultBorder { get; set; } = true;
 
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>
@@ -295,6 +297,22 @@ namespace projectFrameCut.DraftStuff
             ToolTipProperties.SetText(Clip, DisplayName);
             SemanticProperties.SetDescription(Clip, $"{DisplayName}, {TypeName}");
 
+        }
+
+        public override string ToString()
+        {
+            return $"{DisplayName}, {ClipType} ({Id})";
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is not ClipElementUI c) return false;
+            return c.Id == Id;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
         }
 
         [SetsRequiredMembers]

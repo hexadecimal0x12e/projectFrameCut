@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -15,6 +15,17 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         public Dictionary<string, object> Parameters { get; set; } = new();
+
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new();
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            feedback = "The TextFadeIn effect has no settable fields.";
+            return false;
+        }
+
         public List<string> ParametersNeeded => new();
         public Dictionary<string, string> ParametersType => new();
 
@@ -48,7 +59,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(
-                EffectBundleUiHelper.L("_TextFadeIn_Desc",
+                EffectBundleHelper.L("_TextFadeIn_Desc",
                     "Fades the text from transparent to fully visible over the specified duration."));
             return panel;
         }
@@ -62,9 +73,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_TextFadeIn", "Text Fade In"),
-                Description = EffectBundleUiHelper.L("Description_Effect_TextFadeIn", "Fades in text from transparent to fully visible over time."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/textFadeIn.png"))
+                Name = EffectBundleHelper.L("DisplayName_Effect_TextFadeIn", "Text Fade In"),
+                Description = EffectBundleHelper.L("Description_Effect_TextFadeIn", "Fades in text from transparent to fully visible over time."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "textFadeIn.png"))
             };
         }
     }

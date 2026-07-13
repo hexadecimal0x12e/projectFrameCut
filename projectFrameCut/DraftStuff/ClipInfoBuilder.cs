@@ -2,24 +2,27 @@
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Graphics.Text;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Converters;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -28,7 +31,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -48,12 +50,6 @@ using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
-using Microsoft.Maui.Graphics.Text;
-
-
-
-
-
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -64,6 +60,8 @@ using Microsoft.UI.Xaml;
 using projectFrameCut.Platforms.iOS;
 
 #endif
+
+#pragma warning disable CS0618 // We need the old TextClipEntry for compatibility with old projects, so we will keep it for now.
 
 namespace projectFrameCut.DraftStuff
 {
@@ -230,6 +228,8 @@ namespace projectFrameCut.DraftStuff
 
             return tabbedView;
         }
+
+        public View CurrentContent => tabbedView;
 
         #endregion
 
@@ -631,22 +631,100 @@ namespace projectFrameCut.DraftStuff
             .AppendWhen(TargetInstance is IVectorContentClip vc,
                 c =>
                 {
-                    string currentVectorAaLabel = "默认";
-                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr)
+                    string currentVectorAaLabel = PPLocalizedResources.General_VectorClip_AAMode_None;
+                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj))
                     {
+                        string aaStr = "None";
+                        if (aaObj is JsonElement aaJsonElem)
+                        {
+                            aaStr = aaJsonElem.GetString() ?? "None";
+                        }
+                        else if (aaObj is string s)
+                        {
+                            aaStr = s;
+                        }
+
                         currentVectorAaLabel = aaStr switch
                         {
                             "None" => PPLocalizedResources.General_VectorClip_AAMode_None,
                             "SSAA2x" => "SSAA 2x",
                             "SSAA4x" => "SSAA 4x",
                             "SSAA8x" => "SSAA 8x",
-                            _ => "默认"
+                            _ => PPLocalizedResources.General_VectorClip_AAMode_None
                         };
                     }
 
                     c.AddText(new SingleLineLabel(PPLocalizedResources.General_VectorClip, 20))
                      .AddPicker("vectorAntiAliasMode", PPLocalizedResources.General_VectorClip_AAMode, new[] { PPLocalizedResources.General_VectorClip_AAMode_Default, PPLocalizedResources.General_VectorClip_AAMode_None, "SSAA 2x", "SSAA 4x", "SSAA 8x" }, currentVectorAaLabel);
+                })
+            .AppendWhen(clip.ClipType == ClipMode.VectorCanvasClip,
+                c =>
+                {
+                    c.AddButton(PPLocalizedResources.General_VectorCanvas_OpenEditor, async (s, e) =>
+                    {
+                        if (TargetInstance is not VectorCanvasClip vecClip)
+                        {
+                            page.SetStateFail("Target clip is invalid.");
+                            return;
+                        }
+                        var editorPage = new VectorContentEditorPage(vecClip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, page.WorkingPath);
+
+                        if (DeviceInfo.Idiom == DeviceIdiom.Desktop)
+                        {
+                            var window = new Microsoft.Maui.Controls.Window(new NavigationPage(editorPage))
+                            {
+                                Title = PPLocalizedResources.General_VectorCanvas_EditorTitle(clip.DisplayName),
+                            };
+                            window.Destroying += (s, e) =>
+                            {
+                                try
+                                {
+                                    foreach (var item in editorPage.MainMultiWindowView.Windows.ToList().Where(c => c.IsInStandaloneWindowMode))
+                                    {
+                                        item.Close(true);
+                                    }
+                                }
+                                catch { }
+                            };
+                            editorPage.ChangesApplied += (d) =>
+                            {
+                                clip.ExtraData = d;
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
+                            };
+                            editorPage.ChangesCancelled += (s, e) =>
+                            {
+                                Microsoft.Maui.Controls.Application.Current?.CloseWindow(window);
+                            };
+#if WINDOWS
+                            window.HandlerChanged += (s, e) =>
+                            {
+                                var platformView = window.Handler?.PlatformView;
+                                if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
+                                {
+                                    nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+                                }
+                            };
+#endif
+                            Microsoft.Maui.Controls.Application.Current?.OpenWindow(window);
+                        }
+                        else
+                        {
+                            editorPage.ChangesApplied += async (d) =>
+                            {
+                                clip.ExtraData = d;
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs($"VectAnimation of {clip.DisplayName}", null, null));
+                            };
+                            editorPage.ChangesCancelled += async (s, e) =>
+                            {
+                                await page.Navigation.PopModalAsync();
+                            };
+                            await page.Navigation.PushModalAsync(editorPage);
+                        }
+
+
+                    });
                 });
+
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -1391,7 +1469,7 @@ namespace projectFrameCut.DraftStuff
         {
             var section = new VerticalStackLayout { Spacing = 8, Margin = new Thickness(0, 0, 0, 8) };
 
-            string displayName = EffectBundleUiHelper.L(provider.TypeName, provider.TypeName);
+            string displayName = EffectBundleHelper.L(provider.TypeName, provider.TypeName);
 
             var actionsRow = new HorizontalStackLayout { Spacing = 8 };
             var collapseButton = new Label
@@ -2165,10 +2243,10 @@ namespace projectFrameCut.DraftStuff
                 { PPLocalizedResources.TextOption_LayoutMode_FixedSize, TextClipLayoutMode.FixedSize },
             }; //FixedHeight mode is buggy so hide now
             providerHost
-            .AppendWhen(styleProvider.ShowLayoutModePicker, 
+            .AppendWhen(styleProvider.ShowLayoutModePicker,
                 c => c.AddPicker("LayoutMode", PPLocalizedResources.TextOption_LayoutMode, LocalizedLayoutOptionKVP.Keys.ToArray(), LocalizedLayoutOptionKVP.ReverseLookup(styleProvider.LayoutMode, PPLocalizedResources.TextOption_LayoutMode_FixedWidth), picker =>
                 {
-    #if iDevices
+#if iDevices
                     picker.Closed += (s, e) =>
                     {
                         if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
@@ -2178,7 +2256,7 @@ namespace projectFrameCut.DraftStuff
                             HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
                         }
                     };
-    #else
+#else
                     picker.SelectedIndexChanged += (s, e) =>
                     {
                         if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
@@ -2188,7 +2266,7 @@ namespace projectFrameCut.DraftStuff
                             HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
                         }
                     };
-    #endif
+#endif
                 })
             )
             .AppendWhen(styleProvider.ShowDefaultTextEditor,
@@ -2209,13 +2287,13 @@ namespace projectFrameCut.DraftStuff
                 "Text", styleProvider.BasicText)
                 .AddButton(Localized._Apply, (_, _) => { })
             )
-            .AppendWhen(styleProvider.ShowFontPicker, 
+            .AppendWhen(styleProvider.ShowFontPicker,
                 c => c.AddDialogFontPicker(
-                "FontFamily", 
-                PPLocalizedResources.TextOption_Font, 
-                PPLocalizedResources.TextOption_Font, 
-                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null, 
-                fontItems, 
+                "FontFamily",
+                PPLocalizedResources.TextOption_Font,
+                PPLocalizedResources.TextOption_Font,
+                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
+                fontItems,
                 page,
                 font =>
                 {
@@ -2225,7 +2303,7 @@ namespace projectFrameCut.DraftStuff
                         TextClipFontRegistry.AddFont(font.Path);
 
                     HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", font.FontName, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : string.Empty));
-                }, 
+                },
                 TextServices.RenderFontPreviewAsync)
             )
             .AddFromAnother(providerPpb, styleProvider)
@@ -2357,7 +2435,7 @@ namespace projectFrameCut.DraftStuff
                 }
             }
             ;
-            providerHost.PropertyChanged += HandlePanelChange;
+            providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
 
             return providerHost.BuildWithScrollView();
         }
@@ -2997,6 +3075,7 @@ namespace projectFrameCut.DraftStuff
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
             var haveManySpeedVarianceProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
             var haveManyMixtureProvider = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
+            var haveManySourceReplacementEffect = (clip.EffectBundles?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SourceReplacement)) ?? 0) >= 2;
             if (clip.EffectBundles != null)
             {
                 var filteredBundles = clip.EffectBundles
@@ -3005,7 +3084,8 @@ namespace projectFrameCut.DraftStuff
                         || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
                              && c.Value.Target.HasFlag(clip.GetEffectTarget()))
                         || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
-                        || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider))
+                        || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)
+                        || (c.Value.Target == EffectTarget.SourceReplacement && haveManySourceReplacementEffect))
                     .ToList();
 
                 // Sort bundles in input→output order by traversing the connection chain
@@ -3091,6 +3171,10 @@ namespace projectFrameCut.DraftStuff
 
                         ppb.AddSeparator();
 
+                        //they can't be reordered
+                        if (bundleInstance.TypeOfEffect is EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement) goto remove_btn;
+
+
                         // 计算当前输入锚点选中项（用于 Picker 默认值和确保当前选中项不被过滤掉）
                         Guid resolvedInAnchorId;
                         if (bundleInstance.InputAnchorsDisplayName is null)
@@ -3145,6 +3229,7 @@ namespace projectFrameCut.DraftStuff
 
                         ppb.AddPicker($"Bundle|{bundleId}|OutAnchor", string.IsNullOrWhiteSpace(bundleInstance.OutputAnchorDisplayName) ? PPLocalizedResources.EffectBind_OutputAnchor : PPLocalizedResources.EffectBind_OutputAnchorWithName(bundleInstance.OutputAnchorDisplayName), outTargetBundleOptions.Append(PPLocalizedResources.EffectBind_FinalResult).Append(PPLocalizedResources.EffectBind_NoConnection).Distinct(StringComparer.InvariantCultureIgnoreCase).ToArray(), GetOutputAnchorSelection(bundleInstance.BindedOutputId));
 
+                    remove_btn:
                         ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                         ppb.AddSeparator();
                     }
@@ -3562,12 +3647,12 @@ namespace projectFrameCut.DraftStuff
         private static string GetEffectTypeName(EffectTarget target)
         {
             StringBuilder result = new();
-            if (target.HasFlag(EffectTarget.Video)) result.Append("视频");
-            if (target.HasFlag(EffectTarget.Audio)) result.Append("音频");
-            if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append("变速");
-            if (target.HasFlag(EffectTarget.Mixture)) result.Append("混合");
-            if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append("调色");
-            if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(" | 关键帧");
+            if (target.HasFlag(EffectTarget.Video)) result.Append(Localized.EffectType_Video);
+            if (target.HasFlag(EffectTarget.Audio)) result.Append(Localized.EffectType_Audio);
+            if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append(Localized.EffectType_SpeedVariance);
+            if (target.HasFlag(EffectTarget.Mixture)) result.Append(Localized.EffectType_Mixture);
+            if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append(Localized.EffectType_ColorAdjustment);
+            if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(Localized.EffectType_KeyFramed);
             return result.ToString();
         }
 
@@ -5372,6 +5457,14 @@ namespace projectFrameCut.DraftStuff
             public PropertyPanelBuilder CreateUI()
             {
                 throw new NotImplementedException();
+            }
+
+            public Dictionary<string, EffectBundleSettableFields> SettableFields => new();
+
+            public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+            {
+                feedback = "The Dummy effect bundle has no settable fields.";
+                return false;
             }
 
             public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)

@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -51,12 +52,12 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
+using projectFrameCut.ScriptEngine;
 
 
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
-using ILGPU.Runtime;
 
 #endif
 
@@ -149,6 +150,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private Func<int, double, ClipElementUI>? _pendingClipPlacementFactory = null;
     private string? _pendingClipPlacementName = null;
     private Predicate<int>? _pendingClipPlacementTrackFilter = null;
+    private Action? _pendingClipPlacementAfterPlacement = null;
     private readonly Dictionary<string, (int Track, double X)> _keyboardMoveOriginalPlacement = new();
     private List<ClipElementUI> _keyboardMoveClips = [];
     private bool _keyboardMoveHasMoved = false;
@@ -196,6 +198,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _historyNavigatedByUndoRedo = false;
     private bool _hasResolvedInitialPreviewFrame = false;
 
+    private IHistoryGraphProvider? _activeHistoryProvider;
+
 
     DateTime lastSyncTime = DateTime.MinValue;
     Guid PreviousSnapshotID = Guid.Empty;
@@ -217,6 +221,13 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ConcurrentDictionary<Guid, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
+
+    /// <summary>
+    /// 集成的 PowerShell 脚本引擎，可通过 <c>ScriptEngine.ExecuteAsync()</c> 执行脚本，
+    /// 内置 Get-ProjectClip / Add-ProjectClip 等命令与当前时间线交互。
+    /// </summary>
+    public ScriptCore ScriptEngine { get; } = new();
+
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
     public ConcurrentDictionary<long, DraftPageLogItem> HistoryLogs = new();
@@ -266,6 +277,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand SetTimelineScrollLockCommand { get; private set; }
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
+    public ICommand ShowScriptWindowCommand { get; private set; }
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
@@ -292,10 +304,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region options
-#if WINDOWS
-    public Accelerator? AcceleratorToUse { get; set; }
-#endif
-
     public string ProjectName { get; set; } = "Unknown project";
     public bool ShowShadow { get; set; } = true;
     public bool LogUIMessageToLogger { get; set; } = false;
@@ -322,11 +330,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
-
-    /// <summary>
-    /// Resolution divisor for dynamic preview. 1 = full, 2 = half, etc.
-    /// Higher values reduce rendering load.
-    /// </summary>
     public int DynamicPreviewResolutionDivisor { get; set; } = 1;
 
 
@@ -403,49 +406,55 @@ public partial class DraftPage : ContentPage, IDraftPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
-        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-        ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
-        ClipEditor.SetAssets(Assets);
-        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
-        ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
-        ClipEditor.ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync);
-        ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
-        ClipEditor.ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured);
-        ClipEditor.ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback);
-        ClipEditor.ConfigureReferenceLinesChanged(() =>
-        {
-            ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
-            SetStateOK(Localized.DraftPage_EverythingFine);
-            return Task.CompletedTask;
-        });
-        ClipEditor.ConfigureManageReferenceLinesRequested(() =>
-        {
-            _ = ShowManageReferenceLinesPopup();
-        });
-        ClipEditor.ConfigureDefaultColorPickerRequested((currentColor) =>
-        {
-            _ = ShowReferenceLineColorPicker(currentColor);
-        });
+        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
+        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync)
+                  .ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync)
+                  .ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync)
+                  .ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync)
+                  .ConfigureKeyframeCandidateCaptured(OnClipEditorKeyframeCandidateCaptured)
+                  .ConfigureGetClipInstanceCallback(OnGetClipInstanceCallback)
+                  .ConfigureReferenceLinesChanged(() =>
+                  {
+                      ProjectInfo.Properties["ReferenceLines"] = ClipEditor.GetReferenceLinesJson();
+                      SetStateOK(Localized.DraftPage_EverythingFine);
+                      return Task.CompletedTask;
+                  })
+                 .ConfigureManageReferenceLinesRequested(() =>
+                  {
+                      ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
+                  })
+                  .ConfigureDefaultColorPickerRequested((currentColor) =>
+                  {
+                      _ = ShowReferenceLineColorPicker(currentColor);
+                  })
+                  .SetAssets(Assets);
+
+        ApplyClipEditorPreviewOverlayMode();
         HookPreviewSurfaceSizeSync();
+
+
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
 #endif
+
+        Clips = clips;
+        Assets = assets ?? new();
+        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+        trackCount = initialTrackCount;
+        ProjectInfo.ProjectName ??= title;
+        IsReadonly = isReadonly;
+
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
-        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir);
+        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir, ProjectName);
         ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
-        Clips = clips;
-        Assets = assets ?? new();
-        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
-        NormalizeLoadedClipFrameSemantics();
 
-        trackCount = initialTrackCount;
         var maxMainTrack = Clips.Values.Where(c => c.origTrack < SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(0).Max();
         for (int i = 0; i <= maxMainTrack; i++)
         {
@@ -459,8 +468,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 AddASubTrack(i);
             }
         }
-
-
         foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
         {
             var item = kv.Value;
@@ -469,9 +476,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             AddAClip(item);
             RegisterClip(item, true);
         }
+        NormalizeLoadedClipFrameSemantics();
 
-        ProjectInfo.ProjectName ??= title;
-        IsReadonly = isReadonly;
+        ScriptEngine.Initialize(this,
+            CreatePowerShellAuthorizationHandler(this),
+            CreateEnhancedPowerShellAuthorizationHandler(this));
     }
 
     private void RegisterCommands()
@@ -518,7 +527,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStatusText(Localized.DraftPage_MenuBar_View_ReferenceLines_AddHint);
         });
         ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
-        ManageReferenceLinesCommand = new Command(() => _ = ShowManageReferenceLinesPopup());
+        ManageReferenceLinesCommand = new Command(() => { ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup())); });
         SetTimelineScrollLockCommand = new Command(() => SetTimelineScrollEnabled(!IsTimelineScrollEnabled));
         TimelineScrollCommand = new Command<string>(async (i) =>
         {
@@ -526,6 +535,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await TimelineScrollView.ScrollToAsync(TimelineScrollView.ScrollX + offset, TimelineScrollView.ScrollY, true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
+        ShowScriptWindowCommand = new Command(ShowScriptWindow);
 
         EscapeCommand =
             new Command(async () =>
@@ -649,8 +659,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 #elif iDevices
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
-        if (AcceleratorToUse is null) throw new InvalidDataException($"Please specific a accelerator.");
-        projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [AcceleratorToUse];
+        // AcceleratorsManager was initialized during plugin load.
+        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+            throw new InvalidDataException("No valid ILGPU accelerator found.");
 #endif
 
         await Dispatcher.DispatchAsync(() =>
@@ -752,7 +763,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             WindowSize = new Size(w, h);
         }
 
-        var safeZoneRad = UIServices.GetSafeZone();
+        var safeZoneRad = UIServices.GetWindowCornerRadius();
         StatusBarGrid.Margin = new Thickness(safeZoneRad, StatusBarGrid.Margin.Top, safeZoneRad, StatusBarGrid.Margin.Bottom);
         UseCompactLayout ??= (DeviceInfo.Idiom == DeviceIdiom.Phone);
         if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
@@ -1270,11 +1281,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
         PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
 
-        if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
-            & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
+        try
         {
-            MainMultiWindowView.BringToFront(PropertiesSubwindow);
-            _hasAppliedDefaultMainMultiWindowLayout = true;
+            if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
+                & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
+            {
+                MainMultiWindowView.BringToFront(PropertiesSubwindow);
+                _hasAppliedDefaultMainMultiWindowLayout = true;
+            }
+        }
+        catch (COMException ex)
+        {
+            Log(ex, "ApplyDefaultMainMultiWindowLayout SnapWindow", this);
         }
     }
 
@@ -1302,7 +1320,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             element.ClipType = sourceElement.ClipType;
             element.FromPlugin = sourceElement.FromPlugin;
-            //element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
             element.SourcePath = sourceElement.SourcePath;
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
@@ -1317,10 +1334,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         return element;
     }
 
-    public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null)
+    public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null, double startPoint = 0)
     {
         var elem = ClipElementUI.CreateClip(
-                           startX: 0,
+                           startX: startPoint,
                            width: FrameToPixel(asset.isInfiniteLength ? SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300) : AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.TargetFrameRate)),
                            trackIndex: trackIndex,
                            labelText: asset.Name,
@@ -2239,12 +2256,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         await ShowAPopup(AddClipView);
     }
 
-    public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null)
+    public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null, Action? afterPlacement = null)
     {
         ArgumentNullException.ThrowIfNull(clipFactory);
         _pendingClipPlacementName = name;
         _pendingClipPlacementFactory = clipFactory;
         _pendingClipPlacementTrackFilter = trackFilter;
+        _pendingClipPlacementAfterPlacement = afterPlacement;
         SetStateOK();
         AddClip.IsVisible = false;
         AssetPanelButton.IsVisible = false;
@@ -2350,6 +2368,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     clipName,
                     $"Placed at track {trackId}, x={Math.Round(startX, 2)}")
             });
+
+            _pendingClipPlacementAfterPlacement?.Invoke();
 
             SetStateOK();
             SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace_Done(clip.DisplayName));
@@ -2685,12 +2705,26 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task SelectAClip()
+    public async Task SelectAClip(Guid? id = null)
     {
-        var clipsKVP = Clips.ToDictionary(c => $"{c.Value.DisplayName} ({(string.IsNullOrWhiteSpace(c.Value.TypeName) ? c.Value.ClipType.ToString() : c.Value.TypeName)},{c.Value.Id})", c => c.Value);
-        var selection = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_Select, Localized._Cancel, null, clipsKVP.Keys.ToArray());
-        if (string.IsNullOrWhiteSpace(selection) || !clipsKVP.TryGetValue(selection, out var c)) return;
-        SelectTapGesture_Tapped(c.Clip, null!);
+        ClipElementUI? clip = null;
+        if (id is null)
+        {
+            var clipsKVP = Clips.ToDictionary(c => $"{c.Value.DisplayName} ({(string.IsNullOrWhiteSpace(c.Value.TypeName) ? c.Value.ClipType.ToString() : c.Value.TypeName)},{c.Value.Id})", c => c.Value);
+            var selection = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_Select, Localized._Cancel, null, clipsKVP.Keys.ToArray());
+            if (string.IsNullOrWhiteSpace(selection) || !clipsKVP.TryGetValue(selection, out clip)) return;
+        }
+        else if (id is Guid g)
+        {
+            if (!Clips.TryGetValue(g, out clip)) throw new KeyNotFoundException($"Clip with ID {id} not found");
+        }
+
+        if (clip is null)
+        {
+            throw new InvalidOperationException("The selected clip ID is invalid");
+        }
+
+        SelectTapGesture_Tapped(clip.Clip, null!);
     }
 
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -5625,6 +5659,300 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
+    private void ShowScriptWindow()
+    {
+        const string scriptWindowTitle = "Script Console";
+        // 检查是否已存在脚本窗口
+        if (MainMultiWindowView.Windows.FirstOrDefault(w => w.Title == scriptWindowTitle) is MultiWindowItem existing)
+        {
+            MainMultiWindowView.BringToFront(existing);
+            return;
+        }
+
+        var inputEditor = new Editor
+        {
+            Placeholder = "Enter PowerShell command…\ne.g. Get-ProjectClip\n     Add-ProjectClip -Name Test -Track 0 -StartX 100",
+            HeightRequest = 100,
+            FontSize = 13,
+            FontFamily = "MarkdownCodeBlock",
+            IsSpellCheckEnabled = false,
+            AutoSize = EditorAutoSizeOption.TextChanges,
+        };
+
+        var outputEditor = new Editor
+        {
+            IsReadOnly = true,
+            FontSize = 13,
+            FontFamily = "MarkdownCodeBlock",
+            BackgroundColor = Color.FromArgb("#1E1E1E"),
+            TextColor = Colors.White,
+        };
+
+        var runButton = new Button
+        {
+            Text = "▶ Run",
+            BackgroundColor = Color.FromArgb("#0E639C"),
+            TextColor = Colors.White,
+            CornerRadius = 4,
+            HeightRequest = 32,
+            Margin = new Thickness(0, 0, 4, 0),
+        };
+
+        var clearButton = new Button
+        {
+            Text = "Clear",
+            BackgroundColor = Color.FromArgb("#333333"),
+            TextColor = Colors.White,
+            CornerRadius = 4,
+            HeightRequest = 32,
+            Margin = new Thickness(4, 0, 0, 0),
+        };
+
+        var statusLabel = new Label
+        {
+            Text = "Ready",
+            FontSize = 11,
+            VerticalOptions = LayoutOptions.Center,
+            HorizontalOptions = LayoutOptions.Fill,
+            TextColor = Color.FromArgb("#888888"),
+        };
+
+
+        clearButton.Clicked += (_, _) =>
+        {
+            inputEditor.Text = "";
+            outputEditor.Text = "";
+            statusLabel.Text = "Cleared";
+            statusLabel.TextColor = Color.FromArgb("#888888");
+        };
+
+        // 快速命令按钮
+        var quickCmds = new[] { "Get-ProjectClip", "Get-ProjectClip | Format-Table -AutoSize", "Add-ProjectClip -Name 'Test' -Track 0 -StartX 100" };
+        var quickCmdBar = new HorizontalStackLayout { Spacing = 4, Margin = new Thickness(0, 4) };
+        foreach (var cmd in quickCmds)
+        {
+            var chip = new Button
+            {
+                Text = cmd,
+                FontSize = 11,
+                BackgroundColor = Color.FromArgb("#2D2D2D"),
+                TextColor = Color.FromArgb("#CCCCCC"),
+                CornerRadius = 4,
+                Padding = new Thickness(8, 2),
+                HeightRequest = 26,
+            };
+            chip.Clicked += (_, _) =>
+            {
+                inputEditor.Text = cmd;
+            };
+            quickCmdBar.Children.Add(chip);
+        }
+
+        var buttonBar = new HorizontalStackLayout
+        {
+            Children = { runButton, clearButton },
+            Spacing = 0,
+            Margin = new Thickness(0, 4),
+        };
+
+        var cmdBar = new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal };
+
+        // ════════════════════════════════════════════════════════════════
+        //  授权面板（内联在 Script Console 窗口内，基于事件驱动）
+        //  通过 TaskCompletionSource 实现完全非阻塞授权。
+        // ════════════════════════════════════════════════════════════════
+        var authMessageLabel = new Label
+        {
+            FontSize = 12,
+            TextColor = Colors.White,
+            LineBreakMode = LineBreakMode.WordWrap,
+        };
+
+        // 当前待处理的授权请求
+        TaskCompletionSource<Dictionary<string, AuthorizationResult>>? pendingAuthTcs = null;
+        IReadOnlyList<string>? pendingCmdNames = null;
+
+        var btnAllow = new Button { Text = Localized.ScriptEngine_Auth_Allow, BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnAllowRemember = new Button { Text = Localized.ScriptEngine_Auth_AllowRemember, BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDeny = new Button { Text = Localized.ScriptEngine_Auth_Deny, BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+        var btnDenyRemember = new Button { Text = Localized.ScriptEngine_Auth_DenyRemember, BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
+
+        var authPanel = new Border
+        {
+            IsVisible = false,
+            BackgroundColor = Color.FromArgb("#252526"),
+            Stroke = Color.FromArgb("#555555"),
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+            Padding = new Thickness(12, 10),
+            Content = new VerticalStackLayout
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle, FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
+                    new ScrollView { Content = authMessageLabel, MaximumHeightRequest = 150 },
+                    new HorizontalStackLayout
+                    {
+                        Spacing = 8,
+                        HorizontalOptions = LayoutOptions.Center,
+                        Children = { btnAllow, btnAllowRemember, btnDeny, btnDenyRemember },
+                    },
+                }
+            },
+        };
+
+        // ── 订阅授权请求事件（完全非阻塞） ──
+        EventHandler<AuthorizationRequestedEventArgs>? authHandler = null;
+        authHandler = (sender, args) =>
+        {
+            // 构建显示消息
+            var sb = new System.Text.StringBuilder();
+
+            if (!string.IsNullOrEmpty(args.ObfuscationWarning))
+            {
+                sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{args.ObfuscationWarning}");
+                sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{args.ThreatLevel?.ToString() ?? Localized._Unknown}");
+                sb.AppendLine();
+            }
+
+            if (args.CommandNames.Count > 0)
+            {
+                sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
+                for (int i = 0; i < args.CommandNames.Count; i++)
+                {
+                    var name = args.CommandNames[i];
+                    var ctx = args.Commands.Count > i ? args.Commands[i] : null;
+                    sb.Append($"\n  • {Localized.ScriptEngine_Auth_CommandLabel}{name}");
+                    if (ctx?.TargetPath != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
+                    if (ctx?.TargetUrl != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
+                }
+            }
+            else
+            {
+                sb.Append(Localized.ScriptEngine_Auth_RequestHeader);
+            }
+
+            // 更新 UI 并存储 TCS
+            authMessageLabel.Text = sb.ToString();
+            pendingAuthTcs = args.Completion;
+            pendingCmdNames = args.CommandNames;
+            authPanel.IsVisible = true;
+        };
+        ScriptEngine.AuthorizationRequested += authHandler;
+
+        // ── 简化后的 Run 按钮 ──
+        runButton.Clicked += async (_, _) =>
+        {
+            var script = inputEditor.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(script))
+            {
+                statusLabel.Text = "Please enter a command.";
+                return;
+            }
+
+            runButton.IsEnabled = false;
+            statusLabel.Text = "Running…";
+            statusLabel.TextColor = Color.FromArgb("#888888");
+            outputEditor.Text = "";
+
+            try
+            {
+                var result = await ScriptEngine.ExecuteAsync(script);
+                outputEditor.Text = result;
+                statusLabel.Text = $"Completed ({result.Length} chars)";
+                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
+            }
+            catch (Exception ex)
+            {
+                outputEditor.Text = $"ERROR: {ex.Message}";
+                statusLabel.Text = "Failed";
+                statusLabel.TextColor = Colors.OrangeRed;
+            }
+            finally
+            {
+                runButton.IsEnabled = true;
+            }
+        };
+
+        void CompleteAuth(AuthorizationResult decision)
+        {
+            var tcs = pendingAuthTcs;
+            var names = pendingCmdNames;
+            pendingAuthTcs = null;
+            pendingCmdNames = null;
+            if (tcs != null)
+            {
+                var decisions = names?.ToDictionary(c => c, _ => decision)
+                    ?? new Dictionary<string, AuthorizationResult>();
+                tcs.TrySetResult(decisions);
+            }
+            authPanel.IsVisible = false;
+        }
+
+        btnAllow.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Allow);
+        btnAllowRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.AllowAndRemember);
+        btnDeny.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Deny);
+        btnDenyRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.DenyAndRemember);
+
+        var windowContent = new Grid
+        {
+            RowDefinitions =
+            {
+                new RowDefinition { Height = GridLength.Auto },                          // 0: 测试警告
+                new RowDefinition { Height = GridLength.Auto },                          // 1: 快速命令
+                new RowDefinition { Height = GridLength.Auto },                          // 2: 输入
+                new RowDefinition { Height = GridLength.Auto },                          // 3: 按钮
+                new RowDefinition { Height = GridLength.Auto },                          // 4: 授权面板（默认隐藏）
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },     // 5: 输出
+                new RowDefinition { Height = GridLength.Auto },                          // 6: 状态
+            },
+            Padding = new Thickness(8),
+            ColumnDefinitions = { new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) } },
+            RowSpacing = 4,
+            Children =
+            {
+                new Label { Text = Localized.DraftPage_Scripting_TestOnly, TextColor = Colors.Yellow },
+                cmdBar,
+                inputEditor,
+                buttonBar,
+                authPanel,
+                outputEditor,
+                statusLabel,
+            },
+        };
+
+        Grid.SetRow(cmdBar, 1);
+        Grid.SetRow(inputEditor, 2);
+        Grid.SetRow(buttonBar, 3);
+        Grid.SetRow(authPanel, 4);
+        Grid.SetRow(outputEditor, 5);
+        Grid.SetRow(statusLabel, 6);
+
+        var window = new MultiWindowItem
+        {
+            Title = scriptWindowTitle,
+            Content = windowContent,
+            WidthRequest = 500,
+            HeightRequest = 450,
+            IsResizable = true,
+            IsMaximizable = true,
+            IsMinimizable = true,
+            IsClosable = true,
+            IsDraggable = true,
+            IsPopOutVisible = true
+        };
+
+        // ── 窗口关闭时取消订阅事件 ──
+        window.CloseClicked += (_, _) =>
+        {
+            if (authHandler != null)
+                ScriptEngine.AuthorizationRequested -= authHandler;
+        };
+
+        MainMultiWindowView.AddWindow(window);
+    }
+
     private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
     {
         popupShowingDirection = "clip";
@@ -5924,12 +6252,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (!force && !IsPopupClosableByTapBackground) return;
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
-            if (_currentCommunityToolkitPopup is not null)
+            try
             {
-                await _currentCommunityToolkitPopup.CloseAsync();
-                _currentCommunityToolkitPopup = null;
+                await Navigation.ClosePopupAsync();
             }
-
+            catch (PopupNotFoundException) { }
+            catch (Exception) { throw; }
+            _currentCommunityToolkitPopup = null;
             OverlayLayer.IsVisible = false;
             OverlayLayer.InputTransparent = true;
         }
@@ -6424,32 +6753,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task ShowReferenceLineColorPicker(Color currentColor)
-    {
-        var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = currentColor };
-        picker.SelectedColorChanged += (_, color) =>
-        {
-            ClipEditor.DefaultReferenceLineColor = color;
-        };
-
-        var popupView = new VerticalStackLayout
-        {
-            Spacing = 10,
-            Padding = new Thickness(10, 0),
-            Children =
-            {
-                new Button
-                {
-                    Text = Localized._Hide,
-                    Command = new Command(async () => await HidePopup(true))
-                },
-                picker,
-            }
-        };
-        await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
-    }
-
-    private async Task ShowManageReferenceLinesPopup()
+    public static void ShowManageReferenceLinesPopup(InteractableEditor.InteractableEditor ClipEditor, Action<View> ShowPopupCallback, Action ClosePopupCallback)
     {
         var panel = new VerticalStackLayout { Spacing = 6, Padding = new Thickness(10) };
 
@@ -6476,7 +6780,29 @@ public partial class DraftPage : ContentPage, IDraftPage
             VerticalOptions = LayoutOptions.Center
         };
         var defaultColorTap = new TapGestureRecognizer();
-        defaultColorTap.Tapped += async (_, _) => await ShowReferenceLineColorPicker(ClipEditor.DefaultReferenceLineColor);
+        defaultColorTap.Tapped += async (_, _) =>
+        {
+            var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = ClipEditor.DefaultReferenceLineColor };
+            picker.SelectedColorChanged += (_, color) =>
+            {
+                ClipEditor.DefaultReferenceLineColor = color;
+            };
+
+            var popupView = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(10, 0),
+                Children =
+            {
+                new Button
+                {
+                    Text = Localized._Hide,
+                    Command = new Command(ClosePopupCallback)
+                },
+                picker,
+            }
+            };
+        };
         defaultColorSwatch.GestureRecognizers.Add(defaultColorTap);
 
         var defaultThicknessEntry = new Entry
@@ -6573,12 +6899,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                             new Button
                             {
                                 Text = Localized._Hide,
-                                Command = new Command(async () => await HidePopup(true))
+                                Command = new Command(ClosePopupCallback)
                             },
                             linePicker,
                         }
                     };
-                    await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+                    ShowPopupCallback(popupView);
                 };
                 lineColorSwatch.GestureRecognizers.Add(lineColorTap);
 
@@ -6628,7 +6954,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     ClipEditor.RemoveReferenceLine(capturedId);
                     linesList.Children.Remove(row);
-                    _ = ShowManageReferenceLinesPopup();
+                    ShowPopupCallback(panel);
                 };
 
                 row.Children.Add(lineColorSwatch);
@@ -6644,11 +6970,36 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Text = Localized._Hide,
             Margin = new Thickness(0, 8, 0, 0),
-            Command = new Command(async () => await HidePopup(true))
+            Command = new Command(ClosePopupCallback)
         };
         panel.Children.Add(closeButton);
 
-        await ShowAPopup(new ScrollView { Content = panel }, mode: "dialog");
+        ShowPopupCallback(panel);
+    }
+
+    private async Task ShowReferenceLineColorPicker(Color currentColor)
+    {
+        var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = currentColor };
+        picker.SelectedColorChanged += (_, color) =>
+        {
+            ClipEditor.DefaultReferenceLineColor = color;
+        };
+
+        var popupView = new VerticalStackLayout
+        {
+            Spacing = 10,
+            Padding = new Thickness(10, 0),
+            Children =
+            {
+                new Button
+                {
+                    Text = Localized._Hide,
+                    Command = new Command(async () => await HidePopup(true))
+                },
+                picker,
+            }
+        };
+        await ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
     }
 
     #endregion
@@ -6659,7 +7010,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
-    private void OnClipEditorKeyframeCandidateCaptured(string clipId, uint frame, ClipPositionTuple position)
+    private void OnClipEditorKeyframeCandidateCaptured(string clipId, uint frame, ClipPositionTuple position, InteractableEditor.InteractableEditor.ResizeHandle handle)
     {
         if (ClipEditor is null || !ClipEditor.EnableKeyframeRecording)
         {
@@ -7788,7 +8139,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         var firstVisualStartFrame = draft.Clips
-            .OfType<ClipDraftDTO>()
             .Where(c => c.ShouldDisplayInUI && c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
             .Select(c => (double)c.StartFrame)
             .DefaultIfEmpty(0)
@@ -8136,6 +8486,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         UpdateAllExtendToWholeDraftClips();
     }
 
+    [DebuggerNonUserCode()] //too annoying in step-through debugging
     private IClip? OnGetClipInstanceCallback(ClipElementUI element)
     {
         if (previewer?.Clips is not null && previewer.Clips.Length > 0)
@@ -8250,10 +8601,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
             ProjectInfo.PluginUsed =
-                draft.Clips.OfType<ClipDraftDTO>()
+                draft.Clips
                            .Select(c => c.FromPlugin)
-                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
-                           .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
                            .Where(c => !c.StartsWith("projectFrameCut.Render."))
                            .Distinct().ToList();
 
@@ -8506,6 +8857,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    /// <summary>
+    /// Registers an <see cref="IHistoryGraphProvider"/> for this DraftPage session.
+    /// The provider's <see cref="IHistoryGraphProvider.CurrentSnapshotChanged"/> event
+    /// is raised when <see cref="ApplySlot"/> applies a new snapshot.
+    /// </summary>
+    public void RegisterHistoryProvider(IHistoryGraphProvider provider)
+    {
+        _activeHistoryProvider = provider;
+    }
+
     public void ApplySlot(Guid snapshotId)
     {
         try
@@ -8550,6 +8911,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             EnsureContinuousTrackIndices();
             CurrentSnapshotID = snapshotId;
+            _activeHistoryProvider?.NotifyExternalSnapshotChanged();
             PreviousSnapshotID = draftJson.PreviousSnapshot;
             RefreshHistorySubWindowContent();
             DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
@@ -8840,14 +9202,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 })
             });
 
-            RunningTaskToolbarItem = new ToolbarItem
-            {
-                Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
-                Order = ToolbarItemOrder.Primary,
-                Priority = 0,
-                Command = ManageJobsCommand
-            };
-            ToolbarItems.Add(RunningTaskToolbarItem);
+            //RunningTaskToolbarItem = new ToolbarItem
+            //{
+            //    Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
+            //    Order = ToolbarItemOrder.Primary,
+            //    Priority = 0,
+            //    Command = ManageJobsCommand
+            //};
+            //ToolbarItems.Add(RunningTaskToolbarItem);
 
             ToolbarItems.Add(new ToolbarItem
             {
@@ -8872,6 +9234,16 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Priority = 1,
                 Command = SettingsCommand
             });
+            if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+            {
+                ToolbarItems.Add(new ToolbarItem
+                {
+                    Text = Localized.DraftPage_MenuBar_Project_Scripting,
+                    Order = ToolbarItemOrder.Secondary,
+                    Priority = 1,
+                    Command = ShowScriptWindowCommand,
+                });
+            }
 
             var MoreOptionButton = new ToolbarItem
             {
@@ -9142,12 +9514,238 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new Size(widthDp, heightDp);
     }
 
+    /// <summary>
+    /// 创建 PowerShell 命令授权处理器。
+    /// 当脚本尝试执行可能危害或未分类的命令时，弹出对话框询问用户。
+    /// 用户可以选择允许/拒绝，并可选择记住此次决策。
+    /// </summary>
+    public static CommandAuthorizationCallback CreatePowerShellAuthorizationHandler(Page page)
+    {
+        return (commandInfo, commandOrigin) =>
+        {
+            var signal = new ManualResetEventSlim(false);
+            var result = AuthorizationResult.Deny;
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    // 第一层：询问是否允许执行此命令
+                    var allowed = await page.DisplayAlertAsync(
+                        Localized.ScriptEngine_Auth_DialogTitle,
+                        BuildDetailedAuthMessage(new AuthorizationContext
+                        {
+                            CommandInfo = commandInfo,
+                            CommandOrigin = commandOrigin,
+                        }),
+                        Localized.ScriptEngine_Auth_Allow,
+                        Localized.ScriptEngine_Auth_Deny);
+
+                    if (allowed)
+                    {
+                        // 第二层：询问是否记住此决策
+                        var remember = await page.DisplayAlertAsync(
+                            Localized._Info,
+                            Localized.ScriptEngine_Auth_SureRemember,
+                            Localized.ScriptEngine_Auth_RememberAllow_Yes,
+                            Localized.ScriptEngine_Auth_RememberAllow_No);
+                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                    }
+                    else
+                    {
+                        var remember = await page.DisplayAlertAsync(
+                            Localized._Info,
+                            Localized.ScriptEngine_Auth_SureRemember,
+                            Localized.ScriptEngine_Auth_RememberDeny_Yes,
+                            Localized.ScriptEngine_Auth_RememberDeny_No);
+                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex, "PowerShell authorization prompt");
+                    result = AuthorizationResult.Deny;
+                }
+                finally
+                {
+                    signal.Set();
+                }
+            });
+
+            // 阻塞等待用户决策（30 秒超时保护）
+            if (!signal.Wait(TimeSpan.FromSeconds(30)))
+            {
+                Logger.Log("PowerShell authorization prompt timed out after 30s");
+                result = AuthorizationResult.Deny;
+            }
+
+            return result;
+        };
+    }
+
+    /// <summary>
+    /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
+    /// </summary>
+    private bool IsChatActive()
+    {
+        return MainMultiWindowView.Children.Contains(AssisstantSubWindow)
+            && AssisstantSubWindow.IsVisible
+            && ChatSessionsView.Current is not null;
+    }
+
+    /// <summary>
+    /// 创建增强的 PowerShell 命令授权处理器，显示丰富的命令参数信息。
+    /// 如果有活跃的 AI 聊天窗口，将授权请求路由到聊天界面中，减少弹框打断。
+    /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
+    /// </summary>
+    public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
+    {
+        return (context, allowRemember) =>
+        {
+            var signal = new ManualResetEventSlim(false);
+            var result = AuthorizationResult.Deny;
+
+            // ════════════════════════════════════════════════════════════════
+            //  路由到聊天界面：如果有活跃的 AI 聊天窗口
+            // ════════════════════════════════════════════════════════════════
+            if (page is DraftPage draftPage && draftPage.IsChatActive())
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    try
+                    {
+                        var chatTask = draftPage.ChatSessionsView.Current!
+                            .ShowAuthorizationRequestAsync(context, allowRemember);
+
+                        // 用户点击按钮后，在后台线程完成对 ManualResetEvent 的信号通知
+                        chatTask.ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                                result = t.Result;
+                            signal.Set();
+                        }, TaskScheduler.Default);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex, "PowerShell chat authorization");
+                        signal.Set(); // 防止超时，使用默认 Deny
+                    }
+                });
+
+                // 聊天界面不阻塞 UI，给予用户充分的决策时间（5 分钟）
+                if (!signal.Wait(TimeSpan.FromSeconds(300)))
+                {
+                    Logger.Log("PowerShell chat authorization timed out after 300s");
+                    result = AuthorizationResult.Deny;
+                }
+            }
+            else
+            {
+                // ════════════════════════════════════════════════════════════════
+                //  传统对话框方式（聊天窗口不可用时）
+                // ════════════════════════════════════════════════════════════════
+                MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    try
+                    {
+                        // 构建详细消息
+                        var message = BuildDetailedAuthMessage(context);
+
+                        // 第一层：询问是否允许执行此命令
+                        var allowed = await page.DisplayAlertAsync(
+                            Localized.ScriptEngine_Auth_DialogTitle,
+                            message,
+                            Localized._Confirm, Localized._Cancel);
+
+                        if (allowed)
+                        {
+                            var remember = allowRemember && await page.DisplayAlertAsync(
+                                Localized._Info,
+                                Localized.ScriptEngine_Auth_SureRemember,
+                                Localized.ScriptEngine_Auth_RememberAllow_Yes, Localized.ScriptEngine_Auth_RememberAllow_No);
+                            result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
+                        }
+                        else
+                        {
+                            var remember = allowRemember && await page.DisplayAlertAsync(
+                                Localized._Info,
+                                Localized.ScriptEngine_Auth_SureRemember,
+                                Localized.ScriptEngine_Auth_RememberDeny_Yes, Localized.ScriptEngine_Auth_RememberDeny_No);
+                            result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex, "PowerShell enhanced authorization");
+                        result = AuthorizationResult.Deny;
+                    }
+                    finally
+                    {
+                        signal.Set();
+                    }
+                });
+
+                if (!signal.Wait(TimeSpan.FromSeconds(30)))
+                {
+                    Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
+                    result = AuthorizationResult.Deny;
+                }
+            }
+
+            return result;
+        };
+    }
+
+    /// <summary>
+    /// 构建增强授权对话框的详细消息文本。
+    /// </summary>
+    private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
+        sb.AppendLine();
+        sb.AppendLine($"{Localized.ScriptEngine_Auth_CommandLabel}{ctx.CommandInfo?.Name ?? Localized._Unknown}");
+
+        // 文件路径信息
+        if (!string.IsNullOrEmpty(ctx.TargetPath))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_PathStatusLabel}{ctx.PathSafetyStatus switch
+            {
+                PathSafety.Safe => Localized.ScriptEngine_Auth_PathSafe,
+                PathSafety.OutsideProject => Localized.ScriptEngine_Auth_PathOutsideProject,
+                PathSafety.PathTraversal => Localized.ScriptEngine_Auth_PathTraversal,
+                PathSafety.Unresolved => Localized.ScriptEngine_Auth_PathUnresolved,
+                _ => Localized._Unknown,
+            }}");
+        }
+
+        // URL 信息
+        if (!string.IsNullOrEmpty(ctx.TargetUrl))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
+        }
+
+        // 混淆警告
+        if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{ctx.ObfuscationWarning}");
+            sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{ctx.ThreatLevel?.ToString() ?? Localized._Unknown}");
+        }
+
+        return sb.ToString();
+    }
+
     #endregion
 
     #region events
-    protected override async void OnAppearing()
+    protected override async void OnNavigatedTo(NavigatedToEventArgs e)
     {
-        base.OnAppearing();
+        if (e.WasPreviousPageACommunityToolkitPopupPage()) return;
+        base.OnNavigatedTo(e);
         if (AlreadyDisappeared)
         {
             Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}", "fatal");
@@ -9179,8 +9777,13 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    protected override async void OnDisappearing()
+    protected override async void OnNavigatingFrom(NavigatingFromEventArgs e)
     {
+        if (e.IsDestinationPageACommunityToolkitPopupPage())
+        {
+            base.OnNavigatingFrom(e);
+            return;
+        }
         AlreadyDisappeared = true;
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
@@ -9263,7 +9866,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!ExitNoSave) await Save(true);
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();
-            base.OnDisappearing();
+            base.OnNavigatingFrom(e);
 
         }
         catch (Exception ex)
@@ -9328,7 +9931,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void MyLoggerExtensions_OnExceptionLog(Exception obj)
     {
-        Log($"MyLoggerExtensions_OnExceptionLog Received an exception:{obj}", "error");
+        //Log($"MyLoggerExtensions_OnExceptionLog Received an exception:{obj}", "error");
         SetStateFail(Localized._ExceptionTemplate(obj));
     }
 
@@ -9442,7 +10045,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    private void SetStateWarn(string text)
+    public void SetStateWarn(string text)
     {
         SetStateFail();
         Dispatcher.Dispatch(() =>
@@ -9465,7 +10068,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
     }
 
-    private void SetStateFail(string text)
+    public void SetStateFail(string text)
     {
         SetStateFail();
         Dispatcher.Dispatch(() =>
@@ -9494,7 +10097,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             StatusLabel.TextColor = Colors.White;
             StatusLabel.Text = text;
-            SemanticScreenReader.Default.Announce(text);
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
         HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>

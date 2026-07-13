@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Maui.Platform;
@@ -27,7 +27,7 @@ namespace projectFrameCut.Platforms.MacCatalyst
             if (window.RootViewController is UISplitViewController) return;
 
             var originalRoot = window.RootViewController;
-            
+
             var splitVC = new UISplitViewController(UISplitViewControllerStyle.DoubleColumn);
             splitVC.PrimaryBackgroundStyle = UISplitViewControllerBackgroundStyle.Sidebar;
             splitVC.PreferredDisplayMode = UISplitViewControllerDisplayMode.OneBesideSecondary;
@@ -76,7 +76,7 @@ namespace projectFrameCut.Platforms.MacCatalyst
             ConfigureHierarchy();
             ConfigureDataSource();
             ApplyInitialSnapshot();
-            
+
             // Select first item by default
             var firstIndexPath = NSIndexPath.FromItemSection(0, 0);
             collectionView.SelectItem(firstIndexPath, false, UICollectionViewScrollPosition.None);
@@ -88,15 +88,15 @@ namespace projectFrameCut.Platforms.MacCatalyst
             config.ShowsSeparators = false;
             config.HeaderMode = UICollectionLayoutListHeaderMode.None;
             var layout = UICollectionViewCompositionalLayout.GetLayout(config);
-            
+
             collectionView = new UICollectionView(View.Bounds, layout);
             collectionView.AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight;
             collectionView.Delegate = this;
-            
+
             // Important for "Liquid Glass" effect: make backgrounds transparent
             View.BackgroundColor = UIColor.Clear;
             collectionView.BackgroundColor = UIColor.Clear;
-            
+
             View.AddSubview(collectionView);
         }
 
@@ -106,13 +106,13 @@ namespace projectFrameCut.Platforms.MacCatalyst
             {
                 var sidebarItem = item as SidebarItem;
                 var listCell = cell as UICollectionViewListCell;
-                
+
                 var contentConfig = listCell.DefaultContentConfiguration;
                 contentConfig.Text = sidebarItem.Title;
-                
+
                 var imageConfig = UIImageSymbolConfiguration.Create(UIImageSymbolScale.Large);
                 contentConfig.Image = UIImage.GetSystemImage(sidebarItem.Icon, imageConfig);
-                
+
                 listCell.ContentConfiguration = contentConfig;
             });
 
@@ -126,7 +126,7 @@ namespace projectFrameCut.Platforms.MacCatalyst
         {
             var snapshot = new NSDiffableDataSourceSnapshot<NSString, SidebarItem>();
             snapshot.AppendSections(new NSString[] { new NSString("Main") });
-            
+
             var items = new SidebarItem[]
             {
                 new SidebarItem(Localized.AppShell_ProjectsTab, "folder", "//home"),
@@ -134,7 +134,7 @@ namespace projectFrameCut.Platforms.MacCatalyst
                 new SidebarItem(Localized.AppShell_DebugTab, "wrench.and.screwdriver", "//debug"),
                 new SidebarItem(Localized._Options, "gearshape", "//options")
             };
-            
+
             snapshot.AppendItems(items);
             dataSource.ApplySnapshot(snapshot, false);
         }

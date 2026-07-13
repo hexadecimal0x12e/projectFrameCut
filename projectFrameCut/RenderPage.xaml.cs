@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
@@ -31,7 +31,8 @@ using projectFrameCut.Render.Compose;
 using System.Reflection;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
-
+using projectFrameCut.Render.RenderAPIBase.Context;
+using projectFrameCut.Render.Benchmark;
 
 
 
@@ -41,10 +42,10 @@ using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
-#endif
+#elif WINDOWS
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+using Woohoo.Platform.Windows.Taskbar;
 
-#if WINDOWS
-using ILGPU;
 #endif
 
 namespace projectFrameCut;
@@ -67,7 +68,6 @@ public partial class RenderPage : ContentPage
     public bool running;
 
 
-    // ��־������
     private readonly StringBuilder _logBuffer = new StringBuilder();
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
     private System.Timers.Timer? _logUpdateTimer;
@@ -167,12 +167,7 @@ public partial class RenderPage : ContentPage
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
-        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-        {
-            ExportProjectJSONButton.IsVisible = true;
-            PerformPostRenderActionNowTestButton.IsVisible = true;
-        }
-        if (!SettingsManager.IsSettingExists("accel_enableMultiAccel")) SettingsManager.WriteSetting("accel_enableMultiAccel", "true");
+        DebugView.IsVisible = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
@@ -501,20 +496,6 @@ public partial class RenderPage : ContentPage
 
                 try
                 {
-                    await DoCompute(vm, vidOutputPath, mtdDict);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "render frames", this);
-                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
-                    return;
-                }
-
-                if (_cts.IsCancellationRequested) return;
-
-                try
-                {
                     await ComposeAudio(vm, audOutputPath);
 
                 }
@@ -526,6 +507,20 @@ public partial class RenderPage : ContentPage
                     if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
                 }
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await DoCompute(vm, vidOutputPath, mtdDict, audOutputPath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
                 if (_cts.IsCancellationRequested) return;
 
                 double targetFps = double.Parse(vm.Framerate);
@@ -628,6 +623,86 @@ public partial class RenderPage : ContentPage
 
     }
 
+    private async void RenderToVoidButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await PrepareUIForRender();
+
+            if (BindingContext is RenderPageViewModel vm)
+            {
+                running = true;
+                DeviceDisplay.Current.KeepScreenOn = true;
+
+                try
+                {
+                    await DoCompute(vm, "", null!, null, "blank");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
+                DeviceDisplay.Current.KeepScreenOn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "render", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+
+    }
+
+    private async void RenderNoWritingButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await PrepareUIForRender();
+
+            if (BindingContext is RenderPageViewModel vm)
+            {
+                running = true;
+                DeviceDisplay.Current.KeepScreenOn = true;
+
+                try
+                {
+                    await DoCompute(vm, "", null!, null, "null");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+                    return;
+                }
+
+                DeviceDisplay.Current.KeepScreenOn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "render", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
+            return;
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+    }
+
+
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
     VideoBuilder? builder = null;
@@ -653,7 +728,7 @@ public partial class RenderPage : ContentPage
         });
     }
 
-    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null)
+    async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null, string? writerOverride = null)
     {
         try
         {
@@ -700,9 +775,6 @@ public partial class RenderPage : ContentPage
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
-            var outTempFile = outputPath + ext;
-            Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
-
             int[] CPUAffinityOverride = Array.Empty<int>(), preparerAffinityCpuIndexes = [];
             bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
             if (EnableThreadAffinity)
@@ -746,33 +818,12 @@ public partial class RenderPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-            Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
-            var devices = context.Devices.ToList();
-            if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
-            {
-                var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
-                if (accels == "all")
-                {
-                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
-                }
-                else
-                {
-                    var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                .Select(s => int.TryParse(s, out var id) ? id : -1)
-                                .Where(id => id >= 0)
-                                .ToList();
-                    projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
-                }
+            // AcceleratorsManager was initialized during plugin load.
+            // The configured accelerators (from accels.json) are ready to use.
+            AcceleratorsManager.IsRendering = true;
+            if (!AcceleratorsManager.Accelerators.Any()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
-            }
-            else
-            {
-                var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-                if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
-            }
-
-            if (!projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
-
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate);
 #endif
             var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
@@ -807,17 +858,47 @@ public partial class RenderPage : ContentPage
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
             var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
-            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+            if (!string.IsNullOrWhiteSpace(writerOverride))
             {
-                EnablePreview = true,
-                DoGCAfterEachWrite = gcOption > 0,
-                DisposeFrameAfterEachWrite = true,
-                Duration = duration,
-                LogStat = false,
-                BlockWrite = blockwrite
-            };
+                switch (writerOverride)
+                {
+                    case "blank":
+                        Log("writeToVoid is enabled, no file will be written, only rendering will be performed.", "warn");
+                        builder = new VideoBuilder(new BlackholeVideoWriter() { Width = width, Height = height, FramePerSecond = fps, PixelFormat = fmt, OutputPath = "/dev/null" })
+                        {
+                            EnablePreview = true,
+                            minFrameCountToGeneratePreview = 1,
+                            DoGCAfterEachWrite = gcOption > 0,
+                            DisposeFrameAfterEachWrite = true,
+                            Duration = duration,
+                            LogStat = false,
+                            BlockWrite = blockwrite
+                        };
+                        break;
+                    case "null":
+                        Log("writer is disabled.", "warn");
+                        builder = null; 
+                        break;
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(outputPath)) throw new InvalidOperationException("No output path specified for rendering.");
+                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? throw new NullReferenceException());
 
-            builder.Writer?.Metadata = metadata ?? new();
+                builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+                {
+                    EnablePreview = true,
+                    DoGCAfterEachWrite = gcOption > 0,
+                    DisposeFrameAfterEachWrite = true,
+                    Duration = duration,
+                    LogStat = false,
+                    BlockWrite = blockwrite
+                };
+            }
+
+
+            builder?.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
             {
@@ -834,12 +915,13 @@ public partial class RenderPage : ContentPage
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
-                EnableThreadAffinity = EnableThreadAffinity,
+                EnableThreadAffinity = EnableThreadAffinity && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
                 OneByOneRender = blockwrite,
                 PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
                 AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
                 EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
+                RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
                 MinSchedulePreparedFrames = parallelThreadCount,
                 UseHDR = ProjectUsesHDR,
@@ -849,7 +931,8 @@ public partial class RenderPage : ContentPage
                         ? sdrBrightnessInHdrInt
                         : (_project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessInHdr) && int.TryParse(legacySdrBrightnessInHdr, out var legacySdrBrightnessInHdrInt)
                             ? legacySdrBrightnessInHdrInt
-                            : 203)
+                            : 203),
+                AudioFilePath = audioPath
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -865,9 +948,13 @@ public partial class RenderPage : ContentPage
                         HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}fps";
                     }
                 });
+
+#if WINDOWS
+                TaskbarManager.Instance.SetProgressValue((int)(p * 100), 100);
+#endif
             };
 
-            builder.OnPreviewGenerated += async (s, e) =>
+            builder?.OnPreviewGenerated += async (s, e) =>
             {
                 if (!_previewUpdateSemaphore.Wait(0))
                 {
@@ -905,24 +992,17 @@ public partial class RenderPage : ContentPage
             Log("Start render...");
 
             sw1.Restart();
+            await Task.Run(async () => await renderer.GoRender(_cts.Token), _cts.Token);
+            Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+
             if (blockwrite)
             {
-                await Task.Run(async () => await renderer.GoRenderSync(_cts.Token), _cts.Token);
-                Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+                SetSubProg("WriteVideo");
+                Log("Closing result video stream...");
                 builder?.Writer?.Finish();
             }
             else
             {
-                if (SettingsManager.IsBoolSettingTrue("render_RenderByLayer"))
-                {
-                    await renderer.GoRenderByLayer(_cts.Token);
-                }
-                else
-                {
-                    await renderer.GoRender(_cts.Token);
-                }
-                Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-
                 SetSubProg("WriteVideo");
                 Log("Finish writing video...");
                 await Task.Run(() =>
@@ -975,6 +1055,7 @@ public partial class RenderPage : ContentPage
             GC.WaitForPendingFinalizers();
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             GCSettings.LargeObjectHeapCompactionMode = origMode;
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
 #else
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -1097,7 +1178,7 @@ public partial class RenderPage : ContentPage
 
 
 
-    #endregion
+#endregion
 
     private async Task PerformPostRenderAction()
     {
@@ -1523,17 +1604,15 @@ public partial class RenderPage : ContentPage
         }
 
 #if WINDOWS
-        string accelId = "";
-        args.Add($"-multiAccelerator={SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel")}");
+        args.Add($"-multiAccelerator={AcceleratorsManager.IsMultiAccelEnabled}");
 
-        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        if (AcceleratorsManager.IsMultiAccelEnabled && AcceleratorsManager.AcceleratorsForRendering.Length > 0)
         {
-            args.Add($"-acceleratorDeviceIds={SettingsManager.GetSetting("accel_MultiDeviceID", "all")}");
-
+            args.Add($"-acceleratorDeviceNames={string.Join(",", AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name))}");
         }
-        else
+        else if (AcceleratorsManager.DefaultAccelerator is not null)
         {
-            args.Add($"-acceleratorDeviceId={SettingsManager.GetSetting("accel_DeviceId", "")}");
+            args.Add($"-acceleratorDeviceName={AcceleratorsManager.DefaultAccelerator.Name}");
         }
 
 #endif

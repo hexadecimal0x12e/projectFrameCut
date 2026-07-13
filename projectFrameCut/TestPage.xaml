@@ -1,10 +1,14 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:p="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers;assembly=projectFrameCut.ApplicationAPIBase"
              x:Class="projectFrameCut.TestPage"
              Title="TestPage">
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="111">
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
     <ScrollView Orientation="Vertical">
         <VerticalStackLayout>
             <Border StrokeThickness="4">
@@ -28,9 +32,6 @@
                     </Picker>
                 </VerticalStackLayout>
 
-            </Border>
-            <Border StrokeThickness="4">
-                <Button x:Name="LoginTestButton" Text="Login" Clicked="LoginTestButton_Clicked"/>
             </Border>
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
@@ -63,6 +64,9 @@
                 <VerticalStackLayout>
                     <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
                     <Button x:Name="StuckInUIThreadButton" Text="Stuck in UI Thread" Clicked="StuckInUIThreadButton_Clicked"/>
+                    <Button x:Name="ShowCMTPopupButton" Text="Show CMT Popup" Clicked="ShowCMTPopupButton_Clicked"/>
+                    <Button x:Name="ToggleNavPaneButton" Text="Toggle Nav Pane" Clicked="ToggleNavPaneButton_Clicked"/>
+                    <Button x:Name="ShowModelPageButton" Text="Show Model Page" Clicked="ShowModelPageButton_Clicked"/>
                     <Button x:Name="ReadSettingButton" Text="Read a setting" Clicked="ReadSettingButton_Clicked"/>
                     <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
                     <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
@@ -91,7 +95,7 @@
                     <Label Text="ppb test"/>
                     <ScrollView x:Name="PpbTestGrid" HeightRequest="200" />
                     <Button Text="Add ppb content" x:Name="AddPPBButton" Clicked="AddPPBButton_Clicked"/>
-                    <Button Text="export ppb properties" x:Name="ExportPPBDataButton" Clicked="ExportPPBDataButton_Clicked"/>
+                    <Button Text="Enumrate this PPB" x:Name="ExportPPBDataButton" Clicked="ExportPPBDataButton_Clicked"/>
                     <HorizontalStackLayout>
                         <Label Margin="4,5,0,0">PPB's padding</Label>
                         <Slider x:Name="PPBPaddingSlider" Minimum="4" Maximum="20" Value="8" WidthRequest="250" DragCompleted="PPBPaddingSlider_DragCompleted" ></Slider>
@@ -100,6 +104,12 @@
                         <Label Margin="4,5,0,0">PPB's size ratio</Label>
                         <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" DragCompleted="PPBPaddingSlider_DragCompleted" ></Slider>
                     </HorizontalStackLayout>
+                    <VerticalStackLayout>
+                        <Picker x:Name="ControlIdPicker" >
+                        </Picker>
+                        <Entry x:Name="ControlValueEntry" Placeholder="Value" IsReadOnly="True"/>
+                        <Button x:Name="SetValueButton" Clicked="SetValueButton_Clicked" Text="Write"/>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
                 
             </Border >
@@ -113,10 +123,32 @@
                     <Entry x:Name="LocateInputer" Placeholder="Locate for ordering, blank for default"/>
                 </VerticalStackLayout>
             </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="dynamic xaml test"/>
+                    <Editor x:Name="XAMLInputEditor" HeightRequest="150" Placeholder="Input here"></Editor>
+                    <Button x:Name="RenderMarkdownButton" Text="Render Markdown" Clicked="RenderMarkdownButton_Clicked"/>
+                    <Button x:Name="RenderContentButton" Text="Render" Clicked="RenderContentButton_Clicked"/>
+                    <ContentView x:Name="ResultContentView" />
+                    <ContentView x:Name="ResultParticalContentView" />
+                </VerticalStackLayout>
+            </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="pwsh script engine test"/>
+                    <Entry x:Name="ScriptInputEntry" Placeholder="Input script here" />
+                    <Button x:Name="ExecteCommandButton" Text="Execute Command" Clicked="ExecteCommandButton_Clicked"/>
+                    <Editor x:Name="ScriptOutputEditor" HeightRequest="150" Placeholder="" IsReadOnly="False"></Editor>
+                    <Button x:Name="InvokeNativeFuncButton" Text="Invoke libpsl-native" Clicked="InvokeNativeFuncButton_Clicked"/>
+                </VerticalStackLayout>
+            </Border>
+            
+            
 
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Font picker test"/>
+                    <Button x:Name="LoadFontButton" Text="Load fonts" Clicked="LoadFontButton_Clicked"/>
                     <p:FontPicker x:Name="TextPicker" Title="test123"/>
                     <Button x:Name="TestFontPropReaderButton" Text="Test read property" Clicked="TestFontPropReaderButton_Clicked"/>
                 </VerticalStackLayout>

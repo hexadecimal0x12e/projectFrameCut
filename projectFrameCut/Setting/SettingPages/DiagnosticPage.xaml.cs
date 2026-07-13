@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -42,7 +42,7 @@ public partial class DiagnosticSettingPage : ContentPage
             infoGetted = true;
         }
         rootPPB = new PropertyPanelBuilder()
-            .AddButton("MakeDiagReportButton", SettingLocalizedResources.Diag_GenerateReport)
+            .AddButton(SettingLocalizedResources.Diag_GenerateReport, async (s, e) => await MakeDiagReport())
             .AddSeparator()
             .AddText(SettingLocalizedResources.Diag_InfoSection_App)
             .AddCustomChild(new Editor
@@ -61,30 +61,9 @@ public partial class DiagnosticSettingPage : ContentPage
             {
                 Text = DeviceInfo,
                 IsReadOnly = true
-            })
-            .ListenToChanges(SettingInvoker);
+            });
         Content = rootPPB.BuildWithScrollView();
 
-    }
-
-    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
-    {
-        try
-        {
-            switch (args.Id)
-            {
-                case "MakeDiagReportButton":
-                    await MakeDiagReport();
-                    break;
-                case "PerformanceTestButton":
-
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
-        }
     }
 
     void SetBusy()
@@ -335,6 +314,8 @@ public partial class DiagnosticSettingPage : ContentPage
             - config: {internalFFmpegCfg}
             - Codecs: 
             {string.Join("\r\n", codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
+            - Binding verification result: 
+            {ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{b.FunctionName} of {b.LibraryName} fails: {b.Message}\r\n")}
             """ : "");
     }
 
@@ -464,7 +445,7 @@ public partial class DiagnosticSettingPage : ContentPage
             {
                 deviceModel = UIKit.UIDevice.CurrentDevice.Model ?? "Unknown";
             }
-            catch {  }
+            catch { }
 
             try
             {
@@ -492,13 +473,13 @@ public partial class DiagnosticSettingPage : ContentPage
                     }
                 }
             }
-            catch {  }
+            catch { }
 
             try
             {
                 totalMemory = Foundation.NSProcessInfo.ProcessInfo.PhysicalMemory;
             }
-            catch {  }
+            catch { }
 
             string gpuName = "Unknown";
             try
@@ -585,10 +566,10 @@ public partial class DiagnosticSettingPage : ContentPage
 
             try
             {
-                var accelsInfo = RenderSettingPage.GetAccelInfo();
+                var accelsInfo = ILGPU.Context.CreateDefault().Devices;
                 try
                 {
-                    accels = accelsInfo?.Select(a => $"- Accelerator #{a.index}: {a.name} ({a.Type})\r\n").ToArray() ?? ["Unknown"];
+                    accels = accelsInfo.Index().Select(a => $"- Accelerator #{a.Index}: {a.Item.Name} ({a.Item.AcceleratorType})\r\n").ToArray() ?? ["Unknown"];
                 }
                 catch (Exception ex) { Log(ex); }
             }

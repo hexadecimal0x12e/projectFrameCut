@@ -1,6 +1,7 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -106,29 +107,35 @@ namespace projectFrameCut.Render.Effect
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a) = ExtractFloatChannels(source);
-            var resultArr = computer.Compute([
-                r,
-                g,
-                b,
-                a,
-                source.Width,
-                source.Height,
-                startX,
-                startY,
-                targetWidth,
-                targetHeight
-            ]);
 
-            if (resultArr.Length != 4 ||
-                resultArr[0] is not float[] rOut ||
-                resultArr[1] is not float[] gOut ||
-                resultArr[2] is not float[] bOut ||
-                resultArr[3] is not float[] aOut)
+            FourChannelResult placeResult;
+            if (computer is IPlaceComputer pc)
             {
-                throw new InvalidOperationException("PlaceComputer did not return expected channel buffers.");
+                placeResult = pc.ComputePlace(r, g, b, a, source.Width, source.Height,
+                    startX, startY, targetWidth, targetHeight);
+            }
+            else
+            {
+                var resultArr = computer.Compute([
+                    r, g, b, a,
+                    source.Width, source.Height,
+                    startX, startY, targetWidth, targetHeight
+                ]);
+
+                if (resultArr.Length != 4 ||
+                    resultArr[0] is not float[] rOut ||
+                    resultArr[1] is not float[] gOut ||
+                    resultArr[2] is not float[] bOut ||
+                    resultArr[3] is not float[] aOut)
+                {
+                    throw new InvalidOperationException("PlaceComputer did not return expected channel buffers.");
+                }
+
+                placeResult = new FourChannelResult(rOut, gOut, bOut, aOut);
             }
 
-            var result = BuildPicture(source, targetWidth, targetHeight, rOut, gOut, bOut, aOut);
+            var result = BuildPicture(source, targetWidth, targetHeight,
+                placeResult.R, placeResult.G, placeResult.B, placeResult.A);
             sw.Stop();
             result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
             {

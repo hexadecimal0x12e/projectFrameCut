@@ -15,6 +15,9 @@ using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Transform;
+using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Render.VectorContent.Components;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -77,7 +80,8 @@ public class InternalPluginBase : IPluginBase
         {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
         {"LightenMixture", new(() => new Compose.LightenMixture()) },
         {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) },
-        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) }
+        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) },
+        {"Rotation", new(() => new Effect.RotationEffect_IPicture()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -105,7 +109,7 @@ public class InternalPluginBase : IPluginBase
         {"DarkenMixture", new BlendModeMixtureFactory { MixtureType = "Darken" }},
         {"LightenMixture", new BlendModeMixtureFactory { MixtureType = "Lighten" }},
         {"DifferenceMixture", new BlendModeMixtureFactory { MixtureType = "Difference" }},
-
+        {"Rotation", new RotationEffectFactory()},
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
@@ -211,6 +215,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
             ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
+            ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -254,6 +259,27 @@ public class InternalPluginBase : IPluginBase
             "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
             "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
             _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
+        };
+    }
+
+    IVectorComponent IPluginBase.VectComponentCreator(JsonElement element)
+    {
+        var typeName = element.GetProperty("TypeName").GetString();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return typeName switch
+        {
+            "Rectangle" => element.Deserialize<RectangleComponent>(options)!,
+            "RoundedRectangle" => element.Deserialize<RoundedRectangleComponent>(options)!,
+            "Ellipse" => element.Deserialize<EllipseComponent>(options)!,
+            "Line" => element.Deserialize<LineComponent>(options)!,
+            "CubicBezier" => element.Deserialize<CubicBezierComponent>(options)!,
+            "QuadraticBezier" => element.Deserialize<QuadraticBezierComponent>(options)!,
+            "Arc" => element.Deserialize<ArcComponent>(options)!,
+            "Polygon" => element.Deserialize<PolygonComponent>(options)!,
+            "Polyline" => element.Deserialize<PolylineComponent>(options)!,
+            "ComponentGroup" => element.Deserialize<ComponentGroup>(options)!,
+            "Text" => element.Deserialize<TextComponent>(options)!,
+            _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
     }
 

@@ -1,6 +1,7 @@
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.AIAssistance;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
@@ -15,7 +16,6 @@ using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
@@ -113,6 +113,63 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     }
                 }
             }
+        }
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        {
+            get
+            {
+                var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
+                return new Dictionary<string, EffectBundleSettableFields>
+                {
+                    [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Source Text", "Source text to display and translate", DefaultText),
+                    [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used for source and translated text", "HarmonyOS Sans SC Medium", fontNames),
+                    [SizeKey] = TextStyleProviderSettableFieldHelper.NumericField(SizeKey, "Font Size", "Source text font size in canvas pixels", DefaultFontSize, 20f, 400f),
+                    [ColorKey] = TextStyleProviderSettableFieldHelper.ColorField(ColorKey, "Source Color", "Source text color", "#FFFFFF"),
+                    [TranslationTextKey] = TextStyleProviderSettableFieldHelper.StringField(TranslationTextKey, "Translation", "Translated text", ""),
+                    [TranslationTargetLanguageKey] = TextStyleProviderSettableFieldHelper.StringField(TranslationTargetLanguageKey, "Target Language", "Target language name or locale", "zh-CN"),
+                    [TranslationFontSizeRatioKey] = TextStyleProviderSettableFieldHelper.NumericField(TranslationFontSizeRatioKey, "Translation Size Ratio", "Translated text size relative to source text", DefaultTranslationSizeRatio, 0.3f, 1.2f),
+                    [TranslationColorKey] = TextStyleProviderSettableFieldHelper.ColorField(TranslationColorKey, "Translation Color", "Translated text color", "#CFCFCF"),
+                    [TranslationLineSpacingKey] = TextStyleProviderSettableFieldHelper.IntegerField(TranslationLineSpacingKey, "Translation Line Spacing", "Space between source and translated text in canvas pixels", DefaultLineSpacing, 0, 80),
+                    [TranslationAutoGenerateKey] = TextStyleProviderSettableFieldHelper.BooleanField(TranslationAutoGenerateKey, "Auto Generate Translation", "Automatically regenerate translation when source text changes", true),
+                    [LayoutModeKey] = TextStyleProviderSettableFieldHelper.EnumField(LayoutModeKey, "Layout Mode", "How text is sized relative to the clip", TextClipLayoutMode.FillClip.ToString(),
+                    [
+                        TextClipLayoutMode.FillClip.ToString(),
+                        TextClipLayoutMode.FixedWidth.ToString(),
+                        TextClipLayoutMode.FixedSize.ToString()
+                    ])
+                };
+            }
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
+            {
+                feedback = field is null
+                    ? "Field definition is null."
+                    : $"Unknown settable field '{field.Id}' for text style '{TypeName}'.";
+                return false;
+            }
+
+            if (!TextStyleProviderSettableFieldHelper.TryNormalizeValue(
+                canonicalField, value, out var normalizedValue, out feedback))
+            {
+                return false;
+            }
+
+            if (canonicalField.Id == LayoutModeKey)
+            {
+                LayoutMode = Enum.Parse<TextClipLayoutMode>((string)normalizedValue);
+            }
+            else
+            {
+                HandlePropertyPanelChange(new PropertyPanelPropertyChangedEventArgs(
+                    canonicalField.Id, normalizedValue, null));
+            }
+
+            feedback = "";
+            return true;
         }
 
         public TextEntry[] BuildEntries()

@@ -145,8 +145,8 @@ namespace projectFrameCut.DraftStuff
 
             var d = new DraftStructureJSON
             {
-                Clips = clips.Cast<object>().ToArray(),
-                SoundTracks = soundtracks.Cast<object>().ToArray(),
+                Clips = clips.ToArray(),
+                SoundTracks = soundtracks.ToArray(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
@@ -374,30 +374,23 @@ namespace projectFrameCut.DraftStuff
 
         public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
-
-            if (!elements.Any())
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0)
             {
-                if (json.Clips.Any())
-                {
-                    throw new NullReferenceException("Failed to convert DTO to IClip, but the Clips array in JSON is not empty. This may indicate a problem with the JSON structure or the deserialization process.");
-                }
                 return Array.Empty<IClip>();
             }
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -413,11 +406,11 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && !string.IsNullOrEmpty(clip.FilePath) && clipInstance.NeedFilePath)
                 {
                     try
                     {
-                        clipInstance.FilePath = fp.GetString();
+                        clipInstance.FilePath = clip.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -451,14 +444,19 @@ namespace projectFrameCut.DraftStuff
 
         public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.SoundTracks) ?? throw new NullReferenceException("Failed to cast SoundtrackDTOs to ISoundTracks.");
+            var tracks = json.SoundTracks;
+            if (tracks is null || tracks.Length == 0)
+            {
+                return Array.Empty<ISoundTrack>();
+            }
 
             var tracksList = new List<ISoundTrack>();
 
-            foreach (var track in elements.Cast<JsonElement>())
+            foreach (var track in tracks)
             {
-                var trackInstance = PluginManager.CreateSoundTrack(track);
-                trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+                var trackJson = JsonSerializer.SerializeToElement(track);
+                var trackInstance = PluginManager.CreateSoundTrack(trackJson);
+                trackInstance.ExtraData = track.MetaData ?? new();
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -487,11 +485,11 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(trackInstance.FilePath) && track.TryGetProperty("FilePath", out var fp) && trackInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(trackInstance.FilePath) && !string.IsNullOrEmpty(track.FilePath) && trackInstance.NeedFilePath)
                 {
                     try
                     {
-                        trackInstance.FilePath = fp.GetString();
+                        trackInstance.FilePath = track.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -940,7 +938,7 @@ namespace projectFrameCut.DraftStuff
             draft.Duration = (uint)max;
             if (audMax > 0) draft.AudioDuration = (uint)audMax;
 
-            draft.Clips = dtos.Cast<object>().ToArray();
+            draft.Clips = dtos.ToArray();
         }
 
         private static string? ExtractLabelText(Microsoft.Maui.Controls.Border border)

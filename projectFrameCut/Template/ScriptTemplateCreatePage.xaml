@@ -1,0 +1,184 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.Template.ScriptTemplateCreatePage"
+             Title="{l:Localized Key=ScriptTemplateCreatePage_Title}"
+             Padding="16">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
+        <!-- ===== 脚本文件选择 ===== -->
+        <Border Grid.Row="0" StrokeThickness="1" Padding="10" MinimumHeightRequest="200">
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Button x:Name="SelectScriptButton"
+                            Text="{l:Localized Key=ScriptTemplateCreatePage_SelectScript}"
+                            Clicked="OnSelectScriptClicked" />
+                    <Label x:Name="ScriptFileLabel"
+                           Grid.Column="1"
+                           Text="{l:Localized Key=ScriptTemplateCreatePage_NoFileSelected}"
+                           VerticalOptions="Center"
+                           LineBreakMode="TailTruncation" />
+                </Grid>
+                <Label Text="{l:Localized Key=ScriptTemplateCreatePage_ScriptPreview}" FontAttributes="Bold" FontSize="13" />
+                <Editor Grid.Row="1"
+                        x:Name="ScriptEditor"
+                        Placeholder="{l:Localized Key=ScriptTemplateCreatePage_ScriptPlaceholder}"
+                        FontFamily="MarkdownCodeBlock"
+                        FontSize="12"
+                        IsSpellCheckEnabled="False"
+                        VerticalOptions="Fill"
+                        MinimumHeightRequest="120"
+                        MaximumHeightRequest="500"
+                        Focused="ScriptEditor_Focused"
+                        Unfocused="ScriptEditor_Unfocused"
+                        AutoSize="TextChanges" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- ===== 变量定义（交互式配置） ===== -->
+        <Border Grid.Row="1" StrokeThickness="1" Padding="10">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                <Label Text="{l:Localized Key=ScriptTemplateCreatePage_VariableSection}" FontAttributes="Bold" FontSize="14" />
+
+                <!-- 变量列表 -->
+                <Border Grid.Row="1" StrokeThickness="0" MaximumHeightRequest="280" VerticalOptions="Fill">
+                    <CollectionView x:Name="VariablesCollectionView" SelectionMode="None" ItemSizingStrategy="MeasureAllItems">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="1" Padding="8" Margin="0,0,0,6">
+                                    <VerticalStackLayout Spacing="6">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6">
+                                            <Label Text="{l:Localized Key=ScriptTemplateCreatePage_VariableName}" FontSize="12" VerticalOptions="Center" />
+                                            <Entry Grid.Column="1"
+                                                   Text="{Binding VariableName}"
+                                                   FontSize="12"
+                                                   Placeholder="{l:Localized Key=ScriptTemplateCreatePage_VariableNamePlaceholder}"
+                                                   ClearButtonVisibility="WhileEditing" />
+                                            <Label Grid.Column="2"
+                                                   Text="{l:Localized Key=ScriptTemplateCreatePage_VariableType}"
+                                                   FontSize="12"
+                                                   VerticalOptions="Center" />
+                                            <Picker Grid.Column="3"
+                                                    ItemsSource="{Binding TypeOptions}"
+                                                    SelectedItem="{Binding SelectedType}"
+                                                    FontSize="12" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                            <Label Text="{l:Localized Key=ScriptTemplateCreatePage_DisplayName}" FontSize="12" VerticalOptions="Center" />
+                                            <Entry Grid.Column="1"
+                                                   Text="{Binding DisplayName}"
+                                                   FontSize="12"
+                                                   Placeholder="{l:Localized Key=ScriptTemplateCreatePage_DisplayNamePlaceholder}"
+                                                   ClearButtonVisibility="WhileEditing" />
+                                            <Button Grid.Column="2"
+                                                    Text="{l:Localized Key=ScriptTemplateCreatePage_Delete}"
+                                                    TextColor="Red"
+                                                    FontSize="12"
+                                                    HeightRequest="32"
+                                                    Clicked="OnDeleteVariableClicked" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                            <Label Text="{l:Localized Key=ScriptTemplateCreatePage_DefaultValueLabel}" FontSize="12" VerticalOptions="Center" />
+                                            <Entry Grid.Column="1"
+                                                   Text="{Binding DefaultValue}"
+                                                   FontSize="12"
+                                                   Placeholder="{l:Localized Key=ScriptTemplateCreatePage_DefaultValuePlaceholder}"
+                                                   ClearButtonVisibility="WhileEditing" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.EmptyView>
+                            <Label Text="{l:Localized Key=ScriptTemplateCreatePage_EmptyVariables}"
+                                   FontSize="12"
+                                   Opacity="0.6"
+                                   HorizontalOptions="Center"
+                                   Margin="0,20" />
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+                </Border>
+
+                <!-- 添加按钮 -->
+                <Button Grid.Row="2"
+                        Text="{l:Localized Key=ScriptTemplateCreatePage_AddVariable}"
+                        Clicked="OnAddVariableClicked"
+                        FontSize="13"
+                        HeightRequest="36" />
+            </Grid>
+        </Border>
+
+        <!-- ===== 元数据 ===== -->
+        <Border Grid.Row="2" StrokeThickness="1" Padding="10">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{l:Localized Key=ScriptTemplateCreatePage_TemplateInfo}" FontAttributes="Bold" FontSize="14" />
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="6">
+                    <Label Text="{l:Localized Key=ScriptTemplateCreatePage_NameLabel}" VerticalOptions="Center"  />
+                    <Entry x:Name="TemplateNameEntry" Grid.Column="1" Placeholder="{l:Localized Key=ScriptTemplateCreatePage_NamePlaceholder}" Unfocused="TemplateNameEntry_Unfocused" />
+
+                    <Label Grid.Row="1" Text="{l:Localized Key=ScriptTemplateCreatePage_SubtitleLabel}" VerticalOptions="Center" />
+                    <Entry x:Name="SubtitleEntry" Grid.Row="1" Grid.Column="1" Placeholder="{l:Localized Key=ScriptTemplateCreatePage_SubtitlePlaceholder}" />
+                </Grid>
+
+                <!-- ===== 标签（支持回车/按钮添加） ===== -->
+                <Label Text="{l:Localized Key=ScriptTemplateCreatePage_TagsLabel}" FontAttributes="Bold" FontSize="14" />
+                <Label Text="{l:Localized Key=TemplateExtractPage_Step4_TagDescription}" FontSize="12" Opacity="0.7" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Entry x:Name="TagInputEntry"
+                           Placeholder="{l:Localized Key=TemplateExtractPage_Step4_TagPlaceholder}"
+                           ClearButtonVisibility="WhileEditing"
+                           Completed="TagInputEntry_Completed" />
+                    <Button Grid.Column="1"
+                            x:Name="AddTagButton"
+                            Text="{l:Localized Key=TemplateExtractPage_Step4_AddTag}"
+                            Clicked="AddTag_Clicked" />
+                </Grid>
+                <FlexLayout x:Name="TagsContainer"
+                            Wrap="Wrap"
+                            JustifyContent="Start"
+                            AlignItems="Start"
+                            BindableLayout.ItemsSource="{Binding}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeThickness="1"
+                                    Padding="8,4"
+                                    Margin="0,0,6,6"
+                                    StrokeShape="RoundRectangle 12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                    <Label Text="{Binding .}"
+                                           VerticalOptions="Center"
+                                           FontSize="12" />
+                                    <Button Grid.Column="1"
+                                            Text="✕"
+                                            FontSize="10"
+                                            Padding="2,0"
+                                            BackgroundColor="Transparent"
+                                            WidthRequest="20"
+                                            HeightRequest="20"
+                                            VerticalOptions="Center"
+                                            Clicked="RemoveTag_Clicked" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+
+                <Label Text="{l:Localized Key=ScriptTemplateCreatePage_ReadmeLabel}" FontSize="11" Opacity="0.7" />
+                <Editor x:Name="ReadmeEditor"
+                        Placeholder="{l:Localized Key=ScriptTemplateCreatePage_ReadmePlaceholder}"
+                        FontSize="12"
+                        MinimumHeightRequest="60"
+                        MaximumHeightRequest="100"
+                        AutoSize="TextChanges" />
+            </VerticalStackLayout>
+        </Border>
+
+
+        <!-- ===== 操作按钮 ===== -->
+        <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Label x:Name="StatusLabel" Text="{l:Localized Key=ScriptTemplateCreatePage_CreateProjectTemplateHint}" VerticalOptions="Center" FontSize="12" Opacity="0.7" />
+            <Button Grid.Column="1" x:Name="CancelButton" Text="{l:Localized Key=_Cancel}" Clicked="OnCancelClicked" />
+            <Button Grid.Column="2" x:Name="SaveButton" Text="{l:Localized Key=ScriptTemplateCreatePage_Save}" Clicked="OnSaveClicked" IsEnabled="False" />
+        </Grid>
+    </Grid>
+</ContentPage>

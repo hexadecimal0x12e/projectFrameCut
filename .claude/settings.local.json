@@ -25,14 +25,22 @@
       "PowerShell(splc-edit *)",
       "Bash(findstr *)",
       "PowerShell(Get-ChildItem *)",
-      "PowerShell(dotnet restore *)"
+      "PowerShell(dotnet restore *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "Bash(git clone *)",
+      "PowerShell(git clone *)",
+      "Bash(xgrep -l \"*\" --include=\"*.cs\")",
+      "Bash(xargs grep -l *)",
+      "PowerShell(xargs grep -l *)"
     ],
     "deny": [
       "Bash(Select-*)",
       "Bash(Get-*)",
       "Bash(Set-*)",
       "Bash(git commit *)",
-      "Powershell(git commit *)"
+      "PowerShell(git commit *)"
     ]
   },
   "skillOverrides": {

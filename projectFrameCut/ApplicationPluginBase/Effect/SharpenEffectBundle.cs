@@ -1,9 +1,10 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "Amount", 1f }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Amount", EffectBundleHelper.FloatField("Amount", "Amount", "Sharpening intensity", 1f, 0f, 5f) }
+        };
+
         public List<string> ParametersNeeded => SharpenEffect_IPicture.ParametersNeeded;
         public Dictionary<string, string> ParametersType => SharpenEffect_IPicture.ParametersType;
 
@@ -30,6 +36,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsBindableEffect => false;
         public EffectType TypeOfEffect => EffectType.NormalEffect;
         public EffectTarget Target => EffectTarget.Video;
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
@@ -52,7 +60,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            float amount = EffectBundleUiHelper.GetFloat(Parameters, "Amount", 1f);
+            float amount = EffectBundleHelper.GetFloat(Parameters, "Amount", 1f);
             if (amount < 0f)
             {
                 amount = 0f;
@@ -61,7 +69,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Amount",
-                EffectBundleUiHelper.L("Effect_Sharpen_Amount", "Amount"),
+                EffectBundleHelper.L("Effect_Sharpen_Amount", "Amount"),
                 0,
                 5,
                 amount,
@@ -72,9 +80,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Amount" && EffectBundleUiHelper.TrySetFloat(Parameters, "Amount", args.Value))
+            if (args.Id == "Amount" && EffectBundleHelper.TrySetFloat(Parameters, "Amount", args.Value))
             {
-                float amount = EffectBundleUiHelper.GetFloat(Parameters, "Amount", 1f);
+                float amount = EffectBundleHelper.GetFloat(Parameters, "Amount", 1f);
                 if (amount < 0f)
                 {
                     Parameters["Amount"] = 0f;
@@ -84,13 +92,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Sharpen", "Sharpen"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Sharpen", "Increase local contrast to make frame details more crisp."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Name = EffectBundleHelper.L("DisplayName_Effect_Sharpen", "Sharpen"),
+                Description = EffectBundleHelper.L("Description_Effect_Sharpen", "Increase local contrast to make frame details more crisp."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "sharpen.png"))
             };
         }
     }

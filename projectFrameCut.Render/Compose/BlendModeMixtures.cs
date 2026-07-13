@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -326,24 +327,53 @@ namespace projectFrameCut.Render.Compose
 
                     if (mixedCount > 0)
                     {
-                        object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                        object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                        object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                        ushort[] rOutArr, gOutArr, bOutArr;
+                        float[] aOutArr;
+
+                        if (computer is IBlendModeComputer bmc)
+                        {
+                            var rResult = bmc.ComputeBlend(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                            var gResult = bmc.ComputeBlend(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                            var bResult = bmc.ComputeBlend(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                            rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
+                            aOutArr = rResult.Alpha;
+                        }
+                        else
+                        {
+                            object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                            object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
+                            object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
+
+                            rOutArr = (ushort[])outRResult[0];
+                            gOutArr = (ushort[])outGResult[0];
+                            bOutArr = (ushort[])outBResult[0];
+                            aOutArr = (float[])outRResult[1];
+                        }
 
                         for (int i = 0; i < mixedCount; i++)
                         {
                             int idx = mixedIndices![i];
-                            outR[idx] = ReadAsFloat(outRResult[0], i);
-                            outG[idx] = ReadAsFloat(outGResult[0], i);
-                            outB[idx] = ReadAsFloat(outBResult[0], i);
-                            outA[idx] = ReadAsAlpha01(outRResult[1], i);
+                            outR[idx] = rOutArr[i];
+                            outG[idx] = gOutArr[i];
+                            outB[idx] = bOutArr[i];
+                            outA[idx] = aOutArr[i];
                         }
 
                         if (shouldComposeHdr)
                         {
-                            object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                            float[] brightnessAlpha;
+                            if (computer is IOverlayComputer ovcHdr)
+                            {
+                                var hdrResult = ovcHdr.OverlayHdr(mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, mixedCount);
+                                brightnessAlpha = hdrResult.Alpha;
+                            }
+                            else
+                            {
+                                object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
+                                brightnessAlpha = (float[])brightnessResult[0];
+                            }
                             for (int i = 0; i < mixedCount; i++)
-                                outBrightness![mixedIndices![i]] = ReadAsAlpha01(brightnessResult[0], i);
+                                outBrightness![mixedIndices![i]] = brightnessAlpha[i];
                         }
                     }
                 }

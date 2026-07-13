@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Text;
+﻿using projectFrameCut.Drawing.Text;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -68,26 +68,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
-        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
+        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
-            16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, A),
-            8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
-            _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
-        };
+            IPicture result = targetPPB.Value switch
+            {
+                16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, A),
+                8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+                _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
+            };
+            result.CanBeDisposed = false;
+            return result;
+        }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
             => Picture16bpp.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, R, G, B, A);
 
         public SolidColorClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
         public void ReInit()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -197,6 +203,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public string? MarkData;
         public Guid MarkID;

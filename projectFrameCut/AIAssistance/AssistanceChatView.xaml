@@ -1,16 +1,18 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ai="clr-namespace:projectFrameCut.AIAssistance"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:this="clr-namespace:projectFrameCut.AIAssistance"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
-    <Grid RowDefinitions="*,Auto,Auto,Auto" RowSpacing="8" Padding="8">
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" RowSpacing="8" Padding="8">
         <CollectionView Grid.Row="0"
                         x:Name="AIChatHistoryView"
                         SelectionMode="None"
                         Margin="0,0,0,4"
-                        ItemSizingStrategy="MeasureAllItems">
+                        ItemSizingStrategy="MeasureAllItems"
+                        ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="ai:ChatMessageItem">
                     <Grid Padding="2">
@@ -18,109 +20,311 @@
                                 StrokeShape="RoundRectangle 10"
                                 Padding="10,8"
                                 Margin="2"
-                                MaximumWidthRequest="560"
-                                HorizontalOptions="Start"
-                                BackgroundColor="Transparent">
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsUser}" Value="True">
-                                    <Setter Property="HorizontalOptions" Value="End"/>
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <VerticalStackLayout Spacing="4">
+                                BackgroundColor="Transparent"
+                                Stroke="{AppThemeBinding Light=#FFE0E0E0, Dark=#FF444444}"
+                                BindingContextChanged="OnMessageBorderContextChanged">
+                            <VerticalStackLayout Spacing="6">
+                                <!-- Sender -->
                                 <Label Text="{Binding Sender}"
                                        FontAttributes="Bold"
-                                       FontSize="12"/>
-                                <Border StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 8"
-                                        Padding="8,6"
-                                        IsVisible="False">
-                                    <Border.Triggers>
-                                        <DataTrigger TargetType="Border" Binding="{Binding HasReasoning}" Value="True">
-                                            <Setter Property="IsVisible" Value="True"/>
-                                        </DataTrigger>
-                                    </Border.Triggers>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding ReasoningText}"
-                                               FontSize="12"
-                                               LineBreakMode="WordWrap"/>
-                                    </VerticalStackLayout>
-                                </Border>
-                                <Border StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 8"
-                                        Padding="8,6"
-                                        IsVisible="False">
-                                    <Border.Triggers>
-                                        <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
-                                            <Setter Property="IsVisible" Value="True"/>
-                                        </DataTrigger>
-                                    </Border.Triggers>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding ToolCallsText}"
-                                               FontSize="12"
-                                               LineBreakMode="WordWrap"/>
-                                    </VerticalStackLayout>
-                                </Border>
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light=#FF333333, Dark=#FFDDDDDD}"/>
+
+                                <!-- ===== Assistant message: Markdown rendering ===== -->
+                                <VerticalStackLayout Spacing="0"
+                                                     HorizontalOptions="Fill"
+                                                     BindingContextChanged="SubViewCollection_BindingContextChanged" />
+                                <!-- ===== User message: plain text ===== -->
                                 <Label Text="{Binding Message}"
-                                       LineBreakMode="WordWrap"/>
-                                <HorizontalStackLayout Spacing="8"
-                                                       Margin="0,4,0,0"
-                                                       IsVisible="{Binding CanSubmitFeedback}">
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe8dc;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackGoodButton_Clicked"/>
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe8db;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackBadButton_Clicked"/>
-                                    <Button FontFamily="Icons"
-                                            Text="&#xe87f;"
-                                            ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
-                                            Padding="8,2"
-                                            FontSize="12"
-                                            MinimumHeightRequest="30"
-                                            IsEnabled="{Binding HasFeedbackSubmitted, Converter={toolkit:InvertedBoolConverter}}"
-                                            Clicked="AIReplyFeedbackReportButton_Clicked"/>
-                                </HorizontalStackLayout>
+                                       IsVisible="{Binding IsUserMessageWithText}"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFEEEEEE}"/>
+
+
+                                <!-- ===== 反馈/重做 按钮行 + 预创建的下拉面板 ===== -->
+                                <VerticalStackLayout Spacing="0">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                        <!-- 反馈按钮（点击展开好评/差评/举报） -->
+                                        <HorizontalStackLayout Grid.Column="0"
+                                                               HorizontalOptions="Start"
+                                                               Spacing="8"
+                                                               Margin="0,4,0,0"
+                                                               IsVisible="{Binding CanSubmitFeedback}">
+                                            <Button Text="&#xe87f;"
+                                                    FontFamily="Icons"
+                                                    ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
+                                                    Padding="8,2"
+                                                    FontSize="12"
+                                                    MinimumHeightRequest="30"
+                                                    TextColor="{AppThemeBinding Light=#FF444444, Dark=#FFBBBBBB}"
+                                                    Command="{x:Static this:AssistanceChatView.ToggleVisibilityCommand}"
+                                                    CommandParameter="{x:Reference FeedbackDropdown}"/>
+                                        </HorizontalStackLayout>
+
+                                        <!-- 重做 + 复制按钮 -->
+                                        <HorizontalStackLayout Grid.Column="2"
+                                                               HorizontalOptions="End"
+                                                               Spacing="4"
+                                                               IsVisible="{Binding IsFirstTurn, Converter={toolkit:InvertedBoolConverter}}">
+                                            <!-- 重做（点击展开重新生成/编辑/撤回/分支） -->
+                                            <Button Text="&#xe15a;"
+                                                    FontFamily="Icons"
+                                                    ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatView_Regenerate}"
+                                                    Padding="6,2"
+                                                    FontSize="12"
+                                                    MinimumHeightRequest="30"
+                                                    WidthRequest="30"
+                                                    TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                    Command="{x:Static this:AssistanceChatView.ToggleVisibilityCommand}"
+                                                    CommandParameter="{x:Reference RedoDropdown}"/>
+                                            <!-- ===== 复制响应 ===== -->
+                                            <Button FontFamily="Icons"
+                                                    Text="&#xe14d;"
+                                                    ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}"
+                                                    Padding="6,2"
+                                                    FontSize="18"
+                                                    MinimumHeightRequest="30"
+                                                    WidthRequest="30"                                                  
+                                                    TextColor="{AppThemeBinding Light=#FF888888, Dark=#FFAAAAAA}"
+                                                    Clicked="AIReplyCopyButton_Clicked"/>
+                                        </HorizontalStackLayout>
+                                    </Grid>
+                                    <Grid Margin="0,4,0,0">                                    
+                                        <!-- ===== 反馈下拉面板（预创建，默认隐藏） ===== -->
+                                        <Border x:Name="FeedbackDropdown"
+                                                IsVisible="False"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                Padding="0"                                            
+                                                Margin="0,4,0,0"
+                                                HorizontalOptions="Start">
+                                            <Border.Shadow>
+                                                <Shadow Brush="{AppThemeBinding Light=#30000000, Dark=#60000000}"
+                                                        Offset="0,4"
+                                                        Radius="12"
+                                                        Opacity="0.4" />
+                                            </Border.Shadow>
+                                            <HorizontalStackLayout Spacing="0">
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Good}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"
+                                                        Clicked="AIReplyFeedbackGoodButton_Clicked"/>
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Bad}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"                                                        
+                                                        Clicked="AIReplyFeedbackBadButton_Clicked"/>
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_Feedback_Report}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"   
+                                                        Clicked="AIReplyFeedbackReportButton_Clicked"/>
+                                            </HorizontalStackLayout>
+                                        </Border>
+
+                                        <!-- ===== 重做下拉面板（预创建，默认隐藏） ===== -->
+                                        <Border x:Name="RedoDropdown"
+                                                IsVisible="False"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"                                                
+                                                Padding="0"
+                                                Margin="0,4,0,0"
+                                                HorizontalOptions="End">
+                                            <Border.Shadow>
+                                                <Shadow Brush="{AppThemeBinding Light=#30000000, Dark=#60000000}"
+                                                        Offset="0,4"
+                                                        Radius="12"
+                                                        Opacity="0.4" />
+                                            </Border.Shadow>
+                                            <HorizontalStackLayout Spacing="0">
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_Regenerate}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"   
+                                                        IsVisible="{Binding IsAssistant}"
+                                                        Clicked="AIRegenerateFromMessage_Clicked"/>
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_EditMessage}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"   
+                                                        IsVisible="{Binding IsUser}"
+                                                        Clicked="AIEditMessage_Clicked"/>
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_RollbackToHere}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"   
+                                                        Clicked="AIRollbackToHere_Clicked"/>
+                                                <Button Text="{l:Localized Key=AIAssistant_ChatView_BranchFromHere}"
+                                                        Padding="14,9"
+                                                        FontSize="14"
+                                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFDDDDDD}"
+                                                        HorizontalOptions="Fill"
+                                                        Margin="4,0"   
+                                                        Clicked="AIBranchFromHere_Clicked"/>
+                                            </HorizontalStackLayout>
+                                        </Border>
+                                    </Grid>
+
+                                </VerticalStackLayout>
+                                
                             </VerticalStackLayout>
                         </Border>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-        <Grid Grid.Row="1">
-            <Label FontSize="12" TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
+
+        <!-- Sub-agent sessions -->
+        <Border Grid.Row="1"
+                x:Name="SubAgentPanel"
+                IsVisible="False"
+                Stroke="{AppThemeBinding Light=#FFD0D8E0, Dark=#FF30384A}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 8"
+                Padding="0"
+                BackgroundColor="{AppThemeBinding Light=#FFF5F8FC, Dark=#FF1A2230}">
+            <VerticalStackLayout Spacing="0">
+                <Grid x:Name="SubAgentPanelHeader" Padding="8,5"
+                      BackgroundColor="{AppThemeBinding Light=#FFE0E8F0, Dark=#FF28303F}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="SubAgentPanelHeader_Tapped"/>
+                    </Grid.GestureRecognizers>
+                    <Label x:Name="SubAgentToggleIcon"
+                           Text="&#x25B6;"
+                           FontSize="9"
+                           Margin="0,0,5,0"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFAAAAAA}"/>
+                    <Label x:Name="SubAgentPanelTitle"
+                           Grid.Column="1"
+                           Text="Sub-Agents (0)"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF445566, Dark=#FF8899BB}"/>
+                    <Label x:Name="SubAgentPanelIndicator"
+                           Grid.Column="2"
+                           Text="..."
+                           FontSize="10"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#FF888888, Dark=#FF777777}"/>
+                </Grid>
+                <CollectionView x:Name="SubAgentListView"
+                                IsVisible="False"
+                                MaximumHeightRequest="200"
+                                SelectionMode="None"
+                                Margin="4,2">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8,5"
+                                    Margin="0,1"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 5"
+                                    BackgroundColor="{AppThemeBinding Light=#FFFFFFFF, Dark=#FF202838}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="SubAgentItem_Tapped"/>
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="7">
+                                    <Border Grid.RowSpan="2"
+                                            WidthRequest="8"
+                                            HeightRequest="8"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 4"
+                                            BackgroundColor="{Binding StatusColor}"
+                                            VerticalOptions="Center"/>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light=#FF333333, Dark=#FFDDDDDD}"/>
+                                    <Label Grid.Column="1"
+                                           Grid.Row="1"
+                                           Text="{Binding DetailText}"
+                                           FontSize="10"
+                                           TextColor="{AppThemeBinding Light=#FF666666, Dark=#FFAAAAAA}"/>
+                                    <Label Grid.Column="2"
+                                           Grid.RowSpan="2"
+                                           Text="{Binding ActionText}"
+                                           FontSize="10"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#FF667799, Dark=#FF99AACC}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- Bottom info bar -->
+        <Grid Grid.Row="2">
+            <Label FontSize="12"
+                   TextColor="{AppThemeBinding Dark=#80ffffff, Light=Black}"
+                   HorizontalOptions="Center"
+                   Text="{l:Localized Key=AIAssistant_InfoGrayText}"/>
         </Grid>
 
-        
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <!-- Selected files preview -->
+        <VerticalStackLayout Grid.Row="3" x:Name="SelectedFilesPreview"
+                             IsVisible="False" Spacing="4" Margin="0,0,0,4">
+        </VerticalStackLayout>
+
+        <!-- Input area -->
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button Grid.Column="0"
+                    x:Name="AIAttachButton"
+                    FontFamily="Icons"
+                    Text="&#xe226;"
+                    ToolTipProperties.Text="Attach files"
+                    Padding="8,2"
+                    FontSize="18"
+                    MinimumHeightRequest="32"
+                    Clicked="AIAttachButton_Clicked"/>
             <Entry x:Name="AIInputButton"
-                   Grid.Column="0"
+                   Grid.Column="1"
                    HorizontalOptions="Fill"
                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
                    ReturnType="Send"
                    Completed="AIInputButton_Completed"/>
-            <Button Grid.Column="1"
+            <Button Grid.Column="2"
                     x:Name="AISendButton"
                     HorizontalOptions="Center"
                     Text="{l:Localized Key=AIAssistant_ChatView_Send}"
                     Clicked="AISendButton_Clicked"/>
-
-
         </Grid>
+
+        <!-- Temporary off-screen host used by the AI webpage browsing tool. -->
+        <WebView x:Name="WebBrowserHost"
+                 Grid.RowSpan="5"
+                 WidthRequest="1"
+                 HeightRequest="1"
+                 Opacity="0.01"
+                 InputTransparent="True"
+                 HorizontalOptions="Start"
+                 VerticalOptions="Start"/>
     </Grid>
+    <ContentView.GestureRecognizers>
+        <DropGestureRecognizer AllowDrop="True" Drop="FileDropGestureRecognizer_Drop"/>
+    </ContentView.GestureRecognizers>
 </ContentView>

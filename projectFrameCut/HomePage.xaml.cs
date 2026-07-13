@@ -1,4 +1,4 @@
-using LocalizedResources;
+﻿using LocalizedResources;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
@@ -39,6 +39,8 @@ using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
+using Microsoft.Win32;
+
 
 
 
@@ -50,7 +52,6 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
 using Microsoft.UI.Xaml.Media;
-using ILGPU;
 using winui = Microsoft.UI.Xaml.Controls;
 
 
@@ -450,14 +451,14 @@ public partial class HomePage : ContentPage
         }
         if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
         {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
             return;
         }
 
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
-        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
+        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > GetMaxPathLength())
         {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
             return;
         }
 
@@ -473,7 +474,7 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
             return;
         }
 
@@ -491,7 +492,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "timeline.json"),
             JsonSerializer.Serialize(new DraftStructureJSON
             {
-                Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),
+                Clips = Array.Empty<ClipDraftDTO>(),
             }));
         File.WriteAllText(
             Path.Combine(draftSourcePath, "assets.json"),
@@ -505,6 +506,35 @@ public partial class HomePage : ContentPage
 
     }
 
+    public static string GetInvalidFileNameWarn()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Localized.HomePage_CreateAProject_InvalidName_Windows;
+        }
+        else
+        {
+            return Localized.HomePage_CreateAProject_InvalidName_Linux;
+        }
+    }
+
+    public static int GetMaxPathLength()
+    {
+#if WINDOWS
+        try
+        {
+            var k = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\FileSystem");
+            if (Convert.ToBoolean(k.GetValue("LongPathsEnabled"))) return 65535;
+            return 260;
+        }
+        catch { }
+        return 65535;
+#else
+        return 65535;
+#endif
+    }
+
+
     private async Task CloneDraft(ProjectsViewModel viewModel)
     {
         string draftSourcePath = Path.Combine(MauiProgram.DataPath, "My Drafts");
@@ -517,14 +547,14 @@ public partial class HomePage : ContentPage
         }
         if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
         {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
             return;
         }
 
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
         if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || Path.GetInvalidFileNameChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
         {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
             return;
         }
         if (Directory.Exists(draftSourcePath))
@@ -542,7 +572,7 @@ public partial class HomePage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "clone draft", this);
-            await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_CreateAProject_InvalidName}{Environment.NewLine}{Localized._ExceptionTemplate(ex)}", Localized._OK);
+            await DisplayAlertAsync(Localized._Error, $"{GetInvalidFileNameWarn()}{Environment.NewLine}{Localized._ExceptionTemplate(ex)}", Localized._OK);
             return;
         }
 
@@ -900,6 +930,9 @@ public partial class HomePage : ContentPage
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
                 }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
+                DraftPage? createdPage = null;
+                bool pageCreationCancelled = false;
+                await Dispatcher.DispatchAsync(async () =>
                 {
                     int maxRetries = 5;
                     int attempt = 0;
@@ -907,7 +940,7 @@ public partial class HomePage : ContentPage
                     {
                         try
                         {
-                            page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
+                            var p = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
                             {
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
@@ -934,45 +967,35 @@ public partial class HomePage : ContentPage
                                 var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
                                 if (resolution.Split('x', 2).Length >= 2)
                                 {
-                                    page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
-                                    page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
+                                    p.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
+                                    p.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
                                 }
                                 else
                                 {
-                                    page.DefaultPreviewWidth = 1280;
-                                    page.DefaultPreviewHeight = 720;
+                                    p.DefaultPreviewWidth = 1280;
+                                    p.DefaultPreviewHeight = 720;
                                 }
                             }
 #if WINDOWS
-                            ILGPU.Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
-                            var devices = context.Devices.ToList();
-                            List<AcceleratorInfo> listAccels = new();
-                            for (uint i = 0; i < devices.Count; i++)
+                            // AcceleratorsManager was initialized during plugin load.
+                            // No need to re-enumerate devices here — the configuration from
+                            // accels.json (or the default first non-CPU accelerator) is already loaded.
+                            if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
                             {
-                                var item = devices[(int)i];
-                                listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+                                Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated effects will be unavailable.");
                             }
-                            if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
-                            {
-                                var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
-                                SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
-                                Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
-                            }
-                            var picked = listAccels.FirstOrDefault(c => c.index == SettingsManager.GetSettingAs<int>("accel_DeviceId", -1, -1), listAccels.First());
-                            var accelDevice = devices.FirstOrDefault(c => c.Name == picked.name, devices.First());
-                            page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
-                            await page.PostInit();
+                            await p.PostInit();
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
                                 try
                                 {
-                                    plugin.InjectUI(page);
+                                    plugin.InjectUI(p);
                                     var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
-                                    var items = plugin.GetMenuItems(page);
+                                    var items = plugin.GetMenuItems(p);
                                     var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
                                     items.ForEach(c => sub.Add(c));
-                                    page.ExtensionsMenuBar.Add(sub);
+                                    p.ExtensionsMenuBar.Add(sub);
 
                                 }
                                 catch (Exception ex)
@@ -980,17 +1003,18 @@ public partial class HomePage : ContentPage
                                     Log(ex, $"plugin {plugin.Name} InjectUI", this);
                                     if (!await DisplayAlertAsync(Localized._Warn, Localized.HomePage_InitPlugin_Fail(plugin.Name, ex), Localized.HomePage_SourceNotFound_Continue, Localized._Cancel))
                                     {
-                                        page = null;
+                                        pageCreationCancelled = true;
                                         return;
                                     }
                                 }
                             }
+                            createdPage = p;
                             break;
                         }
-                        catch (COMException comEx)
+                        catch (Exception ex)
                         {
                             attempt++;
-                            Log(comEx, $"COMException while loading DraftPage attempt {attempt}", this);
+                            Log(ex, $"Exception while loading DraftPage attempt {attempt}", this);
                             if (attempt >= maxRetries)
                             {
                                 throw;
@@ -999,7 +1023,13 @@ public partial class HomePage : ContentPage
                             continue;
                         }
                     }
+                });
+                if (pageCreationCancelled)
+                {
+                    page = null;
+                    return;
                 }
+                page = createdPage;
 
                 foreach (var item in PluginManager.LoadedPlugins)
                 {
@@ -1173,6 +1203,7 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         _ = McpClientLinkService.Shared.DisconnectAsync();
+        Environment.CurrentDirectory = MauiProgram.DataPath;
         try
         {
             if (lastPage is not null && Window is not null)
@@ -1474,6 +1505,7 @@ public partial class HomePage : ContentPage
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
 #if WINDOWS
+                AppShell.instance.CollapseNavView();
                 AppShell.instance.HideNavView();
 #endif
                 await Navigation.PushAsync(renderPage);
@@ -1491,32 +1523,45 @@ public partial class HomePage : ContentPage
 
     private async Task RenameProject(ProjectsViewModel vmItem)
     {
-        var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
-        if (projName is null) return;
-        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
-        if (Directory.Exists(newPath))
+        try
         {
-            await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
-            return;
-        }
-        if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
-        {
-            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
-            return;
-        }
-        Directory.Move(vmItem._projectPath, newPath);
-        var projInfoPath = Path.Combine(newPath, "project.pjfc");
-        if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(newPath, "project.json");
-        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projInfoPath), DraftPage.DraftJSONOption);
-        if (info is not null)
-        {
-            info.ProjectName = projName;
-            File.WriteAllText(
-                Path.Combine(newPath, "project.pjfc"),
-                JsonSerializer.Serialize(info));
-        }
+            var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
+            if (projName is null) return;
+            var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
+            if (Directory.Exists(newPath))
+            {
+                await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
+                return;
+            }
+            if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
+            {
+                await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
+                return;
+            }
+            var projInfoPath = Path.Combine(newPath, "project.pjfc");
+            if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(newPath, "project.json");
+            var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projInfoPath), DraftPage.DraftJSONOption);
+            if (info is not null)
+            {
+                info.ProjectName = projName;
+                File.WriteAllText(
+                    Path.Combine(newPath, "project.pjfc"),
+                    JsonSerializer.Serialize(info));
+            }
 
-        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            try
+            {
+                Directory.Move(Path.GetDirectoryName(vmItem._projectPath) ?? throw new InvalidOperationException("Cannot find project root."), newPath);
+            }
+            catch { } //ignore the exception, because we already changed the project name in the project.pjfc file, so it won't affect the draft itself.
+
+            await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "rename project", this);
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_ProjectContextMenu_Rename_Fail(vmItem.Name, ex), Localized._OK);
+        }
     }
 
     public async Task ManageProject(ProjectsViewModel vmItem)
@@ -1886,10 +1931,7 @@ public partial class HomePage : ContentPage
                 Path.Combine(draftSourcePath, "timeline.json"),
                 JsonSerializer.Serialize(new DraftStructureJSON
                 {
-                    Clips = new List<ClipDraftDTO>
-                    {
-                        DraftImportAndExportHelper.ExportClipElementFromDraftPage(_draftPage, element, false)
-                    }.Cast<object>().ToArray(),
+                    Clips = [DraftImportAndExportHelper.ExportClipElementFromDraftPage(_draftPage, element, false)],
                 }));
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "assets.json"),

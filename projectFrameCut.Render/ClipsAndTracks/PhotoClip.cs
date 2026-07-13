@@ -1,4 +1,4 @@
-using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
@@ -46,10 +46,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public PhotoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
         public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
@@ -71,7 +72,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 
@@ -82,56 +83,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
             source?.Dispose(true);
         }
 
-    }
-
-    public class VectorPhotoClip : IImmutableVectorContentClip
-    {
-        public AntiAliasMode? ClipAntiAliasMode { get; set; }
-
-        public ClipMode ClipType => ClipMode.PhotoClip;
-        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public bool IsVector => true;
-
-        public Guid Id { get; init; }
-        public string Name { get; init; }
-        public string BindedSoundTrack { get; init; }
-        public uint LayerIndex { get; init; }
-        public uint SubLayerIndex { get; init; }
-        public uint StartFrame { get; init; }
-        public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; set; }
-        public int TargetWidth { get; set; }
-        public int TargetHeight { get; set; }
-        public int TargetX { get; set; }
-        public int TargetY { get; set; }
-        public float FrameTime { get; init; }
-        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
-        public IMixture? MixtureInstance { get; set; }
-        public bool ExtendToWholeDraft { get; set; }
-        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; set; }
-        public string? FilePath { get; set; }
-
-        public bool NeedFilePath => true;
-
-        public Dictionary<string, object> ExtraData { get; set; } = new();
-
-        [System.Text.Json.Serialization.JsonIgnore]
-        public VectorPicture? Picture { get; set; }
-
-        public void Dispose()
-        {
-            Picture = null;
-        }
-
-        public VectorPicture GetVectorPicture(int requiredWidth, int requiredHeight) => Picture ?? throw new InvalidOperationException("Vector picture is not initialized.");
-
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
-        {
-            if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
-            Picture = SVGToVectorElement.ImportFromFile(FilePath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
-        }
     }
 
 }

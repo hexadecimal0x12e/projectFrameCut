@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using projectFrameCut.McpCore;
@@ -74,7 +74,7 @@ public partial class Program
             Console.Error.WriteLine($"No mode defined. Add 'http' or 'stdio' in params.");
             return;
         }
-        if(string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
+        if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
         {
             Console.Error.WriteLine($"Project root '{projectRoot}' does not exist.");
             return;
@@ -308,14 +308,14 @@ public partial class Program
         var draft = workspace.Draft;
 
         uint maxLayer = 0;
-        foreach (var clip in draft.Clips.OfType<ClipDraftDTO>())
+        foreach (var clip in draft.Clips)
         {
             if (clip.LayerIndex > maxLayer)
                 maxLayer = clip.LayerIndex;
         }
 
         uint maxFrame = 0;
-        foreach (var clip in draft.Clips.OfType<ClipDraftDTO>())
+        foreach (var clip in draft.Clips)
         {
             uint endFrame = clip.StartFrame + clip.Duration;
             if (endFrame > maxFrame)
@@ -341,7 +341,7 @@ public partial class Program
         var layers = new Dictionary<uint, object>();
         var layerClips = new Dictionary<uint, List<ClipDraftDTO>>();
 
-        foreach (var clip in workspace.Draft.Clips.OfType<ClipDraftDTO>())
+        foreach (var clip in workspace.Draft.Clips)
         {
             if (!layerClips.ContainsKey(clip.LayerIndex))
                 layerClips[clip.LayerIndex] = new();

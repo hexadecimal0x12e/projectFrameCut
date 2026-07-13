@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,15 +13,15 @@ public static class SimpleLocalizer
     /// <param name="locateCode">The locate Name seted for this locate. Optional, default to the <code>System.Globalization.CultureInfo.CurrentUICulture.Name</code></param>
     /// <exception cref="InvalidOperationException">no any locate available</exception>
     public static ISimpleLocalizerBase Init(string? locateCode = null)
-    { 
+    {
         if (locateCode == null)
         {
             locateCode = System.Globalization.CultureInfo.CurrentUICulture.Name;
         }
         if (!ISimpleLocalizerBase.GetMapping().TryGetValue(locateCode, out var localizer))
         {
-            localizer = ISimpleLocalizerBase.GetMapping().First().Value;       
-            if(localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
+            localizer = ISimpleLocalizerBase.GetMapping().First().Value;
+            if (localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
             IsFallbackMatched = true;
         }
 

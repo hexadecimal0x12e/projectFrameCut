@@ -294,10 +294,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// <param name="ImplementType"></param>
     /// <param name="ParametersType"></param>
     /// <param name="CreateCallback"></param>
-    public class SimpleEffectFactory(string FromPlugin, string TypeName, EffectTarget Target, EffectImplementType ImplementType,  Dictionary<string, string> ParametersType, Func<Dictionary<string, object>, IEffect> CreateCallback) : IEffectFactory
+    public class SimpleEffectFactory(string FromPlugin, string TypeName, EffectTarget Target, EffectImplementType ImplementType, Dictionary<string, string> ParametersType, Func<Dictionary<string, object>, IEffect> CreateCallback) : IEffectFactory
     {
         string IEffectFactory.FromPlugin => FromPlugin;
-        string IEffectFactory.TypeName =>  TypeName;
+        string IEffectFactory.TypeName => TypeName;
         Dictionary<string, string> IEffectFactory.ParametersType => ParametersType;
         List<string> IEffectFactory.ParametersNeeded => ParametersType.Keys.ToList();
         IEffect IEffectFactory.BuildWithDefaultType(Dictionary<string, object>? parameters)

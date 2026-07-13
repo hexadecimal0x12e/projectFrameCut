@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -140,6 +140,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
+        .AddSwitch("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
         .AddSeparator()
 
         .AddText("IPicture", fontSize: 20)

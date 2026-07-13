@@ -24,6 +24,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
 
 
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
@@ -136,7 +138,15 @@ namespace projectFrameCut.StandaloneRender
 
                     Mode 'bench':
                         [-multiAccelerator=<true|false>]
-                        [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]    
+                        [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
+                        [-writeToNull=<true|false>]
+                        [-maxParallelThreads=<number>]
+                        [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
+                        [-GCOptions=0,1,2]
+                        [-preferHwAccelDecoder=<true|false>]
+                        [-PictureResizer=<cpu|hwaccel>]
+                        [-ApproximateMixture=<true|false>]
 
                     ---
 
@@ -272,6 +282,22 @@ namespace projectFrameCut.StandaloneRender
                         return 255;
                     }
                     catch { throw; }
+                case "bench":
+                    var accelResult1 = InitAccel(switches);
+                    if (accelResult1 != 0)
+                    {
+                        return accelResult1;
+                    }
+                    try
+                    {
+                        return await GoBench(switches);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Log("Benchmark task was canceled.");
+                        return 255;
+                    }
+                    break;
                 case "list_accels":
                     Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                     var devices = context.Devices.ToList();
@@ -426,6 +452,8 @@ namespace projectFrameCut.StandaloneRender
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
                 ILGPUPlugin.accelerators = accelerators;
+                AcceleratorsManager.AcceleratorsForRendering = accelerators;
+                AcceleratorsManager.IsRendering = true;
 
                 if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.HwAccelPictureResizer();
                 return 0;
@@ -443,8 +471,9 @@ namespace projectFrameCut.StandaloneRender
             #region init encoder
             bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             Log("Initiliazing FFmpeg...");
-            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+            DynamicallyLoadedBindings.EnableAutoInitialization = false;
             FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
             if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
             {
                 FFmpegHelper.SetupFFmpegLogging(trace ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
@@ -986,23 +1015,351 @@ namespace projectFrameCut.StandaloneRender
             return 0;
         }
 
+        /// <summary>
+        /// 运行内置基准测试：使用 <see cref="BenchmarkSourceGenerator.GetDraftStructure"/>
+        /// 生成的测试项目进行渲染管线性能测试，输出详细的帧时间统计。
+        /// </summary>
+        private static async Task<int> GoBench(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 解析基准测试参数 ──────────────────────────────
+            const int width = 1920;
+            const int height = 1080;
+            const int fps = 60;
+
+            // ── 生成测试结构 ──────────────────────────────────
+            var clips = BenchmarkSourceGenerator.GetDraftStructure();
+            if (clips is null || clips.Length == 0)
+            {
+                Log("ERROR: Benchmark structure is empty.", "error");
+                return 1;
+            }
+            Log($"Generated {clips.Length} test clips.");
+
+            uint duration = 0;
+            foreach (var clip in clips)
+            {
+                duration = Math.Max(clip.StartFrame + clip.Duration, duration);
+            }
+
+            Log($"Running benchmark with duration: {duration} frames, resolution: {width}x{height}, fps: {fps}.");
+
+            Log("Initializing clips...");
+            foreach (var clip in clips)
+            {
+                clip.ExtraData ??= new Dictionary<string, object>();
+                clip.ReInit(IPicture.PicturePixelMode.BytePicture);
+                Log($"Clip {clip.Name} initialized: {clip.ClipType}, StartFrame: {clip.StartFrame}, Duration: {clip.Duration}");
+            }
+            VideoBuilder? builder = null;
+
+            if (switches.TryGetValue("writeToNull", out var writeToStr) && bool.TryParse(writeToStr, out var writeToNull) && writeToNull)
+            {
+                builder = new VideoBuilder("/dev/null", width, height, fps, "BlackHoleWriter", "")
+                {
+                    Duration = duration,
+                };
+                Log("Write to /dev/null (BlackholeVideoWriter) enabled.");
+            }
+            else
+            {
+                Log("Write to /dev/null (BlackholeVideoWriter) disabled.");
+            }
+
+            var cts = new CancellationTokenSource();
+
+            #region read args
+            var GCOption = 0;
+            if (switches.TryGetValue("GCOptions", out var gcopt))
+            {
+                if (!int.TryParse(gcopt, out GCOption) || (GCOption < 0 || GCOption > 2))
+                {
+                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.", "warn");
+                    GCOption = 0;
+                }
+            }
+
+            if (GCOption == 2)
+            {
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            }
+
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            int maxParallelThreads = Environment.ProcessorCount;
+            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
+            int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
+            if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
+            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+            if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
+            if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
+            if (!bool.TryParse(switches.GetOrAdd("boostMode", "false"), out var boostMode)) boostMode = false;
+            if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
+            {
+                if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {renderWorkerAffinityError}", "error");
+                    return 1;
+                }
+
+                try
+                {
+                    ThreadAffinityHelper.BuildAffinityMask(renderWorkerAffinityCpuIndexes);
+                }
+                catch (Exception ex)
+                {
+                    Log($"ERROR: Invalid renderWorkerAffinity '{renderWorkerAffinityRaw}': {ex.Message}", "error");
+                    return 1;
+                }
+
+                Log($"Manual render worker CPU affinity: {string.Join(", ", renderWorkerAffinityCpuIndexes)}");
+            }
+
+            if (!oneByOneRender)
+            {
+                if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
+                {
+                    try
+                    {
+                        var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                        foreach (var item in group)
+                        {
+                            Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
+                        }
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                                ? renderWorkerAffinityCpuIndexes!.Length
+                                : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
+
+                    }
+                    catch
+                    {
+                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
+                    }
+                    maxParallelThreads *= 2;
+                    preparerAffinityCpuIndexes = renderWorkerAffinityCpuIndexes.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(renderWorkerAffinityCpuIndexes).ToArray() : [];
+                }
+                else
+                {
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
+                }
+
+                var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                    ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
+                    : (enableThreadAffinity ? "auto" : "disabled");
+                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{YesNo(renderByLayer)}, Prepare in worker:{YesNo(prepareInWorker)}, Preparer affinity:{YesNo(enableThreadAffinity)}, Worker affinity:{workerAffinityLabel}, Boost mode:{YesNo(boostMode)}");
+
+            }
+            else
+            {
+                Log("Working in serial mode.");
+            }
+
+
+            bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+            ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
+            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
+            {
+                EffectHelper.ForcePreferToType = forcePreferToType;
+                Log($"Using forced effect implement type: {forcePreferToType}");
+            }
+
+            Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
+            Log($"Prefer to HwAccel decode: {YesNo(hwAccelDecode)}");
+            Log($"GC Option: {GCOption}");
+            Log($"Drawing.Processing.Resizing.PictureResizer: {Drawing.Processing.Resizing.PictureResizer.Default.GetType().Name}");
+
+
+            #endregion
+
+            var renderer = new Renderer
+            {
+                builder = builder,
+                Clips = clips,
+                Duration = duration,
+                LogProcessStack = true,
+                LogRenderState = false,
+                LogStaticsData = false,
+                GCOption = GCOption,
+                Use16Bit = false,
+                EnableRenderWatchdogForceStart = false,
+                MaxRenderScheduleTimeout = 0,
+                RenderSchedulerIdleDelayMs = 0,
+                MinSchedulePreparedFrames = 0,
+                ThrottleThreshold = (int)(duration * 8),
+                MaxThreads = boostMode ? (int)duration : maxParallelThreads,
+                BlockPreparingBeforeRendering = boostMode,
+                DisableAllThrottleOptions = boostMode,
+                RenderByLayers = renderByLayer,
+                PrepareInWorkerThreads = prepareInWorker,
+                OneByOneRender = oneByOneRender,
+                EnableThreadAffinity = enableThreadAffinity,
+                WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
+                TargetHeight = height,
+                TargetWidth = width,
+                ProjectRelativeWidth = width,
+                ProjectRelativeHeight = height,
+                EnableGPUBatchProcess = true,
+                AllowReorderEffect = true,
+                AutoSetupRenderContext = false,
+                UseHDR = false,
+                StartFrame = 0
+            };
+
+            // ── 进度回调 ─────────────────────────────────────
+            renderer.OnProgressChanged += (progress, eta) =>
+            {
+                Console.Write($"\rRendering: {progress:P1}  ETA: {eta:hh\\:mm\\:ss}  FPS: {renderer.CurrentFps:N2}  Frame: {renderer.CurrentFinished}/{renderer.Duration}      ");
+            };
+
+            // ── Ctrl+C 处理 ──────────────────────────────────
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true;
+                Log("\nCancelling benchmark...");
+                cts.Cancel();
+            };
+
+            // ── 执行渲染 ─────────────────────────────────────
+            Log("Starting benchmark render...");
+            Console.CursorVisible = false;
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                builder?.Build()?.Start();
+                renderer.PrepareRender(cts.Token);
+                await renderer.GoRender(cts.Token);
+                sw.Stop();
+                Log($"Render done,total elapsed {sw}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+            }
+            catch (TaskCanceledException)
+            {
+                sw.Stop();
+                Console.CursorVisible = true;
+                Log("Benchmark was cancelled by user.");
+                return 255;
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                Console.CursorVisible = true;
+                Log(ex, "Benchmark render failed");
+                return 1;
+            }
+
+            Console.CursorVisible = true;
+            Console.WriteLine(); // 换行
+
+            // ── 统计 ProcessStack 各步骤耗时 ─────────────────
+            List<List<PictureProcessStack>> stacksSnapshot = renderer.FrameProcessStacks.Select(s => s.Value).ToList();
+
+            static IEnumerable<PictureProcessStack> FlattenStacks(IEnumerable<PictureProcessStack>? steps)
+            {
+                if (steps is null) yield break;
+                foreach (var step in steps)
+                {
+                    if (step is null) continue;
+                    yield return step;
+                    if (step is OverlayedPictureProcessStack overlay)
+                    {
+                        foreach (var s in FlattenStacks(overlay.TopSteps)) yield return s;
+                        foreach (var s in FlattenStacks(overlay.BaseSteps)) yield return s;
+                    }
+                }
+            }
+
+            static string GetStepKey(PictureProcessStack step)
+            {
+                var name = step.OperationDisplayName;
+                if (string.IsNullOrWhiteSpace(name)) name = step.Operator?.Name;
+                return string.IsNullOrWhiteSpace(name) ? "(unknown)" : name;
+            }
+
+            var sumTicksByKey = new Dictionary<string, long>(StringComparer.Ordinal);
+            var countByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+            var orderedKeys = new List<string>();
+
+            foreach (var frameStack in stacksSnapshot)
+            {
+                foreach (var step in FlattenStacks(frameStack))
+                {
+                    if (step?.Elapsed is not TimeSpan elapsed) continue;
+                    var key = GetStepKey(step);
+                    if (!orderedKeys.Contains(key)) orderedKeys.Add(key);
+                    sumTicksByKey[key] = sumTicksByKey.GetValueOrDefault(key) + elapsed.Ticks;
+                    countByKey[key] = countByKey.GetValueOrDefault(key) + 1;
+                }
+            }
+
+            // ── 输出结果 ─────────────────────────────────────
+            var avgTime = renderer.EachElapsed.Count > 0
+                ? renderer.EachElapsed.Average(ts => ts.TotalMilliseconds)
+                : 0;
+            var avgPrepTime = renderer.EachElapsedForPreparing.Count > 0
+                ? renderer.EachElapsedForPreparing.Average(ts => ts.TotalMilliseconds)
+                : 0;
+            var totalTime = sw.Elapsed;
+            var renderedFrames = renderer.EachElapsed.Count;
+
+            Log("");
+            Log("========================================", "stat");
+            Log("  Benchmark Results", "stat");
+            Log("========================================", "stat");
+            Log($"  Total frames rendered : {renderedFrames}", "stat");
+            Log($"  Total time            : {totalTime.TotalSeconds:F2}s", "stat");
+            Log($"  Overall FPS           : {renderedFrames / Math.Max(totalTime.TotalSeconds, 0.001):F2}", "stat");
+            Log($"  Avg frame render time : {avgTime:F3}ms ({1000.0 / Math.Max(avgTime + avgPrepTime, 0.001):F1} FPS)", "stat");
+            Log($"  Avg prepare time      : {avgPrepTime:F3}ms", "stat");
+            Log($"  Avg total per frame   : {avgTime + avgPrepTime:F3}ms", "stat");
+
+            if (orderedKeys.Count > 0)
+            {
+                Log("");
+                Log("  Per-step breakdown:", "stat");
+                for (int i = 0; i < orderedKeys.Count; i++)
+                {
+                    var key = orderedKeys[i];
+                    var count = countByKey.GetValueOrDefault(key);
+                    if (count <= 0) continue;
+                    var avg = TimeSpan.FromTicks(sumTicksByKey.GetValueOrDefault(key) / count);
+                    Log($"    Step #{i + 1}: {key}", "stat");
+                    Log($"      Avg: {avg.TotalMilliseconds:F3}ms  (n={count})", "stat");
+                }
+            }
+
+            Log("========================================", "stat");
+
+            // ── 资源清理 ─────────────────────────────────────
+            foreach (var clip in clips)
+            {
+                clip.Dispose();
+            }
+            renderer.builder = null;
+
+            return 0;
+        }
+
         public static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0)
+            {
+                return Array.Empty<IClip>();
+            }
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -1023,11 +1380,11 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && !string.IsNullOrEmpty(clip.FilePath) && clipInstance.NeedFilePath)
                 {
                     try
                     {
-                        clipInstance.FilePath = fp.GetString();
+                        clipInstance.FilePath = clip.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -1047,14 +1404,19 @@ namespace projectFrameCut.StandaloneRender
 
         public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, IDictionary<string, AssetItem> assets)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.SoundTracks) ?? throw new NullReferenceException("Failed to cast SoundtrackDTOs to ISoundTracks.");
+            var tracks = json.SoundTracks;
+            if (tracks is null || tracks.Length == 0)
+            {
+                return Array.Empty<ISoundTrack>();
+            }
 
             var tracksList = new List<ISoundTrack>();
 
-            foreach (var track in elements.Cast<JsonElement>())
+            foreach (var track in tracks)
             {
-                var trackInstance = PluginManager.CreateSoundTrack(track);
-                trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+                var trackJson = JsonSerializer.SerializeToElement(track);
+                var trackInstance = PluginManager.CreateSoundTrack(trackJson);
+                trackInstance.ExtraData = track.MetaData ?? new();
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -1088,11 +1450,11 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(trackInstance.FilePath) && track.TryGetProperty("FilePath", out var fp) && trackInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(trackInstance.FilePath) && !string.IsNullOrEmpty(track.FilePath) && trackInstance.NeedFilePath)
                 {
                     try
                     {
-                        trackInstance.FilePath = fp.GetString();
+                        trackInstance.FilePath = track.FilePath;
                     }
                     catch (InvalidOperationException)
                     {

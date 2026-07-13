@@ -1,13 +1,18 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
-using projectFrameCut.Render.TemplateSystem;
+using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Services;
 using projectFrameCut.Template;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Path = System.IO.Path;
 
 namespace projectFrameCut;
 
@@ -326,6 +331,17 @@ public partial class TemplateViewPage : ContentPage
             await DisplayAlertAsync(Localized._Error, $"{Localized.TemplateCreatePage_InvalidTemplate}{Environment.NewLine}{Environment.NewLine}{Localized._ExceptionTemplate(ex)})", Localized._OK);
         }
     }
+    private async void CreateScriptTemplateButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await Navigation.PushAsync(new ScriptTemplateCreatePage());
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync(Localized._Error, $"{Localized.TemplateCreatePage_InvalidTemplate}{Environment.NewLine}{Environment.NewLine}{Localized._ExceptionTemplate(ex)})", Localized._OK);
+        }
+    }
 
     private async Task ImportTemplate(string filePath)
     {
@@ -342,30 +358,35 @@ public partial class TemplateViewPage : ContentPage
 
             try
             {
-                var loadResult = await TemplatePackageIO.LoadTemplateAsync(
-                    filePath,
-                    DraftPage.DraftJSONOption,
-                    installPackagedAssets: false);
+                // 判断文件类型
+                var ext = Path.GetExtension(filePath);
+                var isPjfcPackage = string.Equals(ext, ".pjfcTemplate", StringComparison.OrdinalIgnoreCase)
+                                 || string.Equals(ext, ".zip", StringComparison.OrdinalIgnoreCase);
 
-                var template = loadResult.Template;
+                ITemplateStructure template;
+
+                if (isPjfcPackage)
+                {
+                    // 新流程：保存 .pjfcTemplate + 轻量元数据
+                    template = await TemplatePackageIO.ImportPjfcTemplateAsync(
+                        filePath, DraftPage.DraftJSONOption);
+                }
+                else
+                {
+                    // 纯 JSON 模板直接导入（旧格式）
+                    var text = await File.ReadAllTextAsync(filePath);
+                    template = JsonSerializer.Deserialize<JSONBasedTemplateStructure>(text, DraftPage.DraftJSONOption)
+                        ?? throw new InvalidOperationException("Invalid template file.");
+                }
 
                 TemplateStore.Templates[template.TemplateID] = template;
-
-                var templateStorePath = Path.Combine(MauiProgram.DataPath, "My Templates", $"{template.TemplateID}.json");
-                await File.WriteAllTextAsync(
-                    templateStorePath,
-                    JsonSerializer.Serialize(template, DraftPage.DraftJSONOption));
 
                 // Reload the templates in the view
                 _viewModel.ReloadTemplates();
 
-                var successMessage = SettingsManager.SettingLocalizedResources.Advanced_Success;
-                if (loadResult.ImportedAssetCount > 0)
-                {
-                    successMessage = $"{successMessage}{Environment.NewLine}Imported assets: {loadResult.ImportedAssetCount}";
-                }
-
-                await DisplayAlertAsync(Localized._Info, successMessage, Localized._OK);
+                await DisplayAlertAsync(Localized._Info,
+                    SettingsManager.SettingLocalizedResources.Advanced_Success,
+                    Localized._OK);
             }
             finally
             {
@@ -387,24 +408,61 @@ public partial class TemplateViewPage : ContentPage
             return;
         }
 
+        var markdownView = new ScrollView
+        {
+            Content = Markdown2XAML.Convert(string.IsNullOrWhiteSpace(_viewModel.SelectedTemplate.Readme) ? $"**{Localized.TemplateViewPage_NoReadme}**" : _viewModel.SelectedTemplate.Readme),
+            MinimumHeightRequest = 250,
+            MinimumWidthRequest = 200,
+            Background = Color.FromArgb("#ff262D3D")
+        };
+
+        await Navigation.ShowPopupAsync(markdownView, new PopupOptions { Shape = new RoundRectangle { CornerRadius = new CornerRadius(UIServices.GetWindowCornerRadius()), Fill = Colors.Transparent, Stroke = Colors.Transparent } });
+
     }
 
     private async Task CreateVideoFromTemplate()
     {
-        if (_viewModel.SelectedTemplate?.Structure is not JSONBasedTemplateStructure stru)
+        if (_viewModel.SelectedTemplate is not TemplateItem selected)
         {
             await DisplayAlertAsync(Localized._Info, Localized.TemplateViewPage_SelectToContinue, Localized._OK);
             return;
         }
-        var view = new Template.TemplateCreatePage(stru);
+
+        // 尝试按需解压 .pjfcTemplate 获取完整结构（含 Project/Draft/素材）
+        string? tempExtractDir = null;
+        ITemplateStructure fullTemplate;
+        try
+        {
+            if (Guid.TryParse(selected.TemplateId, out var templateGuid))
+            {
+                (fullTemplate, tempExtractDir) = await TemplatePackageIO.ExtractStoredTemplateAsync(
+                    templateGuid, DraftPage.DraftJSONOption);
+            }
+            else
+            {
+                // Guid 解析失败，回退到内存中的结构
+                fullTemplate = selected.Structure;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            // 没有对应的 .pjfcTemplate（纯 JSON 导入的旧模板），使用内存中的结构
+            fullTemplate = selected.Structure;
+        }
+
+        var view = new Template.TemplateCreatePage(fullTemplate);
         view.ConfigureForProjectCreationMode();
-        view.CloseRequested += async (_, _) => await Navigation.PopAsync();
+        view.CloseRequested += async (_, _) =>
+        {
+            // 清理临时解压目录
+            TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);
+            await Navigation.PopAsync();
+        };
         await Navigation.PushAsync(new ContentPage
         {
-            Title = Localized.TemplateViewPage_CreateFrom(stru.TemplateName),
+            Title = Localized.TemplateViewPage_CreateFrom(fullTemplate.TemplateName),
             Content = view
         });
-        return;
     }
 
     private async Task DeleteSelectedTemplate()
@@ -469,27 +527,36 @@ public partial class TemplateViewPage : ContentPage
             return;
         }
 
+        var idStr = templateId.ToString("N");
+
+        // 删除轻量元数据 .json
         foreach (var filePath in Directory.EnumerateFiles(templateRootPath, "*.json", SearchOption.AllDirectories))
         {
             var fileName = Path.GetFileNameWithoutExtension(filePath);
-            if (Guid.TryParse(fileName, out var fileGuid) && fileGuid == templateId)
+            if (string.Equals(fileName, idStr, StringComparison.OrdinalIgnoreCase))
             {
                 File.Delete(filePath);
             }
         }
 
-        var packagedAssetsRootPath = Path.Combine(templateRootPath, ".packaged-assets");
-        if (!Directory.Exists(packagedAssetsRootPath))
+        // 删除原始 .pjfcTemplate 包
+        var pjfcPath = Path.Combine(templateRootPath, $"{idStr}.pjfcTemplate");
+        if (File.Exists(pjfcPath))
         {
-            return;
+            File.Delete(pjfcPath);
         }
 
-        foreach (var directoryPath in Directory.EnumerateDirectories(packagedAssetsRootPath, "*", SearchOption.TopDirectoryOnly))
+        // 清理旧的 .packaged-assets 目录（兼容旧导入）
+        var packagedAssetsRootPath = Path.Combine(templateRootPath, ".packaged-assets");
+        if (Directory.Exists(packagedAssetsRootPath))
         {
-            var directoryName = Path.GetFileName(directoryPath);
-            if (Guid.TryParse(directoryName, out var dirGuid) && dirGuid == templateId)
+            foreach (var directoryPath in Directory.EnumerateDirectories(packagedAssetsRootPath, "*", SearchOption.TopDirectoryOnly))
             {
-                Directory.Delete(directoryPath, true);
+                var directoryName = Path.GetFileName(directoryPath);
+                if (Guid.TryParse(directoryName, out var dirGuid) && dirGuid == templateId)
+                {
+                    Directory.Delete(directoryPath, true);
+                }
             }
         }
     }
@@ -556,6 +623,56 @@ public partial class TemplateViewPage : ContentPage
 
         public void ReloadTemplates()
         {
+            try
+            {
+                TemplateStore.Templates.Clear();
+                var templateDir = Path.Combine(MauiProgram.DataPath, "My Templates");
+                if (Directory.Exists(templateDir))
+                {
+                    // 只加载轻量元数据 .json 文件（不含 Project/Draft，仅供列表展示）
+                    foreach (var item in Directory.GetFiles(templateDir, "*.json", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            var templateJson = File.ReadAllText(item);
+
+                            // 检测是否为新的轻量元数据格式（含 $schema 标记）
+                            if (templateJson.Contains("\"$schema\"") && templateJson.Contains("\"template-meta-v2\""))
+                            {
+                                var listingTemplate = TemplatePackageIO.LoadListingTemplate(templateJson);
+                                if (listingTemplate.TemplateID != Guid.Empty)
+                                    TemplateStore.Templates[listingTemplate.TemplateID] = listingTemplate;
+                            }
+                            else
+                            {
+                                // 兼容旧格式：通过 JSON 中的 ScriptContent 字段检测旧版脚本模板
+                                if (templateJson.Contains("\"ScriptContent\""))
+                                {
+                                    var scriptCandidate = JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(templateJson);
+                                    if (scriptCandidate?.TemplateID != Guid.Empty)
+                                    {
+                                        TemplateStore.Templates[scriptCandidate.TemplateID] = scriptCandidate;
+                                        continue;
+                                    }
+                                }
+
+                                var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                                TemplateStore.Templates[template.TemplateID] = template;
+                            }
+                        }
+                        catch (Exception exInner)
+                        {
+                            Log(exInner, $"load template meta: {item}", this);
+                        }
+                    }
+
+                    // 不再在重载时解压 .pjfcTemplate，改为使用时按需解压
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "load templates", this);
+            }
             _allTemplates.Clear();
             _allTemplates.AddRange(BuildTemplates());
             ApplyFilter();
@@ -655,13 +772,34 @@ public partial class TemplateViewPage : ContentPage
             return true;
         }
 
-        private static List<TemplateItem> BuildTemplates() => Template.TemplateStore.Templates.Values.OfType<JSONBasedTemplateStructure>().Select(c => new TemplateItem(c) { Tags = [Localized.TemplateViewPage_TemplateTag_Local] }).ToList();
+        private static List<TemplateItem> BuildTemplates()
+        {
+            var items = new List<TemplateItem>();
+            foreach (var template in TemplateStore.Templates.Values)
+            {
+                if (template is JSONBasedTemplateStructure jsonTemplate)
+                {
+                    items.Add(new TemplateItem(jsonTemplate, jsonTemplate.Readme ?? "")
+                    {
+                        Tags = [Localized.TemplateViewPage_TemplateTag_Local]
+                    });
+                }
+                else if (template is ScriptBasedTemplateStructure scriptTemplate)
+                {
+                    items.Add(new TemplateItem(scriptTemplate, scriptTemplate.Readme ?? "")
+                    {
+                        Tags = [Localized.TemplateViewPage_TemplateTag_Local]
+                    });
+                }
+            }
+            return items;
+        }
 
     }
 
     private sealed class TemplateItem
     {
-        public required JSONBasedTemplateStructure Structure { get; init; }
+        public required ITemplateStructure Structure { get; init; }
 
         public string TemplateId { get; }
         public string Name { get; }
@@ -673,13 +811,14 @@ public partial class TemplateViewPage : ContentPage
         public DateTime CreatedAt { get; }
         public Color AccentColor { get; }
         public string PreviewVideoPath { get; }
+        public string Readme { get; set; }
 
         public string TagsText => string.Join("  ", Tags.Select(t => $"#{t}"));
         public string UsageText => Localized.TemplateViewPage_UsageDisplay(UsageCount);
         public bool IsSupportProject => Structure.Scope == TemplateScope.Project || Structure.Scope == TemplateScope.Any;
 
         [SetsRequiredMembers]
-        public TemplateItem(JSONBasedTemplateStructure structure)
+        public TemplateItem(ITemplateStructure structure, string readme = "")
         {
             Structure = structure;
             TemplateId = structure.TemplateID.ToString();
@@ -688,14 +827,14 @@ public partial class TemplateViewPage : ContentPage
                 ? structure.Variables["category"] ?? "Other"
                 : "Other";
             Description = structure.Variables?.ContainsKey("description") == true
-                ? structure.Variables["description"] ?? Name
-                : Name;
+                    ? structure.Variables["description"] ?? Name
+                    : Name;
             DurationText = structure.Variables?.ContainsKey("duration") == true
                 ? structure.Variables["duration"] ?? "00:00"
                 : "00:00";
             var tagsStr = structure.Variables?.ContainsKey("tags") == true
-                ? structure.Variables["tags"] ?? ""
-                : "";
+                                ? structure.Variables["tags"] ?? ""
+                                : "";
             Tags = string.IsNullOrWhiteSpace(tagsStr)
                 ? Array.Empty<string>()
                 : tagsStr.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();
@@ -703,25 +842,13 @@ public partial class TemplateViewPage : ContentPage
                 && int.TryParse(structure.Variables["usageCount"], out var count)
                 ? count
                 : 0;
-            CreatedAt = DateTime.Now; // Could be parsed from variables if available
-            AccentColor = Color.FromArgb("#3A86FF"); // Default color, could be customized via variables
+            CreatedAt = DateTime.Now;
+            AccentColor = Color.FromArgb("#3A86FF");
             PreviewVideoPath = structure.Variables?.ContainsKey("previewPath") == true
                 ? structure.Variables["previewPath"] ?? ""
                 : "";
-        }
 
-        //public TemplateItem(string templateId, string name, string category, string durationText, string description, IReadOnlyList<string> tags, int usageCount, DateTime createdAt, Color accentColor, string previewVideoPath)
-        //{
-        //    TemplateId = templateId ?? throw new ArgumentNullException(nameof(templateId));
-        //    Name = name ?? throw new ArgumentNullException(nameof(name));
-        //    Category = category ?? throw new ArgumentNullException(nameof(category));
-        //    DurationText = durationText ?? throw new ArgumentNullException(nameof(durationText));
-        //    Description = description ?? throw new ArgumentNullException(nameof(description));
-        //    Tags = tags ?? throw new ArgumentNullException(nameof(tags));
-        //    UsageCount = usageCount;
-        //    CreatedAt = createdAt;
-        //    AccentColor = accentColor ?? throw new ArgumentNullException(nameof(accentColor));
-        //    PreviewVideoPath = previewVideoPath ?? throw new ArgumentNullException(nameof(previewVideoPath));
-        //}
+            Readme = readme;
+        }
     }
 }

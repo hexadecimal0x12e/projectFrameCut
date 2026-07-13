@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.Localize"
@@ -29,7 +29,7 @@
                         Stroke="{AppThemeBinding Dark=Black, Light=#cccccc}"
                         StrokeThickness="1"
                         StrokeShape="RoundRectangle 10"
-                        BackgroundColor="{AppThemeBinding Dark=#164e66, Light=#eff4f7}"
+                        BackgroundColor="{AppThemeBinding Dark=#262D3D, Light=#eff4f7}"
                         VerticalOptions="Fill"
                         HorizontalOptions="Fill">
                     
@@ -57,7 +57,7 @@
                                 </Border>
 
                                 <!-- Forward Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}" IsVisible="{TemplateBinding AllowGoForward}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnForwardTapped"/>
                                     </Border.GestureRecognizers>
@@ -222,6 +222,34 @@
                     <BoxView x:Name="ResizeBottomRight" Grid.Row="2" Grid.Column="2" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
 
                 </Grid>
+
+                <!-- Popup Overlay — highest Z-index, covers everything including DialogOverlay and resize handles -->
+                <Grid x:Name="PopupOverlay"
+                      IsVisible="False"
+                      InputTransparent="False"
+                      ZIndex="10000">
+
+                    <!-- Semi-transparent backdrop — catches outside taps for dismissal -->
+                    <BoxView x:Name="PopupBackdrop"
+                             Color="#AA000000"
+                             InputTransparent="False" />
+
+                    <!-- Popup content container with shadow and rounded corners -->
+                    <Border x:Name="PopupContainer"
+                            InputTransparent="False"
+                            VerticalOptions="Center"
+                            HorizontalOptions="Center"
+                            StrokeShape="RoundRectangle 12"
+                            Stroke="#3e3e42"
+                            StrokeThickness="1"
+                            BackgroundColor="{AppThemeBinding Dark=#252526, Light=White}"
+                            Padding="0">
+                        <Border.Shadow>
+                            <Shadow Brush="Black" Offset="0,8" Radius="32" Opacity="0.6"/>
+                        </Border.Shadow>
+                    </Border>
+                </Grid>
+
             </Grid>
         </ControlTemplate>
     </ContentView.ControlTemplate>

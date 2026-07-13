@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Base;
+﻿using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
@@ -101,6 +101,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         [JsonIgnore]
         public IMixture? MixtureInstance { get; set; }
+
+        /// <summary>
+        /// The ISourceReplacementEffect for this clip. If not null, used for replacing the source of this clip with a new source, such as an enhanced or modified version of the original source. The system will call this effect's Compute method to get the new source frame instead of calling GetFrameRelativeToStartPointOfSource.
+        /// </summary>
+        [JsonIgnore]
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         /// <summary>
         /// Set which this clip should be extended to the whole draft. 

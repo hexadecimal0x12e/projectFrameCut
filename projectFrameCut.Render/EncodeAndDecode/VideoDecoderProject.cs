@@ -53,10 +53,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public IVideoSource CreateNew(string newSource) => new DecoderContextPJFCProject(newSource);
 
         Renderer renderer;
-        BlackholeVideoWriter writer;
         public IPicture.PicturePixelMode TargetPPB = IPicture.PicturePixelMode.BytePicture;
 
-        public Channel<IPicture> resultGetter = Channel.CreateUnbounded<IPicture>();
         private bool inited = false;
 
         public DecoderContextPJFCProject()
@@ -98,36 +96,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public void Dispose()
         {
-            writer.Dispose();
             renderer.ClearCaches();
         }
 
         public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             if (renderer is null) throw new ArgumentNullException("Render is not inited yet.");
-            var frame = TaskHelper.SyncWait(async () =>
-            {
-                renderer.RenderOneFrameSync(targetFrame, default);
-                CancellationTokenSource cts = new();
-                cts.CancelAfter(10 * 1000);
-                try
-                {
-                    await resultGetter.Reader.WaitToReadAsync(cts.Token);
-                    if (resultGetter.Reader.TryRead(out var f))
-                    {
-                        return f;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Failed to read the rendered frame {targetFrame} from the channel.");
-                    }
-                }
-                catch
-                {
-                    throw new TimeoutException($"Timed out while waiting for the rendered frame {targetFrame} to be available. This may indicate a problem in the rendering process.");
-                }
-            }, 90 * 1000, new OperationCanceledException("One-frame render operation timed out for 90 seconds."));
-            return frame;
+            var cts = new CancellationTokenSource();
+            return renderer.RenderSpecificFrame(targetFrame, cts.Token) ?? throw new InvalidOperationException("Render does not return valid data.");
 
         }
 
@@ -136,8 +112,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (string.IsNullOrWhiteSpace(ProjectRoot) || !Path.Exists(ProjectRoot) || inited) return;
             try
             {
-
-
                 ConcurrentDictionary<string, AssetItem> assets = GlobalAssetGetter?.Invoke() ?? new();
                 if (File.Exists(Path.Combine(ProjectRoot, "project.pjfc")))
                 {
@@ -166,13 +140,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     throw new FileNotFoundException("assets.json not found in project directory.");
                 }
-                writer = new BlackholeVideoWriter { Width = project.RelativeWidth, Height = project.RelativeHeight };
-                writer.OnFrameWrite += Writer_OnFrameWrite;
                 var origWorkdir = Environment.CurrentDirectory;
                 Environment.CurrentDirectory = ProjectRoot;
                 renderer = new Renderer
                 {
-                    builder = new VideoBuilder(writer) { Duration = uint.MaxValue, AllowDuplicatedFrameWrite = true, StrictMode = false, BlockWrite = true, DoGCAfterEachWrite = true },
+                    builder = new VideoBuilder(new BlackholeVideoWriter()) { StrictMode = false, AllowDuplicatedFrameWrite = true, EnablePreview = false, DisposeFrameAfterEachWrite = false, DoGCAfterEachWrite = false, BlockWrite = true },
                     Clips = JSONToIClips(timeline, assets, TargetPPB),
                     StartFrame = 0,
                     Use16Bit = TargetPPB == IPicture.PicturePixelMode.UShortPicture,
@@ -193,39 +165,35 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 };
 
                 renderer.PrepareRender(CancellationToken.None);
-                renderer.InitializeRenderCaches();
                 Environment.CurrentDirectory = origWorkdir;
                 inited = true;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 Log(ex, $"init project-source videosource in {ProjectRoot}", this);
             }
 
         }
 
-        private void Writer_OnFrameWrite(object? sender, IPicture e)
-        {
-            resultGetter.Writer.TryWrite(e);
-        }
-
-
         private IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            var clips = json.Clips;
+            if (clips is null || clips.Length == 0)
+            {
+                return Array.Empty<IClip>();
+            }
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in clips)
             {
-                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
-                    && clipTypeProp.ValueKind == JsonValueKind.Number
-                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
-                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipJson = JsonSerializer.SerializeToElement(clip);
+                var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -246,18 +214,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         throw;
                     }
                 }
-                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && !string.IsNullOrEmpty(clip.FilePath) && clipInstance.NeedFilePath)
                 {
                     try
                     {
-                        if (string.IsNullOrWhiteSpace(fp.GetString())) throw new InvalidDataException($"Clip {clipInstance.Name} ({clipInstance.TypeName}) has empty FilePath, which is not valid for clips that need file path.");
-                        if (Path.IsPathRooted(fp.GetString()))
+                        if (string.IsNullOrWhiteSpace(clip.FilePath)) throw new InvalidDataException($"Clip {clipInstance.Name} ({clipInstance.TypeName}) has empty FilePath, which is not valid for clips that need file path.");
+                        if (Path.IsPathRooted(clip.FilePath))
                         {
-                            clipInstance.FilePath = fp.GetString();
+                            clipInstance.FilePath = clip.FilePath;
                         }
                         else
                         {
-                            clipInstance.FilePath = Path.Combine(ProjectRoot, fp.GetString());
+                            clipInstance.FilePath = Path.Combine(ProjectRoot, clip.FilePath);
                         }
                     }
                     catch (InvalidOperationException)

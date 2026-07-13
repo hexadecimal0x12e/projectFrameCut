@@ -15,29 +15,41 @@
                     Clicked="OnResetView" BackgroundColor="#3d3d3d" TextColor="White"/>
             <Button x:Name="FitAllButton" Text="&#x26F6;" WidthRequest="36" HeightRequest="36"
                     Clicked="OnFitAll" BackgroundColor="#3d3d3d" TextColor="White"/>
+            <!-- View toggle: list/graph -->
+            <Button x:Name="ToggleViewButton" Text="☰" WidthRequest="36" HeightRequest="36"
+                    Clicked="OnToggleViewClicked" BackgroundColor="#3d3d3d" TextColor="White"/>
             <Label x:Name="InfoLabel" TextColor="#999" VerticalOptions="Center" Margin="8,0,0,0"
                    FontSize="12"/>
         </HorizontalStackLayout>
 
-        <!-- Row 1: Canvas -->
+        <!-- Row 1: Canvas (shared container for graph + list) -->
         <Grid Grid.Row="1" BackgroundColor="#1e1e1e">
-            <Grid.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated"/>
-                <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated"/>
-            </Grid.GestureRecognizers>
 
-            <!-- Connections Layer (behind nodes) -->
-            <GraphicsView x:Name="ConnectionsLayer"
-                          InputTransparent="True"
-                          VerticalOptions="Fill"
-                          HorizontalOptions="Fill"/>
+            <!-- Graph view layer -->
+            <Grid x:Name="GraphViewContainer">
+                <Grid.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated"/>
+                    <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated"/>
+                </Grid.GestureRecognizers>
 
-            <!-- Nodes Layer (on top of connections) -->
-            <AbsoluteLayout x:Name="NodesContainer"
-                            InputTransparent="False">
-            </AbsoluteLayout>
+                <!-- Connections Layer (behind nodes) -->
+                <GraphicsView x:Name="ConnectionsLayer"
+                              InputTransparent="True"
+                              VerticalOptions="Fill"
+                              HorizontalOptions="Fill"/>
 
-            <!-- Empty state hint -->
+                <!-- Nodes Layer (on top of connections) -->
+                <AbsoluteLayout x:Name="NodesContainer"
+                                InputTransparent="False"/>
+            </Grid>
+
+            <!-- List view layer -->
+            <ScrollView x:Name="ListViewContainer" IsVisible="False"
+                        BackgroundColor="#1e1e1e">
+                <VerticalStackLayout x:Name="ListContent" Spacing="0"/>
+            </ScrollView>
+
+            <!-- Empty state hint (shared) -->
             <Label x:Name="EmptyHint" Text="No history available"
                    TextColor="#555" FontSize="18"
                    HorizontalOptions="Center" VerticalOptions="Center"
@@ -53,6 +65,8 @@
                 <Label x:Name="DetailsSavedAtLabel" FontSize="13" TextColor="#ccc"/>
                 <Label x:Name="DetailsAuthorLabel" FontSize="13" TextColor="#ccc"/>
                 <Label x:Name="DetailsChangeReasonLabel" FontSize="13" FontAttributes="Bold" TextColor="White"/>
+                <!-- Provider extension content slot -->
+                <VerticalStackLayout x:Name="DetailsExtensionContainer" Spacing="4"/>
                 <Button x:Name="DetailsRestoreButton"
                         BackgroundColor="#4A9EFF" TextColor="White"
                         HorizontalOptions="Fill"

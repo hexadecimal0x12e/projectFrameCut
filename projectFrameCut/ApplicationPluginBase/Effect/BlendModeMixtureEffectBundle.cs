@@ -1,9 +1,10 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -58,12 +59,24 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "MixtureType", "Add" }
         };
 
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "MixtureType", EffectBundleHelper.EnumField("MixtureType", "Blend Mode", "Blend mode type", "Add", ["Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference"]) },
+        };
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public List<string> ParametersNeeded => ["MixtureType"];
         public Dictionary<string, string> ParametersType => new() { { "MixtureType", "string" } };
 
         public IEffectFactory[] Create()
         {
-            var mixtureType = EffectBundleUiHelper.GetString(Parameters, "MixtureType", "Add");
+            var mixtureType = EffectBundleHelper.GetString(Parameters, "MixtureType", "Add");
             var factory = new BlendModeMixtureFactory { MixtureType = mixtureType };
             this.ConfigureFactory(factory);
             return [factory];
@@ -71,11 +84,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            var mixtureType = EffectBundleUiHelper.GetString(Parameters, "MixtureType", "Add");
+            var mixtureType = EffectBundleHelper.GetString(Parameters, "MixtureType", "Add");
             var panel = new PropertyPanelBuilder();
             panel.AddPicker(
                 "MixtureType",
-                EffectBundleUiHelper.L("BlendMode_MixtureType", "Blend Mode"),
+                EffectBundleHelper.L("BlendMode_MixtureType", "Blend Mode"),
                 MixtureTypeOptions,
                 mixtureType);
             return panel;
@@ -96,10 +109,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Mixture_BlendMode", "Blend Mode"),
-                Description = EffectBundleUiHelper.L("Description_Mixture_BlendMode",
+                Name = EffectBundleHelper.L("DisplayName_Mixture_BlendMode", "Blend Mode"),
+                Description = EffectBundleHelper.L("Description_Mixture_BlendMode",
                     "Composites the clip using a blend mode (Add, Subtract, Multiply, Screen, Overlay, Darken, Lighten, Difference)."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "blendModeMixture.png"))
             };
         }
     }

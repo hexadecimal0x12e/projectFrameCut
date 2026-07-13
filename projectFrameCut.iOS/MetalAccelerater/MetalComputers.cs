@@ -1,5 +1,6 @@
-using Metal;
+﻿using Metal;
 using Foundation;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -94,7 +95,7 @@ namespace projectFrameCut.MetalAccelerater
 
             var threadGroupSize = new MTLSize(Math.Min(count, (int)_alphaPipelineState!.MaxTotalThreadsPerThreadgroup), 1, 1);
             var threadGroups = new MTLSize((count + threadGroupSize.Width - 1) / threadGroupSize.Width, 1, 1);
-            
+
             encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
 
             // 2. Compute Color
@@ -104,7 +105,7 @@ namespace projectFrameCut.MetalAccelerater
             encoder.SetBuffer(bAlphaBuffer, 0, 2);
             encoder.SetBuffer(bBuffer, 0, 3);
             encoder.SetBuffer(cBuffer, 0, 4);
-            
+
             encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
 
             encoder.EndEncoding();
@@ -292,7 +293,7 @@ kernel void overlay_color_compute(
 
             var threadGroupSize = new MTLSize(Math.Min(count, (int)_alphaPipelineState!.MaxTotalThreadsPerThreadgroup), 1, 1);
             var threadGroups = new MTLSize((count + threadGroupSize.Width - 1) / threadGroupSize.Width, 1, 1);
-            
+
             encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
 
             // 2. Compute Color
@@ -302,7 +303,7 @@ kernel void overlay_color_compute(
             encoder.SetBuffer(bAlphaBuffer, 0, 2);
             encoder.SetBuffer(bBuffer, 0, 3);
             encoder.SetBuffer(cBuffer, 0, 4);
-            
+
             encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
 
             encoder.EndEncoding();
@@ -484,8 +485,9 @@ kernel void overlay_color_compute(
             encoder.SetBuffer(bBuffer, 0, 2);
             encoder.SetBuffer(aBuffer, 0, 3);
             encoder.SetBuffer(outABuffer, 0, 4);
-            
-            unsafe {
+
+            unsafe
+            {
                 encoder.SetBytes((IntPtr)(&lowR), (nuint)sizeof(uint), 5);
                 encoder.SetBytes((IntPtr)(&highR), (nuint)sizeof(uint), 6);
                 encoder.SetBytes((IntPtr)(&lowG), (nuint)sizeof(uint), 7);
@@ -496,7 +498,7 @@ kernel void overlay_color_compute(
 
             var threadGroupSize = new MTLSize(Math.Min(count, (int)_pipelineState!.MaxTotalThreadsPerThreadgroup), 1, 1);
             var threadGroups = new MTLSize((count + threadGroupSize.Width - 1) / threadGroupSize.Width, 1, 1);
-            
+
             encoder.DispatchThreadgroups(threadGroups, threadGroupSize);
 
             encoder.EndEncoding();
@@ -713,8 +715,10 @@ kernel void vignette_compute(
             int w = Convert.ToInt32(args[4]), h = Convert.ToInt32(args[5]), horiz = Convert.ToBoolean(args[6]) ? 1 : 0, vert = Convert.ToBoolean(args[7]) ? 1 : 0;
             int count = rIn.Length, bufSize = count * sizeof(float);
             var d = MetalComputerHelper.Device; var cq = MetalComputerHelper.CommandQueue; var cb = cq.CommandBuffer()!; var enc = cb.ComputeCommandEncoder!;
-            unsafe {
-                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn) {
+            unsafe
+            {
+                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn)
+                {
                     var rB = d.CreateBuffer((IntPtr)pr, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var gB = d.CreateBuffer((IntPtr)pg, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var bB = d.CreateBuffer((IntPtr)pb, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
@@ -775,8 +779,10 @@ kernel void flip_compute(
             int w = Convert.ToInt32(args[4]); float amount = Convert.ToSingle(args[5]);
             int count = rIn.Length, bufSize = count * sizeof(float);
             var d = MetalComputerHelper.Device; var cq = MetalComputerHelper.CommandQueue; var cb = cq.CommandBuffer()!; var enc = cb.ComputeCommandEncoder!;
-            unsafe {
-                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn) {
+            unsafe
+            {
+                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn)
+                {
                     var rB = d.CreateBuffer((IntPtr)pr, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var gB = d.CreateBuffer((IntPtr)pg, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var bB = d.CreateBuffer((IntPtr)pb, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
@@ -845,8 +851,10 @@ kernel void sharpen_compute(
             float angle = Convert.ToSingle(args[8]);
             int srcLen = srcW * srcH, dstLen = outW * outH;
             var d = MetalComputerHelper.Device; var cq = MetalComputerHelper.CommandQueue; var cb = cq.CommandBuffer()!; var enc = cb.ComputeCommandEncoder!;
-            unsafe {
-                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn) {
+            unsafe
+            {
+                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn)
+                {
                     var rB = d.CreateBuffer((IntPtr)pr, (nuint)(srcLen * sizeof(float)), MTLResourceOptions.StorageModeShared)!;
                     var gB = d.CreateBuffer((IntPtr)pg, (nuint)(srcLen * sizeof(float)), MTLResourceOptions.StorageModeShared)!;
                     var bB = d.CreateBuffer((IntPtr)pb, (nuint)(srcLen * sizeof(float)), MTLResourceOptions.StorageModeShared)!;
@@ -935,8 +943,10 @@ kernel void rotation_compute(
             int bufSize = count * sizeof(float);
             var d = MetalComputerHelper.Device; var cq = MetalComputerHelper.CommandQueue; var cb = cq.CommandBuffer()!; var enc = cb.ComputeCommandEncoder!;
 
-            unsafe {
-                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn) {
+            unsafe
+            {
+                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn)
+                {
                     var rB = d.CreateBuffer((IntPtr)pr, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var gB = d.CreateBuffer((IntPtr)pg, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var bB = d.CreateBuffer((IntPtr)pb, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
@@ -1033,8 +1043,10 @@ kernel void blur_vertical(
             float maxV = Convert.ToSingle(args[14]);
             int count = rIn.Length, bufSize = count * sizeof(float);
             var d = MetalComputerHelper.Device; var cq = MetalComputerHelper.CommandQueue; var cb = cq.CommandBuffer()!; var enc = cb.ComputeCommandEncoder!;
-            unsafe {
-                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn) {
+            unsafe
+            {
+                fixed (float* pr = rIn) fixed (float* pg = gIn) fixed (float* pb = bIn) fixed (float* pa = aIn)
+                {
                     var rB = d.CreateBuffer((IntPtr)pr, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var gB = d.CreateBuffer((IntPtr)pg, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;
                     var bB = d.CreateBuffer((IntPtr)pb, (nuint)bufSize, MTLResourceOptions.StorageModeShared)!;

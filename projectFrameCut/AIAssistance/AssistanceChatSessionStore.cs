@@ -1,4 +1,4 @@
-namespace projectFrameCut.AIAssistance;
+﻿namespace projectFrameCut.AIAssistance;
 
 using Microsoft.Extensions.AI;
 using System.Diagnostics;
@@ -16,7 +16,45 @@ internal sealed class AssistanceChatSession
 
     public List<AssistanceChatHistorySnapshot> History { get; } = [];
 
-    public string LastPreview => Messages.LastOrDefault()?.Message ?? "None";
+    public List<ClosedSubAgentSnapshot> ClosedSubAgentSessions { get; } = [];
+
+    public bool IsSubAgent { get; set; }
+
+    public string LastPreview
+    {
+        get
+        {
+            AssistanceChatMessageSnapshot? last = Messages.LastOrDefault();
+            if (last is null)
+            {
+                return string.Empty;
+            }
+
+            // 如果消息有附件但没有文字，用附件文件名作为预览
+            if (string.IsNullOrWhiteSpace(last.Message) && last.Attachments?.Count > 0)
+            {
+                return string.Join(", ", last.Attachments.Select(a => a.FileName));
+            }
+
+            string? message = last.Message;
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return string.Empty;
+            }
+
+            const int maxLines = 2;
+            const int maxCharsPerLine = 150;
+
+            string[] lines = message.Split('\n');
+            int lineCount = Math.Min(lines.Length, maxLines);
+            string preview = string.Join("\n",
+                lines.Take(lineCount).Select(l => l.TrimEnd('\r').Length > maxCharsPerLine
+                    ? l.TrimEnd('\r')[..maxCharsPerLine] + "…"
+                    : l.TrimEnd('\r')));
+
+            return preview;
+        }
+    }
 }
 
 internal sealed class AssistanceChatMessageSnapshot
@@ -31,7 +69,44 @@ internal sealed class AssistanceChatMessageSnapshot
 
     public string ToolCallsText { get; init; } = string.Empty;
 
+    public List<ChatContentSegmentSnapshot>? ContentSegments { get; init; }
+
     public bool HasFeedbackSubmitted { get; init; }
+
+    /// <summary>
+    /// 附件列表（图片/文件），仅在用户消息中有效。
+    /// 文件存储在 chats/{sessionId:N}/media/ 目录下。
+    /// </summary>
+    public List<ChatAttachmentSnapshot>? Attachments { get; init; }
+}
+
+internal sealed class ChatContentSegmentSnapshot
+{
+    public required string Kind { get; init; }
+
+    public required string Text { get; set; }
+
+    public string ResultText { get; set; } = string.Empty;
+}
+
+internal static class ChatContentSegmentKinds
+{
+    public const string Text = "text";
+    public const string ToolCall = "tool_call";
+}
+
+public sealed class ChatAttachmentSnapshot
+{
+    public required string FileName { get; init; }
+
+    public required string MimeType { get; init; }
+
+    public long FileSize { get; init; }
+
+    /// <summary>
+    /// 相对路径，相对于 chats/{sessionId:N}/ 目录。例如 "media/{guid}.jpg"。
+    /// </summary>
+    public required string StoredRelativePath { get; init; }
 }
 
 internal sealed class AssistanceChatHistorySnapshot
@@ -108,7 +183,48 @@ internal static class AssistanceChatSessionStore
         }
     }
 
-    public static void UpdateSession(string? projectPath, Guid sessionId, string title, IEnumerable<AssistanceChatMessageSnapshot> messages, IEnumerable<AssistanceChatHistorySnapshot> history)
+    public static AssistanceChatSession? GetSession(string? projectPath, Guid sessionId)
+    {
+        lock (Gate)
+        {
+            (_, ProjectSessionStore store) = GetProjectStoreLocked(projectPath);
+            return store.Sessions.FirstOrDefault(x => x.SessionId == sessionId);
+        }
+    }
+
+    public static AssistanceChatSession ForkSession(
+        string? projectPath,
+        Guid sourceSessionId,
+        IEnumerable<AssistanceChatMessageSnapshot> messages,
+        IEnumerable<AssistanceChatHistorySnapshot> history,
+        string? newTitle = null)
+    {
+        lock (Gate)
+        {
+            (string normalizedProjectPath, ProjectSessionStore store) = GetProjectStoreLocked(projectPath);
+            AssistanceChatSession? source = store.Sessions.FirstOrDefault(x => x.SessionId == sourceSessionId);
+            string title = !string.IsNullOrWhiteSpace(newTitle)
+                ? newTitle.Trim()
+                : source is not null
+                    ? Localized.AIAssistant_ChatView_BranchTitle(source.Title)
+                    : Localized.AIAssistant_NewChatDefaultTitle;
+
+            AssistanceChatSession session = new()
+            {
+                SessionId = Guid.NewGuid(),
+                Title = title,
+                UpdatedAt = DateTime.Now,
+            };
+            session.Messages.AddRange(messages);
+            session.History.AddRange(history);
+            store.Sessions.Add(session);
+            SaveSessionLocked(normalizedProjectPath, session);
+            RaiseChanged();
+            return session;
+        }
+    }
+
+    public static void UpdateSession(string? projectPath, Guid sessionId, string title, IEnumerable<AssistanceChatMessageSnapshot> messages, IEnumerable<AssistanceChatHistorySnapshot> history, List<ClosedSubAgentSnapshot>? closedSubAgents = null)
     {
         lock (Gate)
         {
@@ -120,6 +236,11 @@ internal static class AssistanceChatSessionStore
             session.Messages.AddRange(messages);
             session.History.Clear();
             session.History.AddRange(history);
+            if (closedSubAgents is not null)
+            {
+                session.ClosedSubAgentSessions.Clear();
+                session.ClosedSubAgentSessions.AddRange(closedSubAgents);
+            }
             SaveSessionLocked(normalizedProjectPath, session);
             RaiseChanged();
         }
@@ -272,7 +393,15 @@ internal static class AssistanceChatSessionStore
                     IsUser = message.IsUser,
                     ReasoningText = message.ReasoningText,
                     ToolCallsText = message.ToolCallsText,
+                    ContentSegments = CloneContentSegments(message.ContentSegments),
                     HasFeedbackSubmitted = message.HasFeedbackSubmitted,
+                    Attachments = message.Attachments?.Select(a => new ChatAttachmentSnapshot
+                    {
+                        FileName = a.FileName,
+                        MimeType = a.MimeType,
+                        FileSize = a.FileSize,
+                        StoredRelativePath = a.StoredRelativePath,
+                    }).ToList(),
                 });
             }
         }
@@ -286,6 +415,39 @@ internal static class AssistanceChatSessionStore
                     Role = ParseRole(history.Role),
                     Text = history.Text ?? string.Empty,
                 });
+            }
+        }
+
+        if (snapshot.ClosedSubAgentSessions is not null)
+        {
+            foreach (var closed in snapshot.ClosedSubAgentSessions)
+            {
+                var cloned = new ClosedSubAgentSnapshot
+                {
+                    AgentId = closed.AgentId,
+                    Title = closed.Title,
+                    SubAgentRole = closed.SubAgentRole,
+                    SourceSessionId = closed.SourceSessionId,
+                    Messages = closed.Messages?.Select(m => new AssistanceChatMessageSnapshot
+                    {
+                        Sender = m.Sender,
+                        Message = m.Message,
+                        IsUser = m.IsUser,
+                        ReasoningText = m.ReasoningText,
+                        ToolCallsText = m.ToolCallsText,
+                        ContentSegments = CloneContentSegments(m.ContentSegments),
+                        HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+                        Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                        {
+                            FileName = a.FileName,
+                            MimeType = a.MimeType,
+                            FileSize = a.FileSize,
+                            StoredRelativePath = a.StoredRelativePath,
+                        }).ToList(),
+                    }).ToList() ?? [],
+                    ClosedAt = closed.ClosedAt,
+                };
+                session.ClosedSubAgentSessions.Add(cloned);
             }
         }
 
@@ -306,14 +468,57 @@ internal static class AssistanceChatSessionStore
                 IsUser = x.IsUser,
                 ReasoningText = x.ReasoningText,
                 ToolCallsText = x.ToolCallsText,
+                ContentSegments = CloneContentSegments(x.ContentSegments),
                 HasFeedbackSubmitted = x.HasFeedbackSubmitted,
+                Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
+                {
+                    FileName = a.FileName,
+                    MimeType = a.MimeType,
+                    FileSize = a.FileSize,
+                    StoredRelativePath = a.StoredRelativePath,
+                }).ToList(),
             }).ToList(),
             History = session.History.Select(x => new AssistanceChatHistoryDiskSnapshot
             {
                 Role = ToRoleText(x.Role),
                 Text = x.Text,
             }).ToList(),
+            ClosedSubAgentSessions = session.ClosedSubAgentSessions.Select(c => new ClosedSubAgentSnapshot
+            {
+                AgentId = c.AgentId,
+                Title = c.Title,
+                SubAgentRole = c.SubAgentRole,
+                SourceSessionId = c.SourceSessionId,
+                Messages = c.Messages?.Select(m => new AssistanceChatMessageSnapshot
+                {
+                    Sender = m.Sender,
+                    Message = m.Message,
+                    IsUser = m.IsUser,
+                    ReasoningText = m.ReasoningText,
+                    ToolCallsText = m.ToolCallsText,
+                    ContentSegments = CloneContentSegments(m.ContentSegments),
+                    HasFeedbackSubmitted = m.HasFeedbackSubmitted,
+                    Attachments = m.Attachments?.Select(a => new ChatAttachmentSnapshot
+                    {
+                        FileName = a.FileName,
+                        MimeType = a.MimeType,
+                        FileSize = a.FileSize,
+                        StoredRelativePath = a.StoredRelativePath,
+                    }).ToList(),
+                }).ToList(),
+                ClosedAt = c.ClosedAt,
+            }).ToList(),
         };
+    }
+
+    private static List<ChatContentSegmentSnapshot>? CloneContentSegments(IEnumerable<ChatContentSegmentSnapshot>? segments)
+    {
+        return segments?.Select(segment => new ChatContentSegmentSnapshot
+        {
+            Kind = segment.Kind,
+            Text = segment.Text,
+            ResultText = segment.ResultText,
+        }).ToList();
     }
 
     private static ChatRole ParseRole(string? roleText)
@@ -412,6 +617,8 @@ internal static class AssistanceChatSessionStore
         public List<AssistanceChatMessageSnapshot>? Messages { get; init; }
 
         public List<AssistanceChatHistoryDiskSnapshot>? History { get; init; }
+
+        public List<ClosedSubAgentSnapshot>? ClosedSubAgentSessions { get; init; }
     }
 
     private sealed class AssistanceChatHistoryDiskSnapshot

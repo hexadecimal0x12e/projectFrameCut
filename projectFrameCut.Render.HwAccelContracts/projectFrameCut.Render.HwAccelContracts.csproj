@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>projectFrameCut.Render.HwAccelContracts</RootNamespace>
+    <AssemblyName>projectFrameCut.Render.HwAccelContracts</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
+  </ItemGroup>
+
+</Project>

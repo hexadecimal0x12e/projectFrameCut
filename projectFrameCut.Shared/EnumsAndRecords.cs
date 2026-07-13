@@ -18,6 +18,7 @@ namespace projectFrameCut.Shared
         SubtitleClip,
         MarkingClip,
         TransformClip,
+        VectorCanvasClip,
         Special = -1
     }
 
@@ -51,6 +52,7 @@ namespace projectFrameCut.Shared
         MixtureProvider,
         TextEffect,
         ContinuousTextEffect,
+        SourceReplacement,
         NotSpecified = -1,
     }
 
@@ -64,6 +66,7 @@ namespace projectFrameCut.Shared
         Mixture = 16,
         ColorAdjustment = 32,
         Text = 64,
+        SourceReplacement = 128,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,

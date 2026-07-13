@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Helpers;
+﻿using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Shared;
 
 namespace projectFrameCut;
@@ -18,7 +18,7 @@ public partial class SetupPage : ContentPage
     private async void Button_Clicked(object sender, EventArgs e)
     {
 #if WINDOWS
-        await App.ShowNavBar();
+        App.ShowNavBar();
         if (CreateDesktopShortcutCheckbox.IsChecked)
         {
             try
@@ -39,24 +39,24 @@ public partial class SetupPage : ContentPage
                 Log(ex, "Create desktop shortcut.", this);
             }
         }
-        ILGPU.Context context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        List<AcceleratorInfo> listAccels = new();
-        for (uint i = 0; i < devices.Count; i++)
-        {
-            var item = devices[(int)i];
-            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
-        }
-        if (!devices.Any(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU))
+
+        var devices = projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DiscoverDevices();
+        if (!devices.Any(c => c.Type != "CPU"))
         {
             await DisplayAlertAsync(Localized._Warn, Localized.WelocmePage_NoAccel, Localized._OK);
         }
-        if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
+
+        // Auto-select best non-CPU accelerator and persist to accels.json.
+        // AcceleratorsManager will be re-initialized on next plugin load.
+        var best = devices
+            .Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 }))
+            .OrderByDescending(t => t.Item2).ThenByDescending(t => t.c.Name)
+            .FirstOrDefault().c;
+        if (best is not null)
         {
-            var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
-            SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
-            SettingsManager.WriteSetting("accel_enableMultiAccel", true.ToString());
-            Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
+            var nonCpuDevices = devices.Where(c => c.Type != "CPU").ToList();
+            projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.SetDefaultAccelerator(best.Name);
+            Log($"Auto-selected accelerator: {best.Name} ({best.Type}).");
         }
 
 #endif

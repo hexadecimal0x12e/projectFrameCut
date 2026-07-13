@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Helpers;
+﻿using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -236,7 +236,8 @@ public partial class PluginSettingPage : ContentPage
             if (e.Id.StartsWith("PluginCfg,"))
             {
                 var cfgKey = e.Id.Split(',')[1];
-                plugin.Configuration[cfgKey] = e.Value?.ToString() ?? "";
+                var newCfg = plugin.Configuration.ToDictionary(c => c.Key, c => c.Key == cfgKey ? e.Value?.ToString() ?? "" : c.Value);
+                plugin.Configuration = newCfg;
             }
             else
             {

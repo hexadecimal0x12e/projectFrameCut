@@ -1,4 +1,5 @@
-using Microsoft.Maui.Graphics;
+﻿using Microsoft.Maui.Graphics;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
@@ -14,7 +15,6 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using TextAlignment = projectFrameCut.Drawing.Text.Entry.TextAlignment;
 
@@ -45,7 +45,12 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         public virtual string TypeName => "Pinyin";
 
-        protected virtual string DefaultText => "拼音";
+        protected virtual string DefaultText => Localized._LocaleId_ switch 
+        {
+            "zh-CN" or "zh-TW" or "文言文" => "拼音",
+            "ja-JP" => "漢字",
+            _ => "Pronunciation"
+        };
 
         protected virtual float DefaultFontSize => 120f;
 
@@ -108,6 +113,60 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     }
                 }
             }
+        }
+
+        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        {
+            get
+            {
+                var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
+                return new Dictionary<string, EffectBundleSettableFields>
+                {
+                    [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Text", "Text content to annotate with pronunciation", DefaultText),
+                    [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used for the text and pronunciation", "HarmonyOS Sans SC Medium", fontNames),
+                    [SizeKey] = TextStyleProviderSettableFieldHelper.NumericField(SizeKey, "Font Size", "Base character font size in canvas pixels", DefaultFontSize, 20f, 400f),
+                    [ColorKey] = TextStyleProviderSettableFieldHelper.ColorField(ColorKey, "Character Color", "Base character color", "#FFFFFF"),
+                    [PinyinFontSizeRatioKey] = TextStyleProviderSettableFieldHelper.NumericField(PinyinFontSizeRatioKey, "Pinyin Size Ratio", "Pronunciation size relative to the base characters", DefaultPinyinFontSizeRatio, 0.15f, 0.8f),
+                    [PinyinColorKey] = TextStyleProviderSettableFieldHelper.ColorField(PinyinColorKey, "Pinyin Color", "Pronunciation text color", "#FFFFFF"),
+                    [SpacingKey] = TextStyleProviderSettableFieldHelper.IntegerField(SpacingKey, "Character Spacing", "Spacing between character columns in canvas pixels", DefaultSpacing, 0, 40),
+                    [LayoutModeKey] = TextStyleProviderSettableFieldHelper.EnumField(LayoutModeKey, "Layout Mode", "How text is sized relative to the clip", TextClipLayoutMode.FillClip.ToString(),
+                    [
+                        TextClipLayoutMode.FillClip.ToString(),
+                        TextClipLayoutMode.FixedWidth.ToString(),
+                        TextClipLayoutMode.FixedSize.ToString()
+                    ])
+                };
+            }
+        }
+
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
+            {
+                feedback = field is null
+                    ? "Field definition is null."
+                    : $"Unknown settable field '{field.Id}' for text style '{TypeName}'.";
+                return false;
+            }
+
+            if (!TextStyleProviderSettableFieldHelper.TryNormalizeValue(
+                canonicalField, value, out var normalizedValue, out feedback))
+            {
+                return false;
+            }
+
+            if (canonicalField.Id == LayoutModeKey)
+            {
+                LayoutMode = Enum.Parse<TextClipLayoutMode>((string)normalizedValue);
+            }
+            else
+            {
+                HandlePropertyPanelChange(new PropertyPanelPropertyChangedEventArgs(
+                    canonicalField.Id, normalizedValue, null));
+            }
+
+            feedback = "";
+            return true;
         }
 
         public TextEntry[] BuildEntries()

@@ -1,4 +1,5 @@
-using Microsoft.Maui.ApplicationModel;
+﻿using Microsoft.Maui.ApplicationModel;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using Silk.NET.Shaderc;
@@ -618,10 +619,28 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             => CreateAndAttachAsync(shaderSource, inputs, outputElementType);
     }
 
-    public class VulkanOverlayComputer : IComputer
+    public class VulkanOverlayComputer : IComputer, IOverlayComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Overlay";
+
+        public BlendResult8 Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 8, pixelCount]);
+            return new BlendResult8((byte[])result[0], (float[])result[1]);
+        }
+
+        public BlendResult16 Overlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
+
+        public BlendResultHdr OverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 0, pixelCount]);
+            return new BlendResultHdr((float[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -713,10 +732,28 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanApproximateOverlayComputer : IComputer
+    public class VulkanApproximateOverlayComputer : IComputer, IApproximateOverlayComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "OverlayApproximate";
+
+        public BlendResult8 ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 8, pixelCount]);
+            return new BlendResult8((byte[])result[0], (float[])result[1]);
+        }
+
+        public BlendResult16 ApproximateOverlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
+
+        public BlendResultHdr ApproximateOverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 0, pixelCount]);
+            return new BlendResultHdr((float[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -808,10 +845,28 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanResizeComputer : IComputer
+    public class VulkanResizeComputer : IComputer, IResizeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Resize";
+
+        public FourChannelResult ComputeResizeFloat(float[] r, float[] g, float[] b, float[] a, float srcW, float srcH, float dstW, float dstH)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, dstW, dstH]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
+        public FourChannelResult8 ComputeResizeByte(float[] r, float[] g, float[] b, float[] a, float srcW, float srcH, float dstW, float dstH)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, dstW, dstH, 8]);
+            return new FourChannelResult8((byte[])result[0], (byte[])result[1], (byte[])result[2], (float[])result[3]);
+        }
+
+        public FourChannelResult16 ComputeResizeUshort(float[] r, float[] g, float[] b, float[] a, float srcW, float srcH, float dstW, float dstH)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, dstW, dstH, 16]);
+            return new FourChannelResult16((ushort[])result[0], (ushort[])result[1], (ushort[])result[2], (float[])result[3]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -883,10 +938,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanCropComputer : IComputer
+    public class VulkanCropComputer : IComputer, ICropComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Crop";
+
+        public FourChannelResult ComputeCrop(float[] r, float[] g, float[] b, float[] a, int srcW, int srcH, int startX, int startY, int cropW, int cropH)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, startX, startY, cropW, cropH]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -958,10 +1019,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanPlaceComputer : IComputer
+    public class VulkanPlaceComputer : IComputer, IPlaceComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Place";
+
+        public FourChannelResult ComputePlace(float[] r, float[] g, float[] b, float[] a, int srcW, int srcH, int startX, int startY, int targetW, int targetH)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, startX, startY, targetW, targetH]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1033,10 +1100,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanRemoveColorComputer : IComputer
+    public class VulkanRemoveColorComputer : IComputer, IRemoveColorComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "RemoveColor";
+
+        public float[] ComputeRemoveColor(float[] r, float[] g, float[] b, float[] a, float targetR, float targetG, float targetB, float range, int pixels)
+        {
+            var result = Compute([r, g, b, a, targetR, targetG, targetB, range, pixels]);
+            return (float[])result[0];
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1151,10 +1224,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendAddComputer : IComputer
+    public class VulkanBlendAddComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "AddComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1168,10 +1247,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendSubtractComputer : IComputer
+    public class VulkanBlendSubtractComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "SubtractComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1185,10 +1270,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendMultiplyComputer : IComputer
+    public class VulkanBlendMultiplyComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "MultiplyComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1202,10 +1293,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendScreenComputer : IComputer
+    public class VulkanBlendScreenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "ScreenComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1219,10 +1316,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendOverlayBlendComputer : IComputer
+    public class VulkanBlendOverlayBlendComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "OverlayBlendComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1236,10 +1339,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendDarkenComputer : IComputer
+    public class VulkanBlendDarkenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "DarkenComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1253,10 +1362,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendLightenComputer : IComputer
+    public class VulkanBlendLightenComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "LightenComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1270,10 +1385,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlendDifferenceComputer : IComputer
+    public class VulkanBlendDifferenceComputer : IComputer, IBlendModeComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "DifferenceComputer";
+
+        public BlendResult16 ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var result = Compute([top, bottom, topAlpha, bottomAlpha, 16, pixelCount]);
+            return new BlendResult16((ushort[])result[0], (float[])result[1]);
+        }
 
         public object[] Compute(object[] args)
         {
@@ -1321,10 +1442,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanOpacityComputer : IComputer
+    public class VulkanOpacityComputer : IComputer, IOpacityComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "FadeOpacity";
+        public FourChannelResult ComputeOpacity(float[] r, float[] g, float[] b, float[] a, float opacity)
+        {
+            var result = Compute([r, g, b, a, opacity]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             float opacity = Convert.ToSingle(args[4]);
@@ -1343,10 +1470,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanVignetteComputer : IComputer
+    public class VulkanVignetteComputer : IComputer, IVignetteComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Vignette";
+        public FourChannelResult ComputeVignette(float[] r, float[] g, float[] b, float[] a, int w, int h, float strength, float radius)
+        {
+            var result = Compute([r, g, b, a, w, h, strength, radius]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             int w = Convert.ToInt32(args[4]), h = Convert.ToInt32(args[5]);
@@ -1375,10 +1508,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanFlipComputer : IComputer
+    public class VulkanFlipComputer : IComputer, IFlipComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Flip";
+        public FourChannelResult ComputeFlip(float[] r, float[] g, float[] b, float[] a, int w, int h, bool horizontal, bool vertical)
+        {
+            var result = Compute([r, g, b, a, w, h, horizontal, vertical]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             int w = Convert.ToInt32(args[4]), h = Convert.ToInt32(args[5]);
@@ -1401,10 +1540,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanSharpenComputer : IComputer
+    public class VulkanSharpenComputer : IComputer, ISharpenComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Sharpen";
+        public FourChannelResult ComputeSharpen(float[] r, float[] g, float[] b, float[] a, int w, float amount)
+        {
+            var result = Compute([r, g, b, a, w, amount]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             int w = Convert.ToInt32(args[4]);
@@ -1431,10 +1576,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanRotationComputer : IComputer
+    public class VulkanRotationComputer : IComputer, IRotationComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Rotation";
+        public FourChannelResult ComputeRotation(float[] r, float[] g, float[] b, float[] a, int srcW, int srcH, int dstW, int dstH, float angleDeg)
+        {
+            var result = Compute([r, g, b, a, srcW, srcH, dstW, dstH, angleDeg]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             var rIn = args[0] as float[] ?? throw new ArgumentException();
@@ -1479,7 +1630,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             return VulkanComputerRunner.EnqueueCompute(async () =>
             {
                 var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(shader, new float[][] { rP }, OutputElementType.Float32);
-                async Task<float[]> RunCh(float[] ch) {
+                async Task<float[]> RunCh(float[] ch)
+                {
                     acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
                     var raw = (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
                     if (raw.Length == dstLen) return raw;
@@ -1490,10 +1642,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanBlurComputer : IComputer
+    public class VulkanBlurComputer : IComputer, IBlurComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "Blur";
+        public FourChannelResult ComputeBlur(float[] r, float[] g, float[] b, float[] a, int w, float sigma)
+        {
+            var result = Compute([r, g, b, a, w, sigma]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             var rIn = args[0] as float[] ?? throw new ArgumentException();
@@ -1542,14 +1700,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             return VulkanComputerRunner.EnqueueCompute(async () =>
             {
                 var (acc, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(hShader, new float[][] { rIn }, OutputElementType.Float32);
-                async Task<float[]> RunH(float[] ch) {
+                async Task<float[]> RunH(float[] ch)
+                {
                     acc.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler, acc);
                     return (float[])await vkView.RunComputeAsync(OutputElementType.Float32);
                 }
                 var rT = await RunH(rIn); var gT = await RunH(gIn); var bT = await RunH(bIn); var aT = await RunH(aIn);
 
                 var (acc2, handler2, vkView2) = await VulkanComputerRunner.CreateAcceleratorAsync(vShader, new float[][] { rT }, OutputElementType.Float32);
-                async Task<float[]> RunV(float[] ch) {
+                async Task<float[]> RunV(float[] ch)
+                {
                     acc2.Inputs = new float[][] { ch }; NativeVulkanSurfaceViewHandler.MapInputs(handler2, acc2);
                     return (float[])await vkView2.RunComputeAsync(OutputElementType.Float32);
                 }
@@ -1558,10 +1718,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
     }
 
-    public class VulkanColorAdjustmentComputer : IComputer
+    public class VulkanColorAdjustmentComputer : IComputer, IColorAdjustmentComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.VulkanComputers";
         public string SupportedEffectOrMixture => "ColorAdjustment";
+        public FourChannelResult ComputeColorAdjustment(float[] r, float[] g, float[] b, float[] a, int w, int h, float brightness, float contrast, float saturation, float hue, float gamma, float vibrance, float temperature, bool invert, float grayscale, float opacity, float maxVal)
+        {
+            var result = Compute([r, g, b, a, brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert ? 1f : 0f, grayscale, opacity, maxVal]);
+            return new FourChannelResult((float[])result[0], (float[])result[1], (float[])result[2], (float[])result[3]);
+        }
+
         public object[] Compute(object[] args)
         {
             var rIn = args[0] as float[] ?? throw new ArgumentException(); var gIn = args[1] as float[] ?? throw new ArgumentException();
@@ -1585,8 +1751,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 layout(set = 0, binding = 4, std430) buffer OutBuf { float o[]; };
                 void main() {
                     uint idx = gl_GlobalInvocationID.x;
-                    if (idx >= {{srcLen}}) { o[idx]=0.0; o[idx+{{srcLen}}]=0.0; o[idx+{{srcLen*2}}]=0.0; o[idx+{{srcLen*3}}]=0.0; return; }
-                    float r=i[idx], g=i[idx+{{srcLen}}], b=i[idx+{{srcLen*2}}], a=i[idx+{{srcLen*3}}];
+                    if (idx >= {{srcLen}}) { o[idx]=0.0; o[idx+{{srcLen}}]=0.0; o[idx+{{srcLen * 2}}]=0.0; o[idx+{{srcLen * 3}}]=0.0; return; }
+                    float r=i[idx], g=i[idx+{{srcLen}}], b=i[idx+{{srcLen * 2}}], a=i[idx+{{srcLen * 3}}];
                     float bf = {{brightness}} - 1.0;
                     r = bf>=0.0 ? r+({{maxV}}-r)*bf : r*(1.0+bf);
                     g = bf>=0.0 ? g+({{maxV}}-g)*bf : g*(1.0+bf);
@@ -1621,7 +1787,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     if({{invertF}}>0.5) { r={{maxV}}-r; g={{maxV}}-g; b={{maxV}}-b; }
                     float lum=0.2126*r+0.7152*g+0.0722*b, gs={{grayscale}}>=1.0?1.0:1.0-{{grayscale}};
                     o[idx]=lum+gs*(r-lum); o[idx+{{srcLen}}]=lum+gs*(g-lum);
-                    o[idx+{{srcLen*2}}]=lum+gs*(b-lum); o[idx+{{srcLen*3}}]=a*{{opacity}};
+                    o[idx+{{srcLen * 2}}]=lum+gs*(b-lum); o[idx+{{srcLen * 3}}]=a*{{opacity}};
                 }
                 """;
 

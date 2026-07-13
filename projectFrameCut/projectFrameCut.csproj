@@ -32,7 +32,7 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>8</ApplicationVersion>
+		<ApplicationVersion>9</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -44,10 +44,11 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<WindowsPackageType>MSIX</WindowsPackageType>
 
-		<AssemblyVersion>1.5.0.0</AssemblyVersion>
-		<FileVersion>1.5.0.0</FileVersion>
+		<AssemblyVersion>1.6.0.0</AssemblyVersion>
+		<FileVersion>1.6.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut Application</Description>
@@ -66,6 +67,8 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
+
+		<PwshSDKVersion>7.6.3</PwshSDKVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -116,34 +119,30 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
-		<PackageReference Include="OpenAI" Version="2.8.0" />
+		<PackageReference Include="OpenAI" Version="2.12.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.50" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.50" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.1.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
-
-		<!--For which assembles included, see Resources\Assembly\about.txt-->
-		<Reference Include="Resources\Assembly\*.dll" />
+		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
+		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<UserHome Condition=" '$(HOME)' != '' ">$(HOME)</UserHome>
+		<UserHome Condition=" '$(UserHome)' == '' and '$(USERPROFILE)' != '' ">$(USERPROFILE)</UserHome>
+		<UserHome Condition=" '$(UserHome)' == '' ">$(HOMEDRIVE)$(HOMEPATH)</UserHome>
+	</PropertyGroup>
 
 	<ItemGroup>
-		<AndroidResource Remove="AIAssistance\AgentSystem\**" />
-		<Compile Remove="AIAssistance\AgentSystem\**" />
-		<EmbeddedResource Remove="AIAssistance\AgentSystem\**" />
-		<MauiCss Remove="AIAssistance\AgentSystem\**" />
-		<MauiXaml Remove="AIAssistance\AgentSystem\**" />
-		<None Remove="AIAssistance\AgentSystem\**" />
-	</ItemGroup>
-
-
-	<ItemGroup>
-		<MauiAsset Include="Resources\Styles\Colors.xaml" />
-		<MauiAsset Include="Resources\Styles\Styles.Default.xaml" />
-		<MauiAsset Include="Resources\Styles\Styles.WinUI.xaml" />
+		<!-- hide huge generated locate.sg.cs to stop Roslyn (devhub.exe) analyse it, and eating extreme large amount of memory -->
+		<Compile Update="Localize\locate.sg.cs" Visible="false" />
+		<!-- removing the annoying refs from Solution resource manager -->
+		<None Update="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
+		<None Remove="$(UserHome)\.nuget\packages\kawazu\*\contentFiles\**\*" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -158,9 +157,11 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
+		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
+		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
-		<PackageReference Include="System.Management" Version="10.0.0" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
@@ -170,10 +171,16 @@
 		</Compile>
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260610101" />
+	</ItemGroup>
+
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<AndroidLibrary Include="Resources\Assembly\fishnet-1.1.0.aar" />
+		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" ExcludeAssets="native" /> <!-- Microsoft.PowerShell.Native has a native lib which was not compactable with android, so we exclude it -->
+		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
+		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>
@@ -182,13 +189,13 @@
 		</Compile>
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
-		<AndroidKeyStore>False</AndroidKeyStore>
-	</PropertyGroup>
-
 	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
 		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+		<AndroidKeyStore>False</AndroidKeyStore>
+	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
 		<AndroidKeyStore>True</AndroidKeyStore>
@@ -196,7 +203,7 @@
 		<AndroidSigningKeyAlias>123456</AndroidSigningKeyAlias>
 		<AndroidSigningKeyPass>123456</AndroidSigningKeyPass>
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
-		<AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
 	</PropertyGroup>
 
 
@@ -213,6 +220,9 @@
 		<MauiXaml Update="Asset\ProjectAssetView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="BenchmarkPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="CreatePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -221,6 +231,9 @@
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\ProjectAddClipView.xaml">
 			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="VectorContent\VectorContentEditorPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -283,6 +296,9 @@
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
 		</Compile>
+		<Compile Update="VectorContent\VectorContentEditorPage.xaml.cs">
+		  <DependentUpon>VectorContentEditorPage.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -334,11 +350,6 @@
 		<MauiXaml Remove="App.WinUI.xaml" />
 		<None Remove="App.WinUI.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<MauiImage Include="Resources\Raw\EffectSample\blur.png" />
-		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
 </Project>

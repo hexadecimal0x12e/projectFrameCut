@@ -29,9 +29,12 @@ using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
 using projectFrameCut.Render.EncodeAndDecode;
 using FFmpeg.AutoGen.Native;
-using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.Project;
+
+
 
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
@@ -43,6 +46,7 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.ClipsAndTracks.Text;
 
 #endif
 
@@ -68,6 +72,7 @@ namespace projectFrameCut
             "My Drafts",
             "My Assets",
             "My Templates",
+            "My Skills",
             "RenderCache",
 #if WINDOWS
             "My Assets\\.database",
@@ -476,7 +481,13 @@ namespace projectFrameCut
                     {
 
                         TextServices.LoadFonts();
-                        TextClipFontRegistry.Initialize(TextServices.LoadedFonts.Values.Select(c => c.InnerFont).Where(c => c is not null));
+                        // 将已发现字体作为懒加载条目注册到 FontRegistry（不加载 FontFace）
+                        foreach (var item in TextServices.LoadedFonts.Values)
+                        {
+                            if (!string.IsNullOrEmpty(item.Path) && File.Exists(item.Path))
+                                TextClipFontRegistry.AddFont(item.Path);
+                        }
+                        TextClipFontRegistry.Initialize();
                     }
 
                 }
@@ -486,7 +497,14 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                    });
+                }
+                finally
+                {
+                    builder.ConfigureFonts(fonts =>
+                    {
                         fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                        fonts.AddFont("SourceCodePro-Regular.ttf", "MarkdownCodeBlock");
                     });
                 }
 
@@ -645,6 +663,7 @@ namespace projectFrameCut
             try
             {
                 PluginManager.InitGlobalGetter();
+                GlobalPluginHelper.PluginsDataRootPath = Path.Combine(BasicDataPath, "Plugins");
                 var internalBase = new InternalApplicationPluginBase();
                 internalBase.locateId = SettingsManager.GetSetting("locate", "default");
                 (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
@@ -703,12 +722,14 @@ namespace projectFrameCut
 
             try
             {
-                string? nativeLibDirOverride = null;
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+
                 try
                 {
                     if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
                     {
 #if WINDOWS
+                        string? nativeLibDirOverride = null;
                         var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
                         if (pluginId == "external")
                         {
@@ -740,73 +761,45 @@ namespace projectFrameCut
                                 Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
                             }
                         }
-#elif ANDROID
-                        nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-#endif
-                    }
-                }
-                catch { }
-#if ANDROID
-                FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
-                JavaSystem.LoadLibrary("c");
-#elif WINDOWS
-                FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-#endif
-                ffmpeg.RootPath = FFmpegRoot;
-                Log($"FFmpeg library root path: {ffmpeg.RootPath}");
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                try
-                {
-                    if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
-                    {
-                        if (OperatingSystem.IsWindows())
+                        if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
                         {
-                            ffmpegFailMessage = ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}");
+                            ffmpeg.RootPath = nativeLibDirOverride;
                         }
                         else
                         {
-                            Log($"FFmpeg fail to load. {ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")}");
+                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
                         }
-
+#elif ANDROID
+                        ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
                     }
                     else
                     {
-                        FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
-                    }
-                }
-                catch
-                {
-                    try
-                    {
-                        DynamicallyLoadedBindings.FunctionResolver = FunctionResolverFactory.Create();
-                        DynamicallyLoadedBindings.InitializeInternal();
-                        try
+                        if (OperatingSystem.IsWindows())
                         {
-                            FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
-                            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
                         }
-                        catch { }
-                    }
-                    catch (Exception ex)
-                    {
-                        ffmpegFailMessage = $"FFmpeg fail to load. {ex.ToString()}";
                     }
                 }
-                finally
-                {
-                    try
-                    {
+                catch { }
+                FFmpegRoot = ffmpeg.RootPath;
+                Log($"FFmpeg library root path: {FFmpegRoot}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
 
-                    }
-                    catch { }
+                try
+                {
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
+                }
+                catch (Exception ex)
+                {
+                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
                 }
 
             }
             catch (Exception ex)
             {
                 Log(ex, "init ffmpeg", CreateMauiApp);
-                ffmpegFailMessage = ex.Message;
+                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
             }
 
             try
@@ -838,15 +831,47 @@ namespace projectFrameCut
 
             try
             {
-                foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Templates"), "*.json", SearchOption.AllDirectories))
+                var templateDir = Path.Combine(DataPath, "My Templates");
+                if (Directory.Exists(templateDir))
                 {
-                    var templateJson = File.ReadAllText(item);
+                    // 加载轻量元数据 .json（不含 Project/Draft，仅供列表展示）
+                    foreach (var item in Directory.GetFiles(templateDir, "*.json", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            var templateJson = File.ReadAllText(item);
 
-                    // Deserialize the template
-                    var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                            // 检测是否为新的轻量元数据格式（含 $schema 标记）
+                            if (templateJson.Contains("\"$schema\"") && templateJson.Contains("\"template-meta-v2\""))
+                            {
+                                var listingTemplate = TemplatePackageIO.LoadListingTemplate(templateJson);
+                                if (listingTemplate.TemplateID != Guid.Empty)
+                                    TemplateStore.Templates[listingTemplate.TemplateID] = listingTemplate;
+                            }
+                            else
+                            {
+                                // 兼容旧格式：通过 JSON 中的 ScriptContent 字段检测旧版脚本模板
+                                if (templateJson.Contains("\"ScriptContent\""))
+                                {
+                                    var scriptCandidate = JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(templateJson);
+                                    if (scriptCandidate?.TemplateID != Guid.Empty)
+                                    {
+                                        TemplateStore.Templates[scriptCandidate.TemplateID] = scriptCandidate;
+                                        continue;
+                                    }
+                                }
 
-                    // Add to TemplateStore
-                    TemplateStore.Templates[template.TemplateID] = template;
+                                var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                                TemplateStore.Templates[template.TemplateID] = template;
+                            }
+                        }
+                        catch (Exception exInner)
+                        {
+                            Log(exInner, $"load template meta: {item}", CreateMauiApp);
+                        }
+                    }
+
+                    // 不再在启动时解压 .pjfcTemplate，改为使用时按需解压
                 }
             }
             catch (Exception ex)
@@ -945,6 +970,39 @@ namespace projectFrameCut
             throw ex; //let Fishnet handle it
 #endif
         }
+
+        public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)
+        {
+            var extractDir = Path.Combine(FileSystem.CacheDirectory, $"startup_extract_{Guid.NewGuid():N}");
+            try
+            {
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePath, extractDir, overwriteFiles: true);
+
+                var templateJsonPath = Path.Combine(extractDir, "template.json");
+                if (!File.Exists(templateJsonPath))
+                    return null;
+
+                var text = File.ReadAllText(templateJsonPath);
+
+                // 检测是否包含脚本
+                var scriptPath = Path.Combine(extractDir, "script.ps1");
+                if (File.Exists(scriptPath))
+                {
+                    return JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(text);
+                }
+
+                return JsonSerializer.Deserialize<JSONBasedTemplateStructure>(text);
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                try { Directory.Delete(extractDir, true); } catch { }
+            }
+        }
+
         public static void ConfigFontFromCulture(MauiAppBuilder builder, CultureInfo culture)
         {
             int codePage = culture.TextInfo.ANSICodePage;

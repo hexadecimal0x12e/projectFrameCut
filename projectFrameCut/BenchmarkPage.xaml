@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.BenchmarkPage"
+             Title="{l:Localized Key=BenchmarkPage_Title}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <!-- 标题区 -->
+            <Label Text="{l:Localized Key=BenchmarkPage_Title}"
+                   FontSize="20" FontAttributes="Bold"/>
+            <Label Text="{l:Localized Key=BenchmarkPage_Description}"
+                   TextColor="Gray"/>
+
+            <!-- 配置区 -->
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="{l:Localized Key=BenchmarkPage_GCOption}"
+                       VerticalOptions="Center"/>
+                <Picker x:Name="GCOptionPicker" SelectedIndex="0" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="{l:Localized Key=BenchmarkPage_OutputMode}"
+                       VerticalOptions="Center"/>
+                <Picker x:Name="OutputModePicker" SelectedIndex="0">
+                    <Picker.Items>
+                        <l:Localized Key="BenchmarkPage_OutputMode_None"/>
+                        <x:String>BlackholeVideoWriter</x:String>
+                    </Picker.Items>
+                </Picker>
+                <Label Text="{l:Localized Key=BenchmarkPage_BoostMode}"
+                       VerticalOptions="Center"/>
+                <Switch x:Name="BoostModeSwitch"/>
+            </HorizontalStackLayout>
+
+            <!-- 控制按钮 -->
+            <HorizontalStackLayout Spacing="8">
+                <Button x:Name="StartButton"
+                        Text="{l:Localized Key=BenchmarkPage_StartBenchmark}"
+                        Clicked="StartButton_Clicked"/>
+                <Button x:Name="CancelButton"
+                        Text="{l:Localized Key=BenchmarkPage_CancelBenchmark}"
+                        IsEnabled="False"
+                        Clicked="CancelButton_Clicked"/>
+            </HorizontalStackLayout>
+
+            <!-- 进度 -->
+            <ProgressBar x:Name="BenchmarkProgress" Progress="0"/>
+            <Label x:Name="StatusLabel"
+                   Text="{l:Localized Key=BenchmarkPage_Status_Ready}"/>
+
+            <!-- 结果区 -->
+            <VerticalStackLayout x:Name="ResultsPanel" IsVisible="False">
+                <Label Text="{l:Localized Key=BenchmarkPage_Results}"
+                       FontSize="18" FontAttributes="Bold"/>
+                <Label x:Name="ResultsLabel" FontFamily="Consolas"/>
+            </VerticalStackLayout>
+
+            <!-- 日志面板 -->
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="{l:Localized Key=BenchmarkPage_LogPanelLabel}"
+                       VerticalOptions="Center"/>
+                <Button Grid.Column="1"
+                        x:Name="ToggleLogButton"
+                        Text="{l:Localized Key=RenderPage_ShowLogs}"
+                        Clicked="ToggleLogButton_Clicked"
+                        Padding="12,2" FontSize="12"/>
+            </Grid>
+            <Editor x:Name="LoggingBox"
+                    IsReadOnly="True"
+                    IsVisible="False"
+                    HeightRequest="200"/>
+
+            <VerticalStackLayout x:Name="ComputeView"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

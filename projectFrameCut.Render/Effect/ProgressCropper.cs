@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Diagnostics;
@@ -191,29 +192,35 @@ namespace projectFrameCut.Render.Effect
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = CropEffectShared.ExtractFloatChannels(source);
-            var resultArr = computer.Compute([
-                r,
-                g,
-                b,
-                a,
-                source.Width,
-                source.Height,
-                safeRect.X,
-                safeRect.Y,
-                safeRect.Width,
-                safeRect.Height
-            ]);
 
-            if (resultArr.Length != 4 ||
-                resultArr[0] is not float[] rOut ||
-                resultArr[1] is not float[] gOut ||
-                resultArr[2] is not float[] bOut ||
-                resultArr[3] is not float[] aOut)
+            FourChannelResult cropResult;
+            if (computer is ICropComputer cc)
             {
-                throw new InvalidOperationException("CropComputer did not return expected channel buffers.");
+                cropResult = cc.ComputeCrop(r, g, b, a, source.Width, source.Height,
+                    safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height);
+            }
+            else
+            {
+                var resultArr = computer.Compute([
+                    r, g, b, a,
+                    source.Width, source.Height,
+                    safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height
+                ]);
+
+                if (resultArr.Length != 4 ||
+                    resultArr[0] is not float[] rOut ||
+                    resultArr[1] is not float[] gOut ||
+                    resultArr[2] is not float[] bOut ||
+                    resultArr[3] is not float[] aOut)
+                {
+                    throw new InvalidOperationException("CropComputer did not return expected channel buffers.");
+                }
+
+                cropResult = new FourChannelResult(rOut, gOut, bOut, aOut);
             }
 
-            var result = CropEffectShared.BuildPicture(source, safeRect.Width, safeRect.Height, rOut, gOut, bOut, aOut, sourceHasAlpha);
+            var result = CropEffectShared.BuildPicture(source, safeRect.Width, safeRect.Height,
+                cropResult.R, cropResult.G, cropResult.B, cropResult.A, sourceHasAlpha);
             sw.Stop();
             result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
             {

@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +19,10 @@ using projectFrameCut.Services;
 using projectFrameCut.Shared;
 
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
+using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
+using projectFrameCut.ScriptEngine;
+using System.ComponentModel;
 
 namespace projectFrameCut
 {
@@ -55,13 +58,13 @@ namespace projectFrameCut
         {
             await NavigateAsync(new EditSettingPage());
         }
-        private async void OnRemoteFeedSettingClicked(object sender, EventArgs e)
-        {
-            await NavigateAsync(new RemoteFeedSettingPage());
-        }
         private async void OnAISettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new AISettingPage());
+        }
+        private async void OnSecuritySettingClicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new SecuritySettingPage());
         }
         private async void OnRenderSettingClicked(object sender, EventArgs e)
         {
@@ -139,6 +142,8 @@ namespace projectFrameCut
 
             }
         }
+
+        [Description("ApplySecuritySettings")]
         public static void SyncSettingToModules()
         {
 
@@ -180,9 +185,35 @@ namespace projectFrameCut
             {
                 EffectHelper.ForcePreferToType = null;
             }
+
+            if (IsBoolSettingTrue("diag_TraceIPictureObject"))
+            {
+                PictureLifecycleTracker.Enabled = true;
+                PictureLifecycleTracker.TrackCollection = true;
+                PictureLifecycleTracker.FireEventOnDispose = true;
+                PictureLifecycleTracker.PictureDisposed += (s, e) =>
+                {
+                    Log($"""
+                        A {e.Picture.GetType().Name} Picture disposed.
+                        Picture info: {e.Picture.Width}x{e.Picture.Height}, bpp: {e.Picture.BitPerPixel}, CanBeDisposed: {e.Picture.CanBeDisposed}
+                        Create at {e.LifecycleState.CreatedAtUtc}, Disposed at {e.LifecycleState.DisposedAtUtc} (survived {e.LifecycleState.LifetimeToDispose})
+
+                        Dispose stack:
+                        {e.LifecycleState.DisposeStack}
+
+                        Process Stack:
+                        {PictureProcessStack.FormatProcessStackForLog(e.Picture.ProcessStack)}
+                        """);
+                };
+            }
+            else
+            {
+                PictureLifecycleTracker.Enabled = false;
+                PictureLifecycleTracker.TrackCollection = false;
+                PictureLifecycleTracker.FireEventOnDispose = false;
+            }
             IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-            PictureLifecycleTracker.Enabled = IsBoolSettingTrue("diag_TraceIPictureObject");
-            PictureLifecycleTracker.TrackCollection = IsBoolSettingTrue("diag_TraceIPictureObject");
+
             var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
             Directory.CreateDirectory(vfdCahceDir);
             VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
@@ -197,6 +228,23 @@ namespace projectFrameCut
             TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
             DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
             DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
+
+            // ===== 安全设置同步 =====
+
+            // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
+            Markdown2XAML.ApplySecuritySettings(
+                enableRendering: IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true),
+                enableDisplayingImage: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true),
+                enableDisplayingHtml: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingHtml", true),
+                enableDisplayingXAML: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingXAML", true),
+                enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
+            );
+
+            // Script 引擎审计模式
+            PSCommandAuthorizationHelper.AuditMode = IsBoolSettingTrueOrDefault("Security_Script_AuditMode", false);
+
+            // 远程内容：HTTP 解码器
+            HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
         }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)

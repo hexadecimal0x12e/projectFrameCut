@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -139,19 +140,20 @@ namespace projectFrameCut.Render.Effect
                 throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
             }
 
-            var alphaArr = computer.Compute(new object[] {
-                r,
-                g,
-                b,
-                a,
-                (float)R,
-                (float)G,
-                (float)B,
-                (float)Tolerance,
-                source.Pixels
+            float[] alpha;
+            if (computer is IRemoveColorComputer rcc)
+            {
+                alpha = rcc.ComputeRemoveColor(r, g, b, a, (float)R, (float)G, (float)B, Tolerance, source.Pixels);
+            }
+            else
+            {
+                var alphaArr = computer.Compute(new object[] {
+                    r, g, b, a,
+                    (float)R, (float)G, (float)B, (float)Tolerance, source.Pixels
                 });
-
-            if (alphaArr[0] is not float[] alpha) throw new InvalidOperationException("The output data from computer is invaild.");
+                if (alphaArr[0] is not float[] alphaOut) throw new InvalidOperationException("The output data from computer is invaild.");
+                alpha = alphaOut;
+            }
 
             if (source is IPicture<ushort> p16_out)
             {

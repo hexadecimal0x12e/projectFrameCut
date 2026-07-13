@@ -10,7 +10,7 @@ namespace projectFrameCut.Services
 {
     internal class UIServices
     {
-        public static double GetSafeZone()
+        public static double GetWindowCornerRadius()
         {
             if (!SettingsManager.IsBoolSettingTrue("ui_ForceUseUserDefinedSafeZone"))
             {

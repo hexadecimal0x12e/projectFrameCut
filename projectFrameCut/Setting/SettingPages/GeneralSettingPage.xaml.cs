@@ -1,4 +1,4 @@
-using Microsoft.Maui.Storage;
+﻿using Microsoft.Maui.Storage;
 
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -298,7 +298,7 @@ public partial class GeneralSettingPage : ContentPage
 #if ANDROID
                     await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_Android(projectFrameCut.Platforms.Android.MainApplication.MainContext?.PackageName ?? "com.hexadecimal0x12e.projectframecut"), Localized._OK);
 #elif iDevices
-                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_iDevices(DeviceInfo.Idiom switch { var t when t == DeviceIdiom.Phone => "iPhone", var t when t == DeviceIdiom.Tablet => "iPad",  _ => "Devices"}), Localized._OK);
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_iDevices(DeviceInfo.Idiom switch { var t when t == DeviceIdiom.Phone => "iPhone", var t when t == DeviceIdiom.Tablet => "iPad", _ => "Devices" }), Localized._OK);
 #endif
                     goto done;
                 case "setUISafeZone":
@@ -379,15 +379,15 @@ public partial class GeneralSettingPage : ContentPage
                             WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
                         }
 #else
-                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-                            Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
-                            if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
-                            Directory.CreateDirectory(internalLibPath);
-                            var ffmpegPath = Path.Combine(MauiProgram.DataPath, "FFmpeg");
-                            foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
-                            {
-                                File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
-                            }
+                        var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                        Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
+                        if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
+                        Directory.CreateDirectory(internalLibPath);
+                        var ffmpegPath = Path.Combine(MauiProgram.DataPath, "FFmpeg");
+                        foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
+                        {
+                            File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
+                        }
 #endif
                     }
                     else

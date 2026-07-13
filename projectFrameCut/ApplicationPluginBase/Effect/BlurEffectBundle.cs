@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -22,6 +22,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
             {"Sigma", 4f }
+        };
+
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Sigma", EffectBundleHelper.FloatField("Sigma", "Sigma", "Controls the intensity of the Gaussian blur effect", 4f, 0f, 128f) }
         };
 
         public List<string> ParametersNeeded => new List<string>
@@ -61,6 +66,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public EffectTarget Target => EffectTarget.Video;
 
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
         public IEffectFactory[] Create()
         {
             var factory = new BlurEffectFactory();
@@ -70,7 +77,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            float sigma = EffectBundleUiHelper.GetFloat(Parameters, "Sigma", 4f);
+            float sigma = EffectBundleHelper.GetFloat(Parameters, "Sigma", 4f);
             if (sigma < 0f)
             {
                 sigma = 0f;
@@ -79,7 +86,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Sigma",
-                EffectBundleUiHelper.L("Property_Sigma", "Sigma"),
+                EffectBundleHelper.L("Property_Sigma", "Sigma"),
                 0,
                 128,
                 sigma,
@@ -90,9 +97,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Sigma" && EffectBundleUiHelper.TrySetFloat(Parameters, "Sigma", args.Value))
+            if (args.Id == "Sigma" && EffectBundleHelper.TrySetFloat(Parameters, "Sigma", args.Value))
             {
-                float sigma = EffectBundleUiHelper.GetFloat(Parameters, "Sigma", 4f);
+                float sigma = EffectBundleHelper.GetFloat(Parameters, "Sigma", 4f);
                 if (sigma < 0f)
                 {
                     Parameters["Sigma"] = 0f;
@@ -102,13 +109,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_Blur", "Blur"),
-                Description = EffectBundleUiHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample/blur.png"))
+                Name = EffectBundleHelper.L("DisplayName_Effect_Blur", "Blur"),
+                Description = EffectBundleHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "blur.png"))
             };
         }
     }

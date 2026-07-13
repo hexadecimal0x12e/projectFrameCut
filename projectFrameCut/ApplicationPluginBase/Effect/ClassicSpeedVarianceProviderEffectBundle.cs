@@ -1,8 +1,9 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         private static readonly Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
         {
             { "Ratio", "float" }
+        };
+
+        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
+        {
+            { "Ratio", EffectBundleHelper.FloatField("Ratio", "Ratio", "Speed ratio applied to the clip", 1f, 0.05f, 8f) }
         };
 
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -43,6 +49,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
+        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
+
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
             { "Ratio", 1f }
@@ -60,7 +68,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            float ratio = EffectBundleUiHelper.GetFloat(Parameters, "Ratio", 1f);
+            float ratio = EffectBundleHelper.GetFloat(Parameters, "Ratio", 1f);
             if (ratio <= 0f)
             {
                 ratio = 1f;
@@ -69,7 +77,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Ratio",
-                EffectBundleUiHelper.L("Property_Ratio", "Ratio"),
+                EffectBundleHelper.L("Property_Ratio", "Ratio"),
                 0.05,
                 8,
                 ratio,
@@ -81,9 +89,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "Ratio" && EffectBundleUiHelper.TrySetFloat(Parameters, "Ratio", args.Value))
+            if (args.Id == "Ratio" && EffectBundleHelper.TrySetFloat(Parameters, "Ratio", args.Value))
             {
-                float ratio = EffectBundleUiHelper.GetFloat(Parameters, "Ratio", 1f);
+                float ratio = EffectBundleHelper.GetFloat(Parameters, "Ratio", 1f);
                 if (ratio <= 0f)
                 {
                     Parameters["Ratio"] = 1f;
@@ -94,13 +102,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return Parameters;
         }
 
+        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        {
+            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_ClassicSpeedVarianceProvider", "Classic Speed"),
-                Description = EffectBundleUiHelper.L("Description_Effect_ClassicSpeedVarianceProvider", "Apply a constant speed ratio for the whole clip."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
+                Name = EffectBundleHelper.L("DisplayName_Effect_ClassicSpeedVarianceProvider", "Classic Speed"),
+                Description = EffectBundleHelper.L("Description_Effect_ClassicSpeedVarianceProvider", "Apply a constant speed ratio for the whole clip."),
+                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "classicSpeedVarianceProvider.png"))
             };
         }
     }

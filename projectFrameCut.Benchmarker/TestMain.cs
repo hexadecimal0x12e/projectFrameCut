@@ -1,7 +1,6 @@
-﻿using ILGPU.Runtime;
+﻿//using ILGPU.Runtime;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 
@@ -47,12 +46,12 @@ namespace projectFrameCut.Benchmarker
             FFmpeg.AutoGen.ffmpeg.RootPath = @"D:\azert\Downloads\ffmpeg-8.1-full_build-shared\bin";
             FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize();
 
-            var c = ILGPU.Context.CreateDefault();
-            ILGPUPlugin.accelerators = c.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(d => d.CreateAccelerator(c)).ToArray();
+            //var c = ILGPU.Context.CreateDefault();
+            //ILGPUPlugin.accelerators = c.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(d => d.CreateAccelerator(c)).ToArray();
 
-            PluginManager.InitGlobalGetter();
-            List<IPluginBase> plugins = [new InternalPluginBase(), new ILGPUPlugin()];
-            PluginManager.Init(plugins);
+            //PluginManager.InitGlobalGetter();
+            //List<IPluginBase> plugins = [new InternalPluginBase(), new HwAc()];
+            //PluginManager.Init(plugins);
 
 
         }

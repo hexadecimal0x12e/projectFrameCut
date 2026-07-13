@@ -1,4 +1,4 @@
-using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
@@ -58,10 +58,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [JsonIgnore()]
         public string? DecoderName => Decoder?.TypeName;
 
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
 
         public VideoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
@@ -108,7 +109,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
             {
                 Decoder = _decoderPool.RepresentativeDecoder;
-                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
                 return;
             }
 
@@ -118,7 +119,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             _decoderPoolKey = poolKey;
             _decoderPool = pool;
             Decoder = pool.RepresentativeDecoder;
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
 
         }
 

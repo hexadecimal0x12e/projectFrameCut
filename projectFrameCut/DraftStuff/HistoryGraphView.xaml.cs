@@ -1,4 +1,4 @@
-using LocalizedResources;
+﻿using LocalizedResources;
 using Color = Microsoft.Maui.Graphics.Color;
 using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
@@ -99,12 +99,18 @@ public partial class HistoryGraphView : ContentView
 
     #region Fields
 
-    private DraftPage? _page;
+    private IHistoryGraphProvider? _provider;
     private readonly List<HistoryGraphNodeViewModel> _nodeViewModels = new();
     private HistoryGraphConnectionsDrawable _connectionsDrawable = null!;
     private HistoryGraphNodeViewModel? _selectedNode;
     private Guid _selectedSnapshotId = Guid.Empty;
     private Guid _currentSnapshotId = Guid.Empty;
+
+    // List view state
+    private List<HistoryGraphNode> _currentNodes = new();
+    private List<HistoryGraphRowDrawable> _rowDrawables = new();
+    private List<GraphicsView> _rowGraphicsViews = new();
+    private HistoryViewMode _viewMode = HistoryViewMode.Graph;
 
     // Canvas state
     private double _panStartX, _panStartY;
@@ -125,9 +131,15 @@ public partial class HistoryGraphView : ContentView
         ConnectionsLayer.Drawable = _connectionsDrawable;
     }
 
-    public HistoryGraphView(DraftPage page) : this()
+    public HistoryGraphView(IHistoryGraphProvider provider) : this()
     {
-        _page = page;
+        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider.CurrentSnapshotChanged += OnProviderCurrentSnapshotChanged;
+    }
+
+    [Obsolete("Use HistoryGraphView(IHistoryGraphProvider) instead")]
+    public HistoryGraphView(DraftPage page) : this(new DraftHistoryGraphProvider(page))
+    {
     }
 
     protected override void OnHandlerChanged()
@@ -146,6 +158,17 @@ public partial class HistoryGraphView : ContentView
 
     #region Public API
 
+    public HistoryViewMode ViewMode
+    {
+        get => _viewMode;
+        set
+        {
+            if (_viewMode == value) return;
+            _viewMode = value;
+            UpdateViewMode();
+        }
+    }
+
     public void LoadHistory(
         List<HistoryGraphNode> nodes,
         List<HistoryGraphEdge> edges,
@@ -160,17 +183,89 @@ public partial class HistoryGraphView : ContentView
         NodesContainer.Children.Clear();
         _nodeViewModels.Clear();
         _connectionsDrawable.Connections.Clear();
+        ListContent.Children.Clear();
+        _currentNodes.Clear();
+        _rowDrawables.Clear();
+        _rowGraphicsViews.Clear();
 
         if (nodes.Count == 0)
         {
             EmptyHint.IsVisible = true;
             InfoLabel.Text = "";
+            GraphViewContainer.IsVisible = _viewMode == HistoryViewMode.Graph;
+            ListViewContainer.IsVisible = _viewMode == HistoryViewMode.List;
             ConnectionsLayer.Invalidate();
             return;
         }
 
         EmptyHint.IsVisible = false;
 
+        // Store raw nodes for list view
+        _currentNodes = nodes;
+
+        // ── Build graph view ──
+        BuildGraphView(nodes, edges, currentSnapshotId);
+
+        // ── Build list view ──
+        BuildListView(nodes, edges);
+
+        InfoLabel.Text = _provider is not null
+            ? $"{_provider.ProviderName}: {nodes.Count} snapshots"
+            : $"{nodes.Count} snapshots";
+
+        UpdateViewMode();
+
+        // Fit all after layout settles
+        Dispatcher.Dispatch(() => OnFitAll(null, EventArgs.Empty));
+    }
+
+    public void RefreshSelection()
+    {
+        if (_provider is null) return;
+        _currentSnapshotId = _provider.CurrentSnapshotID;
+
+        // Update graph view selection
+        foreach (var vm in _nodeViewModels)
+        {
+            vm.IsCurrentSnapshot = vm.SnapshotID == _currentSnapshotId;
+            if (vm.View is Border border)
+            {
+                UpdateNodeBorderStyle(border, vm);
+            }
+        }
+        ConnectionsLayer.Invalidate();
+
+        // Update list view selection
+        for (int i = 0; i < _rowDrawables.Count; i++)
+        {
+            bool isCurrent = i < _currentNodes.Count && _currentNodes[i].SnapshotID == _currentSnapshotId;
+            _rowDrawables[i].IsCurrentSnapshot = isCurrent;
+            _rowDrawables[i].IsSelected = _currentNodes.Count > i && _currentNodes[i].SnapshotID == _selectedSnapshotId;
+            if (i < _rowGraphicsViews.Count)
+                _rowGraphicsViews[i].Invalidate();
+        }
+
+        // Update current highlighting in rows
+        for (int i = 0; i < ListContent.Children.Count; i++)
+        {
+            if (ListContent.Children[i] is Grid row && i < _currentNodes.Count)
+            {
+                row.BackgroundColor = _currentNodes[i].SnapshotID == _currentSnapshotId
+                    ? Color.FromArgb("#1A4A9EFF")
+                    : Colors.Transparent;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Graph View Building
+
+    private void BuildGraphView(
+        List<HistoryGraphNode> nodes,
+        List<HistoryGraphEdge> edges,
+        Guid currentSnapshotId)
+    {
         // Convert to viewmodels
         var nodeDict = new Dictionary<Guid, HistoryGraphNodeViewModel>();
         foreach (var node in nodes)
@@ -213,27 +308,127 @@ public partial class HistoryGraphView : ContentView
             }
         }
 
-        InfoLabel.Text = $"{nodes.Count} snapshots";
-
         ConnectionsLayer.Invalidate();
-
-        // Fit all after layout settles
-        Dispatcher.Dispatch(() => OnFitAll(null, EventArgs.Empty));
     }
 
-    public void RefreshSelection()
+    #endregion
+
+    #region List View Building
+
+    private void BuildListView(List<HistoryGraphNode> nodes, List<HistoryGraphEdge> edges)
     {
-        if (_page is null) return;
-        _currentSnapshotId = _page.CurrentSnapshotID;
-        foreach (var vm in _nodeViewModels)
+        var edgeSet = new HashSet<(Guid from, Guid to)>();
+        foreach (var edge in edges)
+            edgeSet.Add((edge.FromSnapshotID, edge.ToSnapshotID));
+
+        for (int i = 0; i < nodes.Count; i++)
         {
-            vm.IsCurrentSnapshot = vm.SnapshotID == _currentSnapshotId;
-            if (vm.View is Border border)
-            {
-                UpdateNodeBorderStyle(border, vm);
-            }
+            var node = nodes[i];
+            Guid prevId = node.PreviousSnapshotID;
+            Guid nextId = node.NextSnapshotID;
+
+            bool hasPredecessor = edgeSet.Contains((prevId, node.SnapshotID)) || prevId != Guid.Empty;
+            bool hasSuccessor = edgeSet.Contains((node.SnapshotID, nextId)) || nextId != Guid.Empty;
+            bool isFirst = i == 0;
+            bool isLast = i == nodes.Count - 1;
+
+            var row = BuildListRow(node, hasPredecessor || !isFirst, hasSuccessor || !isLast);
+
+            var capturedNode = node;
+            var tapGesture = new TapGestureRecognizer();
+            tapGesture.Tapped += (_, _) => OnListItemTapped(capturedNode);
+            row.GestureRecognizers.Add(tapGesture);
+
+            ListContent.Children.Add(row);
         }
-        ConnectionsLayer.Invalidate();
+    }
+
+    private View BuildListRow(HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
+    {
+        var drawable = new HistoryGraphRowDrawable
+        {
+            HasPredecessor = hasPredecessor,
+            HasSuccessor = hasSuccessor,
+            IsCurrentSnapshot = node.SnapshotID == _currentSnapshotId,
+            IsSelected = node.SnapshotID == _selectedSnapshotId
+        };
+
+        var graphView = new GraphicsView
+        {
+            WidthRequest = 50,
+            HeightRequest = 56,
+            Drawable = drawable,
+            BackgroundColor = Colors.Transparent
+        };
+
+        _rowDrawables.Add(drawable);
+        _rowGraphicsViews.Add(graphView);
+
+        string reasonText = string.IsNullOrWhiteSpace(node.ChangeReason)
+            ? "(no description)"
+            : node.ChangeReason.Trim();
+        if (node.IsCurrentSnapshot) reasonText = "* " + reasonText;
+
+        bool isCurrent = node.IsCurrentSnapshot;
+
+        var reasonLabel = new Label
+        {
+            Text = reasonText,
+            TextColor = isCurrent ? Colors.White : Color.FromArgb("#ccc"),
+            FontSize = 13,
+            FontAttributes = isCurrent ? FontAttributes.Bold : FontAttributes.None,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var timeLabel = new Label
+        {
+            Text = node.RelativeTimeDisplay,
+            TextColor = Color.FromArgb("#999"),
+            FontSize = 11,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var textStack = new VerticalStackLayout
+        {
+            Spacing = 2,
+            VerticalOptions = LayoutOptions.Center,
+            Children = { reasonLabel, timeLabel }
+        };
+
+        var row = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = 50 },
+                new ColumnDefinition { Width = GridLength.Star }
+            },
+            Padding = new Thickness(0, 0),
+            BackgroundColor = isCurrent ? Color.FromArgb("#1A4A9EFF") : Colors.Transparent
+        };
+
+        row.Add(graphView, 0);
+        row.Add(textStack, 1);
+
+        return row;
+    }
+
+    private void OnListItemTapped(HistoryGraphNode node)
+    {
+        _selectedSnapshotId = node.SnapshotID;
+        _selectedNode = null;
+
+        for (int i = 0; i < _rowDrawables.Count; i++)
+        {
+            _rowDrawables[i].IsSelected = i < _currentNodes.Count && _currentNodes[i].SnapshotID == _selectedSnapshotId;
+            if (i < _rowGraphicsViews.Count)
+                _rowGraphicsViews[i].Invalidate();
+        }
+
+        _provider?.OnNodeSelected(node);
+
+        // Update details panel (same shared panel)
+        ShowDetailsPanel(node);
     }
 
     #endregion
@@ -401,7 +596,7 @@ public partial class HistoryGraphView : ContentView
 
         var tapGesture = new TapGestureRecognizer();
         var capturedVm = vm;
-        tapGesture.Tapped += (_, _) => OnNodeTapped(capturedVm);
+        tapGesture.Tapped += (_, _) => OnGraphNodeTapped(capturedVm);
         frame.GestureRecognizers.Add(tapGesture);
 
         ToolTipProperties.SetText(frame, $"{vm.DisplayLabel}\n{vm.TimeDisplay}");
@@ -441,26 +636,52 @@ public partial class HistoryGraphView : ContentView
 
     #region Node Interaction
 
-    private void OnNodeTapped(HistoryGraphNodeViewModel vm)
+    private void OnGraphNodeTapped(HistoryGraphNodeViewModel vm)
     {
-        // Deselect previous
+        _selectedSnapshotId = vm.SnapshotID;
+
+        // Deselect previous graph node
         if (_selectedNode != null && _selectedNode.View is Border prevBorder)
         {
             prevBorder.StrokeThickness = _selectedNode.IsCurrentSnapshot ? 3 : 2;
             UpdateNodeBorderStyle(prevBorder, _selectedNode);
         }
 
-        // Select new
+        // Select new graph node
         _selectedNode = vm;
-        _selectedSnapshotId = vm.SnapshotID;
-
         if (vm.View is Border border)
         {
             border.Stroke = Color.FromArgb("#FFB74D");
             border.StrokeThickness = 3;
         }
 
-        // Update details panel
+        // Also deselect list view
+        for (int i = 0; i < _rowDrawables.Count; i++)
+        {
+            _rowDrawables[i].IsSelected = false;
+            if (i < _rowGraphicsViews.Count)
+                _rowGraphicsViews[i].Invalidate();
+        }
+
+        _provider?.OnNodeSelected(
+            new HistoryGraphNode
+            {
+                SnapshotID = vm.SnapshotID,
+                PreviousSnapshotID = vm.PreviousSnapshotID,
+                NextSnapshotIDs = vm.NextSnapshotIDs,
+                SavedAt = vm.SavedAt,
+                ChangeReason = vm.ChangeReason,
+                ChangedByUserDisplayName = vm.ChangedByUserDisplayName,
+                ChangedByUser = vm.ChangedByUser,
+                IsCurrentSnapshot = vm.IsCurrentSnapshot,
+                IsHead = vm.IsHead,
+            });
+
+        ShowDetailsPanel(vm);
+    }
+
+    private void ShowDetailsPanel(HistoryGraphNodeViewModel vm)
+    {
         DetailsPanel.IsVisible = true;
         DetailsSavedAtLabel.Text = vm.SavedAt == DateTime.MinValue
             ? "Unknown time"
@@ -469,23 +690,94 @@ public partial class HistoryGraphView : ContentView
         DetailsChangeReasonLabel.Text = vm.ChangeReason;
         DetailsRestoreButton.IsEnabled = !vm.IsCurrentSnapshot;
         DetailsRestoreButton.Text = vm.IsCurrentSnapshot ? "(Current)" : Localized._Apply;
+
+        // Append provider extension content
+        ClearDetailsPanelExtension();
+        var extension = _provider?.GetDetailsPanelExtension(
+            new HistoryGraphNode
+            {
+                SnapshotID = vm.SnapshotID,
+                PreviousSnapshotID = vm.PreviousSnapshotID,
+                NextSnapshotIDs = vm.NextSnapshotIDs,
+                SavedAt = vm.SavedAt,
+                ChangeReason = vm.ChangeReason,
+                ChangedByUserDisplayName = vm.ChangedByUserDisplayName,
+                ChangedByUser = vm.ChangedByUser,
+                IsCurrentSnapshot = vm.IsCurrentSnapshot,
+                IsHead = vm.IsHead,
+            });
+        if (extension is not null)
+        {
+            DetailsExtensionContainer.Children.Add(extension);
+        }
+    }
+
+    private void ShowDetailsPanel(HistoryGraphNode node)
+    {
+        DetailsPanel.IsVisible = true;
+        DetailsSavedAtLabel.Text = node.SavedAt == DateTime.MinValue
+            ? "Unknown time"
+            : node.SavedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+        DetailsAuthorLabel.Text = $"By: {node.ChangedByUserDisplayName}";
+        DetailsChangeReasonLabel.Text = node.ChangeReason;
+        DetailsRestoreButton.IsEnabled = !node.IsCurrentSnapshot;
+        DetailsRestoreButton.Text = node.IsCurrentSnapshot ? "(Current)" : Localized._Apply;
+
+        ClearDetailsPanelExtension();
+        var extension = _provider?.GetDetailsPanelExtension(node);
+        if (extension is not null)
+        {
+            DetailsExtensionContainer.Children.Add(extension);
+        }
+    }
+
+    private void ClearDetailsPanelExtension()
+    {
+        DetailsExtensionContainer.Children.Clear();
     }
 
     private async void OnRestoreClicked(object? sender, EventArgs e)
     {
-        if (_selectedSnapshotId == Guid.Empty || _page is null) return;
+        if (_selectedSnapshotId == Guid.Empty || _provider is null) return;
 
-        try
+        bool success = await _provider.ApplySnapshotAsync(_selectedSnapshotId);
+        if (success)
         {
-            _page.SetStateBusy();
-            _page.ApplySlot(_selectedSnapshotId);
             RefreshSelection();
         }
-        catch (Exception ex)
+    }
+
+    #endregion
+
+    #region View Mode Toggle
+
+    private void OnToggleViewClicked(object? sender, EventArgs e)
+    {
+        _viewMode = _viewMode == HistoryViewMode.Graph
+            ? HistoryViewMode.List
+            : HistoryViewMode.Graph;
+        UpdateViewMode();
+    }
+
+    private void UpdateViewMode()
+    {
+        bool isEmpty = _nodeViewModels.Count == 0 && _currentNodes.Count == 0;
+        bool isGraph = _viewMode == HistoryViewMode.Graph;
+
+        GraphViewContainer.IsVisible = isGraph && !isEmpty;
+        ListViewContainer.IsVisible = !isGraph && !isEmpty;
+
+        ToggleViewButton.Text = isGraph ? "☰" : "⬡";
+
+        if (isGraph && !isEmpty)
         {
-            _page.SetStateFail();
-            _page.SetStatusText($"Restore failed: {ex.Message}");
+            ConnectionsLayer.Invalidate();
         }
+    }
+
+    private void OnProviderCurrentSnapshotChanged(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() => RefreshSelection());
     }
 
     #endregion
@@ -649,4 +941,13 @@ public partial class HistoryGraphView : ContentView
     }
 
     #endregion
+}
+
+/// <summary>View mode for the history panel.</summary>
+public enum HistoryViewMode
+{
+    /// <summary>DAG-style graph view with nodes and curved connections.</summary>
+    Graph,
+    /// <summary>Compact vertical list view with timeline-style dots.</summary>
+    List
 }

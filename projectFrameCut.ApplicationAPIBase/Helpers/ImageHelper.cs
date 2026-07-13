@@ -21,6 +21,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// <summary>
         /// Trying to load PNG image to a Microsoft.Maui.Controls.Image control.
         /// </summary>
+        [Obsolete("Not recommended to use this. Use this only in edge case when the ImageSource has a fault.", false)]
         public static async Task ForceLoadPNGToAImage(this Microsoft.Maui.Controls.Image source, string path)
         {
             var exists = System.IO.File.Exists(path);

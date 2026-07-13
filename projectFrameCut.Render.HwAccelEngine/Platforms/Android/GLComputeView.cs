@@ -398,7 +398,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
 
         public static readonly BindableProperty ShaderSourceProperty =
-            BindableProperty.Create(nameof(ShaderSource), typeof(string), typeof(NativeGLSurfaceView), string.Empty);      
+            BindableProperty.Create(nameof(ShaderSource), typeof(string), typeof(NativeGLSurfaceView), string.Empty);
 
         public string ShaderSource
         {
@@ -407,7 +407,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         }
 
         public static readonly BindableProperty JobIDProperty =
-            BindableProperty.Create(nameof(JobID), typeof(string), typeof(NativeGLSurfaceView), "???");  
+            BindableProperty.Create(nameof(JobID), typeof(string), typeof(NativeGLSurfaceView), "???");
         public string JobID
         {
             get => (string)GetValue(JobIDProperty);
@@ -438,7 +438,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         [DebuggerStepThrough()]
         public static void MapInputs(NativeGLSurfaceViewHandler handler, NativeGLSurfaceView view)
         {
-            if (handler.PlatformView != null )
+            if (handler.PlatformView != null)
             {
                 if (string.IsNullOrWhiteSpace(view.ShaderSource))
                     throw new NullReferenceException("glSource can't be null or whitespace.");

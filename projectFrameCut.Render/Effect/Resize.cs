@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -140,20 +141,45 @@ namespace projectFrameCut.Render.Effect
 
             }
 
-            var resultArr = computer.Compute(new object[] {
-                r, g, b, a,
-                        (float)source.Width, (float)source.Height,
-                        (float)destWidth, (float)destHeight
-            });
-
-
-            if (resultArr.Length == 4 &&
-                resultArr[0] is float[] r_out &&
-                resultArr[1] is float[] g_out &&
-                resultArr[2] is float[] b_out &&
-                resultArr[3] is float[] a_out)
+            IPicture result;
+            if (computer is IResizeComputer resizeComp)
             {
-                IPicture result;
+                if (source.BitPerPixel == 16)
+                {
+                    var r16 = resizeComp.ComputeResizeUshort(r, g, b, a,
+                        source.Width, source.Height, destWidth, destHeight);
+                    var p = new Picture16bpp(destWidth, destHeight);
+                    p.r = r16.R; p.g = r16.G; p.b = r16.B; p.a = r16.A;
+                    p.HasAlphaChannel = true;
+                    result = p;
+                }
+                else
+                {
+                    var r8 = resizeComp.ComputeResizeByte(r, g, b, a,
+                        source.Width, source.Height, destWidth, destHeight);
+                    var p = new Picture8bpp(destWidth, destHeight);
+                    p.r = r8.R; p.g = r8.G; p.b = r8.B; p.a = r8.A;
+                    p.HasAlphaChannel = true;
+                    result = p;
+                }
+            }
+            else
+            {
+                var resultArr = computer.Compute(new object[] {
+                    r, g, b, a,
+                    (float)source.Width, (float)source.Height,
+                    (float)destWidth, (float)destHeight
+                });
+
+                if (resultArr.Length != 4 ||
+                    resultArr[0] is not float[] r_out ||
+                    resultArr[1] is not float[] g_out ||
+                    resultArr[2] is not float[] b_out ||
+                    resultArr[3] is not float[] a_out)
+                {
+                    throw new InvalidOperationException($"Accelerator doesn't return expected result.");
+                }
+
                 if (source.BitPerPixel == 16)
                 {
                     var p = new Picture16bpp(destWidth, destHeight);
@@ -174,23 +200,23 @@ namespace projectFrameCut.Render.Effect
                     p.HasAlphaChannel = true;
                     result = p;
                 }
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-                {
-                    Elapsed = sw.Elapsed,
-                    OperationDisplayName = $"Resize (GPU)",
-                    Operator = typeof(ResizeEffect_HwAccel),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                            {
-                                { "Width", destWidth },
-                                { "Height", destHeight },
-                                { "PreserveAspectRatio", PreserveAspectRatio }
-                            }
-                }).ToList();
-                return result;
             }
-            throw new InvalidOperationException($"Accelerator doesn't return expected result.");
+
+            sw.Stop();
+            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+            {
+                Elapsed = sw.Elapsed,
+                OperationDisplayName = $"Resize (GPU)",
+                Operator = typeof(ResizeEffect_HwAccel),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = new Dictionary<string, object>
+                {
+                    { "Width", destWidth },
+                    { "Height", destHeight },
+                    { "PreserveAspectRatio", PreserveAspectRatio }
+                }
+            }).ToList();
+            return result;
         }
 
     }

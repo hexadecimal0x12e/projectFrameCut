@@ -1,4 +1,5 @@
-using projectFrameCut.Drawing.Processing.Resizing;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -18,6 +19,7 @@ namespace projectFrameCut.Render.Effect
     public class HwAccelPictureResizer : IPictureResizer
     {
         private IComputer? _cachedComputer;
+        private IResizeComputer? _cachedResizeComputer;
         private bool _computerResolved;
 
         private static readonly BilinearPictureResizer _cpuFallback = new();
@@ -34,15 +36,21 @@ namespace projectFrameCut.Render.Effect
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IComputer? GetComputer()
+        private IResizeComputer? GetResizeComputer()
         {
             if (!_computerResolved)
             {
-                _cachedComputer = PluginManager.CreateComputer("ResizeComputer", forceCreate: false);
+                var computer = PluginManager.CreateComputer("ResizeComputer", forceCreate: false);
+                _cachedComputer = computer;
+                _cachedResizeComputer = computer as IResizeComputer;
                 _computerResolved = true;
             }
-            return _cachedComputer;
+            return _cachedResizeComputer;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private IComputer? GetComputer() => _computerResolved ? _cachedComputer
+            : (GetResizeComputer(), _cachedComputer).Item2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static (int destW, int destH) ComputeDestSize(
@@ -61,394 +69,231 @@ namespace projectFrameCut.Render.Effect
             return (destW, destH);
         }
 
-        private static float[] ConvertToFloat(ushort[] data)
+        /// <summary>
+        /// 验证尺寸并计算目标尺寸，提前返回 source 本身（尺寸不变时）。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private (int destW, int destH) ValidateAndComputeSize<T>(
+            IPicture<T> source, int targetWidth, int targetHeight, bool preserveAspect)
+        {
+            if (targetWidth <= 0 || targetHeight <= 0)
+                throw new ArgumentException("targetWidth and targetHeight must be positive");
+            if (source.Width <= 0 || source.Height <= 0)
+                throw new InvalidOperationException("Source image has invalid dimensions");
+
+            var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
+            _cancellationToken.ThrowIfCancellationRequested();
+            return (destW, destH);
+        }
+
+        private static float[] ConvertToFloat<T>(T[] data) where T : unmanaged
         {
             var result = new float[data.Length];
-            for (int i = 0; i < data.Length; i++)
-                result[i] = data[i];
+            if (typeof(T) == typeof(byte))
+            {
+                var src = (byte[])(object)data;
+                for (int i = 0; i < data.Length; i++)
+                    result[i] = src[i];
+            }
+            else if (typeof(T) == typeof(ushort))
+            {
+                var src = (ushort[])(object)data;
+                for (int i = 0; i < data.Length; i++)
+                    result[i] = src[i];
+            }
+            else
+            {
+                for (int i = 0; i < data.Length; i++)
+                    result[i] = (float)Convert.ToDouble(data[i]);
+            }
             return result;
         }
 
-        private static float[] ConvertToFloat(byte[] data)
+        /// <summary>
+        /// 填充 ProcessStack 信息并停止计时器。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void FinalizeResult(IPicture result, Stopwatch sw, string displayName, Type operatorType,
+            Dictionary<string, object>? extraProps = null)
         {
-            var result = new float[data.Length];
-            for (int i = 0; i < data.Length; i++)
-                result[i] = data[i];
-            return result;
+            sw.Stop();
+            var props = new Dictionary<string, object>
+            {
+                { "OperationDisplayName", displayName }
+            };
+            if (extraProps != null)
+                foreach (var kv in extraProps)
+                    props[kv.Key] = kv.Value;
+
+            result.ProcessStack.Add(new PictureProcessStack
+            {
+                Elapsed = sw.Elapsed,
+                OperationDisplayName = displayName,
+                Operator = operatorType,
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = props
+            });
+        }
+
+        /// <summary>
+        /// 将 source 的 RGB 通道转换为 float[]，并准备 alpha 数组。
+        /// </summary>
+        private static (float[] r, float[] g, float[] b, float[] a, bool aFromPool, bool hasAlpha)
+            PrepareChannels<T>(IPicture<T> source, ArrayPool<float> pool) where T : unmanaged
+        {
+            float[] r = ConvertToFloat(source.r);
+            float[] g = ConvertToFloat(source.g);
+            float[] b = ConvertToFloat(source.b);
+            float[] a;
+            bool aFromPool = false;
+            if (source.a != null)
+            {
+                a = source.a;
+            }
+            else
+            {
+                a = pool.Rent(source.Pixels);
+                Array.Fill(a, 1f, 0, source.Pixels);
+                aFromPool = true;
+            }
+            return (r, g, b, a, aFromPool, source.HasAlphaChannel);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<ushort> Resize(IPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
-            var computer = GetComputer();
-            if (computer == null)
+            var resizeComputer = GetResizeComputer();
+            if (resizeComputer == null)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
                 return (Picture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
             }
 
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == source.Width && targetHeight == source.Height)
-                return source;
-
-            if (targetWidth <= 0 || targetHeight <= 0)
-                throw new ArgumentException("targetWidth and targetHeight must be positive");
-            if (source.Width <= 0 || source.Height <= 0)
-                throw new InvalidOperationException("Source image has invalid dimensions");
-
-            var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
+            var (destW, destH) = ValidateAndComputeSize(source, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
 
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            float[] r = ConvertToFloat(source.r);
-            float[] g = ConvertToFloat(source.g);
-            float[] b = ConvertToFloat(source.b);
-
-            float[] a;
-            bool aFromPool = false;
-            if (source.a != null)
-            {
-                a = source.a;
-            }
-            else
-            {
-                a = ArrayPool<float>.Shared.Rent(source.Pixels);
-                Array.Fill(a, 1f, 0, source.Pixels);
-                aFromPool = true;
-            }
-
-            IPicture? result = null;
+            var sw = Stopwatch.StartNew();
+            var (r, g, b, a, aFromPool, hasAlpha) = PrepareChannels(source, ArrayPool<float>.Shared);
+            Picture16bpp? result = null;
             try
             {
                 _cancellationToken.ThrowIfCancellationRequested();
-
-                // Pass 16 as pixel-type hint so the computer can return ushort[] for RGB directly
-                var resultArr = computer.Compute(new object[]
-                {
-                    r, g, b, a,
-                    (float)source.Width, (float)source.Height,
-                    (float)destW, (float)destH,
-                    16  // pixel type hint
-                });
-
-                if (resultArr.Length != 4)
-                    throw new InvalidOperationException("Accelerator didn't return the expected 4 arrays.");
-
-                _cancellationToken.ThrowIfCancellationRequested();
-
+                var r16 = resizeComputer.ComputeResizeUshort(r, g, b, a,
+                    source.Width, source.Height, destW, destH);
                 result = new Picture16bpp(destW, destH)
                 {
-                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    HasAlphaChannel = source.HasAlphaChannel
+                    r = r16.R,
+                    g = r16.G,
+                    b = r16.B,
+                    a = hasAlpha ? r16.A : null,
+                    HasAlphaChannel = hasAlpha
                 };
-
-                // Computer may return ushort[] (typed path) or float[] (fallback)
-                if (resultArr[0] is ushort[] rOutUS && resultArr[1] is ushort[] gOutUS && resultArr[2] is ushort[] bOutUS)
-                {
-                    ((Picture16bpp)result).r = rOutUS;
-                    ((Picture16bpp)result).g = gOutUS;
-                    ((Picture16bpp)result).b = bOutUS;
-                }
-                else if (resultArr[0] is float[] rOutF && resultArr[1] is float[] gOutF && resultArr[2] is float[] bOutF)
-                {
-                    var pixels = result.Pixels;
-                    var rRes = new ushort[pixels];
-                    var gRes = new ushort[pixels];
-                    var bRes = new ushort[pixels];
-                    for (int i = 0; i < pixels; i++)
-                    {
-                        rRes[i] = (ushort)Math.Clamp(rOutF[i], 0, 65535);
-                        gRes[i] = (ushort)Math.Clamp(gOutF[i], 0, 65535);
-                        bRes[i] = (ushort)Math.Clamp(bOutF[i], 0, 65535);
-                    }
-                    ((Picture16bpp)result).r = rRes;
-                    ((Picture16bpp)result).g = gRes;
-                    ((Picture16bpp)result).b = bRes;
-                }
-                else
-                {
-                    throw new InvalidOperationException("Accelerator returned unexpected array types.");
-                }
-
-                sw.Stop();
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (GPU)",
-                    Operator = typeof(HwAccelPictureResizer),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", source.Width },
-                        { "SourceHeight", source.Height },
-                        { "TargetWidth", destW },
-                        { "TargetHeight", destH },
-                        { "PreserveAspect", preserveAspect },
-                    },
-                    Elapsed = sw.Elapsed,
-                });
+                FinalizeResult(result, sw, "Resize (GPU)", typeof(HwAccelPictureResizer),
+                    new() { { "SourceWidth", source.Width }, { "SourceHeight", source.Height },
+                            { "TargetWidth", destW }, { "TargetHeight", destH },
+                            { "PreserveAspect", preserveAspect } });
             }
             finally
             {
-                if (aFromPool)
-                    ArrayPool<float>.Shared.Return(a);
+                if (aFromPool) ArrayPool<float>.Shared.Return(a);
             }
-
-            return (Picture16bpp)result!;
+            return result!;
         }
-
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IPicture<byte> Resize(IPicture<byte> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
-            var computer = GetComputer();
-            if (computer == null)
+            var resizeComputer = GetResizeComputer();
+            if (resizeComputer == null)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
                 return (Picture8bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
             }
 
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == source.Width && targetHeight == source.Height)
-                return source;
-
-            if (targetWidth <= 0 || targetHeight <= 0)
-                throw new ArgumentException("targetWidth and targetHeight must be positive");
-            if (source.Width <= 0 || source.Height <= 0)
-                throw new InvalidOperationException("Source image has invalid dimensions");
-
-            var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
+            var (destW, destH) = ValidateAndComputeSize(source, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
 
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            float[] r = ConvertToFloat(source.r);
-            float[] g = ConvertToFloat(source.g);
-            float[] b = ConvertToFloat(source.b);
-
-            float[] a;
-            bool aFromPool = false;
-            if (source.a != null)
-            {
-                a = source.a;
-            }
-            else
-            {
-                a = ArrayPool<float>.Shared.Rent(source.Pixels);
-                Array.Fill(a, 1f, 0, source.Pixels);
-                aFromPool = true;
-            }
-
-            IPicture? result = null;
+            var sw = Stopwatch.StartNew();
+            var (r, g, b, a, aFromPool, hasAlpha) = PrepareChannels(source, ArrayPool<float>.Shared);
+            Picture8bpp? result = null;
             try
             {
-                // Pass 8 as pixel-type hint so the computer can return byte[] for RGB directly
-                var resultArr = computer.Compute(new object[]
-                {
-                    r, g, b, a,
-                    (float)source.Width, (float)source.Height,
-                    (float)destW, (float)destH,
-                    8  // pixel type hint
-                });
-
-                if (resultArr.Length != 4)
-                    throw new InvalidOperationException("Accelerator didn't return the expected 4 arrays.");
-
+                _cancellationToken.ThrowIfCancellationRequested();
+                var r8 = resizeComputer.ComputeResizeByte(r, g, b, a,
+                    source.Width, source.Height, destW, destH);
                 result = new Picture8bpp(destW, destH)
                 {
-                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    HasAlphaChannel = source.HasAlphaChannel
+                    r = r8.R,
+                    g = r8.G,
+                    b = r8.B,
+                    a = hasAlpha ? r8.A : null,
+                    HasAlphaChannel = hasAlpha
                 };
-
-                // Computer may return byte[] (typed path) or float[] (fallback)
-                if (resultArr[0] is byte[] rOutB && resultArr[1] is byte[] gOutB && resultArr[2] is byte[] bOutB)
-                {
-                    ((Picture8bpp)result).r = rOutB;
-                    ((Picture8bpp)result).g = gOutB;
-                    ((Picture8bpp)result).b = bOutB;
-                }
-                else if (resultArr[0] is float[] rOutF && resultArr[1] is float[] gOutF && resultArr[2] is float[] bOutF)
-                {
-                    var pixels = result.Pixels;
-                    var rRes = new byte[pixels];
-                    var gRes = new byte[pixels];
-                    var bRes = new byte[pixels];
-                    for (int i = 0; i < pixels; i++)
-                    {
-                        rRes[i] = (byte)Math.Clamp(rOutF[i], 0, 255);
-                        gRes[i] = (byte)Math.Clamp(gOutF[i], 0, 255);
-                        bRes[i] = (byte)Math.Clamp(bOutF[i], 0, 255);
-                    }
-                    ((Picture8bpp)result).r = rRes;
-                    ((Picture8bpp)result).g = gRes;
-                    ((Picture8bpp)result).b = bRes;
-                }
-                else
-                {
-                    throw new InvalidOperationException("Accelerator returned unexpected array types.");
-                }
-
-                sw.Stop();
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (GPU)",
-                    Operator = typeof(HwAccelPictureResizer),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", source.Width },
-                        { "SourceHeight", source.Height },
-                        { "TargetWidth", destW },
-                        { "TargetHeight", destH },
-                        { "PreserveAspect", preserveAspect },
-                    },
-                    Elapsed = sw.Elapsed,
-                });
+                FinalizeResult(result, sw, "Resize (GPU)", typeof(HwAccelPictureResizer),
+                    new() { { "SourceWidth", source.Width }, { "SourceHeight", source.Height },
+                            { "TargetWidth", destW }, { "TargetHeight", destH },
+                            { "PreserveAspect", preserveAspect } });
             }
             finally
             {
-                if (aFromPool)
-                    ArrayPool<float>.Shared.Return(a);
+                if (aFromPool) ArrayPool<float>.Shared.Return(a);
             }
-
-            return (Picture8bpp)result!;
+            return result!;
         }
-
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public IHDRPicture<ushort> Resize(IHDRPicture<ushort> source, int targetWidth, int targetHeight, bool preserveAspect)
         {
-            var computer = GetComputer();
-            if (computer == null)
+            var resizeComputer = GetResizeComputer();
+            if (resizeComputer == null)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
                 return (HDRPicture16bpp)_cpuFallback.Resize(source, targetWidth, targetHeight, preserveAspect);
             }
 
-            var sw = Stopwatch.StartNew();
-            if (targetWidth == source.Width && targetHeight == source.Height)
-                return source;
-
-            if (targetWidth <= 0 || targetHeight <= 0)
-                throw new ArgumentException("targetWidth and targetHeight must be positive");
-            if (source.Width <= 0 || source.Height <= 0)
-                throw new InvalidOperationException("Source image has invalid dimensions");
-
-            var (destW, destH) = ComputeDestSize(source.Width, source.Height, targetWidth, targetHeight, preserveAspect);
+            var (destW, destH) = ValidateAndComputeSize(source, targetWidth, targetHeight, preserveAspect);
             if (destW == source.Width && destH == source.Height)
                 return source;
 
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            float[] r = ConvertToFloat(source.r);
-            float[] g = ConvertToFloat(source.g);
-            float[] b = ConvertToFloat(source.b);
-
-            float[] a;
-            bool aFromPool = false;
-            if (source.a != null)
-            {
-                a = source.a;
-            }
-            else
-            {
-                a = ArrayPool<float>.Shared.Rent(source.Pixels);
-                Array.Fill(a, 1f, 0, source.Pixels);
-                aFromPool = true;
-            }
-
+            var sw = Stopwatch.StartNew();
+            var (r, g, b, a, aFromPool, hasAlpha) = PrepareChannels(source, ArrayPool<float>.Shared);
             HDRPicture16bpp? result = null;
             try
             {
                 _cancellationToken.ThrowIfCancellationRequested();
 
-                var resultArr = computer.Compute(new object[]
-                {
-                    r, g, b, a,
-                    (float)source.Width, (float)source.Height,
-                    (float)destW, (float)destH,
-                    16  // pixel type hint
-                });
-
-                if (resultArr.Length != 4)
-                    throw new InvalidOperationException("Accelerator didn't return the expected 4 arrays.");
-
-                _cancellationToken.ThrowIfCancellationRequested();
-
+                var r16 = resizeComputer.ComputeResizeUshort(r, g, b, a,
+                    source.Width, source.Height, destW, destH);
                 int dstPixels = checked(destW * destH);
                 result = new HDRPicture16bpp(destW, destH)
                 {
-                    a = source.HasAlphaChannel && resultArr[3] is float[] aOut ? aOut : null,
-                    HasAlphaChannel = source.HasAlphaChannel,
+                    r = r16.R,
+                    g = r16.G,
+                    b = r16.B,
+                    a = hasAlpha ? r16.A : null,
+                    HasAlphaChannel = hasAlpha,
                     MaximumBrightness = source.MaximumBrightness,
                 };
 
-                if (resultArr[0] is ushort[] rOutUS && resultArr[1] is ushort[] gOutUS && resultArr[2] is ushort[] bOutUS)
-                {
-                    result.r = rOutUS;
-                    result.g = gOutUS;
-                    result.b = bOutUS;
-                }
-                else if (resultArr[0] is float[] rOutF && resultArr[1] is float[] gOutF && resultArr[2] is float[] bOutF)
-                {
-                    var pixels = result.Pixels;
-                    result.r = new ushort[pixels];
-                    result.g = new ushort[pixels];
-                    result.b = new ushort[pixels];
-                    for (int i = 0; i < pixels; i++)
-                    {
-                        result.r[i] = (ushort)Math.Clamp(rOutF[i], 0, 65535);
-                        result.g[i] = (ushort)Math.Clamp(gOutF[i], 0, 65535);
-                        result.b[i] = (ushort)Math.Clamp(bOutF[i], 0, 65535);
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException("Accelerator returned unexpected array types.");
-                }
-
-                // Interpolate brightness channel on CPU (bilinear) since the GPU computer
-                // only handles the RGBA channels.
-                _cancellationToken.ThrowIfCancellationRequested();
-
+                // Interpolate brightness channel on CPU since GPU computer only handles RGBA
                 float[]? sourceBrightness = source.Brightness;
                 if (sourceBrightness != null && sourceBrightness.Length == source.Pixels)
-                {
-                    result.Brightness = InterpolateBrightness(
-                        sourceBrightness, source.Width, source.Height, destW, destH, _cancellationToken);
-                }
+                    result.Brightness = InterpolateBrightness(sourceBrightness, source.Width, source.Height, destW, destH, _cancellationToken);
                 else
-                {
                     result.Brightness = new float[dstPixels];
-                }
 
-                sw.Stop();
-                result.ProcessStack.Add(new PictureProcessStack
-                {
-                    OperationDisplayName = "Resize (GPU)",
-                    Operator = typeof(HwAccelPictureResizer),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "SourceWidth", source.Width },
-                        { "SourceHeight", source.Height },
-                        { "TargetWidth", destW },
-                        { "TargetHeight", destH },
-                        { "PreserveAspect", preserveAspect },
-                        { "MaximumBrightness", source.MaximumBrightness },
-                    },
-                    Elapsed = sw.Elapsed,
-                });
+                FinalizeResult(result, sw, "Resize (GPU)", typeof(HwAccelPictureResizer),
+                    new() { { "SourceWidth", source.Width }, { "SourceHeight", source.Height },
+                            { "TargetWidth", destW }, { "TargetHeight", destH },
+                            { "PreserveAspect", preserveAspect },
+                            { "MaximumBrightness", source.MaximumBrightness } });
             }
             finally
             {
-                if (aFromPool)
-                    ArrayPool<float>.Shared.Return(a);
+                if (aFromPool) ArrayPool<float>.Shared.Return(a);
             }
-
-            return result;
+            return result!;
         }
-
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static float[] InterpolateBrightness(
             float[] srcBrightness, int srcW, int srcH, int dstW, int dstH,

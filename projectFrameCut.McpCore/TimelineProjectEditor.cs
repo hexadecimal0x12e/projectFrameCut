@@ -10,7 +10,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     public TimelineProjectWorkspace Workspace { get; } = workspace;
 
     public IReadOnlyList<ClipDraftDTO> ListClips()
-        => Workspace.Draft.Clips.OfType<ClipDraftDTO>().OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).ThenBy(c => c.SubLayerIndex).ToList();
+        => Workspace.Draft.Clips.OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).ThenBy(c => c.SubLayerIndex).ToList();
 
     public ClipDraftDTO GetClip(string id)
         => FindClip(id) ?? throw new KeyNotFoundException($"Clip '{id}' not found.");
@@ -18,7 +18,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     public ClipDraftDTO UpsertClip(ClipDraftDTO clip)
     {
         ArgumentNullException.ThrowIfNull(clip);
-        var clips = Workspace.Draft.Clips.OfType<ClipDraftDTO>().ToList();
+        var clips = Workspace.Draft.Clips.ToList();
         int index = clips.FindIndex(c => c.Id == clip.Id);
         if (index >= 0)
         {
@@ -29,7 +29,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
             clips.Add(clip);
         }
 
-        Workspace.Draft.Clips = clips.Cast<object>().ToArray();
+        Workspace.Draft.Clips = [.. clips];
         return clip;
     }
 
@@ -54,10 +54,10 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
 
     public bool DeleteClip(string id)
     {
-        var clips = Workspace.Draft.Clips.OfType<ClipDraftDTO>().ToList();
+        var clips = Workspace.Draft.Clips.ToList();
         int before = clips.Count;
         clips.RemoveAll(c => c.Id == Guid.Parse(id));
-        Workspace.Draft.Clips = clips.Cast<object>().ToArray();
+        Workspace.Draft.Clips = [.. clips];
         return clips.Count != before;
     }
 
@@ -129,12 +129,11 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     }
 
     public ClipDraftDTO? FindClip(string id)
-        => Workspace.Draft.Clips.OfType<ClipDraftDTO>().FirstOrDefault(c => c.Id == Guid.Parse(id));
+        => Workspace.Draft.Clips.FirstOrDefault(c => c.Id == Guid.Parse(id));
 
     public EffectInfo? GetEffectInfo(string typeName)
     {
-        var effect = Workspace.Draft.Clips.OfType<ClipDraftDTO>()
-            .SelectMany(c => c.Effects ?? [])
+        var effect = Workspace.Draft.Clips.SelectMany(c => c.Effects ?? [])
             .FirstOrDefault(e => string.Equals(e.TypeName, typeName, StringComparison.Ordinal));
 
         return effect is null

@@ -11,6 +11,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 {
     public sealed unsafe class HttpDecoderContext : IVideoSource
     {
+        /// <summary>
+        /// HTTP 解码器全局开关。由主程序在安全设置中控制（Security_RemoteContent_EnableHttpDecoder）。
+        /// 关闭时所有 HttpDecoderContext 构造将立即失败。
+        /// </summary>
+        public static bool Enabled { get; set; } = true;
+
         private readonly string _url;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
@@ -54,6 +60,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public HttpDecoderContext(string url)
         {
+            if (!Enabled)
+                throw new InvalidOperationException("HTTP decoder is disabled by security policy (Security_RemoteContent_EnableHttpDecoder).");
+
             if (!string.IsNullOrWhiteSpace(url))
             {
                 _url = url;

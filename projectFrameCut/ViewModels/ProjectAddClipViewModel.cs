@@ -1,7 +1,6 @@
-using CommunityToolkit.Maui.Core;
+﻿using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
-using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -23,6 +22,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Management.Automation;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -578,6 +578,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand GenerateTextPreviewCommand { get; set; } = null!;
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
     public ICommand AddAlternativeSourceClipCommand { get; set; } = null!;
+    public ICommand AddVectorCompositionCommand { get; set; } = null!;
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
@@ -611,12 +612,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
-        AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
         AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
         GenerateTransformPreviewCommand = new Command<TransformItemViewModel?>(async (t) => await GenerateTransformPreviewAsync(t ?? SelectedTransformForPreview));
         SelectTransformForPreviewCommand = new Command<TransformItemViewModel?>(t => SelectedTransformForPreview = t);
+        AddVectorCompositionCommand = new Command(async () => await AddVectorComposition());
 
         DrawingContentUndoCommand = new Command(DrawingUndo);
         DrawingContentRedoCommand = new Command(DrawingRedo);
@@ -678,8 +679,22 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (template is JSONBasedTemplateStructure jsonTemplate)
             {
-                item.ClipCount = (jsonTemplate.Draft.Clips ?? Array.Empty<object>()).Length;
-                item.TrackCount = (jsonTemplate.Draft.SoundTracks ?? Array.Empty<object>()).Length;
+                // 从 Draft 取实际片段数（完整模板）；列表模板用元数据中预存的值
+                item.ClipCount = jsonTemplate.Draft.Clips?.Length > 0
+                    ? jsonTemplate.Draft.Clips.Length
+                    : jsonTemplate.ClipCount;
+                item.TrackCount = jsonTemplate.Draft.SoundTracks?.Length > 0
+                    ? jsonTemplate.Draft.SoundTracks.Length
+                    : jsonTemplate.TrackCount;
+            }
+            else if (template is ScriptBasedTemplateStructure scriptTemplate)
+            {
+                item.ClipCount = scriptTemplate.Draft.Clips?.Length > 0
+                    ? scriptTemplate.Draft.Clips.Length
+                    : scriptTemplate.ClipCount;
+                item.TrackCount = scriptTemplate.Draft.SoundTracks?.Length > 0
+                    ? scriptTemplate.Draft.SoundTracks.Length
+                    : scriptTemplate.TrackCount;
             }
 
             AvailableTemplates.Add(item);
@@ -796,10 +811,36 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
     {
-        if (templateViewModel?.Template is not JSONBasedTemplateStructure jsonTemplate)
+        if (templateViewModel?.Template is null)
         {
-            await _draftPage.DisplayAlertAsync(Localized._Info, "Only JSON templates are supported for timeline insertion.", Localized._OK);
             return;
+        }
+
+        // ---- 原有 JSON 模板逻辑 ----
+        if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
+        {
+            if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
+            {
+                jsonTemplate = new JSONBasedTemplateStructure
+                {
+                    TemplateName = scriptTemplate.TemplateName,
+                    TemplateID = scriptTemplate.TemplateID,
+                    Scope = scriptTemplate.Scope,
+                    Draft = scriptTemplate.Draft ?? new DraftStructureJSON(),
+                    Project = scriptTemplate.Project ?? new ProjectJSONStructure(),
+                    AssetHashTable = scriptTemplate.AssetHashTable,
+                    CreatedInAPIVersion = scriptTemplate.CreatedInAPIVersion,
+                    HaveAsset = scriptTemplate.HaveAsset,
+                    TemplateVersion = scriptTemplate.TemplateVersion,
+                    VariableDefinitions = scriptTemplate.VariableDefinitions,
+                    Variables = scriptTemplate.Variables
+                };
+            }
+            else
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Info, "the templates are not supported for timeline insertion.", Localized._OK);
+                return;
+            }
         }
 
         try
@@ -835,37 +876,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            var clipDtos = new List<ClipDraftDTO>();
-            foreach (var obj in remappedDraft.Clips ?? Array.Empty<object>())
-            {
-                var dto = obj switch
-                {
-                    ClipDraftDTO c => c,
-                    JsonElement je => je.Deserialize<ClipDraftDTO>(DraftPage.DraftJSONOption),
-                    _ => null
-                };
+            var clipDtos = remappedDraft.Clips?.ToList() ?? [];
 
-                if (dto is not null)
-                {
-                    clipDtos.Add(dto);
-                }
-            }
-
-            var soundtrackDtos = new List<SoundtrackDTO>();
-            foreach (var obj in remappedDraft.SoundTracks ?? Array.Empty<object>())
-            {
-                var dto = obj switch
-                {
-                    SoundtrackDTO s => s,
-                    JsonElement je => je.Deserialize<SoundtrackDTO>(DraftPage.DraftJSONOption),
-                    _ => null
-                };
-
-                if (dto is not null)
-                {
-                    soundtrackDtos.Add(dto);
-                }
-            }
+            var soundtrackDtos = remappedDraft.SoundTracks?.ToList() ?? [];
 
             if (clipDtos.Count == 0 && soundtrackDtos.Count == 0)
             {
@@ -898,8 +911,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             var importDraft = new DraftStructureJSON
             {
-                Clips = clipDtos.Cast<object>().ToArray(),
-                SoundTracks = soundtrackDtos.Cast<object>().ToArray(),
+                Clips = clipDtos.ToArray(),
+                SoundTracks = soundtrackDtos.ToArray(),
                 SavedAt = DateTime.Now
             };
 
@@ -913,7 +926,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (templateClips.Count == 0)
             {
-                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
+                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
+                {
+                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name);
+                }
+                else
+                {
+                    await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
+                }
                 return;
             }
 
@@ -1055,7 +1075,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
                 return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
-            }, trackFilter, templateViewModel.Name);
+            }, trackFilter, templateViewModel.Name,
+            async () =>
+            {
+                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
+                {
+                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name, inputValues);
+                }
+            });
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1067,7 +1094,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
     private async Task<Dictionary<string, string?>?> PromptTemplateValuesWithViewAsync(
-        JSONBasedTemplateStructure template,
+        ITemplateStructure template,
         string? templateName)
     {
         var inputView = new TemplateCreatePage();
@@ -1086,6 +1113,72 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             _draftPage.IsPopupClosableByTapBackground = originPopupClosable;
             inputView.CloseRequested -= closeRequestedHandler;
+        }
+    }
+
+    /// <summary>
+    /// 应用脚本模板：用户填入变量 → 注入 PowerShell 运行空间 → 执行脚本。
+    /// </summary>
+    private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
+    {
+        string? tempExtractDir = null;
+        try
+        {
+            // 0. 从 .pjfcTemplate 包中提取并读取脚本内容
+            string scriptContent;
+            try
+            {
+                var (_, dir) = await TemplatePackageIO.ExtractStoredTemplateAsync(
+                    template.TemplateID, DraftPage.DraftJSONOption);
+                tempExtractDir = dir;
+
+                var scriptFilePath = Path.Combine(dir, "script.ps1");
+                if (!File.Exists(scriptFilePath))
+                {
+                    await _draftPage.DisplayAlertAsync(Localized._Error,
+                        $"模板「{template.TemplateName}」没有关联脚本。", Localized._OK);
+                    return;
+                }
+
+                scriptContent = await File.ReadAllTextAsync(scriptFilePath);
+            }
+            catch (FileNotFoundException)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Error,
+                    $"找不到模板「{template.TemplateName}」的包文件。", Localized._OK);
+                return;
+            }
+
+            // 1. 获取变量输入
+            inputValues ??= await PromptTemplateValuesWithViewAsync(template, name);
+            if (inputValues is null)
+                return;
+
+            // 2. 准备脚本运行环境：将填充后的变量注入 ScriptEngine
+            var scriptVars = new Dictionary<string, object?>();
+            foreach (var (key, value) in inputValues)
+                scriptVars[key] = value;
+            scriptVars["TemplateName"] = template.TemplateName;
+
+            _draftPage.ScriptEngine.SetVariables(scriptVars);
+
+            // 3. 执行脚本
+            var result = await _draftPage.ScriptEngine.ExecuteAsync(scriptContent);
+
+            await _draftPage.DisplayAlertAsync(Localized._Info, $"成功导入模板「{template.TemplateName}」。\n\n{result}", Localized._OK);
+
+            // 5. 刷新时间线
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "apply script template", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error,
+                $"执行脚本模板「{template.TemplateName}」时出错：{ex.Message}", Localized._OK);
+        }
+        finally
+        {
+            TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);
         }
     }
 
@@ -1564,7 +1657,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var element = _draftPage.CreateAndAddClip(
                 startX: startX,
-                width: _draftPage.FrameToPixel(300),
+                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
                 trackIndex: trackIndex,
                 id: null,
                 labelText: text,
@@ -1624,7 +1717,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var element = _draftPage.CreateAndAddClip(
                 startX: startX,
-                width: _draftPage.FrameToPixel(300),
+                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
                 trackIndex: trackIndex,
                 id: null,
                 labelText: text,
@@ -2338,6 +2431,40 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Creates an empty vector composition clip — no SVG file, user adds
+    /// shapes manually through the Vector Editor.
+    /// </summary>
+    private async Task AddVectorComposition()
+    {
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var targetFps = Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
+
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(1000),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: "Vector Composition",
+                background: new SolidColorBrush(Colors.CornflowerBlue),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.VectorCanvasClip;
+            element.SourcePath = null; // No SVG — composition only
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.sourceSecondPerFrame = 1;
+            element.ExtraData = new();
+            return element;
+        }, name: "Vector Composition");
+
+        await _draftPage.HidePopup(true);
+    }
+
     private static uint ResolveTimelineFrameCount(uint sourceFrames, double sourceSecondPerFrame, uint targetFrameRate)
     {
         if (sourceFrames == 0)
@@ -2365,92 +2492,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
     }
 
-
-    public async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
-    {
-        if (assetViewModel?.OriginalAsset == null) return;
-
-        try
-        {
-            // ??????????????? token ???
-            if (assetViewModel.IsRemote)
-            {
-                // ??????
-                // TODO: ???????
-
-                // ??????????? token
-                var multiServerService = MultiServerRemoteAssetService.Instance;
-                var tokenResponse = await multiServerService.GetFileTokenAsync(assetViewModel.ServerId ?? "", assetViewModel.Id);
-
-                if (tokenResponse == null)
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Error, "Cannot get file access token.", Localized._OK);
-                    return;
-                }
-
-                // ?????? URL?????????? URL?
-                var serverBaseUrl = assetViewModel.ServerUrl?.TrimEnd('/') ?? "";
-                var fileServerUri = new Uri($"{serverBaseUrl}/api/file/download?token={tokenResponse.token}");
-
-                Log($"Downloading asset from {fileServerUri}...");
-
-                // ?????????
-                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets", assetViewModel.ServerId ?? "default");
-                if (!Directory.Exists(cacheDir))
-                {
-                    Directory.CreateDirectory(cacheDir);
-                }
-
-                var fileName = Path.GetFileName(assetViewModel.OriginalAsset.Path) ?? $"{assetViewModel.Id}{Path.GetExtension(assetViewModel.OriginalAsset.Path)}";
-                var localPath = Path.Combine(cacheDir, fileName);
-
-                // ????????????
-                if (!File.Exists(localPath))
-                {
-#if DEBUG
-                    // ??????? SSL ????
-                    var handler = new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-                    };
-                    using var client = new HttpClient(handler);
-#else
-                    using var client = new HttpClient();
-#endif
-                    var response = await client.GetAsync(fileServerUri);
-                    response.EnsureSuccessStatusCode();
-
-                    using var fileStream = File.Create(localPath);
-                    await response.Content.CopyToAsync(fileStream);
-                }
-
-                // ?????????????
-                assetViewModel.OriginalAsset.Path = localPath;
-            }
-
-            BeginTimelineClipPlacement((trackIndex, startX) =>
-            {
-                var clip = _draftPage.CreateFromAsset(
-                    assetViewModel.OriginalAsset,
-                    trackIndex,
-                    startX,
-                    InternalPluginBase.InternalPluginBaseID,
-                    assetViewModel.SourcePath
-                );
-
-                _draftPage.RegisterClip(clip, true);
-                _draftPage.AddAClip(clip);
-                return clip;
-            }, name: assetViewModel.Name);
-
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "load reuseabel asset", this);
-            await _draftPage.DisplayAlertAsync(Localized._Error, $"Failed to add asset: {ex.Message}", Localized._OK);
-        }
-    }
     #endregion
 
     #region AI Content Generation
