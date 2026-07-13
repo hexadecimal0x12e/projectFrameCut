@@ -1,7 +1,7 @@
 # 关于许可证
 projectFrameCut的各个部分使用的是分离的许可证：
 - `projectFrameCut.Shared` 和 `projectFrameCut.Render.RenderAPIBase` 使用了 MIT License，这是因为他们是开发插件所需的一部分。
-- 其他部分，包括主程序，使用的是 Apache License 2.0。（详见[license.txt](license.txt)）
+- 其他部分，包括主程序、`projectFrameCut.ApplicationAPIBase`、`projectFrameCut.StandaloneRender`等，使用的是 Apache License 2.0。（详见[license.txt](license.txt)）
 **请注意**，由于主程序的许可的原因，projectFrameCut**只自带了LGPL的FFmpeg库**，这意味着默认情况下，你不能解码一些类型的视频（比如`h264`或者`h265`等）格式
 如果你需要，可以考虑安装编解码扩展包。
 

@@ -48,7 +48,24 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 ```
 
 ### bench
-运行性能基准测试。TODO
+运行渲染管线的性能基准测试，**无需外部项目文件**。
+
+bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种渲染场景的复杂测试项目，覆盖以下内容：
+
+- **层 0 — 纯色背景段**：5 段不同颜色的纯色 clip（红/绿/蓝/橙/紫），段间有 10 帧重叠以测试叠化合成
+- **层 0 - 子层 — 画中画 (PiP)**：小尺寸半透明叠加，测试非全屏 clip 合成
+- **层 1 — 单效果演示**：Blur、Rotation、Sharpen、Vignette 各单独一段
+- **层 2 — 效果链**：多效果叠加在同一 clip 上（如 FadeOpacity+ColorAdjustment、Blur+Sharpen+FadeOpacity、Flip+Rotation+Vignette），测试效果管线的链式处理性能
+- **层 3 — 位置动画**：Jitter 效果（抖动），测试 `IClipPositionProvider` 路径
+- **层 4 — 文字叠加**：多段文字，含 FadeOpacity、ColorAdjustment、TextFadeIn、ZoomIn 等效果
+- **层 5 — HUD/装饰**：信息栏、分割线、帧计数器等持续显示元素
+
+**默认参数**：1920×1080 @ 60fps，默认约 300 帧（~5 秒），输出到空设备（不产生实际文件）。
+
+**输出结果**：渲染完成后会输出详细的性能统计，包括：
+- 总渲染帧数、总耗时、整体 FPS
+- 平均帧渲染时间、平均帧准备时间、平均每帧总时间
+- **逐步骤耗时分解**：按照渲染管线的每个处理步骤（如 Blur、Rotation、ColorAdjustment、Jitter、TextRendering 等）分别统计平均耗时和调用次数
 
 ### about
 显示程序信息和版本详情。
@@ -198,6 +215,8 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 ### 模式 'bench' 的参数
 
+bench 模式不需要 `-project`、`-output` 等渲染参数，它会使用 `BenchmarkSourceGenerator` 自动生成测试项目结构进行渲染性能测试。
+
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器。
 
@@ -209,6 +228,50 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-acceleratorDeviceIds=<device ids|all>`**  
   多个加速器设备 ID。
+
+- **`-writeToNull=<true|false>`**  
+  是否写入空设备（BlackholeVideoWriter）。默认：`true`  
+  为 `true` 时渲染结果直接丢弃，消除 I/O 对性能测试的影响；为 `false` 时不创建视频写入器，仅测试渲染管线的帧准备和渲染阶段。
+
+- **`-boostMode=<true|false>`**  
+  是否启用 Boost 压力测试模式。默认：`false`  
+  启用后使用最大并行线程数（等于总帧数）、禁用渲染节流、阻塞准备阶段直到渲染开始，以获得最高吞吐量数据。
+
+- **`-maxParallelThreads=<number>`**  
+  最大并行渲染线程数。默认：`8`
+
+- **`-oneByOneRender=<true|false>`**  
+  是否逐帧渲染。默认：`false`
+
+- **`-renderByLayer=<true|false>`**  
+  是否为每个图层分别渲染。默认：`false`
+
+- **`-prepareInWorker=<true|false>`**  
+  是否在工作线程中准备帧。默认：`false`
+
+- **`-enableThreadAffinity=<true|false>`**  
+  是否启用线程亲和性。默认：`true`
+
+- **`-renderWorkerAffinity=<cpu indexes>`**  
+  渲染工作线程的手动 CPU 亲和性设置。支持逗号分隔的 CPU 索引或范围，例如 `0-3,5,7`。
+
+- **`-GCOptions=<0|1|2>`**  
+  垃圾回收选项：
+  - `0`: 默认行为
+  - `1`: 每次写入后执行 GC
+  - `2`: 启用大对象堆压缩
+
+- **`-preferHwAccelDecoder=<true|false>`**  
+  是否优先使用硬件加速解码器。默认：`false`
+
+- **`-PictureResizer=<cpu|hwaccel>`**  
+  选择要使用的图片缩放器。默认：`hwaccel`
+
+- **`-ApproximateMixture=<true|false>`**  
+  是否允许近似混合模式。默认：`false`
+
+- **`-ForcePreferToType=<NotSpecified|cpu|cuda|opencl>`**  
+  强制所有效果使用指定的实现类型。默认：`NotSpecified`（不强制）
 
 ## 返回结果
 返回0表示成功。
@@ -278,7 +341,38 @@ projectFrameCut.StandaloneRender render \
   -assetDbFile=D:\Assets\database.json
 ```
 
-## 项目结构要求
+### 示例 7: 运行性能基准测试
+
+```bash
+projectFrameCut.StandaloneRender bench
+```
+
+### 示例 8: 使用 CUDA 加速进行基准测试
+
+```bash
+projectFrameCut.StandaloneRender bench \
+  -acceleratorType=cuda \
+  -acceleratorDeviceId=2
+```
+
+### 示例 9: 压力测试模式（Boost Mode）
+
+```bash
+projectFrameCut.StandaloneRender bench \
+  -acceleratorType=cuda \
+  -boostMode=true \
+  -writeToNull=true
+```
+
+### 示例 10: 多加速器基准测试
+
+```bash
+projectFrameCut.StandaloneRender bench \
+  -multiAccelerator=true \
+  -acceleratorDeviceIds=all
+```
+
+## 项目结构要求（仅 render 模式）
 
 项目目录必须包含以下文件：
 
