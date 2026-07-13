@@ -242,10 +242,13 @@ public partial class ScriptTemplateCreatePage : ContentPage
 
     private static string SanitizeFileName(string name)
     {
-        var invalid = Path.GetInvalidFileNameChars();
-        return string.Join("_", name.Select(c => invalid.Contains(c) ? '_' : c))
-            .TrimEnd('.')
-            .Truncate(100);
+        if (string.IsNullOrWhiteSpace(name)) return "ScriptTemplate";
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sb = new System.Text.StringBuilder(name.Length);
+        foreach (var ch in name)
+            sb.Append(invalid.Contains(ch) ? '_' : ch);
+        var result = sb.ToString().Trim();
+        return result.Length > 0 ? result : "ScriptTemplate";
     }
 
     private async Task DisplayAlertAsync(string title, string message, string cancel)

@@ -80,7 +80,8 @@ public class InternalPluginBase : IPluginBase
         {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
         {"LightenMixture", new(() => new Compose.LightenMixture()) },
         {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) },
-        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) }
+        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) },
+        {"Rotation", new(() => new Effect.RotationEffect_IPicture()) }
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -108,7 +109,7 @@ public class InternalPluginBase : IPluginBase
         {"DarkenMixture", new BlendModeMixtureFactory { MixtureType = "Darken" }},
         {"LightenMixture", new BlendModeMixtureFactory { MixtureType = "Lighten" }},
         {"DifferenceMixture", new BlendModeMixtureFactory { MixtureType = "Difference" }},
-
+        {"Rotation", new RotationEffectFactory()},
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>

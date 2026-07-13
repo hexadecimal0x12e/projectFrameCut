@@ -2688,25 +2688,27 @@ namespace projectFrameCut.Render.Rendering
                 catch { }
                 ImmutableContentCache.Clear();
 
+                foreach (var item in ClipNeedForFrame.Values.SelectMany(c => c))
+                {
+                    try
+                    {
+                        item.Dispose();
+                    }
+                    catch { }
+                }
                 ClipNeedForFrame.Clear();
 
                 try
                 {
-                    foreach (var effects in EffectCache.Values)
+                    foreach (var d in EffectCache.Values.SelectMany(c => c).OfType<IDisposable>())
                     {
-                        foreach (var eff in effects)
-                        {
-                            if (eff is IDisposable d)
-                            {
-                                try { d.Dispose(); } catch { }
-                            }
-                        }
+                        try { d.Dispose(); } catch { }
                     }
                 }
                 catch { }
                 EffectCache.Clear();
 
-                try { BlankFrame?.Dispose(); } catch { }
+                try { BlankFrame?.Dispose(true); } catch { }
 
                 // Clean up thread-local BlankPlace
                 try { _threadLocalBlankPlace?.Dispose(); } catch { }

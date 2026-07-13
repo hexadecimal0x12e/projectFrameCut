@@ -1100,6 +1100,174 @@
         "DontTranslate": false
       },
       {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Boost \u6A21\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u53D6\u6D88\u6D4B\u8BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u4F60\u786E\u5B9A\u8981\u53D6\u6D88\u57FA\u51C6\u6D4B\u8BD5\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u4F7F\u7528\u751F\u6210\u7684\u7D20\u6750\u6D4B\u8BD5\u6E32\u67D3\u7BA1\u7EBF\u541E\u5410\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - \u538B\u7F29\u5927\u5806",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u6BCF\u5E27\u56DE\u6536",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC \u9009\u9879\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole\uFF08\u7A7A\u5199\u5165\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u7981\u7528\uFF08\u65E0\u5199\u5165\u5668\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u5199\u5165\u65B9\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u7981\u7528\u5199\u5165\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u57FA\u51C6\u6D4B\u8BD5\u7ED3\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u5F00\u59CB\u57FA\u51C6\u6D4B\u8BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u57FA\u51C6\u6D4B\u8BD5\u5DF2\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u57FA\u51C6\u6D4B\u8BD5\u5B8C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u51C6\u5907\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u5C31\u7EEA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u8FD0\u884C\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u6E32\u67D3\u57FA\u51C6\u6D4B\u8BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "ClipUpdateReason_ClipAdded",
         "Value": "\u6DFB\u52A0\u4E86\u300C{clip}\u300D\u5230\u8F68\u9053\u4E0A",
         "Mode": "InterpolationString",
@@ -18111,6 +18279,195 @@
         ],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Rendering Benchmark Test",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Test render pipeline throughput using generated assets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC Options:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Write mode:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Boost Mode: ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Start Benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Cancel Benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Are you sure you want to cancel the benchmark?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Ready",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Preparing...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "Running...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark Complete",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark cancelled",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Benchmark Results",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Log",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Default",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - GC per frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Compact LOH",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole (null write)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Disabled (No Writer)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Disable Write",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -27550,6 +27907,195 @@
       {
         "Id": "EffectType_Video",
         "Value": "\u5F71\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u6E32\u67D3\u57FA\u6E96\u6E2C\u8A66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u4F7F\u7528\u751F\u6210\u7684\u7D20\u6750\u6E2C\u8A66\u6E32\u67D3\u7BA1\u7DDA\u541E\u5410\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC \u9078\u9805\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u5BEB\u5165\u65B9\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Boost \u6A21\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u958B\u59CB\u57FA\u6E96\u6E2C\u8A66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u53D6\u6D88\u6E2C\u8A66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u4F60\u78BA\u5B9A\u8981\u53D6\u6D88\u57FA\u6E96\u6E2C\u8A66\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u5C31\u7DD2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u6E96\u5099\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u57F7\u884C\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u57FA\u6E96\u6E2C\u8A66\u5B8C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u57FA\u6E96\u6E2C\u8A66\u5DF2\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u57FA\u6E96\u6E2C\u8A66\u7D50\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u65E5\u8A8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u6BCF\u5E40\u56DE\u6536",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - \u58D3\u7E2E\u5927\u5806",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole\uFF08\u7A7A\u5BEB\u5165\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u7981\u7528\uFF08\u7121\u5BEB\u5165\u5668\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u7981\u7528\u5BEB\u5165\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -37006,6 +37552,195 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u751F\u6210\u7D20\u6750\u3067\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u306E\u30B9\u30EB\u30FC\u30D7\u30C3\u30C8\u3092\u30C6\u30B9\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC\u30AA\u30D7\u30B7\u30E7\u30F3\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u66F8\u304D\u8FBC\u307F\u65B9\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "\u30D6\u30FC\u30B9\u30C8\u30E2\u30FC\u30C9\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u958B\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u30C6\u30B9\u30C8\u3092\u30AD\u30E3\u30F3\u30BB\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u6E96\u5099\u5B8C\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u6E96\u5099\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u5B9F\u884C\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u57FA\u6E96\u30C6\u30B9\u30C8\u5B8C\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u30C6\u30B9\u30C8\u53D6\u6D88\u6E08\u307F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u7D50\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u30ED\u30B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \u65E2\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u6BCE\u30D5\u30EC\u30FC\u30E0\u56DE\u53CE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - LOH\u5727\u7E2E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u538B\u7F29\u5927\u5BF9\u8C61\u5806",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "\u30D6\u30E9\u30C3\u30AF\u30DB\u30FC\u30EB\uFF08\u7A7A\u66F8\u304D\u8FBC\u307F\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u7121\u52B9\uFF08\u66F8\u304D\u8FBC\u307F\u88C5\u7F6E\u306A\u3057\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u66F8\u304D\u8FBC\u307F\u6A5F\u80FD\u3092\u7121\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -46441,6 +47176,195 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\uB80C\uB354\uB9C1 \uBCA4\uCE58\uB9C8\uD06C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\uC0DD\uC131\uB41C \uC18C\uC7AC\uB97C \uC0AC\uC6A9\uD558\uC5EC \uB80C\uB354\uB9C1 \uD30C\uC774\uD504\uB77C\uC778\uC758 \uCC98\uB9AC\uB7C9\uC744 \uD14C\uC2A4\uD2B8\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC \uC635\uC158: ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\uC4F0\uAE30 \uBC29\uC2DD:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "\uBD80\uC2A4\uD2B8 \uBAA8\uB4DC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\uBCA4\uCE58\uB9C8\uD06C \uC2DC\uC791",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\uD14C\uC2A4\uD2B8 \uCDE8\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\uC815\uB9D0\uB85C \uBCA4\uCE58\uB9C8\uD06C\uB97C \uCDE8\uC18C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\uC900\uBE44 \uC644\uB8CC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\uC900\uBE44 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\uC2E4\uD589 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\uBCA4\uCE58\uB9C8\uD06C \uC644\uB8CC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\uBCA4\uCE58\uB9C8\uD06C \uD14C\uC2A4\uD2B8 \uCDE8\uC18C\uB428",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\uBCA4\uCE58\uB9C8\uD06C \uACB0\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\uB85C\uADF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \uAE30\uBCF8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \uB9E4 \uD504\uB808\uC784 GC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - \uB300\uD615 \uD799 \uC555\uCD95",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "\uBE14\uB799\uD640\uFF08\uACF5 \uC4F0\uAE30\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\uBE44\uD65C\uC131\uD654(\uC791\uC131\uAE30 \uC5C6\uC74C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\uC4F0\uAE30 \uAE30\uB2A5 \uBE44\uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -55869,6 +56793,195 @@
       {
         "Id": "VectorContentEditorView_Property_Width",
         "Value": "Largeur :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Test de performance de rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Tester le d\u00E9bit du pipeline de rendu \u00E0 l\u0027aide de ressources g\u00E9n\u00E9r\u00E9es",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "Options GC :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Mode d\u0027\u00E9criture :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Mode Boost :",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "D\u00E9marrer le benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Annuler le benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u00CAtes-vous s\u00FBr de vouloir annuler le test de r\u00E9f\u00E9rence ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Pr\u00EAt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Pr\u00E9paration...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "En cours...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark termin\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Test de r\u00E9f\u00E9rence annul\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "R\u00E9sultats du benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Journal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Collecte par image",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Compacter le gros tas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole (\u00E9criture vide)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "D\u00E9sactiv\u00E9 (aucun writer)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u7981\u7528\uFF08\u65E0\u5199\u5165\u5668\uFF09\u0027 for a disabled output state due to missing writer.",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "D\u00E9sactiver l\u0027\u00E9criture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -65323,6 +66436,194 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u6E32\u67D3\u57FA\u6E96\u4E4B\u8A66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u4EE5\u6240\u751F\u4E4B\u6750\u8BD5\u6E32\u67D3\u7BA1\u541E\u5410\u91CF\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC \u9078\u9805\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u5F55\u5199\u4E4B\u6CD5\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "\u52A0\u901F\u6A21\u5F0F\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u59CB\u57FA\u51C6\u6D4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u5F00\u59CB\u8FDB\u884C\u57FA\u51C6\u6D4B\u8BD5",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u7F62\u8BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u6C5D\u786E\u6B32\u7F62\u57FA\u51C6\u8BD5\u4E4E\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u5DF2\u5907",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u9884\u5907\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u8FD0\u884C\u4E2D\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u57FA\u51C6\u6D4B\u8BD5\u5DF2\u6BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u57FA\u51C6\u8BD5\u5DF2\u7F62",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u57FA\u51C6\u8BD5\u4E4B\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "\u96F6\u00B7\u9ED8\u8A8D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u57FA\u51C6\u6D4B\u8BD5\u4E2DGC\u9ED8\u8BA4\u9009\u9879\u7684\u96F6\u53F7\u9879\u76EE",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u6BCF\u5E27\u6536",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "\u4E8C - \u538B\u7F29\u5927\u5806",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "\u9ED1\u6D1E\uFF08\u865A\u5199\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u7981\u7528\uFF08\u65E0\u5199\u5668\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u7981\u5199",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -74760,6 +76061,195 @@
       {
         "Id": "VectorContentEditorView_Property_Width",
         "Value": "\u0627\u0644\u0639\u0631\u0636:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u0639\u064A\u0627\u0631 \u0627\u0644\u062A\u0642\u062F\u064A\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u0627\u062E\u062A\u0628\u0627\u0631 \u0625\u0646\u062A\u0627\u062C\u064A\u0629 \u062E\u0637 \u0623\u0646\u0627\u0628\u064A\u0628 \u0627\u0644\u062A\u0642\u062F\u064A\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0645\u0648\u0644\u062F\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "\u062E\u064A\u0627\u0631\u0627\u062A GC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "\u0648\u0636\u0639 Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u0628\u062F\u0621 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A\u061F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u062C\u0627\u0647\u0632",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0636\u064A\u0631...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u0642\u064A\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u0627\u0643\u062A\u0645\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u0646\u062A\u0627\u0626\u062C \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0639\u064A\u0627\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u0633\u062C\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062F\u0648\u064A\u0631 \u0644\u0643\u0644 \u0625\u0637\u0627\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - \u0636\u063A\u0637 \u0627\u0644\u0643\u0648\u0645\u0629 \u0627\u0644\u0643\u0628\u064A\u0631\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "\u0627\u0644\u062B\u0642\u0628 \u0627\u0644\u0623\u0633\u0648\u062F (\u0643\u062A\u0627\u0628\u0629 \u0641\u0627\u0631\u063A\u0629)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u0645\u0639\u0637\u0644 (\u0644\u0627 \u064A\u0648\u062C\u062F \u0643\u0627\u062A\u0628)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u062A\u0639\u0637\u064A\u0644 \u0648\u0638\u064A\u0641\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -84207,6 +85697,194 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Rendering-Benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Testen Sie den Durchsatz der Rendering-Pipeline mit generierten Materialien",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC-Optionen:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Schreibmodus:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Boost-Modus:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Benchmark starten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Test abbrechen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Sind Sie sicher, dass Sie den Benchmark abbrechen m\u00F6chten?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Bereit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Vorbereitung...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "L\u00E4uft...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark abgeschlossen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark abgebrochen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Benchmark-Ergebnisse",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Protokoll",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Standard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - GC pro Frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Gro\u00DFen Heap komprimieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole\uFF08Nullschreiben\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Deaktiviert (kein Schreiber)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Schreibfunktion deaktivieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -93639,6 +95317,195 @@
       {
         "Id": "VectorContentEditorView_Property_Width",
         "Value": "Ancho:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Prueba de referencia de renderizado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Probar el rendimiento de la tuber\u00EDa de renderizado utilizando materiales generados.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "Opciones de GC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Modo de escritura:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Modo Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Iniciar benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Cancelar prueba",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u00BFEst\u00E1s seguro de que deseas cancelar la prueba de referencia?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Listo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Preparando...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "Ejecutando...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Prueba de referencia completada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark cancelado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Resultados de referencia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Registro",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Predeterminado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Recolecci\u00F3n por fotograma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Compactar LOH",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole\uFF08escritura nula\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Deshabilitado (sin escritor)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Deshabilitar escritura",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -103086,6 +104953,195 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Benchmark di rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Testare la produttivit\u00E0 della pipeline di rendering utilizzando materiali generati",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "Opzioni GC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Modalit\u00E0 di scrittura:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Modalit\u00E0 Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Avvia benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Annulla test",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Sei sicuro di voler annullare il benchmark?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Pronto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "In preparazione...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "In esecuzione...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark completato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark annullato",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Risultati del benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Registro",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Predefinito",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Raccolta per frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Compatta LOH",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole (scrittura vuota)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Traduzione di \u0027Blackhole\uFF08\u7A7A\u5199\u5165\uFF09\u0027 per pagina benchmark",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Disabilitato (nessun writer)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Disabilita la funzione di scrittura",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -112524,6 +114580,193 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Benchmark renderowania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Przetestuj przepustowo\u015B\u0107 potoku renderowania przy u\u017Cyciu wygenerowanych zasob\u00F3w.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC opcje:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Tryb zapisu:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Tryb Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Rozpocznij benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Anuluj test",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Czy na pewno chcesz anulowa\u0107 test por\u00F3wnawczy?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Gotowy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Status ready",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Przygotowywanie...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "Uruchomiony...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Status indicating that the benchmark is running",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark zako\u0144czony",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark anulowany",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Wyniki benchmark\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Dziennik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Domy\u015Blne",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Zbieranie co klatk\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Kompaktowanie du\u017Cej sterty",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Czarna dziura (puste zapisy)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Wy\u0142\u0105czone (brak writera)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Wy\u0142\u0105cz funkcj\u0119 zapisu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -121956,6 +124199,195 @@
       {
         "Id": "VectorContentEditorView_Property_Width",
         "Value": "Largura:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Benchmark de renderiza\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "Teste de throughput do pipeline de renderiza\u00E7\u00E3o usando materiais gerados.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "Op\u00E7\u00F5es de GC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Modo de grava\u00E7\u00E3o:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Modo Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Iniciar benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Cancelar teste",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Tem certeza de que deseja cancelar o benchmark?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Pronto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Preparando...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "Em execu\u00E7\u00E3o...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "Benchmark conclu\u00EDdo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "Benchmark cancelado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "Resultados do benchmark",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "Log",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Padr\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Coleta por quadro",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - Compacta\u00E7\u00E3o do LOH",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole (escrita vazia)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Desativado (sem gravador)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Desativar fun\u00E7\u00E3o de escrita",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -131402,6 +133834,195 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u0422\u0435\u0441\u0442 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u043D\u043E\u0439 \u0441\u043F\u043E\u0441\u043E\u0431\u043D\u043E\u0441\u0442\u0438 \u043A\u043E\u043D\u0432\u0435\u0439\u0435\u0440\u0430 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430 \u0441 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435\u043C \u0441\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B GC:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "\u0421\u043F\u043E\u0441\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0438:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "\u0420\u0435\u0436\u0438\u043C Boost:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0431\u0435\u043D\u0447\u043C\u0430\u0440\u043A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0442\u0435\u0441\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0431\u0435\u043D\u0447\u043C\u0430\u0440\u043A?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "\u0413\u043E\u0442\u043E\u0432\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A \u043E\u0442\u043C\u0435\u043D\u0451\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u044B \u0431\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "\u0416\u0443\u0440\u043D\u0430\u043B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - \u041F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - \u0421\u0431\u043E\u0440\u043A\u0430 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043A\u0430\u0434\u0440\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - \u0421\u0436\u0430\u0442\u0438\u0435 \u0431\u043E\u043B\u044C\u0448\u043E\u0439 \u043A\u0443\u0447\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Blackhole (\u043F\u0443\u0441\u0442\u0430\u044F \u0437\u0430\u043F\u0438\u0441\u044C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "\u041E\u0442\u043A\u043B\u044E\u0447\u0435\u043D\u043E (\u0431\u0435\u0437 \u0437\u0430\u043F\u0438\u0441\u0438)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "\u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0444\u0443\u043D\u043A\u0446\u0438\u044E \u0437\u0430\u043F\u0438\u0441\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -140833,6 +143454,195 @@
       {
         "Id": "VectorContentEditorView_Property_Width",
         "Value": "Geni\u015Flik:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Title",
+        "Value": "Render K\u0131yaslama Testi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Description",
+        "Value": "\u00DCretilen malzemeleri kullanarak render hatt\u0131 i\u015F hacmini test edin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GCOption",
+        "Value": "GC se\u00E7ene\u011Fi:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode",
+        "Value": "Yazma modu:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_BoostMode",
+        "Value": "Boost modu:",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_StartBenchmark",
+        "Value": "Benchmark testini ba\u015Flat",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark",
+        "Value": "Testi iptal et",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_CancelBenchmark_Warn",
+        "Value": "Benchmark testini iptal etmek istedi\u011Finize emin misiniz?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Ready",
+        "Value": "Haz\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Preparing",
+        "Value": "Haz\u0131rlan\u0131yor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Running",
+        "Value": "\u00C7al\u0131\u015F\u0131yor...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Complete",
+        "Value": "K\u0131yaslama testi tamamland\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Status_Cancelled",
+        "Value": "K\u0131yaslama iptal edildi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Results",
+        "Value": "K\u0131yaslama Sonu\u00E7lar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_LogPanelLabel",
+        "Value": "G\u00FCnl\u00FCk",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_Default",
+        "Value": "0 - Varsay\u0131lan",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_EachFrame",
+        "Value": "1 - Her karede \u00E7\u00F6p toplama",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_GC_CompactLOH",
+        "Value": "2 - B\u00FCy\u00FCk Nesne Y\u0131\u011F\u0131n\u0131 S\u0131k\u0131\u015Ft\u0131rma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Blackhole",
+        "Value": "Kara delik (bo\u015F yazma)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_Output_Disabled",
+        "Value": "Devre D\u0131\u015F\u0131 (Yaz\u0131c\u0131 Yok)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "BenchmarkPage_OutputMode_None",
+        "Value": "Yazma i\u015Flevini devre d\u0131\u015F\u0131 b\u0131rak",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

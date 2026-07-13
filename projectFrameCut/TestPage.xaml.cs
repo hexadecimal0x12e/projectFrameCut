@@ -934,33 +934,7 @@ public partial class TestPage : ContentPage
 
     private async void BenchmarkButton_Clicked(object sender, EventArgs e)
     {
-
-#if ANDROID
-        ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
-        ComputerHelper.Init();
-#elif iDevices
-
-#elif WINDOWS
-        // AcceleratorsManager was initialized during plugin load.
-        // Switch to rendering mode so all configured accelerators are used for benchmarking.
-        projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.IsRendering = true;
-        if (!projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.Accelerators.Any())
-            throw new InvalidDataException("No valid ILGPU accelerators found.");
-
-#endif
-        await Benchmarker.Start((d, etr) =>
-        {
-            string timeStr = "";
-            if (etr.TotalSeconds > 0)
-            {
-                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
-            }
-            Dispatcher.Dispatch(async () =>
-            {
-                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
-
-            });
-        });
+        await Navigation.PushAsync(new BenchmarkPage());
     }
     #endregion
 

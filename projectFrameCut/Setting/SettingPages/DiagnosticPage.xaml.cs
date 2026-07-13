@@ -42,7 +42,7 @@ public partial class DiagnosticSettingPage : ContentPage
             infoGetted = true;
         }
         rootPPB = new PropertyPanelBuilder()
-            .AddButton("MakeDiagReportButton", SettingLocalizedResources.Diag_GenerateReport)
+            .AddButton(SettingLocalizedResources.Diag_GenerateReport, async (s, e) => await MakeDiagReport())
             .AddSeparator()
             .AddText(SettingLocalizedResources.Diag_InfoSection_App)
             .AddCustomChild(new Editor
@@ -61,30 +61,9 @@ public partial class DiagnosticSettingPage : ContentPage
             {
                 Text = DeviceInfo,
                 IsReadOnly = true
-            })
-            .ListenToChanges(SettingInvoker);
+            });
         Content = rootPPB.BuildWithScrollView();
 
-    }
-
-    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
-    {
-        try
-        {
-            switch (args.Id)
-            {
-                case "MakeDiagReportButton":
-                    await MakeDiagReport();
-                    break;
-                case "PerformanceTestButton":
-
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
-        }
     }
 
     void SetBusy()

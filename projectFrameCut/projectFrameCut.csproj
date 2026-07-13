@@ -68,7 +68,6 @@
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
 
-		<MauiVersion>10.0.71</MauiVersion>
 		<PwshSDKVersion>7.6.3</PwshSDKVersion>
 	</PropertyGroup>
 
@@ -221,6 +220,9 @@
 		<MauiXaml Update="Asset\ProjectAssetView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="BenchmarkPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="CreatePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -348,10 +350,6 @@
 		<MauiXaml Remove="App.WinUI.xaml" />
 		<None Remove="App.WinUI.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
 </Project>

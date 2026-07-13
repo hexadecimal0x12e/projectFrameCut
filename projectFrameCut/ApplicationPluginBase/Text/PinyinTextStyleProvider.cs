@@ -45,7 +45,12 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         public virtual string TypeName => "Pinyin";
 
-        protected virtual string DefaultText => "拼音";
+        protected virtual string DefaultText => Localized._LocaleId_ switch 
+        {
+            "zh-CN" or "zh-TW" or "文言文" => "拼音",
+            "ja-JP" => "漢字",
+            _ => "Pronunciation"
+        };
 
         protected virtual float DefaultFontSize => 120f;
 
