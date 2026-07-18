@@ -5,6 +5,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:this="clr-namespace:projectFrameCut.AIAssistance"
+             xmlns:markdown="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
     <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" RowSpacing="8" Padding="8">
         <CollectionView Grid.Row="0"
@@ -307,6 +308,13 @@
                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
                    ReturnType="Send"
                    Completed="AIInputButton_Completed"/>
+            <Editor x:Name="AIInputEditor"
+                    Grid.Column="1"
+                    HorizontalOptions="Fill"
+                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
+                    IsVisible="False"
+                    AutoSize="TextChanges"
+                    MaximumHeightRequest="200"/>
             <Button Grid.Column="2"
                     x:Name="AISendButton"
                     HorizontalOptions="Center"

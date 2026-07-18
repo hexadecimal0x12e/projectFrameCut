@@ -1,4 +1,4 @@
-﻿namespace projectFrameCut.AIAssistance;
+namespace projectFrameCut.AIAssistance;
 
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
@@ -801,7 +801,46 @@ public partial class AssistanceChatView : ContentView
             return;
         }
 
+        // 如果输入框中有文本，切换为多行 Editor 模式让用户继续编辑
+        string text = AIInputButton.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(text))
+        {
+            SwitchToEditorMode();
+            return;
+        }
+
         await SendMessageAsync();
+    }
+
+    /// <summary>
+    /// 切换到多行 Editor 模式（隐藏 Entry，显示 Editor 并保留当前文本）。
+    /// </summary>
+    private void SwitchToEditorMode()
+    {
+        if (AIInputEditor.IsVisible)
+            return;
+        AIInputButton.Unfocus();
+
+        string text = AIInputButton.Text ?? string.Empty;
+        AIInputEditor.Text = "";
+        AIInputButton.IsVisible = false;
+        AIInputEditor.IsVisible = true;
+        AIInputEditor.Focus();
+
+        InvalidateMeasure(); //make sure hint refreshes
+        AIInputEditor.InvalidateMeasure();
+    }
+
+    /// <summary>
+    /// 重置为单行 Entry 模式（清空文本，隐藏 Editor，显示 Entry）。
+    /// </summary>
+    private void SwitchToEntryMode()
+    {
+        AIInputEditor.IsVisible = false;
+        AIInputEditor.Text = string.Empty;
+        AIInputButton.Text = string.Empty;
+        AIInputButton.IsVisible = true;
+        AIInputButton.Focus();
     }
 
     private void AIClearContextButton_Clicked(object? sender, EventArgs e)
@@ -942,7 +981,10 @@ public partial class AssistanceChatView : ContentView
             return;
         }
 
-        string input = AIInputButton.Text?.Trim() ?? string.Empty;
+        // 从当前活跃的输入控件读取文本
+        string input = AIInputEditor.IsVisible
+            ? (AIInputEditor.Text?.Trim() ?? string.Empty)
+            : (AIInputButton.Text?.Trim() ?? string.Empty);
         bool hasText = !string.IsNullOrEmpty(input);
         bool hasAttachments = _pendingAttachments.Count > 0;
 
@@ -1091,8 +1133,8 @@ public partial class AssistanceChatView : ContentView
             _chatHistory.Add(new AIChatMessage(ChatRole.User, input));
         }
 
-        // ----- 清空输入 -----
-        AIInputButton.Text = string.Empty;
+        // ----- 清空并重置输入（恢复为单行 Entry 模式）-----
+        SwitchToEntryMode();
         _pendingAttachments.Clear();
         UpdateAttachmentsPreview();
 
@@ -1110,7 +1152,6 @@ public partial class AssistanceChatView : ContentView
         AISendButton.IsEnabled = true;
         _cts?.Dispose();
         _cts = null;
-        AIInputButton.Focus();
     }
 
     /// <summary>
@@ -3164,6 +3205,28 @@ public partial class AssistanceChatView : ContentView
     }
 
     /// <summary>
+    /// 在当前的 StreamingMarkdownView 之前插入一个卡片 View。
+    /// 如果找不到 markdown view 则追加到末尾。
+    /// </summary>
+    /// <remarks>已废弃，改用 <see cref="StreamingMarkdownView.InsertContentView"/>。</remarks>
+    [Obsolete("Use StreamingMarkdownView.InsertContentView instead")]
+    private static void InsertViewBeforeMarkdown(ObservableCollection<View> views, StreamingMarkdownView? markdownView, View card)
+    {
+        if (markdownView is not null)
+        {
+            int idx = views.IndexOf(markdownView);
+            if (idx >= 0)
+                views.Insert(idx, card);
+            else
+                views.Add(card);
+        }
+        else
+        {
+            views.Add(card);
+        }
+    }
+
+    /// <summary>
     /// 在流式异常/取消时，刷新 converter 中的剩余内容到 ContentViews。
     /// 必须在主线程调用。
     /// </summary>
@@ -3969,13 +4032,12 @@ public partial class AssistanceChatView : ContentView
         ChatMessageItem? streamingItem = null;
         StringBuilder textBuilder = new();
         StringBuilder reasoningBuilder = new();
-        var converter = new Markdown2XAML.StreamConverter();
+        StreamingMarkdownView? currentMarkdownView = null;
         ThinkingCardView? thinkingCard = null;
         Dictionary<string, ToolCallCardView> toolCallCardsByKey = new(StringComparer.Ordinal);
         Dictionary<string, ChatContentSegmentSnapshot> toolCallSegmentsByKey = new(StringComparer.Ordinal);
         StringBuilder pendingTextSegment = new();
         string? terminalContentSegment = null;
-        View? partialView = null;
         try
         {
             if (_chatClient is null)
@@ -3992,6 +4054,10 @@ public partial class AssistanceChatView : ContentView
                     ContentSegments = [],
                 };
                 _messages.Add(streamingItem);
+
+                // 创建 StreamingMarkdownView 并添加到 ContentViews（替代旧的 StreamConverter）
+                currentMarkdownView = new StreamingMarkdownView();
+                streamingItem.ContentViews.Add(currentMarkdownView);
 
                 bool restartForContextChange;
                 do
@@ -4113,18 +4179,8 @@ public partial class AssistanceChatView : ContentView
                             {
                                 streamingItem.Message = capturedText;
 
-                                foreach (View view in converter.Feed(textChunk))
-                                    streamingItem.ContentViews.Add(view);
-
-                                var newPartialView = converter.CurrentPartialView;
-                                if (!ReferenceEquals(newPartialView, partialView))
-                                {
-                                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                                        streamingItem.ContentViews.Remove(partialView);
-                                    partialView = newPartialView;
-                                    if (partialView is not null && !streamingItem.ContentViews.Contains(partialView))
-                                        streamingItem.ContentViews.Add(partialView);
-                                }
+                                // 文本 chunk 流式 Feed 到 StreamingMarkdownView
+                                currentMarkdownView?.Feed(textChunk);
                                 // --- Reasoning: create/update thinking card ---
                                 if (!string.IsNullOrEmpty(reasoningChunk))
                                 {
@@ -4132,7 +4188,9 @@ public partial class AssistanceChatView : ContentView
                                     if (thinkingCard is null)
                                     {
                                         thinkingCard = new ThinkingCardView(capturedReasoning);
-                                        InsertViewBeforePartial(streamingItem.ContentViews, partialView, thinkingCard.View);
+                                        // 通过 InsertContentView 插入到 StreamingMarkdownView 当前位置，
+                                        // 后续 markdown 流式内容会自动排在此卡片之后
+                                        currentMarkdownView?.InsertContentView(thinkingCard.View);
                                     }
                                     else
                                     {
@@ -4152,12 +4210,11 @@ public partial class AssistanceChatView : ContentView
                                             continue;
                                         }
 
-                                        FlushStreamingState(streamingItem, converter, ref partialView);
-                                        converter = new Markdown2XAML.StreamConverter();
-
+                                        // 直接在 StreamingMarkdownView 的当前位置插入 ToolCall 卡片，
+                                        // 无需 flush 和创建新的视图，后续 markdown 内容会自动保持在此卡片之后
                                         var card = new ToolCallCardView(text);
                                         toolCallCardsByKey[key] = card;
-                                        streamingItem.ContentViews.Add(card.View);
+                                        currentMarkdownView?.InsertContentView(card.View);
                                     }
                                 }
 
@@ -4167,12 +4224,10 @@ public partial class AssistanceChatView : ContentView
                                     {
                                         if (!toolCallCardsByKey.TryGetValue(key, out ToolCallCardView? card))
                                         {
-                                            FlushStreamingState(streamingItem, converter, ref partialView);
-                                            converter = new Markdown2XAML.StreamConverter();
-
+                                            // 如果结果先于调用定义到达，仍然插入卡片
                                             card = new ToolCallCardView(text);
                                             toolCallCardsByKey[key] = card;
-                                            streamingItem.ContentViews.Add(card.View);
+                                            currentMarkdownView?.InsertContentView(card.View);
                                         }
 
                                         card.UpdateResult(result);
@@ -4215,24 +4270,19 @@ public partial class AssistanceChatView : ContentView
                         textBuilder.Clear();
                         reasoningBuilder.Clear();
                         pendingTextSegment.Clear();
-                        converter = new Markdown2XAML.StreamConverter();
+                        currentMarkdownView = new StreamingMarkdownView();
+                        streamingItem.ContentViews.Add(currentMarkdownView);
                         thinkingCard = null;
                         toolCallCardsByKey.Clear();
                         toolCallSegmentsByKey.Clear();
-                        partialView = null;
                     }
                 }
                 while (restartForContextChange);
 
-                // Flush remaining converter content on main thread
+                // Flush 剩余的 markdown 内容到 StreamingMarkdownView
                 await MainThread.InvokeOnMainThreadAsync(() =>
                 {
-                    if (partialView is not null && streamingItem.ContentViews.Contains(partialView))
-                        streamingItem.ContentViews.Remove(partialView);
-                    partialView = null;
-
-                    foreach (View view in converter.Flush())
-                        streamingItem.ContentViews.Add(view);
+                    currentMarkdownView?.Flush();
 
                     // 刷新完成后滚动到底部
                     ScrollToEnd();
@@ -4249,7 +4299,7 @@ public partial class AssistanceChatView : ContentView
             terminalContentSegment = Localized.AIAssistant_ChatView_ChatFail_Cancelled;
             if (streamingItem is not null)
             {
-                FlushStreamingState(streamingItem, converter, ref partialView);
+                currentMarkdownView?.Flush();
                 streamingItem.Message = assistantText;
                 streamingItem.ContentViews.Add(new Label
                 {
@@ -4269,7 +4319,7 @@ public partial class AssistanceChatView : ContentView
             terminalContentSegment = $"{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
             if (streamingItem is not null)
             {
-                FlushStreamingState(streamingItem, converter, ref partialView);
+                currentMarkdownView?.Flush();
                 streamingItem.Message = assistantText;
                 streamingItem.ContentViews.Add(new Label
                 {
