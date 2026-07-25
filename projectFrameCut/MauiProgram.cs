@@ -46,7 +46,6 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-using projectFrameCut.Render.ClipsAndTracks.Text;
 
 #endif
 
@@ -489,6 +488,24 @@ namespace projectFrameCut
                         }
                         TextClipFontRegistry.Initialize();
                     }
+
+                    Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping("EnableTextSelection", (handler, view) =>
+                    {
+                        if (view is Label l && (l.FontFamily == "MarkdownCodeBlock" || l.StyleId == "SelectableLabel"))
+                        {
+#if WINDOWS
+                            if (handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBlock tb)
+                            {
+                                tb.IsTextSelectionEnabled = true;
+                            }
+#elif ANDROID
+                            if (handler.PlatformView is Android.Widget.TextView tv)
+                            {
+                                tv.SetTextIsSelectable(true);
+                            }
+#endif
+                        }
+                    });
 
                 }
                 catch

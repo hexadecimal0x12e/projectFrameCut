@@ -9,6 +9,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+#if WINDOWS
+using Microsoft.Maui.Handlers;
+using TextBlock = Microsoft.UI.Xaml.Controls.TextBlock;
+#endif
 
 namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 {
@@ -217,6 +221,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 {
                     Text = input,
                     FontFamily = "MarkdownCodeBlock",
+                    StyleId = "SelectableLabel",
                 };
 
             // 规范化换行符
@@ -395,6 +400,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                             LineBreakMode = LineBreakMode.WordWrap,
                             Opacity = 0.7,
                             TextColor = MarkdownTextColor,
+                            StyleId = "SelectableLabel",
                         };
                     }
                     return null;
@@ -414,6 +420,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     FontSize = 13,
                     TextColor = CodeBlockTextColor,
                     Opacity = 0.7,
+                    StyleId = "SelectableLabel",
                 };
 
                 return new Border
@@ -442,6 +449,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     {
                         Text = chunk,
                         FontFamily = "MarkdownCodeBlock",
+                        StyleId = "SelectableLabel",
                     }];
 
                 // 设置引用定义上下文（_refDefinitions 在 ProcessLine 中被增量填充）
@@ -474,6 +482,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     {
                         Text = _buffer,
                         FontFamily = "MarkdownCodeBlock",
+                        StyleId = "SelectableLabel",
                     }];
 
                 var views = new List<View>();
@@ -2103,6 +2112,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 FormattedText = new FormattedString { Spans = { span } },
                 Margin = new Thickness(0, 8, 0, 4),
                 TextColor = MarkdownTextColor,
+                StyleId = "SelectableLabel",
             };
         }
 
@@ -2115,6 +2125,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 LineBreakMode = LineBreakMode.WordWrap,
                 FontSize = BodyFontSize,
                 TextColor = MarkdownTextColor,
+                StyleId = "SelectableLabel",
             };
 
             foreach (var span in spans)
@@ -2161,6 +2172,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     TextColor = CodeBlockTextColor.WithAlpha(0.6f),
                     FontFamily = "MarkdownCodeBlock",
                     Margin = new Thickness(0, 0, 0, 4),
+                    StyleId = "SelectableLabel",
                 });
             }
 
@@ -2171,6 +2183,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 FontFamily = "MarkdownCodeBlock",
                 FontSize = 13,
                 TextColor = CodeBlockTextColor,
+                StyleId = "SelectableLabel",
             });
 
             return new Border
@@ -2219,6 +2232,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     VerticalOptions = LayoutOptions.Start,
                     MinimumWidthRequest = 24,
                     TextColor = MarkdownTextColor,
+                    StyleId = "SelectableLabel",
                 };
 
                 var contentLabel = new Label
@@ -2227,6 +2241,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     FontSize = BodyFontSize,
                     LineBreakMode = LineBreakMode.WordWrap,
                     TextColor = MarkdownTextColor,
+                    StyleId = "SelectableLabel",
                 };
 
                 foreach (var span in spans)
@@ -2272,6 +2287,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     LineBreakMode = LineBreakMode.WordWrap,
                     TextColor = MarkdownTextColor,
                     VerticalOptions = LayoutOptions.Center,
+                    StyleId = "SelectableLabel",
                 };
 
                 foreach (var span in spans)
@@ -2327,6 +2343,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         FontSize = BodyFontSize,
                         LineBreakMode = LineBreakMode.WordWrap,
                         TextColor = MarkdownTextColor,
+                        StyleId = "SelectableLabel",
                     };
                     foreach (var span in spans)
                         label.FormattedText.Spans.Add(span);
@@ -2423,6 +2440,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     TextColor = ImageCaptionTextColor,
                     HorizontalOptions = LayoutOptions.Center,
                     Margin = new Thickness(0, 8),
+                    StyleId = "SelectableLabel",
                 };
             }
 
@@ -2470,6 +2488,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     TextColor = ImageCaptionTextColor,
                     HorizontalTextAlignment = TextAlignment.Center,
                     HorizontalOptions = LayoutOptions.Center,
+                    StyleId = "SelectableLabel",
                 });
             }
 
@@ -2531,6 +2550,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         Padding = new Thickness(TableCellPadding),
                         BackgroundColor = bgColor,
                         HorizontalTextAlignment = c < alignments.Count ? alignments[c] : TextAlignment.Start,
+                        StyleId = "SelectableLabel",
                     };
 
                     if (isHeader)

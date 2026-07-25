@@ -33,7 +33,8 @@
       "PowerShell(git clone *)",
       "Bash(xgrep -l \"*\" --include=\"*.cs\")",
       "Bash(xargs grep -l *)",
-      "PowerShell(xargs grep -l *)"
+      "PowerShell(xargs grep -l *)",
+      "Bash(dotnet new *)"
     ],
     "deny": [
       "Bash(Select-*)",

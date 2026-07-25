@@ -90,6 +90,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             set => SetValue(SelectedIndexProperty, value);
         }
 
+        public static readonly BindableProperty IsTabBarVisibleProperty =
+            BindableProperty.Create(
+                nameof(IsTabBarVisible),
+                typeof(bool),
+                typeof(CompactTabView),
+                true,
+                propertyChanged: (bindable, oldValue, newValue) =>
+                {
+                    ((CompactTabView)bindable)._switchRow.IsVisible = (bool)newValue;
+                });
+
+        public bool IsTabBarVisible
+        {
+            get => (bool)GetValue(IsTabBarVisibleProperty);
+            set => SetValue(IsTabBarVisibleProperty, value);
+        }
+
         public static readonly BindableProperty SelectedItemProperty =
             BindableProperty.Create(
                 nameof(SelectedItem),
@@ -151,6 +168,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             _switchRow.ColumnDefinitions.Clear();
             _switchRow.Children.Clear();
             _contentHost.Children.Clear();
+            _switchRow.IsVisible = IsTabBarVisible;
             var previousPendingContents = new Dictionary<TabbedViewItem, View?>(_pendingTabContents);
             _pendingTabContents.Clear();
 

@@ -178,6 +178,19 @@ public class StreamingMarkdownView : ContentView
     }
 
     /// <summary>
+    /// 移除之前通过 <see cref="InsertContentView"/> 插入的自定义视图。
+    /// 必须在主线程上调用。
+    /// </summary>
+    /// <param name="view">要移除的自定义视图。</param>
+    public void RemoveContentView(View view)
+    {
+        if (_rootLayout.Children.Contains(view))
+        {
+            _rootLayout.Children.Remove(view);
+        }
+    }
+
+    /// <summary>
     /// 将视图插入到 provisional 视图之前（如果存在），否则追加到末尾。
     /// 确保 provisional 视图始终位于布局末尾，自定义内容和已完成 Markdown 内容在其之前。
     /// </summary>
