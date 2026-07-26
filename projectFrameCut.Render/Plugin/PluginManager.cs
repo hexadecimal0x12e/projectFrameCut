@@ -462,6 +462,7 @@ namespace projectFrameCut.Render.Plugin
                 case "avc":
                 case "avc1":
                 case "x264":
+                case "libx264":
                     AddCandidate("libx264");
                     AddCandidate("h264_nvenc");
                     AddCandidate("h264_qsv");
@@ -474,6 +475,7 @@ namespace projectFrameCut.Render.Plugin
                 case "hevc":
                 case "h265/hevc":
                 case "x265":
+                case "libx265":
                     AddCandidate("libx265");
                     AddCandidate("hevc_nvenc");
                     AddCandidate("hevc_qsv");

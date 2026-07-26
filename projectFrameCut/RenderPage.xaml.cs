@@ -872,7 +872,11 @@ public partial class RenderPage : ContentPage
                             DisposeFrameAfterEachWrite = true,
                             Duration = duration,
                             LogStat = false,
-                            BlockWrite = blockwrite
+                            BlockWrite = blockwrite,
+                            EnableDiskCacheRouting = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", true),
+                            DiskCacheMaxFrameCount = SettingsManager.GetSettingAs("render_MaxDiskBufferCount", 500, 500),
+                            DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7),
+                            DiskCacheDirectory = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoCache"), "RenderingCache")
                         };
                         break;
                     case "null":
@@ -924,6 +928,7 @@ public partial class RenderPage : ContentPage
                 RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
                 MinSchedulePreparedFrames = parallelThreadCount,
+                MaxPendingWriteFrames = SettingsManager.GetSettingAs("render_maxPendingWriteFrames", (int)(Environment.WorkingSet / ((width * height * (bpp.Value / 8) * 3) + 32)) / 2, 150),
                 UseHDR = ProjectUsesHDR,
                 MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
                 SDRClipsBrightnessInHDRMode =
@@ -1587,7 +1592,8 @@ public partial class RenderPage : ContentPage
             $"-project={_workingPath}",
             $"-output={outputPath}",
             $"-output_options={width},{height},{fps},{pixelFormat},{encoder}",
-            $"-assetDbFile={Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json")}"
+            $"-assetDbFile={Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json")}",
+            $"-FFmpegLibraryPath={FFmpeg.AutoGen.ffmpeg.RootPath}"
         };
 
         var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));

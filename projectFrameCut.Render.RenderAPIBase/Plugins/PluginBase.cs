@@ -172,6 +172,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an IVideoWriter instance from the given file path.
         /// </summary>
+        /// <remarks>
+        /// The key of each item is NOT used in detect the video writer type from file extension. They can be 100% meaningless and doesn't need to be the same as the file extension. 
+        /// The value is a function that takes a file path and returns an IVideoWriter instance.
+        /// Implement <see cref="IVideoWriter.SupportCodec(string)"/> to allow render engine to check for preferred extensions.
+        /// </remarks>
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
 
 

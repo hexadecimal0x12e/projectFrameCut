@@ -37,6 +37,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         public IAudioSource ComposedAudio { get; }
 
         /// <summary>
+        /// The target width and height for the rendered output. These properties define the dimensions of the final video output, ensuring that all rendering operations adhere to the specified resolution.
+        /// </summary>
+        public int TargetWidth { get; }
+        /// <summary>
+        /// The target height for the rendered output. This property defines the vertical dimension of the final video output, ensuring that all rendering operations adhere to the specified resolution.
+        /// </summary>
+        public int TargetHeight { get; }
+        /// <summary>
+        /// Gets the target frame-time(spf) for the rendering operation. This property defines the playback speed of the final video output, ensuring that all rendering operations adhere to the specified frame rate.
+        /// </summary>
+        public double TargetSecondPerFrame { get; }
+
+        /// <summary>
         /// AsyncLocal that holds per-worker rendering state.
         /// Each execution context (thread or async flow) gets its own value,
         /// allowing safe per-thread tracking of which clip, frame, and stage

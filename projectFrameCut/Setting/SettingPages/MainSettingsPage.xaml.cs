@@ -219,7 +219,6 @@ namespace projectFrameCut
             VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
             VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
             VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
-            IVideoSource.EnableMemoryCache = IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
             IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
             ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
             IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };

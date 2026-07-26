@@ -86,8 +86,8 @@ public partial class GeneralSettingPage : ContentPage
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
-            .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
-            .AddSwitch("codec_EnableMemoryCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableMemoryCache, SettingLocalizedResources.GeneralCodec_EnableMemoryCache_Desc), IsBoolSettingTrue("codec_EnableMemoryCache"))
+            .AddSwitch("codec_PreferredHWAccelDecoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelDecoding, IsBoolSettingTrue("codec_PreferredHWAccelDecoding"))
+            .AddSwitch("codec_PreferredHWAccelEncoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding, IsBoolSettingTrue("codec_PreferredHWAccelEncoding"))
             .AddSwitch("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
             .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
@@ -417,7 +417,6 @@ public partial class GeneralSettingPage : ContentPage
                     needReboot = true;
                     goto done;
                 case "codec_EnableDiskCache":
-                case "codec_EnableMemoryCache":
                 case "codec_defaultResizeProvider":
                     WriteSetting(args.Id, args.Value?.ToString() ?? "");
                     return;

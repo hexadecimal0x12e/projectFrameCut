@@ -59,6 +59,7 @@ namespace projectFrameCut.Render.Rendering
         public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
         public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
         public int ThrottleThreshold { get => field > 0 ? field : Math.Max(MaxThreads * 4, MaxThreads + 8); set; }
+        public int MaxPendingWriteFrames { get => field > 0 ? field : Math.Max(ThrottleThreshold * 2, 32); set; }
         public bool BlockPreparingBeforeRendering { get; set; } = false;
         public bool DisableAllThrottleOptions { get; set; } = false;
 
@@ -80,6 +81,17 @@ namespace projectFrameCut.Render.Rendering
         private double _currentFps = 0;
 
         public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
+        public TimeSpan OnePercentLowFrameTime => ComputeLowPercentileFrameTime(0.01);
+        public double OnePercentLowFps
+        {
+            get
+            {
+                var ts = ComputeLowPercentileFrameTime(0.01);
+                if (ts.TotalSeconds <= 0) return -1;
+                return 1 / ts.TotalSeconds;
+            }
+        }
+
         public double CurrentSecondPerFrame => 1 / CurrentFps;
         public double CurrentFinishedPercentage => Duration > 0 ? (double)Volatile.Read(ref Finished) / Duration : 0;
         public int CurrentFinished => Finished;
@@ -88,6 +100,7 @@ namespace projectFrameCut.Render.Rendering
         public double Progress => CurrentFinishedPercentage;
         public string? AudioFilePath = null;
         public IAudioSource ComposedAudio { get { if (field is not null) return field; field = PluginManager.CreateAudioSource(AudioFilePath ?? throw new FileNotFoundException("Audio is not set.")); return field; } private set { field = value; } }
+        double IRenderContext.TargetSecondPerFrame => 1d / (double)(builder?.Writer?.FramePerSecond ?? 30.0);
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
@@ -116,10 +129,6 @@ namespace projectFrameCut.Render.Rendering
         int ThreadWorking = 0, Finished = 0;
         private SemaphoreSlim _threadLimiter = null!;
 
-        public static bool IsProfilerAttached =>
-            string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
-
-
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
         ConcurrentDictionary<uint, byte> PreparedFlag = new();
 
@@ -142,8 +151,13 @@ namespace projectFrameCut.Render.Rendering
         private static readonly ConcurrentDictionary<string, bool> ComputerBatchSupportCache = new();
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
-        private long _renderElapsedTicksTotal; private int _renderElapsedCount;
-        private long _prepareElapsedTicksTotal; private int _prepareElapsedCount;
+        private long _renderElapsedTicksTotal; 
+        private int _renderElapsedCount;
+        private long _prepareElapsedTicksTotal; 
+        private int _prepareElapsedCount;
+
+        public static bool IsProfilerAttached =>
+            string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
 
         #endregion
 
@@ -151,7 +165,7 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if (builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
+            Log($"[Preparer] Calculating clip visibility for {Duration} frames...");
             var clipsForFrame = new List<IClip>(Clips.Length);
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
@@ -160,7 +174,6 @@ namespace projectFrameCut.Render.Rendering
                 foreach (var item in Clips)
                 {
                     if (token.IsCancellationRequested) return;
-
 
                     if (item.ContainsFrame(idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
@@ -183,14 +196,10 @@ namespace projectFrameCut.Render.Rendering
                     Interlocked.Increment(ref TotalEnqueued);
                 }
 
-                if (idx % 50 == 0)
-                {
-                    Log($"[Preparer] source preparing finished {(float)(idx - StartFrame) / (float)Duration:p3} ({idx - StartFrame}/{Duration})");
-                }
-
             }
             InitializeRenderCaches();
             Log($"[Preparer] source preparing done.");
+            if (builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
 
         }
 
@@ -259,7 +268,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (UseHDR)
             {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0, 0);
             }
             else if (Use16Bit)
             {
@@ -332,6 +341,7 @@ namespace projectFrameCut.Render.Rendering
                     if (aiMark is bool) isAI = (bool)aiMark;
                     else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
                     else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
+                    Log($"[Preparer] Clip {item.Id} ({item.Name}) is marked as AI-generated.");
                 }
                 if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
@@ -429,6 +439,38 @@ namespace projectFrameCut.Render.Rendering
             }
         }
 
+        /// <summary>
+        /// Writer backpressure throttle: if <see cref="VideoBuilder"/> has accumulated too many
+        /// unwritten frames (<see cref="MaxPendingWriteFrames"/>), pause the render scheduler
+        /// until at least 50% of the threshold have been flushed to disk by the write thread.
+        /// Returns <c>false</c> if the caller should abort due to cancellation.
+        /// No-op when <see cref="DisableAllThrottleOptions"/> is true, <see cref="builder"/> is null,
+        /// or the pending count is already within the limit.
+        /// </summary>
+        private async Task<bool> CheckWriterBackpressureAsync(int pollDelayMs, CancellationToken token)
+        {
+            if (DisableAllThrottleOptions || builder is null)
+                return true;
+
+            int pending = builder.PendingWriteCount;
+            int maxPending = MaxPendingWriteFrames;
+            if (pending <= maxPending)
+                return true;
+
+            Log($"[Render] Writer backpressure: {pending} frames pending write (limit {maxPending}). Pausing render until write thread catches up...", "warn");
+
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(pollDelayMs, token);
+                if (builder.PendingWriteCount <= 10)
+                {
+                    Log($"[Render] Writer backpressure resolved: {builder.PendingWriteCount} frames pending, resuming render.", "info");
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private async Task GoBackgroundPreparerRender(CancellationToken token)
         {
             // Initialize thread limiter
@@ -517,7 +559,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             var workerThreadAffinity = ResolveWorkerThreadAffinity();
-            if (workerThreadAffinity.Mask.HasValue)
+            if (workerThreadAffinity.Mask is not null)
             {
                 Log($"Using thread affinity for worker threads ({workerThreadAffinity.Description}).");
             }
@@ -656,6 +698,13 @@ namespace projectFrameCut.Render.Rendering
                         GC.Collect();
                     }
 
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(preparePollDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) continue;
+
                     for (int i = 0; i < toStart; i++)
                     {
                         if (!PreparedFrames.TryDequeue(out var targetFrame))
@@ -740,7 +789,7 @@ namespace projectFrameCut.Render.Rendering
 
             var (Mask, Description) = ResolveWorkerThreadAffinityTargetCores();
             int[] reversedMask = [];
-            if (Mask.Length > 0)
+            if (Mask?.Any() ?? false)
             {
                 Log($"Using thread affinity for worker threads ({Description}).");
                 reversedMask = Enumerable.Range(0, Environment.ProcessorCount).Except(Mask).ToArray();
@@ -809,7 +858,7 @@ namespace projectFrameCut.Render.Rendering
                     TrackPrepareElapsed(sw.Elapsed);
                     FramePrepareElapsed[targetFrame] = sw.Elapsed;
 
-                    if (Mask.Length > 0)
+                    if (Mask?.Any() ?? false)
                     {
                         ThreadAffinityHelper.SetCurrentThreadAffinity(Mask); //let preparing work can eat all big cores
                         Thread.Sleep(0); // reschedule the thread to make sure new mask applies
@@ -918,6 +967,13 @@ namespace projectFrameCut.Render.Rendering
                     {
                         GC.Collect();
                     }
+
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(idleDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? frameQueue.Count : Math.Min(frameQueue.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) { enqueueFramesToThrottle(); continue; }
 
                     for (int i = 0; i < toStart; i++)
                     {
@@ -1226,6 +1282,13 @@ namespace projectFrameCut.Render.Rendering
                     {
                         GC.Collect();
                     }
+
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(preparePollDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) continue;
 
                     for (int i = 0; i < toStart; i++)
                     {
@@ -2593,6 +2656,7 @@ namespace projectFrameCut.Render.Rendering
             double preparedProgress = totalFrames > 0 ? (double)prepared / totalFrames : 0;
             TimeSpan eachRender = GetAverageElapsed(Interlocked.Read(ref _renderElapsedTicksTotal), Volatile.Read(ref _renderElapsedCount));
             TimeSpan eachPrepare = GetAverageElapsed(Interlocked.Read(ref _prepareElapsedTicksTotal), Volatile.Read(ref _prepareElapsedCount));
+            double onePctLow = OnePercentLowFps;
 
             if (includeQueueAndWriterStats)
             {
@@ -2602,13 +2666,13 @@ namespace projectFrameCut.Render.Rendering
                     $"pending to render: {prepared - finished}, " +
                     $"total write frames: {wrote} wrote and {Math.Max(0, totalWriteFrames - wrote)} pended, " +
                     $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
-                    $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}.)";
+                    $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}, 1% low FPS: {onePctLow:n1} ({OnePercentLowFrameTime.TotalMilliseconds:n1} ms).)";
             }
 
             return $"Finished {finishedProgress:p2}. ETA: {GetEstimated(finishedProgress)}, " +
                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                 $"       ({finished} of {totalFrames} finished, already elapsed {_renderTotalStopwatch.Elapsed}, " +
-                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}.)";
+                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}, 1% low FPS: {onePctLow:n1} ({OnePercentLowFrameTime.TotalMilliseconds:n1} ms).)";
         }
 
         private static TimeSpan GetAverageElapsed(ConcurrentBag<TimeSpan> elapsedCollection)
@@ -2640,6 +2704,25 @@ namespace projectFrameCut.Render.Rendering
 
         private static TimeSpan GetAverageElapsed(long totalTicks, int count)
             => count > 0 ? new TimeSpan(totalTicks / count) : TimeSpan.Zero;
+
+        /// <summary>
+        /// 计算低百分位帧耗时：对 <see cref="EachElapsed"/> 中所有帧渲染耗时排序，
+        /// 取最慢的 <paramref name="fraction"/> 比例帧的平均值。
+        /// 例如 fraction=0.01 得到 1% low 帧耗时，fraction=0.001 得到 0.1% low。
+        /// 返回 <see cref="TimeSpan.Zero"/> 表示尚无数据。
+        /// </summary>
+        /// <param name="fraction">要平均的最慢帧比例，如 0.01 表示最慢 1%。</param>
+        public TimeSpan ComputeLowPercentileFrameTime(double fraction)
+        {
+            if (EachElapsed.IsEmpty) return TimeSpan.Zero;
+
+            var sorted = EachElapsed.OrderBy(ts => ts.Ticks).ToArray();
+            int count = Math.Max(1, (int)(sorted.Length * fraction));
+            long totalTicks = 0;
+            for (int i = sorted.Length - count; i < sorted.Length; i++)
+                totalTicks += sorted[i].Ticks;
+            return new TimeSpan(totalTicks / count);
+        }
 
         private Dictionary<string, object> RentFrameLocalCache()
         {
@@ -2797,7 +2880,7 @@ namespace projectFrameCut.Render.Rendering
             GC.Collect();
         }
 
-        private (int[] Mask, string? Description) ResolveWorkerThreadAffinityTargetCores()
+        private (int[]? Mask, string? Description) ResolveWorkerThreadAffinityTargetCores()
         {
             if (WorkerCPUCoreIndexs is { Length: > 0 })
             {

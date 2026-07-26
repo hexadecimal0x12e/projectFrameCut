@@ -132,6 +132,7 @@ public partial class RenderSettingPage : ContentPage
     {
         var isCPUBigLittleCore = ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
         if (!isCPUBigLittleCore && !Settings.ContainsKey("render_enableThreadAffinity")) WriteSetting("render_enableThreadAffinity", "False");
+        var suggestedMaxPendingFrame = ((int)(Environment.WorkingSet / ((1920 * 1080 * 3) + 32)) / 2 + 5) / 10 * 10;
         Content = new VerticalStackLayout();
         rootPPB = new();
         rootPPB
@@ -157,6 +158,10 @@ public partial class RenderSettingPage : ContentPage
             .AppendWhen(IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true) && PluginManager.LoadedPlugins.Any(c => !c.Key.StartsWith("projectFrameCut.Render")), p => p.AddText(new Label { Text = SettingLocalizedResources.Render_PrepareInWorkerThreads_3rdPluginWarn, TextColor = Colors.Yellow }))
             .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore), p => p.IsEnabled = isCPUBigLittleCore)
             .AppendWhen(!isCPUBigLittleCore, c => c.AddCustomChild(new Label { Text = SettingLocalizedResources.Render_EnableAutoThreadAffinity_Unsupported, TextColor = Colors.Gray, FontSize = 12 }))
+            .AddSeparator()
+            .AddEntry("render_maxPendingWriteFrames", SettingLocalizedResources.Render_MaxPendingWriteFrames, GetSetting("render_maxPendingWriteFrames", suggestedMaxPendingFrame.ToString()), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric)
+            .AddCheckbox("render_enableDiskCacheRouting", SettingLocalizedResources.Render_EnableDiskBuffer, IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false))
+            .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddEntry("render_MaxDiskBufferCount", SettingLocalizedResources.Render_MaxDiskBufferCount, GetSetting("render_MaxDiskBufferCount", "500"), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator();
 
 #if WINDOWS
@@ -218,6 +223,7 @@ public partial class RenderSettingPage : ContentPage
         {
             rootPPB
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
+                .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddSlider("render_DiskBufferThreshold", SettingLocalizedResources.Render_DiskBufferThreshold, 0, 1, GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7)))
                 .AddCheckbox("render_forceImpType_ForceHwAccel", SettingLocalizedResources.Render_ForceImpType_ForceHwAccel, IsBoolSettingTrue("render_forceImpType_ForceHwAccel"), null)
                 .AddCheckbox("render_forceImpType_ForceIPicture", SettingLocalizedResources.Render_ForceImpType_ForceIPicture, IsBoolSettingTrue("render_forceImpType_ForceIPicture"), null)
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
@@ -415,19 +421,20 @@ public partial class RenderSettingPage : ContentPage
                         }
                         break;
                     }
-                case "render_enableThreadAffinity":
-                    if (args.Value != null)
-                    {
-                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
-                    }
-                    BuildPPB();
-                    break;
                 case "render_preferredAntiAliasMode":
                     {
                         var mode = AntiAliasModeMapping.TryGetValue(args.Value as string, out var aaMode) ? aaMode : "ssaa4x";
                         WriteSetting(args.Id, mode);
                         break;
                     }
+                case "render_enableThreadAffinity":
+                case "render_enableDiskCacheRouting":
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
+                    BuildPPB();
+                    break;
                 default:
                     if (args.Value != null)
                     {

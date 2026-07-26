@@ -36,7 +36,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public bool EnableLock { get; set; }
 
         public bool StrictMode { get; set; } = true;
-        public bool EnableMemoryCache { get; set; }
         public bool EnableDiskCache { get; set; }
         
         public string TypeName => "RawPictureSequenceStreamVideoDecoderContext";

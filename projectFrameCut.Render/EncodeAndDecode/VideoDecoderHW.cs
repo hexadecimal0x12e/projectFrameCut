@@ -53,9 +53,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int? ResultBitPerPixel => 8;
 
-        private readonly Dictionary<uint, Picture8bpp> _frameCache = new();
         private readonly VideoFrameDiskCache _diskCache;
-        private const int MaxFrameCacheSize = 30;
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
@@ -67,7 +65,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
-            if (!string.IsNullOrWhiteSpace(path)) _diskCache = new VideoFrameDiskCache(_path);
+            if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public IVideoSource CreateNew(string newSource) => new DecoderContextHW(newSource);
@@ -269,17 +267,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                // Check frame cache first
-                if (IVideoSource.EnableMemoryCache && _frameCache.TryGetValue(targetFrame, out var cachedFrame))
-                {
-                    Index++;
-                    return cachedFrame;
-                }
-
                 // Try disk cache before decoding
                 if (IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
                 {
-                    if (IVideoSource.EnableMemoryCache) _frameCache[targetFrame] = diskFrame;
                     Index++;
                     return diskFrame;
                 }
@@ -436,10 +426,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
         {
-            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
-                return;
-
-            if (_frameCache.ContainsKey(frameNumber))
+            if (!IVideoSource.EnableDiskCache)
                 return;
 
             var picture = ConvertCurrentDecodedFrame(hasAlpha, frameNumber);
@@ -496,35 +483,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void CacheFinalFrame(uint frameNumber, Picture8bpp picture)
         {
-            if (!IVideoSource.EnableMemoryCache && !IVideoSource.EnableDiskCache)
+            if (!IVideoSource.EnableDiskCache)
                 return;
 
-            if (IVideoSource.EnableMemoryCache)
-            {
-                if (_frameCache.ContainsKey(frameNumber))
-                    return;
-
-                if (_frameCache.Count >= MaxFrameCacheSize)
-                {
-                    uint bestEvict = 0;
-                    long bestDist = -1;
-                    foreach (var key in _frameCache.Keys)
-                    {
-                        long dist = Math.Abs((long)key - (long)frameNumber);
-                        if (dist > bestDist)
-                        {
-                            bestDist = dist;
-                            bestEvict = key;
-                        }
-                    }
-                    _frameCache.Remove(bestEvict);
-                }
-
-                _frameCache[frameNumber] = picture;
-            }
-
-            if (IVideoSource.EnableDiskCache)
-                _diskCache.Save8bppFrameAsync(frameNumber, picture);
+            _diskCache.Save8bppFrameAsync(frameNumber, picture);
         }
 
         private bool IsHWFormat(AVPixelFormat fmt)
@@ -602,8 +564,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 locker.Exit();
             }
 
-            // Clear cache
-            _frameCache.Clear();
             _diskCache?.Dispose();
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }

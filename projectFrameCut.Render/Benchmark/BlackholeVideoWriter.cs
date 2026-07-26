@@ -19,6 +19,7 @@ namespace projectFrameCut.Render.Benchmark
         public int FramePerSecond { get; set; }
         public string CodecName { get; set; }
         public string PixelFormat { get; set; }
+        public long BitRate { get; set; }
 
         public uint DurationWritten => _index;
 

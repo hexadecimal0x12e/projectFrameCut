@@ -52,31 +52,36 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
         return Task.Run(() =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (TryGetCachedFrame(frameKey, out var cachedFrame))
+            try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (TryGetCachedFrame(frameKey, out var cachedFrame))
+                {
+                    EnqueuePrefetch(clip, contextKey, targetFrame);
+                    TouchDiskEntry(ResolveDiskCachePath(frameKey));
+                    return cachedFrame;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, canvasWidth, canvasHeight, true, 8);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var result = frame.BitPerPixel == IPicture.PicturePixelMode.BytePicture
+                    ? frame.Clone()
+                    : frame.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+
+                var diskPath = ResolveDiskCachePath(frameKey);
+                TryPersistFrameToDisk(result, diskPath);
+                CacheFrame(frameKey, result, diskPath);
                 EnqueuePrefetch(clip, contextKey, targetFrame);
-                TouchDiskEntry(ResolveDiskCachePath(frameKey));
-                return cachedFrame;
+
+                return result;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, canvasWidth, canvasHeight, true, 8);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var result = frame.BitPerPixel == IPicture.PicturePixelMode.BytePicture
-                ? frame.Clone()
-                : frame.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
-
-            var diskPath = ResolveDiskCachePath(frameKey);
-            TryPersistFrameToDisk(result, diskPath);
-            CacheFrame(frameKey, result, diskPath);
-            EnqueuePrefetch(clip, contextKey, targetFrame);
-
-            return result;
+            catch (OperationCanceledException) { return Picture8bpp.GenerateSolidColor(1, 1, 0, 0, 0, 1f); }
+            catch { throw; }
         }, cancellationToken);
     }
 

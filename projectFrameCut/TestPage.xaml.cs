@@ -932,6 +932,34 @@ public partial class TestPage : ContentPage
 
     }
 
+
+    private async void ReEncodeButton_Clicked(object sender, EventArgs e)
+    {
+        var vidFile = await FileSystemService.PickFileAsync();
+        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
+        if (string.IsNullOrWhiteSpace(vidFile)) return;
+        var outputPath = Path.Combine(FileSystem.CacheDirectory, $"reencode-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4");
+        var src = PluginManager.CreateVideoSource(vidFile);
+        var dest = new VideoWriterHWAccel
+        {
+            CodecName = "libx264",
+            FramePerSecond = (int)src.Fps,
+            Width = src.Width,
+            Height = src.Height,
+            PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P.ToString(),
+            OutputPath = outputPath
+        };
+        dest.Initialize();
+        for(uint i = 0;i < src.TotalFrames; i++)
+        {
+            Log($"{i} of {src.TotalFrames} done");
+            dest.Append(src.GetFrame(i, false));
+        }
+        dest.Finish();
+        dest.Dispose();
+        src.Dispose();
+    }
+
     private async void BenchmarkButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushAsync(new BenchmarkPage());
@@ -1476,6 +1504,8 @@ public partial class TestPage : ContentPage
             await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
         }
     }
+    
+
     private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button { Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });

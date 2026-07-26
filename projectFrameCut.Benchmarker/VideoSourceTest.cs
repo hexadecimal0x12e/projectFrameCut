@@ -70,7 +70,6 @@ namespace projectFrameCut.Benchmarker
         public void TestDecodeSpeed(bool diskCache)
         {
             IVideoSource.EnableDiskCache = diskCache;
-            IVideoSource.EnableMemoryCache = false; //ramcache is not suitable in this scenario, as it may cause OOM and affect the benchmark result
             var source = new HDRDecoderContext(TestVideoPath);
             Console.WriteLine($"Video {source.Width}*{source.Height}, FPS:{source.Fps}, frameCount:{source.TotalFrames}");
             Assert.IsNotNull(source);

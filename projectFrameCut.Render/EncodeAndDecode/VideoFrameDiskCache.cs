@@ -369,7 +369,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             using (_fileLock.EnterScope())
             {
-                File.WriteAllText(Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "metadata.json"), JsonSerializer.Serialize(_caches));
+                var baseDir = VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache");
+                Directory.CreateDirectory(baseDir);
+                File.WriteAllText(Path.Combine(baseDir, "metadata.json"), JsonSerializer.Serialize(_caches));
             }
 
             return _caches[hash];
@@ -389,7 +391,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             using (_fileLock.EnterScope())
             {
-                File.WriteAllText(Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "metadata.json"), JsonSerializer.Serialize(_caches));
+                var baseDir = VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache");
+                Directory.CreateDirectory(baseDir);
+                File.WriteAllText(Path.Combine(baseDir, "metadata.json"), JsonSerializer.Serialize(_caches));
             }
         }
 

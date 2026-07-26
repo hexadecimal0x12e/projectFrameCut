@@ -191,6 +191,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _perClipThumbCts = new();
+    private readonly Dictionary<Guid, OnClipUIPreview> _activeClipPreviews = new();
     private const int ThumbIntervalFrames = 30;
     private const int ThumbMaxCount = 60;
     private const int ThumbTargetWidth = 320;
@@ -1653,7 +1654,15 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
+            // Dispose any previous preview for this clip before creating a new one
+            if (_activeClipPreviews.TryGetValue(element.Id, out var oldGen))
+            {
+                oldGen.Dispose();
+                _activeClipPreviews.Remove(element.Id);
+            }
+
             var previewGen = new OnClipUIPreview(this, element);
+            _activeClipPreviews[element.Id] = previewGen;
             var previewView = previewGen.Update();
             element.UpdateContent(previewView);
 
@@ -3219,6 +3228,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             Clips.TryRemove(target.Id, out _);
+
+            // Dispose the scroll-aware preview to unsubscribe from scroll events
+            if (_activeClipPreviews.Remove(target.Id, out var previewGen))
+                previewGen.Dispose();
+
             deletedNames.Add(GetClipNameForChangeReason(target, target.Id.ToString()));
             LogDiagnostic($"clip {target.Id} deleted.");
 
@@ -4256,6 +4270,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(key, out var oldPreview))
+                            oldPreview.Dispose();
+
                         // remove visual from overlay if present
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         // also remove from its track container
@@ -5474,6 +5491,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(ghostId, out var oldPreview))
+                            oldPreview.Dispose();
+
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         foreach (var t in Tracks.Values.ToList())
                             try { t.Children.Remove(removed.Clip); } catch { }
@@ -5492,6 +5512,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(shadowId, out var oldPreview))
+                            oldPreview.Dispose();
+
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         foreach (var t in Tracks.Values.ToList())
                             try { t.Children.Remove(removed.Clip); } catch { }
@@ -8393,7 +8416,43 @@ public partial class DraftPage : ContentPage, IDraftPage
                 TimelineScrollView.ScrollToAsync(e.ScrollX, 0, false);
         }
         UpdatePlayheadPosition(e.ScrollX);
+
+        // Notify all active clip previews so they update their visible frame range
+        NotifyClipPreviewsScrollChanged(e.ScrollX);
     }
+
+    private void NotifyClipPreviewsScrollChanged(double scrollX)
+    {
+        double viewportWidth = TimelineScrollView.Width;
+        List<Guid>? toRemove = null;
+        foreach (var kvp in _activeClipPreviews)
+        {
+            if (!kvp.Value.NotifyScrollChanged(scrollX, viewportWidth))
+            {
+                toRemove ??= new();
+                toRemove.Add(kvp.Key);
+            }
+        }
+        if (toRemove is not null)
+        {
+            foreach (var id in toRemove)
+            {
+                if (_activeClipPreviews.TryGetValue(id, out var detached))
+                {
+                    detached.Dispose();
+                    _activeClipPreviews.Remove(id);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the current horizontal scroll position and viewport width of the
+    /// main timeline ScrollView. Used by <see cref="OnClipUIPreview"/> to perform
+    /// viewport-culled frame rendering without direct access to the private field.
+    /// </summary>
+    internal (double scrollX, double viewportWidth) GetTimelineScrollState()
+        => (TimelineScrollView.ScrollX, TimelineScrollView.Width);
 
     private async Task MovePlayhead(int deltaFrames)
     {

@@ -54,7 +54,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; } = false;
         public bool StrictMode { get; set; }
-        public bool EnableMemoryCache { get; set; }
         public bool EnableDiskCache { get; set; }
         private Lock locker = new();
 

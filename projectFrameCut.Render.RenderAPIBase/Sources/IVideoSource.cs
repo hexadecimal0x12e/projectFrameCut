@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.Drawing.Base;
-using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
@@ -108,11 +107,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public bool StrictMode { get; set; }
 
         /// <summary>
-        /// Enable or disable in-memory frame caching. When enabled, decoded frames are kept in RAM for faster re-access within the session.
-        /// </summary>
-        public static bool EnableMemoryCache { get; set; }
-
-        /// <summary>
         /// Enable or disable disk-based frame caching. When enabled, decoded frames are written to disk for faster re-access across sessions.
         /// </summary>
         public static bool EnableDiskCache { get; set; }
@@ -123,57 +117,5 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     {
         public new IPicture<T> GetFrame(uint targetFrame, bool hasAlpha = false);
         IPicture IVideoSource.GetFrame(uint targetFrame, bool hasAlpha) => GetFrame(targetFrame, hasAlpha);
-    }
-
-    public interface IVideoWriter : IDisposable
-    {
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public string OutputPath { get; set; }
-        public int FramePerSecond { get; set; }
-        public string CodecName { get; set; }
-        public string PixelFormat { get; set; }
-        public uint DurationWritten { get; }
-        public IPicture.PicturePixelMode? TargetPPB { get; }
-
-        public void Initialize();
-        public virtual bool TryInitialize()
-        {
-            try
-            {
-                Initialize();
-                return true;
-
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        /// <summary>
-        /// Metadata key-value pairs to write into the output container.
-        /// Set before calling <see cref="Initialize"/>; changes after initialization may be ignored.
-        /// </summary>
-        Dictionary<string, string>? Metadata { get; set; }
-
-        public bool SupportCodec(string codecName);
-        public void Finish();
-
-
-        public void Append(IPicture<ushort> picture);
-        public void Append(IPicture<byte> picture);
-        public void Append(HDRPicture16bpp pic) => Append((IPicture<ushort>)pic);
-
-        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
-        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
-        public void Append(IPicture source)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            if (source.BitPerPixel == 16) Append((IPicture<ushort>)source);
-            else if (source.BitPerPixel == 8) Append((IPicture<byte>)source);
-            else throw new NotSupportedException($"Unsupported pixel mode.");
-        }
-
-
     }
 }

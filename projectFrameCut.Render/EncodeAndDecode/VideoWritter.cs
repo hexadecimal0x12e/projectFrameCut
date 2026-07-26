@@ -90,6 +90,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public long BitRate
+        {
+            get => _bitRate;
+            set
+            {
+                if (_inited) throw new InvalidOperationException("Cannot modify property after initialization");
+                _bitRate = value;
+            }
+        }
+
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
         private AVStream* _videoStream;
@@ -101,6 +111,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _isHeaderWritten;
         private bool _isDisposed;
         private int colorDepth = 8;
+        private long _bitRate = 4_000_000;
         private bool _inited;
 
         public bool IsOpened => _fmtCtx != null;
@@ -191,7 +202,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = 12;
             _codecCtx->max_b_frames = 2;
-            _codecCtx->bit_rate = 4_000_000;
+            _codecCtx->bit_rate = _bitRate;
 
             if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                 _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -479,6 +490,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private void EnsureHeader()
         {
             if (_isHeaderWritten) return;
+
+            if (_fmtCtx == null)
+            {
+                if (string.IsNullOrWhiteSpace(OutputPath))
+                    throw new InvalidOperationException(
+                        "Cannot write video header: OutputPath was not set. " +
+                        "The video writer was created without an output path (for codec probing) " +
+                        "but Append was called as if it were ready to write. " +
+                        "Set OutputPath and call Initialize() before writing frames.");
+                throw new InvalidOperationException(
+                    $"Cannot write video header: the video writer was not properly initialized " +
+                    $"(OutputPath='{OutputPath}', but the format context is null). " +
+                    "Ensure Initialize() completed successfully before calling Append.");
+            }
 
             if (_metadata != null && _metadata.Count > 0)
             {

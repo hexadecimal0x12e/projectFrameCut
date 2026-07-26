@@ -25,6 +25,7 @@ using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+using projectFrameCut.Drawing.Base.Picture;
 
 
 
@@ -120,6 +121,7 @@ namespace projectFrameCut.StandaloneRender
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
+                        [-maxPendingWriteFrames=<number>]
                         [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
@@ -131,22 +133,49 @@ namespace projectFrameCut.StandaloneRender
                         [-preferHwAccelDecoder=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
-                        [-VideoFrameMemoryCache=<true|false>]
+                        [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
+                        [-diskCacheThreshold=<0.1-0.95>]
+                        [-diskCacheMaxFrameCount=<number>]
+                        [-videoBuilderDiskCacheRoot=<path>]
                         [-ApproximateMixture=<true|false>]
 
 
 
-                    Mode 'bench':
+                    Mode 'bench' [sub-modes]:
+                        bench render    - Render pipeline benchmark (default)
+                        bench encode    - VideoBuilder cache & encode throughput test
+                        bench decode    - IVideoSource decode performance test
+
+                    Common arguments (all sub-modes):
+                        [-writeToNull=<true|false>]
+
+                    Sub-mode 'render' arguments:
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
-                        [-writeToNull=<true|false>]
                         [-maxParallelThreads=<number>]
+                        [-maxPendingWriteFrames=<number>]
                         [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-GCOptions=0,1,2]
                         [-preferHwAccelDecoder=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-ApproximateMixture=<true|false>]
+
+                    Sub-mode 'encode' arguments:
+                        [-output=<output file>]                         (if omitted → BlackHoleWriter, no real file)
+                        [-encoder=<codec name>]                         (default: libx264)
+                        [-pixelFormat=<AVPixelFormat name>]             (default: yuv420p)
+                        [-totalFrames=<number>]                         (default: 600)
+                        [-fps=<frame rate>]                             (default: 60)
+                        [-enableDiskCacheRouting=<true|false>]          (test disk cache spillover)
+                        [-diskCacheThreshold=<0.1-0.95>]                (default: 0.85)
+                        [-maxPendingWriteFrames=<number>]
+
+                    Sub-mode 'decode' arguments:
+                        -source=<video file path>                   (required)
+                        [-maxFrames=<number>]                       (limit decoded frames)
+                        [-VideoFrameDiskCache=<true|false>]
+                        [-preferHwAccelDecoder=<true|false>]
 
                     ---
 
@@ -283,21 +312,49 @@ namespace projectFrameCut.StandaloneRender
                     }
                     catch { throw; }
                 case "bench":
-                    var accelResult1 = InitAccel(switches);
-                    if (accelResult1 != 0)
+                    // ── 解析子模式（render / encode / decode）──────────
+                    var benchSubMode = "render";
+                    if (args.Length > 1 && !args[1].StartsWith('-') && !args[1].Contains('='))
                     {
-                        return accelResult1;
+                        benchSubMode = args[1].ToLowerInvariant();
                     }
+                    else if (switches.TryGetValue("benchMode", out var switchBenchMode))
+                    {
+                        benchSubMode = switchBenchMode.ToLowerInvariant();
+                    }
+
+                    if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode")
+                    {
+                        Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode.", "error");
+                        return 1;
+                    }
+
+                    Log($"Bench sub-mode: {benchSubMode}");
+
+                    // 只有 render（渲染管线测试）需要 GPU 加速器
+                    if (benchSubMode == "render" || switches.ContainsKey("preferHwAccelDecoder"))
+                    {
+                        var accelResult1 = InitAccel(switches);
+                        if (accelResult1 != 0)
+                        {
+                            return accelResult1;
+                        }
+                    }
+
                     try
                     {
-                        return await GoBench(switches);
+                        return benchSubMode switch
+                        {
+                            "encode" => await GoBenchEncode(switches),
+                            "decode" => await GoBenchDecode(switches),
+                            _ => await GoBenchRender(switches),
+                        };
                     }
                     catch (TaskCanceledException)
                     {
                         Log("Benchmark task was canceled.");
                         return 255;
                     }
-                    break;
                 case "list_accels":
                     Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                     var devices = context.Devices.ToList();
@@ -564,6 +621,21 @@ namespace projectFrameCut.StandaloneRender
 
             Log($"GC Option:{GCOption}");
 
+            int maxPendingWriteFrames = 0; // 0 = use Renderer default
+            if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
+            {
+                if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
+                {
+                    Log($"Invalid maxPendingWriteFrames value '{mpwf}', must be a non-negative integer. Default will be used.", "warn");
+                    maxPendingWriteFrames = 0;
+                }
+                else
+                {
+                    Log($"Max pending write frames: {maxPendingWriteFrames}");
+                }
+            }
+            double maxPendingWriteFramesDouble = maxPendingWriteFrames;
+
             ConcurrentDictionary<string, AssetItem> assets = new();
 
             if (switches.TryGetValue("assetDbFile", out var assetDbPath))
@@ -648,7 +720,9 @@ namespace projectFrameCut.StandaloneRender
 
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
-            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
 
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
@@ -663,9 +737,19 @@ namespace projectFrameCut.StandaloneRender
                 IVideoSource.EnableDiskCache = false;
             }
 
-            IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
+            var diskCacheRoutingEnabled = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache;
+            if (diskCacheRoutingEnabled)
+            {
+                var threshold = switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                    && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct)
+                    ? Math.Clamp(dct, 0.1, 0.95) : 0.7;
+                var cacheRoot = switches.TryGetValue("videoBuilderDiskCacheRoot", out var vcr) && !string.IsNullOrWhiteSpace(vcr) ? vcr : "(default temp)";
+                var maxPending = maxPendingWriteFrames > 0 ? maxPendingWriteFrames.ToString() : "(auto)";
+                var maxFrames = switches.TryGetValue("diskCacheMaxFrameCount", out var mfcStr) && int.TryParse(mfcStr, out var mfc) ? mfc : 0;
+                Log($"VideoBuilder disk cache routing: Enabled, threshold: {threshold:P0} of max pending ({maxPending}), max frames on disk: {(maxFrames > 0 ? maxFrames.ToString() : "unlimited")}, cache root: {cacheRoot}");
+            }
 
-            Log($"Video decoding: Prefer HWAccel: {YesNo(hwAccelDecode)}, Memory cache: {YesNo(IVideoSource.EnableMemoryCache)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
+            Log($"Video decoding: Prefer HWAccel Decode: {YesNo(hwAccelDecode)} Encode: {YesNo(hwAccelEncode)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}, Disk buffer: {YesNo(diskCacheRoutingEnabled)}");
 
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
 
@@ -743,7 +827,18 @@ namespace projectFrameCut.StandaloneRender
                     DisposeFrameAfterEachWrite = true,
                     Duration = timeline.Duration,
                     BlockWrite = oneByOneRender,
+                    EnableDiskCacheRouting = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache,
+                    ForceUseDiskCache = bool.TryParse(switches.GetOrAdd("forceUseDiskCache", "false"), out var forceUseDiskCache) && forceUseDiskCache,
+                    DiskCacheMaxPendingFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
+                    DiskCacheMaxFrameCount = switches.TryGetValue("diskCacheMaxFrameCount", out var mfcStr) && int.TryParse(mfcStr, out var mfc) ? Math.Max(mfc, 0) : 0,
+                    DiskCacheDirectory = switches.TryGetValue("videoBuilderDiskCacheRoot", out var cacheRoot) && !string.IsNullOrWhiteSpace(cacheRoot) ? cacheRoot : null,
                 };
+
+                if (builder.EnableDiskCacheRouting && switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                    && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct))
+                {
+                    builder.DiskCacheThreshold = Math.Clamp(dct, 0.1, 0.95);
+                }
 
                 renderer = new Renderer
                 {
@@ -759,6 +854,7 @@ namespace projectFrameCut.StandaloneRender
                     MaxRenderScheduleTimeout = 0,
                     MinSchedulePreparedFrames = 1,
                     MaxThreads = maxParallelThreads,
+                    MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                     RenderByLayers = renderByLayer,
                     PrepareInWorkerThreads = prepareInWorker,
                     OneByOneRender = oneByOneRender,
@@ -777,13 +873,14 @@ namespace projectFrameCut.StandaloneRender
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                         FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
 #endif
+                        double writeBufFree = maxPendingWriteFrames > 0 ? builder.PendingWriteCount / maxPendingWriteFramesDouble : 0;
                         if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2}          \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2}, buffer: {writeBufFree:p2} on ram used and {builder.FramesOnDisk} on disk          \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame          \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame, buffer: {writeBufFree:p2} on ram used and {builder.FramesOnDisk} on disk        \r");
                         }
                     };
                 }
@@ -1019,7 +1116,7 @@ namespace projectFrameCut.StandaloneRender
         /// 运行内置基准测试：使用 <see cref="BenchmarkSourceGenerator.GetDraftStructure"/>
         /// 生成的测试项目进行渲染管线性能测试，输出详细的帧时间统计。
         /// </summary>
-        private static async Task<int> GoBench(ConcurrentDictionary<string, string> switches)
+        private static async Task<int> GoBenchRender(ConcurrentDictionary<string, string> switches)
         {
             // ── 解析基准测试参数 ──────────────────────────────
             const int width = 1920;
@@ -1081,6 +1178,20 @@ namespace projectFrameCut.StandaloneRender
             if (GCOption == 2)
             {
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            }
+
+            int maxPendingWriteFrames = 0; // 0 = use Renderer default
+            if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
+            {
+                if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
+                {
+                    Log($"Invalid maxPendingWriteFrames value '{mpwf}', must be a non-negative integer. Default will be used.", "warn");
+                    maxPendingWriteFrames = 0;
+                }
+                else
+                {
+                    Log($"Max pending write frames: {maxPendingWriteFrames}");
+                }
             }
 
             string YesNo(bool b) => b ? "Yes" : "No";
@@ -1157,7 +1268,9 @@ namespace projectFrameCut.StandaloneRender
 
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
-            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
             if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
             {
@@ -1189,6 +1302,7 @@ namespace projectFrameCut.StandaloneRender
                 MinSchedulePreparedFrames = 0,
                 ThrottleThreshold = (int)(duration * 8),
                 MaxThreads = boostMode ? (int)duration : maxParallelThreads,
+                MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                 BlockPreparingBeforeRendering = boostMode,
                 DisableAllThrottleOptions = boostMode,
                 RenderByLayers = renderByLayer,
@@ -1338,6 +1452,335 @@ namespace projectFrameCut.StandaloneRender
             }
             renderer.builder = null;
 
+            return 0;
+        }
+
+        /// <summary>
+        /// 编码性能基准测试：使用 <see cref="VideoBuilder"/>，
+        /// 生成随机帧并以乱序追加，以模拟真实渲染场景中的 Cache 访问模式。
+        /// 指定 -output 时可写入实际视频文件（否则使用 BlackHoleWriter）。
+        /// </summary>
+        private static async Task<int> GoBenchEncode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            const int width = 1920;
+            const int height = 1080;
+            const int defaultFps = 60;
+
+            var totalFrames = uint.TryParse(switches.GetOrAdd("totalFrames", "600"), out var tf) ? tf : 600u;
+            var fpsSetting = int.TryParse(switches.GetOrAdd("fps", defaultFps.ToString()), out var fps) ? fps : defaultFps;
+
+            // 磁盘缓存路由
+            var diskCacheThreshold = switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct)
+                ? Math.Clamp(dct, 0.1, 0.95) : 0.85;
+            var enableDiskCache = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var edc) && edc;
+            var maxPendingFrames = int.TryParse(switches.GetOrAdd("maxPendingWriteFrames", "0"), out var mpf) ? mpf : 0;
+
+            // ── 输出路径 ────────────────────────────────────────
+            var outputPath = switches.TryGetValue("output", out var outPath) && !string.IsNullOrWhiteSpace(outPath)
+                ? outPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"))
+                : null;
+
+            var useRealEncoder = outputPath is not null;
+            string encoder, pixelFormat;
+            string builderLabel;
+
+            if (useRealEncoder)
+            {
+                encoder = switches.GetOrAdd("encoder", "libx264");
+                pixelFormat = switches.GetOrAdd("pixelFormat", "AV_PIX_FMT_YUV420P");
+                builderLabel = $"{encoder} → {outputPath}";
+                Log($"Output: {outputPath}, encoder: {encoder}, pixel format: {pixelFormat}");
+            }
+            else
+            {
+                encoder = "BlackHoleWriter";
+                pixelFormat = "";
+                builderLabel = "BlackHoleWriter (null output)";
+                Log("No -output specified; using BlackHoleWriter (no real file written).");
+            }
+
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            Log($"Encode bench: {totalFrames} frames, {width}x{height} @ {fps}fps");
+            Log($"Disk cache: {YesNo(enableDiskCache)} (threshold: {diskCacheThreshold:P0})");
+            // ── 初始化 FFmpeg ────────────────────────────────
+            Log("Initializing FFmpeg for encode bench...");
+            DynamicallyLoadedBindings.EnableAutoInitialization = false;
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+            if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+            {
+                FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
+                Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
+            }
+            else
+            {
+                Log($"FFmpeg library failed to load. ({ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")})", "error");
+                return 1;
+            }
+            FFmpegHelper.SetupFFmpegLogging();
+            Log($"FFmpeg library path: {ffmpeg.RootPath}");
+
+            // ── 创建 VideoBuilder ──────────────────────────────
+            var builder = new VideoBuilder(outputPath ?? "/dev/null", width, height, fps, encoder, pixelFormat)
+            {
+                Duration = totalFrames,
+                // 允许乱序追加
+                StrictMode = false,
+                AllowDuplicatedFrameWrite = false,
+                DisposeFrameAfterEachWrite = true,
+                EnableDiskCacheRouting = enableDiskCache,
+                DiskCacheThreshold = diskCacheThreshold,
+                DiskCacheMaxPendingFrames = maxPendingFrames,
+                // 关闭自动预览日志避免干扰
+                EnablePreview = false,
+            };
+
+            Log($"VideoBuilder initialized with {builderLabel}.");
+
+            // ── 生成随机帧索引（Fisher-Yates 洗牌）─────────────
+            var frameIndices = new uint[totalFrames];
+            for (uint i = 0; i < totalFrames; i++) frameIndices[i] = i;
+            var rng = Random.Shared;
+            for (int i = frameIndices.Length - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (frameIndices[i], frameIndices[j]) = (frameIndices[j], frameIndices[i]);
+            }
+
+            // ── 预生成帧数据 ──────────────────────────────────
+            Log("Pre-generating frame data...");
+            var frames = new IPicture[totalFrames];
+            for (uint i = 0; i < totalFrames; i++)
+            {
+                var r = (byte)rng.Next(256);
+                var g = (byte)rng.Next(256);
+                var b = (byte)rng.Next(256);
+                frames[i] = Picture8bpp.GenerateSolidColor(width, height, r, g, b, a: null);
+                frames[i].Tag = $"generated frame #{i}";
+            }
+            Log($"Generated {totalFrames} frames.");
+
+            // ── 启动写入线程 ──────────────────────────────────
+            builder.Build()?.Start();
+            Log("Writer thread started.");
+
+            // ── 乱序追加 ──────────────────────────────────────
+            Log("Appending frames in random order...");
+            var swAppend = Stopwatch.StartNew();
+            long peakPending = 0;
+
+            for (int i = 0; i < frameIndices.Length; i++)
+            {
+                var idx = frameIndices[i];
+                builder.Append(idx, frames[idx]);
+
+                var pending = builder.PendingWriteCount;
+                if (pending > peakPending) peakPending = pending;
+
+                if ((i + 1) % Math.Max(totalFrames / 10, 1) == 0)
+                {
+                    var pct = (double)(i + 1) / totalFrames;
+                    Console.Write($"\rAppending: {pct:P0} ({i + 1}/{totalFrames}), pending: {builder.PendingWriteCount}, disk: {builder.FramesOnDisk}         ");
+                }
+            }
+            swAppend.Stop();
+            Console.WriteLine();
+            Log($"Append done in {swAppend.Elapsed.TotalSeconds:F3}s, peak pending: {peakPending}, final pending: {builder.PendingWriteCount}, disk: {builder.FramesOnDisk}");
+
+            var appendFps = totalFrames / swAppend.Elapsed.TotalSeconds;
+
+            // ── 等待写入/编码完成 ─────────────────────────────
+            Log("Waiting for writer to drain (encode remaining frames)...");
+            var swFlush = Stopwatch.StartNew();
+            builder.Finish(
+                regenerator: idx => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, null),
+                totalFrames: totalFrames,
+                onWritingProgressUpdate: (c, p) => Console.Write($"\rFlushing: frame #{c} / {totalFrames} ({p:P2})    ")
+            );
+            swFlush.Stop();
+            Console.WriteLine();
+
+            var totalTime = swFlush.Elapsed;
+            var encodeFps = totalFrames / Math.Max(totalTime.TotalSeconds, 0.001);
+
+            // ── 结果统计 ──────────────────────────────────────
+            Log("");
+            Log("========================================", "stat");
+            if (useRealEncoder)
+                Log("  Encode Benchmark Results (real video)", "stat");
+            else
+                Log("  Encode Benchmark Results (null device)", "stat");
+            Log("========================================", "stat");
+            Log($"  Total frames       : {totalFrames}", "stat");
+            Log($"  Resolution         : {width}x{height}", "stat");
+            Log($"  FPS setting        : {fps}", "stat");
+            if (useRealEncoder)
+            {
+                Log($"  Encoder            : {encoder}", "stat");
+                Log($"  Pixel format       : {pixelFormat}", "stat");
+                Log($"  Output file        : {outputPath}", "stat");
+            }
+            Log($"  Disk cache         : {YesNo(enableDiskCache)} (@ {diskCacheThreshold:P0} threshold)", "stat");
+            Log($"  Append FPS         : {appendFps:F2}", "stat");
+            Log($"  Encode FPS         : {encodeFps:F2}", "stat");
+            if (useRealEncoder)
+            {
+                var bitsPerFrame = (long)width * height * 3 * 8; // approx YUV 4:2:0 → 12 bpp → 12 bits
+                var bitrate = (long)(bitsPerFrame * fps);
+                Log($"  Est. bitrate       : {bitrate / 1000.0 / 1000.0:F1} Mbps (raw, uncompressed)", "stat");
+            }
+            Log($"  Total time         : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Peak pending count : {peakPending}", "stat");
+            Log($"  Final cache cleared: {builder.WrittenFramesCount}/{builder.TotalFramesCount}", "stat");
+            Log("========================================", "stat");
+
+            builder.Dispose();
+            return 0;
+        }
+
+        /// <summary>
+        /// 解码性能基准测试：创建 <see cref="IVideoSource"/> 并顺序解码所有帧，
+        /// 测量解码吞吐量（FPS）和速度倍率。
+        /// </summary>
+        private static async Task<int> GoBenchDecode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            if (!switches.TryGetValue("source", out var sourcePath) || string.IsNullOrWhiteSpace(sourcePath))
+            {
+                Log("ERROR: Decode benchmark requires -source=<video file path>.", "error");
+                return 1;
+            }
+
+            if (!File.Exists(sourcePath))
+            {
+                Log($"ERROR: Source file '{sourcePath}' not found.", "error");
+                return 1;
+            }
+
+            var maxFrames = int.TryParse(switches.TryGetValue("maxFrames", out var mf) ? mf : "0", out var parsedMf) && parsedMf > 0 ? parsedMf : 0;
+            var enableDiskCache = bool.TryParse(switches.GetOrAdd("VideoFrameDiskCache", "false"), out var edc) && edc;
+
+            IVideoSource.EnableDiskCache = enableDiskCache;
+
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            Log($"Decode bench source: {sourcePath}");
+            Log($"Disk cache: {YesNo(enableDiskCache)}");
+
+            // ── 创建解码器 ──────────────────────────────────────
+            Log("Creating video source...");
+            IVideoSource? source = null;
+            try
+            {
+                source = PluginManager.CreateVideoSource(sourcePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to create video source");
+                return 1;
+            }
+
+            if (source is null)
+            {
+                Log("ERROR: Failed to create video source - no plugin supports this file.", "error");
+                return 1;
+            }
+
+            source.Initialize();
+            source.StrictMode = false;
+
+            var totalFrames = source.TotalFrames > 0 ? source.TotalFrames : 0;
+            if (totalFrames <= 0)
+            {
+                Log("WARN: Cannot determine total frame count, estimating via probing...", "warn");
+                // 尝试探测帧数
+                totalFrames = 0;
+                for (uint probe = 0; probe < 100000; probe += 100)
+                {
+                    try
+                    {
+                        using var probeFrame = source.GetFrame(probe, false);
+                        if (probeFrame is null) break;
+                        totalFrames = probe + 1;
+                    }
+                    catch { break; }
+                }
+                if (totalFrames <= 0)
+                {
+                    Log("ERROR: Cannot determine total frame count, aborting.", "error");
+                    source.Dispose();
+                    return 1;
+                }
+            }
+
+            var decodeTotal = maxFrames > 0 ? Math.Min(maxFrames, totalFrames) : totalFrames;
+
+            Log($"Source: {source.Width}x{source.Height}, {source.Fps:F2}fps, {decodeTotal}/{totalFrames} frames, decoder: {source.TypeName}");
+
+            // ── 热启动（丢弃前几帧加载开销）────────────────────
+            var warmupCount = (int)Math.Min(30, decodeTotal / 10);
+            Log($"Warming up ({warmupCount} frames)...");
+            for (uint i = 0; i < warmupCount; i++)
+            {
+                using var warmupFrame = source.GetFrame(i, false);
+            }
+            Log("Warm-up done.");
+
+            // ── 解码测试 ──────────────────────────────────────
+            Log("Starting decode benchmark...");
+            Console.CursorVisible = false;
+            var sw = Stopwatch.StartNew();
+            long decodedBytes = 0;
+            int decodedCount = 0;
+
+            for (uint i = 0; i < decodeTotal; i++)
+            {
+                using var frame = source.GetFrame(i, false);
+                if (frame is not null)
+                {
+                    decodedCount++;
+                    decodedBytes += frame.Width * frame.Height * (frame.BitPerPixel / 8);
+                }
+
+                if ((i + 1) % (Math.Max(decodeTotal / 50, 1)) == 0 || i == decodeTotal - 1)
+                {
+                    var pct = (double)(i + 1) / decodeTotal;
+                    var elapsed = sw.Elapsed.TotalSeconds;
+                    var currentFps = (i + 1) / Math.Max(elapsed, 0.001);
+                    Console.Write($"\rDecoding: {pct:P1} ({i + 1}/{decodeTotal}), {currentFps:F1} FPS, elapsed: {elapsed:F1}s      ");
+                }
+            }
+            sw.Stop();
+            Console.WriteLine();
+            Console.CursorVisible = true;
+
+            // ── 结果统计 ──────────────────────────────────────
+            var totalTime = sw.Elapsed;
+            var decodeFps = decodedCount / Math.Max(totalTime.TotalSeconds, 0.001);
+            var speedVsRealtime = decodeFps / Math.Max(source.Fps, 1.0);
+            var bandwidthMbps = (decodedBytes / Math.Max(totalTime.TotalSeconds, 0.001)) / (1024.0 * 1024.0);
+
+            Log("");
+            Log("========================================", "stat");
+            Log("  Decode Benchmark Results", "stat");
+            Log("========================================", "stat");
+            Log($"  Source file        : {Path.GetFileName(sourcePath)}", "stat");
+            Log($"  Resolution         : {source.Width}x{source.Height}", "stat");
+            Log($"  Source FPS         : {source.Fps:F2}", "stat");
+            Log($"  Decoder            : {source.TypeName}", "stat");
+            Log($"  Disk cache         : {YesNo(enableDiskCache)}", "stat");
+            Log($"  Frames decoded     : {decodedCount}/{decodeTotal}", "stat");
+            Log($"  Total time         : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Decode FPS         : {decodeFps:F2}", "stat");
+            Log($"  Speed vs realtime  : {speedVsRealtime:F2}x", "stat");
+            Log($"  Bandwidth          : {bandwidthMbps:F1} MB/s (raw pixel)", "stat");
+            Log($"  Avg per frame      : {(totalTime.TotalMilliseconds / Math.Max(decodedCount, 1)):F3}ms", "stat");
+            Log("========================================", "stat");
+
+            source.Dispose();
             return 0;
         }
 

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.RenderAPIBase.Context;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -429,4 +430,145 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
     }
 
+
+    /// <summary>
+    /// A video clip that uses an <see cref="IVirtualVideoSource"/> to generate frames procedurally,
+    /// such as from a shader, mathematical function, or any other procedural source.
+    /// Unlike <see cref="VideoClip"/>, this clip does not require a file on disk —
+    /// frames are generated on-the-fly by the <see cref="VirtualSource"/>.
+    /// </summary>
+    public class VirtualSourceVideoClip : IClip
+    {
+        public required Guid Id { get; init; }
+        public required string Name { get; init; }
+        public uint LayerIndex { get; init; } = 0;
+        public uint SubLayerIndex { get; init; }
+        public uint StartFrame { get; init; }
+        public uint RelativeStartFrame { get; init; }
+        public uint Duration { get; set; }
+        public float FrameTime { get; init; }
+        public float SecondPerFrameRatio { get => 1; init { } }
+
+        [JsonIgnore]
+        public string? FilePath { get; set; }
+
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; } = new();
+        public bool ExtendToWholeDraft { get; set; }
+        [JsonIgnore]
+        public bool NeedFilePath => false;
+
+        [JsonIgnore]
+        public IVirtualVideoSource? VirtualSource { get; set; }
+
+        public ClipMode ClipType => ClipMode.VideoClip;
+        public string TypeName => "VirtualSourceVideoClip";
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        public string BindedSoundTrack { get; init; } = "";
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
+        public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
+        public IMixture? MixtureInstance { get; set; }
+        public ISourceReplacementEffect? AlternativeSource { get; set; }
+
+        /// <summary>
+        /// The native width of the virtual source's generated frames.
+        /// Used when <see cref="IVirtualVideoSource.Init"/> is called during <see cref="IClip.ReInit"/>.
+        /// If 0 or negative, falls back to <see cref="TargetWidth"/>, then to 1920.
+        /// </summary>
+        public int VirtualWidth { get; set; }
+
+        /// <summary>
+        /// The native height of the virtual source's generated frames.
+        /// Used when <see cref="IVirtualVideoSource.Init"/> is called during <see cref="IClip.ReInit"/>.
+        /// If 0 or negative, falls back to <see cref="TargetHeight"/>, then to 1080.
+        /// </summary>
+        public int VirtualHeight { get; set; }
+
+        /// <summary>
+        /// The native frame rate of the virtual source, in frames per second.
+        /// Used when <see cref="IVirtualVideoSource.Init"/> is called during <see cref="IClip.ReInit"/>.
+        /// If 0 or negative, inferred from <see cref="FrameTime"/>, then defaults to 30.
+        /// </summary>
+        public float VirtualFps { get; set; }
+
+        public VirtualSourceVideoClip()
+        {
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource)
+                = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+        }
+
+        /// <summary>
+        /// Generate a frame from the virtual source at the given source-relative index,
+        /// then resize and convert to the target format.
+        /// </summary>
+        public IPicture GetFrameRelativeToStartPointOfSource(
+            uint targetFrame,
+            int targetWidth,
+            int targetHeight,
+            bool forceResize,
+            IPicture.PicturePixelMode targetPPB)
+        {
+            if (VirtualSource is null)
+            {
+                throw new NullReferenceException(
+                    $"Virtual source is null for clip '{Name}' ({Id}). Set VirtualSource before rendering.");
+            }
+
+            // Clamp to valid range — virtual sources are finite (bounded by Duration)
+            if (Duration > 0 && targetFrame >= Duration)
+            {
+                targetFrame = Duration - 1;
+            }
+
+            return VirtualSource
+                .Generate(targetFrame, hasAlpha: true)
+                .Resize(targetWidth, targetHeight, forceResize)
+                .ToBitPerPixel(targetPPB);
+        }
+
+        /// <summary>
+        /// Initialize (or re-initialize) the virtual source with the clip's native resolution,
+        /// frame rate, duration, and target pixel format.
+        /// </summary>
+        void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+            if (VirtualSource is null)
+            {
+                throw new NullReferenceException(
+                    $"Virtual source is null for clip '{Name}' ({Id}). Cannot re-initialize.");
+            }
+
+            // Resolve native dimensions for the virtual source
+            int initWidth = TargetWidth;
+            int initHeight = TargetHeight;
+
+            // Guard against degenerate or unset dimensions
+            if (initWidth <= 0) initWidth = IRenderContext.Current?.TargetWidth ?? 1920;
+            if (initHeight <= 0) initHeight = IRenderContext.Current?.TargetHeight ?? 1080;
+
+            // Resolve frame rate
+            int fps = (int)(VirtualFps > 0
+                ? (int)Math.Ceiling(VirtualFps)
+                : (FrameTime > 0 ? (int)Math.Ceiling(1f / FrameTime) : (1 / (IRenderContext.Current?.TargetSecondPerFrame ?? 30))));
+
+            // Duration must be at least 1 frame for a valid virtual source
+            uint duration = Duration > 0 ? Duration : 1;
+
+            VirtualSource.Init(initWidth, initHeight, fps, duration, targetPPB);
+
+            // Rebuild effect, speed-variance, and mixture instances from serialized data
+            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource)
+                = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+        }
+
+        void IDisposable.Dispose()
+        {
+            VirtualSource?.Dispose();
+        }
+    }
 }

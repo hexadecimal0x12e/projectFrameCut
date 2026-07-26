@@ -159,16 +159,17 @@ public class InternalPluginBase : IPluginBase
 
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
-        (HWAccelOptionGetter() ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
-            : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HDRDecoderContext", new((p) => new HDRDecoderContext(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("FFmpegDeviceDecoderContext", new((p) => new FFmpegDeviceDecoderContext(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
-        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContextPJFCProject", new((p) => new DecoderContextPJFCProject(p))))
-        .ToDictionary();
+        new Dictionary<string, (Func<bool>, Func<string, IVideoSource>)>
+        {
+            { "DecoderContextHW", (HWAccelDecodeOptionGetter, new((p) => new DecoderContextHW(p))) },
+            { "DecoderContext8Bit", (AlwaysTrue, new((p) => new DecoderContext8Bit(p))) },
+            { "DecoderContext16Bit", (AlwaysTrue, new((p) => new DecoderContext16Bit(p))) },
+            { "HDRDecoderContext", (AlwaysTrue, new((p) => new HDRDecoderContext(p))) },
+            { "HttpDecoderContext", (AlwaysTrue, new((p) => new HttpDecoderContext(p))) },
+            { "FFmpegDeviceDecoderContext", (AlwaysTrue, new((p) => new FFmpegDeviceDecoderContext(p))) },
+            { "RPSVDecoderContext", (AlwaysTrue, new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))) },
+            { "DecoderContextPJFCProject", (AlwaysTrue, new((p) => new DecoderContextPJFCProject(p))) }
+        }.ComputeCondition();
 
 
 
@@ -186,13 +187,14 @@ public class InternalPluginBase : IPluginBase
         {"AudioDecoder", (s) => new Float32bitAudioDecoder(s) }
     };
 
-    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
-    {
-        {"VideoWriter", new((_) => new VideoWriter()) },
-        {"HDRVideoWriter", new((_) => new HDRVideoWriter()) },
-        {"HDRWriter", new((_) => new HDRVideoWriter()) },
-        {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
-    };
+    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider =>
+        new Dictionary<string, (Func<bool>, Func<string, IVideoWriter>)>
+        {
+            { "VideoWriterHWAccel", (HWAccelEncodeOptionGetter, new((_) => new VideoWriterHWAccel())) },
+            { "VideoWriter", (AlwaysTrue, new((_) => new VideoWriter())) },
+            { "HDRVideoWriter", (AlwaysTrue, new((_) => new HDRVideoWriter())) },
+            { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }
+        }.ComputeCondition();
 
     public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
     {
@@ -208,7 +210,7 @@ public class InternalPluginBase : IPluginBase
         Logger.Log($"Found clip {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
         return type switch
         {
-            ClipMode.VideoClip => element.Deserialize<VideoClip>() ?? throw new NullReferenceException(),
+            ClipMode.VideoClip => HandleVideoClip(element),
             ClipMode.PhotoClip => HandlePhotoClip(element),
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
@@ -218,6 +220,15 @@ public class InternalPluginBase : IPluginBase
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
+    }
+
+    private static IClip HandleVideoClip(JsonElement element)
+    {
+        if (element.TryGetProperty("TypeName", out var e) && e.GetString() == "VirtualSourceVideoClip")
+        {
+            return element.Deserialize<VirtualSourceVideoClip>() ?? throw new NullReferenceException();
+        }
+        return element.Deserialize<VideoClip>() ?? throw new NullReferenceException();
     }
 
     private static IClip HandlePhotoClip(JsonElement element)
@@ -303,8 +314,7 @@ public class InternalPluginBase : IPluginBase
         FailedReason = "";
         return true;
     }
-
-
-    public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
-
+    public static Func<bool> HWAccelDecodeOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccelDecoding"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
+    public static Func<bool> HWAccelEncodeOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccelEncoding"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
+    private static bool AlwaysTrue() => true;
 }
