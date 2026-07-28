@@ -130,7 +130,12 @@ namespace projectFrameCut.Render.Rendering
         private SemaphoreSlim _threadLimiter = null!;
 
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
-        ConcurrentDictionary<uint, byte> PreparedFlag = new();
+        /// <summary>
+        /// Per-frame prepared flag array indexed by (frame - StartFrame).
+        /// 0 = not prepared, 1 = prepared-and-queued, 2 = pre-cached by RenderSpecificFrame.
+        /// Uses <see cref="Interlocked.CompareExchange"/> for atomic access.
+        /// </summary>
+        int[] _preparedFlagArray = [];
 
         int TotalEnqueued = 0;
         volatile bool PreparerFinished = false;
@@ -241,7 +246,8 @@ namespace projectFrameCut.Render.Rendering
                         FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
                     }
                 }
-                if (PreparedFlag.TryAdd(idx, 0))
+                int prepFlagArrayIdx = (int)(idx - StartFrame);
+                if (prepFlagArrayIdx >= 0 && prepFlagArrayIdx < _preparedFlagArray.Length && Interlocked.CompareExchange(ref _preparedFlagArray[prepFlagArrayIdx], 1, 0) == 0)
                 {
                     PreparedFrames.Enqueue(idx);
                     Interlocked.Increment(ref TotalEnqueued);
@@ -257,6 +263,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void InitializeRenderCaches()
         {
+            _preparedFlagArray = new int[Duration];
             _ppb = Use16Bit ? 16 : 8;
             if (builder is not null)
             {
@@ -471,6 +478,77 @@ namespace projectFrameCut.Render.Rendering
             return false;
         }
 
+        #region scheduler helpers
+
+        private readonly record struct SchedulerConfig(
+            int WatchdogTimeoutMs,
+            double LaunchUtilizationThreshold,
+            int PreparePollDelayMs,
+            int IdleDelayMs,
+            int MinRemainingFramesForPreparedWait,
+            int MaxRenderScheduleTimeoutValue);
+
+        private SchedulerConfig ResolveSchedulerConfig()
+        {
+            int watchdog = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
+            double util = RenderWorkerLaunchUtilizationThreshold;
+            if (double.IsNaN(util) || double.IsInfinity(util) || util <= 0) util = 1.0;
+            if (util > 1.0) util = 1.0;
+            int preparePollMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
+            int idleMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
+            int minPrepared = MinRemainingFramesForPreparedWait >= 0
+                ? MinRemainingFramesForPreparedWait
+                : Math.Max(0, MaxThreads / 2 - 2);
+            int maxTimeout = MaxRenderScheduleTimeout > 0 ? MaxRenderScheduleTimeout : 500;
+            return new(watchdog, util, preparePollMs, idleMs, minPrepared, maxTimeout);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void HandleGarbageCollection()
+        {
+            if (GCOption == 2)
+            {
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForFullGCComplete();
+            }
+            else if (GCOption == 1)
+            {
+                GC.Collect();
+            }
+        }
+
+        private static void HandleSchedulerExceptions(ConcurrentQueue<Exception> exceptions, string contextMessage)
+        {
+            if (exceptions.IsEmpty) return;
+            var list = new List<Exception>();
+            while (exceptions.TryDequeue(out var ex)) list.Add(ex);
+            if (list.Count == 1) throw list.First();
+            throw new AggregateException(contextMessage, list);
+        }
+
+        private void StartStatLoggerThread(CancellationToken token, bool includeQueueAndWriterStats)
+        {
+            new Thread(() =>
+            {
+                while (running)
+                {
+                    try
+                    {
+                        if (token.IsCancellationRequested) return;
+                        Log(GetRendererStatusInfo(includeQueueAndWriterStats), "STAT");
+                        Thread.Sleep(10000);
+                    }
+                    catch { }
+                }
+            })
+            {
+                Name = "Stat logger thread",
+                IsBackground = false
+            }.Start();
+        }
+
+        #endregion
+
         private async Task GoBackgroundPreparerRender(CancellationToken token)
         {
             // Initialize thread limiter
@@ -489,26 +567,7 @@ namespace projectFrameCut.Render.Rendering
 
 
             running = true;
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: true);
 
             Thread preparer = new(() =>
             {
@@ -613,18 +672,7 @@ namespace projectFrameCut.Render.Rendering
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
             await Task.Delay(50, token);
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int preparePollDelayMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
-            int minRemainingFramesForPreparedWait = MinRemainingFramesForPreparedWait >= 0
-                ? MinRemainingFramesForPreparedWait
-                : Math.Max(0, MaxThreads / 2 - 2);
-
+            var cfg = ResolveSchedulerConfig();
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastManuallyStarted = 0;
             int lastFinished = Volatile.Read(ref Finished);
@@ -651,17 +699,17 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
                 if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? preparedCount : Math.Min(preparedCount, availableSlots);
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
                         if (availableSlots == 0)
                         {
                             Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked (e.g. in effects/mixer) or the writer is stuck waiting for a missing frame index.", "warn");
@@ -671,9 +719,9 @@ namespace projectFrameCut.Render.Rendering
                     {
                         // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
                         Stopwatch waitElapsed = Stopwatch.StartNew();
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > minRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > cfg.MinRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
                         {
-                            await Task.Delay(preparePollDelayMs, token);
+                            await Task.Delay(cfg.PreparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
                                 lastManuallyStarted += PreparedFrames.Count;
@@ -688,18 +736,10 @@ namespace projectFrameCut.Render.Rendering
 
                     lastActivity.Restart();
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
 
                     // Writer backpressure throttle
-                    if (!await CheckWriterBackpressureAsync(preparePollDelayMs, token))
+                    if (!await CheckWriterBackpressureAsync(cfg.PreparePollDelayMs, token))
                         break;
                     lastActivity.Restart();
                     toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
@@ -727,18 +767,11 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(idleDelayMs, token);
+                    await Task.Delay(cfg.IdleDelayMs, token);
                 }
 
 
-                if (!exceptions.IsEmpty)
-                {
-                    Log("Exceptions occurred during rendering. Aborting.", "error");
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during rendering.", list);
-                }
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during rendering.");
 
             }
             if (token.IsCancellationRequested)
@@ -788,6 +821,7 @@ namespace projectFrameCut.Render.Rendering
             running = true;
 
             var (Mask, Description) = ResolveWorkerThreadAffinityTargetCores();
+            var workerAffinityMask = ResolveWorkerThreadAffinity().Mask; // ulong? for StartWorkerThread compatibility
             int[] reversedMask = [];
             if (Mask?.Any() ?? false)
             {
@@ -818,6 +852,8 @@ namespace projectFrameCut.Render.Rendering
                     {
                         ThreadAffinityHelper.SetCurrentThreadAffinity(reversedMask); //let preparing work can eat all small cores
                     }
+
+                    FlushBlankFramesBefore(targetFrame, token);
 
                     if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clips) || clips == null || clips.Length == 0)
                     {
@@ -896,26 +932,12 @@ namespace projectFrameCut.Render.Rendering
                 Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
                 {
                     Interlocked.Increment(ref ThreadWorking);
-                    new Thread(() =>
-                    {
-                        worker((uint)i);
-                    })
-                    {
-                        Name = $"Worker-Decode render #{i}",
-                        IsBackground = false,
-                        Priority = ThreadPriority.Highest
-                    }.Start();
+                    StartWorkerThread($"Worker-Decode render #{i}", () => worker((uint)i), workerAffinityMask);
                 });
                 goto done;
             }
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
+            var cfg = ResolveSchedulerConfig();
 
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastFinished = Volatile.Read(ref Finished);
@@ -945,31 +967,23 @@ namespace projectFrameCut.Render.Rendering
                     break;
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
 
                 if (queuedFrames > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? queuedFrames : Math.Min(queuedFrames, availableSlots);
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. queued={queuedFrames}, working={working}/{MaxThreads}, finished={finished}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. queued={queuedFrames}, working={working}/{MaxThreads}, finished={finished}/{Duration}.", "warn");
                     }
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
 
                     // Writer backpressure throttle
-                    if (!await CheckWriterBackpressureAsync(idleDelayMs, token))
+                    if (!await CheckWriterBackpressureAsync(cfg.IdleDelayMs, token))
                         break;
                     lastActivity.Restart();
                     toStart = forceStart ? frameQueue.Count : Math.Min(frameQueue.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
@@ -988,15 +1002,21 @@ namespace projectFrameCut.Render.Rendering
 
                         Interlocked.Increment(ref ThreadWorking);
 
-                        new Thread(() =>
+                        if (Mask is not null)
                         {
-                            worker(targetFrame);
-                        })
+                            // With affinity: must create dedicated threads (two-phase affinity would pollute ThreadPool)
+                            new Thread(() => { worker(targetFrame); })
+                            {
+                                Name = $"Worker-Decode render #{targetFrame}",
+                                IsBackground = false,
+                                Priority = ThreadPriority.Highest
+                            }.Start();
+                        }
+                        else
                         {
-                            Name = $"Worker-Decode render #{targetFrame}",
-                            IsBackground = false,
-                            Priority = ThreadPriority.Highest
-                        }.Start();
+                            // No affinity: reuse ThreadPool to avoid per-frame thread creation cost
+                            ThreadPool.QueueUserWorkItem(_ => worker(targetFrame));
+                        }
 
                     }
 
@@ -1006,14 +1026,12 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 enqueueFramesToThrottle();
-                await Task.Delay(idleDelayMs, token);
-                if (!exceptions.IsEmpty)
+                if (nextFrameToEnqueue >= renderEndFrame && frameQueue.IsEmpty && Volatile.Read(ref ThreadWorking) == 0 && !BlankFrames.IsEmpty)
                 {
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during worker-decoded rendering.", list);
+                    FlushBlankFramesBefore(StartFrame + Duration, token);
                 }
+                await Task.Delay(cfg.IdleDelayMs, token);
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during worker-decoded rendering.");
             }
 
         done:
@@ -1032,7 +1050,9 @@ namespace projectFrameCut.Render.Rendering
         {
 
 
-            PreparedFlag.TryRemove(targetFrame, out _);
+            int pfIdx = (int)(targetFrame - StartFrame);
+            if ((uint)pfIdx < _preparedFlagArray.Length)
+                Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx], 0, 1);
 
             if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clipsNeed) || clipsNeed.Length == 0)
             {
@@ -1066,26 +1086,7 @@ namespace projectFrameCut.Render.Rendering
         {
             Log("[Renderer] OneByOne enabled/MaxThread is 1: switching to single-threaded, synchronous render.", "info");
 
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: false), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: false);
 
             running = true;
 
@@ -1143,26 +1144,7 @@ namespace projectFrameCut.Render.Rendering
                 Log($"Using thread affinity for worker threads ({workerThreadAffinity.Description}).");
             }
 
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: true);
 
             Thread preparer = new(() =>
             {
@@ -1198,18 +1180,7 @@ namespace projectFrameCut.Render.Rendering
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
             await Task.Delay(50, token);
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int preparePollDelayMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
-            int minRemainingFramesForPreparedWait = MinRemainingFramesForPreparedWait >= 0
-                ? MinRemainingFramesForPreparedWait
-                : Math.Max(0, MaxThreads / 2 - 2);
-
+            var cfg = ResolveSchedulerConfig();
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastManuallyStarted = 0;
             int lastFinished = Volatile.Read(ref Finished);
@@ -1236,10 +1207,10 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
 
                 if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
@@ -1247,7 +1218,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
                         if (availableSlots == 0)
                         {
                             Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked or the writer is stuck waiting for a missing frame index.", "warn");
@@ -1256,9 +1227,9 @@ namespace projectFrameCut.Render.Rendering
                     else
                     {
                         Stopwatch waitElapsed = Stopwatch.StartNew();
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > minRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > cfg.MinRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
                         {
-                            await Task.Delay(preparePollDelayMs, token);
+                            await Task.Delay(cfg.PreparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
                                 lastManuallyStarted += PreparedFrames.Count;
@@ -1273,18 +1244,10 @@ namespace projectFrameCut.Render.Rendering
 
                     lastActivity.Restart();
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
 
                     // Writer backpressure throttle
-                    if (!await CheckWriterBackpressureAsync(preparePollDelayMs, token))
+                    if (!await CheckWriterBackpressureAsync(cfg.PreparePollDelayMs, token))
                         break;
                     lastActivity.Restart();
                     toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
@@ -1381,17 +1344,10 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(idleDelayMs, token);
+                    await Task.Delay(cfg.IdleDelayMs, token);
                 }
 
-                if (!exceptions.IsEmpty)
-                {
-                    Log("Exceptions occurred during rendering. Aborting.", "error");
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during rendering.", list);
-                }
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during rendering.");
             }
 
             if (token.IsCancellationRequested)
@@ -1426,7 +1382,9 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
             }
-            PreparedFlag.TryRemove(targetFrame, out _);
+            int pfIdx = (int)(targetFrame - StartFrame);
+            if ((uint)pfIdx < _preparedFlagArray.Length)
+                Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx], 0, 1);
 
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
             {
@@ -1605,7 +1563,7 @@ namespace projectFrameCut.Render.Rendering
             //    - 如果 Worker 已出队此帧（TryRemove 消费了 flag），TryAdd 也会成功，
             //      TryPreAppend 写入 Cache，Worker 结束后 RenderAFrame 会检测到并跳过
             if (builder?.FramePendedToWrite.ContainsKey(frameIndex) == false
-                && PreparedFlag.TryAdd(frameIndex, 0))
+                && TryClaimPreparedFlag(frameIndex))
             {
                 var clone = result.Clone();
                 if (builder?.TryPreAppend(frameIndex, clone) == true)
@@ -1619,7 +1577,9 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     // 认领竞争失败（另一线程先写入了），清理 flag
-                    PreparedFlag.TryRemove(frameIndex, out _);
+                    int pfIdx2 = (int)(frameIndex - StartFrame);
+                    if ((uint)pfIdx2 < _preparedFlagArray.Length)
+                        Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx2], 0, 1);
                     try { clone.Dispose(); } catch { }
                 }
             }
@@ -1843,6 +1803,10 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Copy is only materialized when a bindable effect actually gets removed
                     List<IEffect>? effectCopy = null;
+                    // Cache Computer by NeedComputer string to avoid per-effect CreateComputer overhead
+                    // (many effects in a chain often share the same computer type)
+                    string? lastComputerType = null;
+                    IComputer? cachedComputer = null;
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
                         // Try GPU batch processing (2+ consecutive GPU effects)
@@ -1859,7 +1823,13 @@ namespace projectFrameCut.Render.Rendering
 
 
                         var item = effects[_effectIdx];
-                        var computer = PluginManager.CreateComputer(item.NeedComputer);
+                        // Reuse Computer instance when NeedComputer hasn't changed within the same clip chain
+                        if (item.NeedComputer != lastComputerType)
+                        {
+                            cachedComputer = item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null;
+                            lastComputerType = item.NeedComputer;
+                        }
+                        var computer = cachedComputer;
                         IRenderContext.CurrentFrameBuffer = frame;
 
                         try
@@ -2016,9 +1986,15 @@ namespace projectFrameCut.Render.Rendering
 
                     if (effectCopy is not null)
                     {
-                        var updated = effectCopy.OrderBy(c => c.Index).ToArray();
+                        // effectCopy preserves original array order (minus removed effect).
+                        // Skip sort when reorder is disabled — OrderBy is redundant without it.
+                        var updated = effectCopy.ToArray();
                         if (AllowReorderEffect)
+                        {
+                            // Restore Index order before GPU re-batching for deterministic result.
+                            Array.Sort(updated, (a, b) => a.Index.CompareTo(b.Index));
                             updated = ReorderEffectsForGpuBatching(updated);
+                        }
                         EffectCache[clip.Id] = updated;
                     }
                 }
@@ -2622,6 +2598,17 @@ namespace projectFrameCut.Render.Rendering
             return false;
         }
 
+        /// <summary>
+        /// Atomically claims a frame in <see cref="_preparedFlagArray"/>.
+        /// Equivalent to <c>ConcurrentDictionary.TryAdd(key, 0)</c> on the old <c>PreparedFlag</c> dictionary.
+        /// Returns true if the frame was not yet claimed (CAS 0→1 succeeded).
+        /// </summary>
+        private bool TryClaimPreparedFlag(uint frameIndex)
+        {
+            int idx = (int)(frameIndex - StartFrame);
+            return (uint)idx < _preparedFlagArray.Length && Interlocked.CompareExchange(ref _preparedFlagArray[idx], 1, 0) == 0;
+        }
+
         private void InvokeProgress()
         {
             double prog = (double)Volatile.Read(ref Finished) / Duration;
@@ -2802,7 +2789,7 @@ namespace projectFrameCut.Render.Rendering
                 // Clean up thread limiter
                 try { _threadLimiter?.Dispose(); } catch { }
 
-                PreparedFlag.Clear();
+                Array.Clear(_preparedFlagArray);
                 while (PreparedFrames.TryDequeue(out _)) { }
                 while (BlankFrames.TryDequeue(out _)) { }
 

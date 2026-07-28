@@ -46,9 +46,10 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
         clip.Decoder?.EnableLock = true;
 
+        var (renderWidth, renderHeight) = ResolveRenderSize(target, canvasWidth, canvasHeight, targetWidth, targetHeight);
         var sourceFingerprint = ResolveSourceFingerprint(clip.FilePath);
-        var contextKey = new VideoPrefetchContextKey(clip.Id, canvasWidth, canvasHeight, sourceFingerprint);
-        var frameKey = new VideoFrameCacheKey(clip.Id, canvasWidth, canvasHeight, targetFrame, sourceFingerprint);
+        var contextKey = new VideoPrefetchContextKey(clip.Id, renderWidth, renderHeight, sourceFingerprint);
+        var frameKey = new VideoFrameCacheKey(clip.Id, renderWidth, renderHeight, targetFrame, sourceFingerprint);
 
         return Task.Run(() =>
         {
@@ -65,7 +66,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, canvasWidth, canvasHeight, true, 8);
+                using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, renderWidth, renderHeight, true, 8);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -98,9 +99,10 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         }
         clip.Decoder?.EnableLock = true;
 
+        var (renderWidth, renderHeight) = ResolveRenderSize(target, canvasWidth, canvasHeight, targetWidth, targetHeight);
         var sourceFingerprint = ResolveSourceFingerprint(clip.FilePath);
-        var contextKey = new VideoPrefetchContextKey(clip.Id, canvasWidth, canvasHeight, sourceFingerprint);
-        var frameKey = new VideoFrameCacheKey(clip.Id, canvasWidth, canvasHeight, targetFrame, sourceFingerprint);
+        var contextKey = new VideoPrefetchContextKey(clip.Id, renderWidth, renderHeight, sourceFingerprint);
+        var frameKey = new VideoFrameCacheKey(clip.Id, renderWidth, renderHeight, targetFrame, sourceFingerprint);
 
         if (TryGetCachedFrame(frameKey, out var cachedFrame))
         {
@@ -108,7 +110,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             return BuildImage(cachedFrame.ToImageSource());
         }
 
-        var decoded = RenderFrameAsImageSource(clip, canvasWidth, canvasHeight, targetFrame, contextKey, frameKey, persistToDisk: false);
+        var decoded = RenderFrameAsImageSource(clip, renderWidth, renderHeight, targetFrame, contextKey, frameKey, persistToDisk: false);
         if (decoded is null)
         {
             return BuildFallbackLabel("Video source is unavailable.");
@@ -129,6 +131,29 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
         };
+    }
+
+    /// <summary>
+    /// 计算视频帧的渲染尺寸。
+    /// 使用 Clip 的逻辑尺寸（或项目尺寸）作为画布，使生成出来的帧能 1:1 填入
+    /// PreviewHost；同时按 DynamicPreview 已经对画布施加的缩放因子等比缩小，
+    /// 保留视频原始比例。这样就不会把按编辑器比例 letterbox 后的画布再拉伸到
+    /// Clip 边界，从而避免预览画面与选择框错位。
+    /// </summary>
+    private static (int renderWidth, int renderHeight) ResolveRenderSize(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight)
+    {
+        var clipW = target.TargetWidth > 0 ? target.TargetWidth : (targetWidth > 0 ? targetWidth : canvasWidth);
+        var clipH = target.TargetHeight > 0 ? target.TargetHeight : (targetHeight > 0 ? targetHeight : canvasHeight);
+
+        double scaleW = targetWidth > 0 ? (double)canvasWidth / targetWidth : 1.0;
+        double scaleH = targetHeight > 0 ? (double)canvasHeight / targetHeight : 1.0;
+        var scale = Math.Min(scaleW, scaleH);
+        if (scale <= 0 || !double.IsFinite(scale)) scale = 1.0;
+
+        var renderWidth = Math.Max(1, (int)Math.Round(clipW * scale));
+        var renderHeight = Math.Max(1, (int)Math.Round(clipH * scale));
+
+        return (renderWidth, renderHeight);
     }
 
     private static bool TryGetCachedFrame(VideoFrameCacheKey frameKey, out IPicture frame)
@@ -246,7 +271,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         });
     }
 
-    private static RenderedVideoFrame? RenderFrameAsImageSource(IClip clip, int canvasWidth, int canvasHeight, uint targetFrame, VideoPrefetchContextKey contextKey, VideoFrameCacheKey frameKey, bool persistToDisk)
+    private static RenderedVideoFrame? RenderFrameAsImageSource(IClip clip, int renderWidth, int renderHeight, uint targetFrame, VideoPrefetchContextKey contextKey, VideoFrameCacheKey frameKey, bool persistToDisk)
     {
         // Double-check cache before decoding (handles race between main thread and prefetch worker).
         if (TryGetCachedFrame(frameKey, out var cached))
@@ -256,7 +281,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         }
 
         clip.ReInit(8);
-        using var frame = clip.GetFrameRelativeToStartPointOfSource(clip.TryGetRelativeFrameIndex(targetFrame, clip.StartFrame) ?? 0, canvasWidth, canvasHeight, true, 8);
+        using var frame = clip.GetFrameRelativeToStartPointOfSource(clip.TryGetRelativeFrameIndex(targetFrame, clip.StartFrame) ?? 0, renderWidth, renderHeight, true, 8);
 
         var result = frame.BitPerPixel == IPicture.PicturePixelMode.BytePicture
             ? frame.Clone()

@@ -720,7 +720,7 @@ namespace projectFrameCut.StandaloneRender
 
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
-            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
             InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
             InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
 
@@ -1088,8 +1088,8 @@ namespace projectFrameCut.StandaloneRender
                     var outputDir = switches.TryGetValue("outputIntermediatePath", out var iPath) ? iPath : Path.GetDirectoryName(outputPath);
                     outputDir ??= Environment.CurrentDirectory;
                     var ext = Path.GetExtension(outputPath);
-                    string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                    string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                    string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                    string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await composeVideo(vidOutputPath);
                     composeAudio(audOutputPath);
                     Console.WriteLine("Composing audio and video... this may take a few seconds.");

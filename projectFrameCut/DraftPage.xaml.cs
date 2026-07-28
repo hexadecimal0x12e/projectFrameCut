@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using System.Collections.Concurrent;
@@ -1055,13 +1055,21 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void SyncPreviewSurfaceSize()
     {
-        var width = ClipEditorHost.Width;
-        var height = ClipEditorHost.Height;
+        // Use the InteractableEditor's own rendered size (which is what
+        // OnSizeAllocated would deliver). The previous version used the
+        // ClipEditorHost's outer size, which includes the host's Padding and
+        // causes the canvas to be reported larger than the visible preview
+        // area, drifting the clip overlay away from the video. When the
+        // editor's Width/Height haven't been laid out yet we fall back to
+        // the host's inner content area (host size minus padding), which is
+        // exactly what OnSizeAllocated will hand the editor.
+        var width = ClipEditor.Width;
+        var height = ClipEditor.Height;
 
         if (width <= 0 || height <= 0)
         {
-            width = ClipEditor.Width;
-            height = ClipEditor.Height;
+            width = Math.Max(0, ClipEditorHost.Width - ClipEditorHost.Padding.HorizontalThickness);
+            height = Math.Max(0, ClipEditorHost.Height - ClipEditorHost.Padding.VerticalThickness);
         }
 
         if (width <= 0 || height <= 0)
@@ -1069,6 +1077,18 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
+        // Explicitly push the editor's correct rendered size into both
+        // consumers. The DynamicPreviewProvider renders the live preview
+        // image at this size, and ClipEditor.UpdateCanvasSize is what
+        // drives _canvasWidth/_canvasHeight used by GetRenderRect(). We
+        // CANNOT rely solely on InteractableEditor.OnSizeAllocated: in
+        // deeply nested ControlTemplate hosts (MultiWindowItem wraps the
+        // ClipEditorHost in a template with a title bar row) the size
+        // allocation can be deferred or skipped, leaving _canvasWidth/
+        // _canvasHeight at their default (800x240) and causing the clip
+        // selection rectangle to drift away from the preview. The value
+        // we pass here matches what OnSizeAllocated would deliver, so
+        // calling it is race-free with the layout-driven path.
         ClipEditor.UpdateCanvasSize(width, height);
         DynamicPreviewProvider.UpdateCanvasSize(width, height);
     }
@@ -7642,6 +7662,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             return _livePreviewRealtimeHost;
         }
+
+        // The MediaElement is a child of the LivePreviewerHost (ContentView with Fill/Fill),
+        // which itself fills the InteractableEditor. Without explicit Fill/Fill + AspectFit
+        // here, the MediaElement falls back to its natural (video-source) size, which is
+        // 1920x1080 or larger. The editor is only ~248px tall, so the unscaled MediaElement
+        // overflows downward and visually dominates the editor — making every overlay
+        // coordinate (renderRect, selection handles, debug overlay) appear to be misaligned
+        // with the visible video, because the visible video is not at the editor's
+        // coordinate scale. Constrain it to the host and use AspectFit so the live frame
+        // letterboxes identically to the static PreviewOverlayImage.
+        LivePreviewPlayer.Aspect = Aspect.AspectFit;
+        LivePreviewPlayer.HorizontalOptions = LayoutOptions.Fill;
+        LivePreviewPlayer.VerticalOptions = LayoutOptions.Fill;
 
         var host = new Grid();
         host.Children.Add(LivePreviewPlayer);

@@ -209,10 +209,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResult8 Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccelerator();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelByte(accelerator);
@@ -238,10 +238,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResult16 Overlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccelerator();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelUShort(accelerator);
@@ -267,10 +267,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResultHdr OverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccelerator();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<float>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelFloat(accelerator);
@@ -468,10 +468,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResult8 ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccel();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelByte(accelerator);
@@ -497,10 +497,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResult16 ApproximateOverlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccel();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelUShort(accelerator);
@@ -526,10 +526,10 @@ namespace projectFrameCut.Render.WindowsRender
         public BlendResultHdr ApproximateOverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
             var accelerator = PickAccel();
-            using var a = accelerator.Allocate1D(top.Take(pixelCount).ToArray());
-            using var b = accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
-            using var aAlphaBuffer = accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
-            using var bAlphaBuffer = accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
+            using var a = top.Length == pixelCount ? accelerator.Allocate1D(top) : accelerator.Allocate1D(top.Take(pixelCount).ToArray());
+            using var b = bottom.Length == pixelCount ? accelerator.Allocate1D(bottom) : accelerator.Allocate1D(bottom.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = topAlpha.Length == pixelCount ? accelerator.Allocate1D(topAlpha) : accelerator.Allocate1D(topAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = bottomAlpha.Length == pixelCount ? accelerator.Allocate1D(bottomAlpha) : accelerator.Allocate1D(bottomAlpha.Take(pixelCount).ToArray());
             var outBuffer = accelerator.Allocate1D<float>(pixelCount);
             var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
             var krnl = GetKernelFloat(accelerator);
@@ -652,16 +652,11 @@ namespace projectFrameCut.Render.WindowsRender
             if (highB > 65535) highB = 65535;
 
             var kernel = GetKernel(accelerator);
-            using var rBuf = accelerator.Allocate1D<float>(size);
-            using var gBuf = accelerator.Allocate1D<float>(size);
-            using var bBuf = accelerator.Allocate1D<float>(size);
-            using var aBuf = accelerator.Allocate1D<float>(size);
+            using var rBuf = size == r.Length ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(size).ToArray());
+            using var gBuf = size == g.Length ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(size).ToArray());
+            using var bBuf = size == b.Length ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(size).ToArray());
+            using var aBuf = size == a.Length ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(size).ToArray());
             using var outABuf = accelerator.Allocate1D<float>(size);
-
-            rBuf.CopyFromCPU(r.Take(size).ToArray());
-            gBuf.CopyFromCPU(g.Take(size).ToArray());
-            bBuf.CopyFromCPU(b.Take(size).ToArray());
-            aBuf.CopyFromCPU(a.Take(size).ToArray());
 
             LockRun(() => kernel(size, rBuf.View, gBuf.View, bBuf.View, aBuf.View, lowR, highR, lowG, highG, lowB, highB, outABuf.View));
             if (ForceSync) accelerator.Synchronize();
@@ -735,10 +730,10 @@ namespace projectFrameCut.Render.WindowsRender
             int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
             if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult([], [], [], []);
             int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
@@ -769,10 +764,10 @@ namespace projectFrameCut.Render.WindowsRender
             int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
             if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult8([], [], [], []);
             int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<byte>(dstLength);
             using var gBufOut = accelerator.Allocate1D<byte>(dstLength);
             using var bBufOut = accelerator.Allocate1D<byte>(dstLength);
@@ -806,10 +801,10 @@ namespace projectFrameCut.Render.WindowsRender
             int iDstW = (int)dstW, iDstH = (int)dstH, iSrcW = (int)srcW, iSrcH = (int)srcH;
             if (iDstW <= 0 || iDstH <= 0) return new FourChannelResult16([], [], [], []);
             int dstLength = iDstW * iDstH, srcLength = iSrcW * iSrcH;
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<ushort>(dstLength);
             using var gBufOut = accelerator.Allocate1D<ushort>(dstLength);
             using var bBufOut = accelerator.Allocate1D<ushort>(dstLength);
@@ -949,10 +944,10 @@ namespace projectFrameCut.Render.WindowsRender
             int srcLength = checked(srcW * srcH);
             int dstLength = checked(cropW * cropH);
 
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
@@ -1081,10 +1076,10 @@ namespace projectFrameCut.Render.WindowsRender
             int srcLength = checked(srcW * srcH);
             int dstLength = checked(targetW * targetH);
 
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
@@ -1840,23 +1835,22 @@ namespace projectFrameCut.Render.WindowsRender
             Action<Index1D,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
-                int, float>> KernelCache = new();
+                int, int, float>> KernelCache = new();
 
         private static Action<Index1D,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
-            int, float> GetKernel(Accelerator accelerator)
+            int, int, float> GetKernel(Accelerator accelerator)
         {
             return KernelCache.GetOrAdd(accelerator, static acc =>
                 acc.LoadAutoGroupedStreamKernel((
                     Index1D i,
                     ArrayView<float> rOut, ArrayView<float> gOut, ArrayView<float> bOut, ArrayView<float> aOut,
                     ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
-                    int w, float amount) =>
+                    int w, int h, float amount) =>
                 {
                     int x = i % w;
                     int y = i / w;
-                    int h = (int)(rIn.Length / w);
 
                     float avgR, avgG, avgB, origR, origG, origB;
                     origR = rIn[i]; origG = gIn[i]; origB = bIn[i];
@@ -1894,12 +1888,13 @@ namespace projectFrameCut.Render.WindowsRender
             using var bBufOut = accelerator.Allocate1D<float>(length);
             using var aBufOut = accelerator.Allocate1D<float>(length);
 
+            int h = length / w;
             var kernel = GetKernel(accelerator);
             if (Sync)
             {
-                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, amount); accelerator.Synchronize(); }
+                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, amount); accelerator.Synchronize(); }
             }
-            else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, amount); }
+            else { kernel(length, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, w, h, amount); }
 
             return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
         }
@@ -1931,11 +1926,12 @@ namespace projectFrameCut.Render.WindowsRender
             var kernel = GetKernel(sess.Accelerator);
             int length = (int)sess.CurBufR.Length;
             int w = parameters.TryGetValue("BuiltIn.TargetWidth", out var wObj) ? Convert.ToInt32(wObj) : sess.Width;
+            int h = length / w;
             float amount = Convert.ToSingle(parameters["Amount"]);
             kernel(length,
                 sess.AltBufR.View, sess.AltBufG.View, sess.AltBufB.View, sess.AltBufA.View,
                 sess.CurBufR.View, sess.CurBufG.View, sess.CurBufB.View, sess.CurBufA.View,
-                w, amount);
+                w, h, amount);
             sess.SwapBuffers();
         }
     }
@@ -1960,25 +1956,22 @@ namespace projectFrameCut.Render.WindowsRender
             Action<Index1D,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
                 ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
-                int, int, int, int, float>> KernelCache = new();
+                int, int, int, int, float, float>> KernelCache = new();
 
         private static Action<Index1D,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>,
-            int, int, int, int, float> GetKernel(Accelerator accelerator)
+            int, int, int, int, float, float> GetKernel(Accelerator accelerator)
         {
             return KernelCache.GetOrAdd(accelerator, static acc =>
                 acc.LoadAutoGroupedStreamKernel((
                     Index1D i,
                     ArrayView<float> rOut, ArrayView<float> gOut, ArrayView<float> bOut, ArrayView<float> aOut,
                     ArrayView<float> rIn, ArrayView<float> gIn, ArrayView<float> bIn, ArrayView<float> aIn,
-                    int srcW, int srcH, int outW, int outH, float angleDeg) =>
+                    int srcW, int srcH, int outW, int outH, float cosA, float sinA) =>
                 {
                     int x = i % outW;
                     int y = i / outW;
-                    float angleRad = angleDeg * MathF.PI / 180f;
-                    float cosA = MathF.Cos(-angleRad);
-                    float sinA = MathF.Sin(-angleRad);
 
                     float srcCx = srcW * 0.5f;
                     float srcCy = srcH * 0.5f;
@@ -2025,21 +2018,26 @@ namespace projectFrameCut.Render.WindowsRender
             int srcLength = checked(srcW * srcH);
             int dstLength = checked(dstW * dstH);
 
-            using var rBufIn = accelerator.Allocate1D(r.Take(srcLength).ToArray());
-            using var gBufIn = accelerator.Allocate1D(g.Take(srcLength).ToArray());
-            using var bBufIn = accelerator.Allocate1D(b.Take(srcLength).ToArray());
-            using var aBufIn = accelerator.Allocate1D(a.Take(srcLength).ToArray());
+            using var rBufIn = r.Length == srcLength ? accelerator.Allocate1D(r) : accelerator.Allocate1D(r.Take(srcLength).ToArray());
+            using var gBufIn = g.Length == srcLength ? accelerator.Allocate1D(g) : accelerator.Allocate1D(g.Take(srcLength).ToArray());
+            using var bBufIn = b.Length == srcLength ? accelerator.Allocate1D(b) : accelerator.Allocate1D(b.Take(srcLength).ToArray());
+            using var aBufIn = a.Length == srcLength ? accelerator.Allocate1D(a) : accelerator.Allocate1D(a.Take(srcLength).ToArray());
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);
             using var bBufOut = accelerator.Allocate1D<float>(dstLength);
             using var aBufOut = accelerator.Allocate1D<float>(dstLength);
 
+            // Pre-compute rotation trig once on CPU instead of per-pixel in GPU kernel
+            float angleRad = angleDeg * MathF.PI / 180f;
+            float cosA = MathF.Cos(-angleRad);
+            float sinA = MathF.Sin(-angleRad);
+
             var kernel = GetKernel(accelerator);
             if (Sync)
             {
-                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, angleDeg); accelerator.Synchronize(); }
+                using (ILGPUComputerHelper.locker.EnterScope()) { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, cosA, sinA); accelerator.Synchronize(); }
             }
-            else { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, angleDeg); }
+            else { kernel(dstLength, rBufOut.View, gBufOut.View, bBufOut.View, aBufOut.View, rBufIn.View, gBufIn.View, bBufIn.View, aBufIn.View, srcW, srcH, dstW, dstH, cosA, sinA); }
 
             return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
         }
@@ -2076,11 +2074,15 @@ namespace projectFrameCut.Render.WindowsRender
             int outW = parameters.TryGetValue("BuiltIn.TargetWidth", out var wObj) ? Convert.ToInt32(wObj) : sess.Width;
             int outH = parameters.TryGetValue("BuiltIn.TargetHeight", out var hObj) ? Convert.ToInt32(hObj) : sess.Height;
             float angleDeg = Convert.ToSingle(parameters["Angle"]);
+            // Pre-compute rotation trig once on CPU
+            float angleRad = angleDeg * MathF.PI / 180f;
+            float cosA = MathF.Cos(-angleRad);
+            float sinA = MathF.Sin(-angleRad);
             // In session mode, src and dst have the same dimensions
             kernel(length,
                 sess.AltBufR.View, sess.AltBufG.View, sess.AltBufB.View, sess.AltBufA.View,
                 sess.CurBufR.View, sess.CurBufG.View, sess.CurBufB.View, sess.CurBufA.View,
-                outW, outH, outW, outH, angleDeg);
+                outW, outH, outW, outH, cosA, sinA);
             sess.SwapBuffers();
         }
     }
@@ -2114,24 +2116,43 @@ namespace projectFrameCut.Render.WindowsRender
         {
             return KernelHorizontalCache.GetOrAdd(accelerator, static acc =>
                 acc.LoadAutoGroupedStreamKernel((
-                    Index1D i,
+                    Index1D row,
                     ArrayView<float> rTmp, ArrayView<float> gTmp,
                     ArrayView<float> rIn, ArrayView<float> gIn,
                     int w, int radius) =>
                 {
-                    int x = i % w;
+                    // One thread per row — sliding window box blur (O(1) per pixel instead of O(radius))
+                    int rowBase = row * w;
 
+                    // Initialize: x = 0
                     float sumR = 0f, sumG = 0f;
                     int count = 0;
-                    for (int k = x - radius; k <= x + radius; k++)
+                    for (int k = 0; k <= radius && k < w; k++, count++)
                     {
-                        int idx = (i / w) * w + (k < 0 ? 0 : (k >= w ? w - 1 : k));
-                        sumR += rIn[idx];
-                        sumG += gIn[idx];
-                        count++;
+                        sumR += rIn[rowBase + k];
+                        sumG += gIn[rowBase + k];
                     }
-                    rTmp[i] = sumR / count;
-                    gTmp[i] = sumG / count;
+                    rTmp[rowBase] = sumR / count;
+                    gTmp[rowBase] = sumG / count;
+
+                    // Slide window right
+                    for (int x = 1; x < w; x++)
+                    {
+                        if (x - radius - 1 >= 0)
+                        {
+                            sumR -= rIn[rowBase + x - radius - 1];
+                            sumG -= gIn[rowBase + x - radius - 1];
+                            count--;
+                        }
+                        if (x + radius < w)
+                        {
+                            sumR += rIn[rowBase + x + radius];
+                            sumG += gIn[rowBase + x + radius];
+                            count++;
+                        }
+                        rTmp[rowBase + x] = sumR / count;
+                        gTmp[rowBase + x] = sumG / count;
+                    }
                 }));
         }
 
@@ -2148,25 +2169,41 @@ namespace projectFrameCut.Render.WindowsRender
         {
             return KernelVerticalCache.GetOrAdd(accelerator, static acc =>
                 acc.LoadAutoGroupedStreamKernel((
-                    Index1D i,
+                    Index1D col,
                     ArrayView<float> rOut, ArrayView<float> gOut,
                     ArrayView<float> rTmp, ArrayView<float> gTmp,
                     int w, int h, int radius) =>
                 {
-                    int y = i / w;
-
+                    // One thread per column — sliding window box blur
+                    // Initialize: y = 0
                     float sumR = 0f, sumG = 0f;
                     int count = 0;
-                    for (int k = y - radius; k <= y + radius; k++)
+                    for (int k = 0; k <= radius && k < h; k++, count++)
                     {
-                        int row = k < 0 ? 0 : (k >= h ? h - 1 : k);
-                        int idx = row * w + (i % w);
-                        sumR += rTmp[idx];
-                        sumG += gTmp[idx];
-                        count++;
+                        sumR += rTmp[k * w + col];
+                        sumG += gTmp[k * w + col];
                     }
-                    rOut[i] = sumR / count;
-                    gOut[i] = sumG / count;
+                    rOut[col] = sumR / count;
+                    gOut[col] = sumG / count;
+
+                    // Slide window down
+                    for (int y = 1; y < h; y++)
+                    {
+                        if (y - radius - 1 >= 0)
+                        {
+                            sumR -= rTmp[(y - radius - 1) * w + col];
+                            sumG -= gTmp[(y - radius - 1) * w + col];
+                            count--;
+                        }
+                        if (y + radius < h)
+                        {
+                            sumR += rTmp[(y + radius) * w + col];
+                            sumG += gTmp[(y + radius) * w + col];
+                            count++;
+                        }
+                        rOut[y * w + col] = sumR / count;
+                        gOut[y * w + col] = sumG / count;
+                    }
                 }));
         }
 
@@ -2201,20 +2238,20 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
-                    kernelH(length, rBufTmp.View, gBufTmp.View, rBufIn.View, gBufIn.View, w, radius);
-                    kernelH(length, bBufTmp.View, aBufTmp.View, bBufIn.View, aBufIn.View, w, radius);
+                    kernelH(h, rBufTmp.View, gBufTmp.View, rBufIn.View, gBufIn.View, w, radius);
+                    kernelH(h, bBufTmp.View, aBufTmp.View, bBufIn.View, aBufIn.View, w, radius);
                     accelerator.Synchronize();
-                    kernelV(length, rBufOut.View, gBufOut.View, rBufTmp.View, gBufTmp.View, w, h, radius);
-                    kernelV(length, bBufOut.View, aBufOut.View, bBufTmp.View, aBufTmp.View, w, h, radius);
+                    kernelV(w, rBufOut.View, gBufOut.View, rBufTmp.View, gBufTmp.View, w, h, radius);
+                    kernelV(w, bBufOut.View, aBufOut.View, bBufTmp.View, aBufTmp.View, w, h, radius);
                     accelerator.Synchronize();
                 }
             }
             else
             {
-                kernelH(length, rBufTmp.View, gBufTmp.View, rBufIn.View, gBufIn.View, w, radius);
-                kernelH(length, bBufTmp.View, aBufTmp.View, bBufIn.View, aBufIn.View, w, radius);
-                kernelV(length, rBufOut.View, gBufOut.View, rBufTmp.View, gBufTmp.View, w, h, radius);
-                kernelV(length, bBufOut.View, aBufOut.View, bBufTmp.View, aBufTmp.View, w, h, radius);
+                kernelH(h, rBufTmp.View, gBufTmp.View, rBufIn.View, gBufIn.View, w, radius);
+                kernelH(h, bBufTmp.View, aBufTmp.View, bBufIn.View, aBufIn.View, w, radius);
+                kernelV(w, rBufOut.View, gBufOut.View, rBufTmp.View, gBufTmp.View, w, h, radius);
+                kernelV(w, bBufOut.View, aBufOut.View, bBufTmp.View, aBufTmp.View, w, h, radius);
             }
 
             return new FourChannelResult(rBufOut.GetAsArray1D(), gBufOut.GetAsArray1D(), bBufOut.GetAsArray1D(), aBufOut.GetAsArray1D());
@@ -2259,10 +2296,10 @@ namespace projectFrameCut.Render.WindowsRender
             var kernelH = GetKernelHorizontal(sess.Accelerator);
             var kernelV = GetKernelVertical(sess.Accelerator);
 
-            kernelH(length, rBufTmp.View, gBufTmp.View, sess.CurBufR.View, sess.CurBufG.View, w, radius);
-            kernelH(length, bBufTmp.View, aBufTmp.View, sess.CurBufB.View, sess.CurBufA.View, w, radius);
-            kernelV(length, sess.AltBufR.View, sess.AltBufG.View, rBufTmp.View, gBufTmp.View, w, h, radius);
-            kernelV(length, sess.AltBufB.View, sess.AltBufA.View, bBufTmp.View, aBufTmp.View, w, h, radius);
+            kernelH(h, rBufTmp.View, gBufTmp.View, sess.CurBufR.View, sess.CurBufG.View, w, radius);
+            kernelH(h, bBufTmp.View, aBufTmp.View, sess.CurBufB.View, sess.CurBufA.View, w, radius);
+            kernelV(w, sess.AltBufR.View, sess.AltBufG.View, rBufTmp.View, gBufTmp.View, w, h, radius);
+            kernelV(w, sess.AltBufB.View, sess.AltBufA.View, bBufTmp.View, aBufTmp.View, w, h, radius);
             sess.SwapBuffers();
         }
     }
@@ -2318,11 +2355,14 @@ namespace projectFrameCut.Render.WindowsRender
                     g = ((g / maxV - 0.5f) * contrast + 0.5f) * maxV;
                     b = ((b / maxV - 0.5f) * contrast + 0.5f) * maxV;
 
-                    // 3. Saturation
-                    float gray = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-                    r = gray + saturation * (r - gray);
-                    g = gray + saturation * (g - gray);
-                    b = gray + saturation * (b - gray);
+                    // 3. Saturation (skip when == 1.0 to avoid redundant luminance calc)
+                    if (MathF.Abs(saturation - 1f) > 1e-6f)
+                    {
+                        float gray = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                        r = gray + saturation * (r - gray);
+                        g = gray + saturation * (g - gray);
+                        b = gray + saturation * (b - gray);
+                    }
 
                     // 4. Hue (RGB->HSL, rotate H, HSL->RGB all inline)
                     if (MathF.Abs(hue) > 1e-6f)
@@ -2517,8 +2557,23 @@ namespace projectFrameCut.Render.WindowsRender
 
     internal static class BlendModeILGPUHelper
     {
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator,
+            Action<Index1D, ArrayView<float>, ArrayView<ushort>>> FloatToUshortKernelCache = new();
+
+        private static Action<Index1D, ArrayView<float>, ArrayView<ushort>> GetFloatToUshortKernel(Accelerator accelerator)
+        {
+            return FloatToUshortKernelCache.GetOrAdd(accelerator, static acc =>
+                acc.LoadAutoGroupedStreamKernel((Index1D i, ArrayView<float> src, ArrayView<ushort> dst) =>
+                {
+                    float v = src[i];
+                    if (v < 0f) v = 0f;
+                    if (v > 65535f) v = 65535f;
+                    dst[i] = (ushort)v;
+                }));
+        }
+
         /// <summary>
-        /// 强类型 16bpp 混合计算 — 无装箱/拆箱开销。
+        /// 强类型 16bpp 混合计算 — 无装箱/拆箱开销，GPU 端 float→ushort 转换。
         /// </summary>
         internal static BlendResult16 BlendModeCompute16(
             Accelerator[] accelerators, ref int accelIdx, bool sync,
@@ -2541,34 +2596,30 @@ namespace projectFrameCut.Render.WindowsRender
             using var topAlphaBuf = accelerator.Allocate1D(topAlpha);
             using var bottomAlphaBuf = accelerator.Allocate1D(bottomAlpha);
             using var outCBuf = accelerator.Allocate1D<float>(pixelCount);
+            using var outCBufUshort = accelerator.Allocate1D<ushort>(pixelCount);
             using var outABuf = accelerator.Allocate1D<float>(pixelCount);
 
             var kernel = getKernel(accelerator);
+            var convertKernel = GetFloatToUshortKernel(accelerator);
 
             if (sync)
             {
                 using (ILGPUComputerHelper.locker.EnterScope())
                 {
                     kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+                    convertKernel(pixelCount, outCBuf.View, outCBufUshort.View);
                     accelerator.Synchronize();
                 }
             }
             else
             {
                 kernel(pixelCount, topBuf.View, bottomBuf.View, topAlphaBuf.View, bottomAlphaBuf.View, outCBuf.View, outABuf.View);
+                convertKernel(pixelCount, outCBuf.View, outCBufUshort.View);
             }
 
-            var outC = outCBuf.GetAsArray1D();
+            var ushortOut = outCBufUshort.GetAsArray1D();
             var outA = outABuf.GetAsArray1D();
 
-            var ushortOut = new ushort[pixelCount];
-            for (int i = 0; i < pixelCount; i++)
-            {
-                float v = outC[i];
-                if (v < 0f) v = 0f;
-                if (v > 65535f) v = 65535f;
-                ushortOut[i] = (ushort)v;
-            }
             return new BlendResult16(ushortOut, outA);
         }
 

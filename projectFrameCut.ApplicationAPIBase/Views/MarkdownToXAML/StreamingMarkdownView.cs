@@ -27,7 +27,9 @@ public class StreamingMarkdownView : ContentView
 {
     // ===== 内部状态 =====
 
-    private readonly Markdown2XAML.StreamConverter _converter = new();
+    private readonly Markdown2XAML.MarkdownStyleContext? _styleContext;
+
+    private readonly Markdown2XAML.StreamConverter _converter;
     private readonly VerticalStackLayout _rootLayout;
     private readonly ScrollView _scrollView;
     private View? _partialView;
@@ -71,13 +73,26 @@ public class StreamingMarkdownView : ContentView
     // ===== 构造函数 =====
 
     /// <summary>
-    /// 创建一个新的流式 Markdown 渲染视图实例。
+    /// 创建一个新的流式 Markdown 渲染视图实例，使用 <see cref="Markdown2XAML"/>
+    /// 的静态样式属性。
     /// </summary>
     public StreamingMarkdownView()
+        : this(null) { }
+
+    /// <summary>
+    /// 创建一个新的流式 Markdown 渲染视图实例。传入 <paramref name="context"/>
+    /// 可在本次会话中覆盖部分或全部样式字段（未提供字段回退到静态默认值）。
+    /// 内部 <see cref="Markdown2XAML.StreamConverter"/> 会在构造时对 context
+    /// 做不可变快照，外部后续修改不会影响本次会话。
+    /// </summary>
+    public StreamingMarkdownView(Markdown2XAML.MarkdownStyleContext? context)
     {
+        _styleContext = context;
+        _converter = new Markdown2XAML.StreamConverter(context);
+
         _rootLayout = new VerticalStackLayout
         {
-            Spacing = Markdown2XAML.ParagraphSpacing,
+            Spacing = context?.ParagraphSpacing ?? Markdown2XAML.ParagraphSpacing,
             HorizontalOptions = LayoutOptions.Fill,
         };
 
@@ -169,10 +184,11 @@ public class StreamingMarkdownView : ContentView
     /// 保证插入的自定义内容在原位不动。
     /// </summary>
     /// <param name="view">要插入的自定义视图。</param>
+    /// <param name="fillHorizontal">是否将视图水平填充到父容器。</param>
     /// <remarks>必须在主线程上调用。</remarks>
-    public void InsertContentView(View view)
+    public void InsertContentView(View view, bool fillHorizontal = true)
     {
-        ApplyFillHorizontal(view);
+        if (fillHorizontal) ApplyFillHorizontal(view);
         InsertBeforeProvisional(view);
         _hasCustomContent = true;
     }
@@ -257,7 +273,7 @@ public class StreamingMarkdownView : ContentView
             {
                 Text = ex.Message,
                 TextColor = Colors.Red,
-                FontSize = Markdown2XAML.BodyFontSize,
+                FontSize = _styleContext?.BodyFontSize ?? Markdown2XAML.BodyFontSize,
                 LineBreakMode = LineBreakMode.WordWrap,
             });
         }
@@ -320,7 +336,7 @@ public class StreamingMarkdownView : ContentView
         if (rawPartial is Label label)
         {
             // 段落类型 → 使用 BuildParagraphView 增强行内格式（粗体/斜体/代码/链接等）
-            var enhanced = Markdown2XAML.BuildParagraphView(label.Text);
+            var enhanced = Markdown2XAML.BuildParagraphView(label.Text, _styleContext);
             enhanced.Opacity = 0.7; // 视觉上区分"正在输入中"
             ApplyFillHorizontal(enhanced);
             InsertOrUpdatePartial(enhanced);
@@ -334,7 +350,7 @@ public class StreamingMarkdownView : ContentView
         else if (!string.IsNullOrEmpty(_preliminaryText))
         {
             // StreamConverter 尚未处理此文本（缺少 \n），直接使用原始文本渲染为 provisional 段落
-            var enhanced = Markdown2XAML.BuildParagraphView(_preliminaryText);
+            var enhanced = Markdown2XAML.BuildParagraphView(_preliminaryText, _styleContext);
             enhanced.Opacity = 0.7;
             ApplyFillHorizontal(enhanced);
             InsertOrUpdatePartial(enhanced);

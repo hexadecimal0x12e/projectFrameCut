@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationPluginBase.Text;
+using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
@@ -252,6 +252,12 @@ namespace projectFrameCut.InteractableEditor
         } = Colors.Black;
 
         public bool ShowDetailReferenceLineControl { get; set; } = false;
+
+        public bool ShowBottomControls
+        {
+            get => BottomControlsHost.IsVisible;
+            set => BottomControlsHost.IsVisible = value;
+        }
 
         private static bool AreColorsClose(Color a, Color b) =>
             Math.Abs(a.Red - b.Red) < 0.004 &&
@@ -882,8 +888,29 @@ namespace projectFrameCut.InteractableEditor
 
         public void UpdateCanvasSize(double width, double height, bool ignorePositionProvider = false)
         {
-            _canvasWidth = width;
-            _canvasHeight = height;
+            // Round to integer pixels to match the canvas dimensions DynamicPreview
+            // uses when it calls providers. If _canvasWidth/_canvasHeight keep
+            // sub-pixel values while DynamicPreview rounds away, the two scales
+            // drift by a fraction of a pixel and the preview ends up slightly
+            // offset from the selection rectangle.
+            _canvasWidth = Math.Max(1d, Math.Round(width, MidpointRounding.AwayFromZero));
+            _canvasHeight = Math.Max(1d, Math.Round(height, MidpointRounding.AwayFromZero));
+
+            // ClipStatesHost and ReferenceLinesHost are AbsoluteLayout children of
+            // EditorCanvas (also an AbsoluteLayout). They are declared in XAML with
+            // LayoutFlags="None" but no LayoutBounds, so they default to AutoSize
+            // and are measured to the union of their children — which is the raw
+            // 1920x1080 project space. That bubbles up through EditorCanvas's own
+            // MeasureOverride, causing the overlay to be laid out as if the canvas
+            // were 1920x1080 instead of the visible editor area. Pin them to the
+            // actual rendered canvas so EditorCanvas's measure reflects the real
+            // preview rect.
+            AbsoluteLayout.SetLayoutBounds(ClipStatesHost, new Rect(0, 0, _canvasWidth, _canvasHeight));
+            AbsoluteLayout.SetLayoutBounds(ReferenceLinesHost, new Rect(0, 0, _canvasWidth, _canvasHeight));
+            // Keep DebugOverlay pinned to the top-left at a fixed size so its AutoSize
+            // can't drag EditorCanvas's measure away from the real canvas size.
+            AbsoluteLayout.SetLayoutBounds(DebugOverlay, new Rect(8, 8, 380, 240));
+
             UpdateVisuals(ignorePositionProvider);
         }
 
@@ -1837,10 +1864,82 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 ReorderClipStateRootsByZIndex();
+
+                RefreshDebugOverlay(renderRect, scale);
             }
             finally
             {
                 Interlocked.Exchange(ref _isUpdatingVisuals, 0);
+            }
+        }
+
+        private void RefreshDebugOverlay(Rect renderRect, double scale)
+        {
+            try
+            {
+                if (DebugInfoLabel is null) return;
+
+                var editorW = Math.Round(Width);
+                var editorH = Math.Round(Height);
+                var canvasW = Math.Round(EditorCanvas.Width);
+                var canvasH = Math.Round(EditorCanvas.Height);
+                var statesW = Math.Round(ClipStatesHost.Width);
+                var statesH = Math.Round(ClipStatesHost.Height);
+                var refsW = Math.Round(ReferenceLinesHost.Width);
+                var refsH = Math.Round(ReferenceLinesHost.Height);
+                var renderVW = Math.Round(PreviewOverlayImage.Width);
+                var renderVH = Math.Round(PreviewOverlayImage.Height);
+                var renderVVisible = PreviewOverlayImage.IsVisible;
+                var renderVAspect = PreviewOverlayImage.Aspect.ToString();
+
+                // Identify which element is actually painting the visible video.
+                var liveHostW = Math.Round(LivePreviewerHost.Width);
+                var liveHostH = Math.Round(LivePreviewerHost.Height);
+                var liveHostVisible = LivePreviewerHost.IsVisible;
+                var liveContent = LivePreviewerHost.Content;
+                var liveContentType = liveContent?.GetType().Name ?? "(null)";
+                var liveContentW = liveContent is VisualElement v1 ? Math.Round(v1.Width) : -1;
+                var liveContentH = liveContent is VisualElement v2 ? Math.Round(v2.Height) : -1;
+                string liveContentAspect = "?";
+                if (liveContent is Image img) liveContentAspect = img.Aspect.ToString();
+
+                var ratioCanvas = _canvasHeight > 0 ? _canvasWidth / _canvasHeight : 0;
+                var ratioVideo = _videoHeight > 0 ? _videoWidth / _videoHeight : 0;
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"self    : {editorW} x {editorH}");
+                sb.AppendLine($"EditorCanvas       : {canvasW} x {canvasH}");
+                sb.AppendLine($"ClipStatesHost     : {statesW} x {statesH}");
+                sb.AppendLine($"ReferenceLinesHost : {refsW} x {refsH}");
+                sb.AppendLine($"PreviewImg         : vis={renderVVisible} {renderVW} x {renderVH} asp={renderVAspect}");
+                sb.AppendLine($"LiveHost           : vis={liveHostVisible} {liveHostW} x {liveHostH}");
+                sb.AppendLine($"  content          : {liveContentType} {liveContentW} x {liveContentH} asp={liveContentAspect}");
+                sb.AppendLine($"_canvas (logic)    : {Math.Round(_canvasWidth)} x {Math.Round(_canvasHeight)}");
+                sb.AppendLine($"_video             : {Math.Round(_videoWidth)} x {Math.Round(_videoHeight)}");
+                sb.AppendLine($"ratio c/v          : {ratioCanvas:F3} / {ratioVideo:F3}");
+                sb.AppendLine($"renderRect         : X={Math.Round(renderRect.X)} Y={Math.Round(renderRect.Y)} W={Math.Round(renderRect.Width)} H={Math.Round(renderRect.Height)}");
+                sb.AppendLine($"scale              : {scale:F4}");
+
+                if (_currentClip is not null)
+                {
+                    var c = _currentClip;
+                    var tx = c.TargetX;
+                    var ty = c.TargetY;
+                    var tw = c.TargetWidth > 0 ? c.TargetWidth : _videoWidth;
+                    var th = c.TargetHeight > 0 ? c.TargetHeight : _videoHeight;
+                    var dx = renderRect.X + tx * scale;
+                    var dy = renderRect.Y + ty * scale;
+                    var dw = tw * scale;
+                    var dh = th * scale;
+                    sb.AppendLine($"clip T             : {Math.Round((double)tx)} {Math.Round((double)ty)} {Math.Round(tw)} x {Math.Round(th)}");
+                    sb.AppendLine($"clip D             : X={Math.Round(dx)} Y={Math.Round(dy)} {Math.Round(dw)} x {Math.Round(dh)}");
+                }
+
+                DebugInfoLabel.Text = sb.ToString();
+            }
+            catch
+            {
+                // Best-effort debug overlay, never throw from here.
             }
         }
 
@@ -2631,7 +2730,9 @@ namespace projectFrameCut.InteractableEditor
                     double snapThresholdVideo = _currentClip?.CanSnapWhileResizing != false
                         ? ComputeSnapThresholdVideo(scale)
                         : 0;
-                    var snapped = ApplyClipSnapping(new Rect(newX, newY, newW, newH), snapThresholdVideo, handle);
+                    var snapped = allowFreeScale
+                        ? ApplyClipSnapping(new Rect(newX, newY, newW, newH), snapThresholdVideo, handle)
+                        : ApplyAspectLockedClipSnapping(new Rect(newX, newY, newW, newH), snapThresholdVideo, handle);
                     newX = snapped.X;
                     newY = snapped.Y;
                     newW = snapped.Width;
@@ -3082,6 +3183,126 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return new Rect(x, y, w, h);
+        }
+
+        private Rect ApplyAspectLockedClipSnapping(Rect rect, double snapThresholdVideo, ResizeHandle handle)
+        {
+            if (snapThresholdVideo <= 0)
+                return rect;
+
+            double aspect = ResolveLockedResizeAspectRatio();
+            if (aspect <= 0.0001 || double.IsNaN(aspect))
+                return rect;
+
+            double x = rect.X;
+            double y = rect.Y;
+            double w = rect.Width;
+            double h = rect.Height;
+
+            // For an aspect-locked corner resize the opposite corner must stay fixed.
+            bool fixedXIsLeft = handle is ResizeHandle.TopRight or ResizeHandle.BottomRight;
+            bool fixedYIsTop = handle is ResizeHandle.BottomLeft or ResizeHandle.BottomRight;
+            double fixedX = fixedXIsLeft ? x : x + w;
+            double fixedY = fixedYIsTop ? y : y + h;
+
+            bool canSnapLeft = false, canSnapRight = false, canSnapTop = false, canSnapBottom = false;
+            switch (handle)
+            {
+                case ResizeHandle.TopLeft:
+                    canSnapLeft = true;
+                    canSnapTop = true;
+                    break;
+                case ResizeHandle.TopRight:
+                    canSnapRight = true;
+                    canSnapTop = true;
+                    break;
+                case ResizeHandle.BottomLeft:
+                    canSnapLeft = true;
+                    canSnapBottom = true;
+                    break;
+                case ResizeHandle.BottomRight:
+                default:
+                    canSnapRight = true;
+                    canSnapBottom = true;
+                    break;
+            }
+
+            var hTargets = GetHorizontalSnapTargets();
+            var vTargets = GetVerticalSnapTargets();
+            AddOtherClipEdgesToSnapTargets(hTargets, vTargets);
+
+            double bestDist = snapThresholdVideo;
+            double bestX = x, bestY = y, bestW = w, bestH = h;
+
+            foreach (var target in hTargets)
+            {
+                if (canSnapLeft)
+                {
+                    double dist = Math.Abs(x - target);
+                    if (dist < bestDist)
+                    {
+                        double newW = Math.Max(MinSize, fixedX - target);
+                        double newH = Math.Max(MinSize, newW / aspect);
+                        bestDist = dist;
+                        bestX = fixedX - newW;
+                        bestY = fixedYIsTop ? fixedY : fixedY - newH;
+                        bestW = newW;
+                        bestH = newH;
+                    }
+                }
+
+                if (canSnapRight)
+                {
+                    double right = x + w;
+                    double dist = Math.Abs(right - target);
+                    if (dist < bestDist)
+                    {
+                        double newW = Math.Max(MinSize, target - fixedX);
+                        double newH = Math.Max(MinSize, newW / aspect);
+                        bestDist = dist;
+                        bestX = fixedX;
+                        bestY = fixedYIsTop ? fixedY : fixedY - newH;
+                        bestW = newW;
+                        bestH = newH;
+                    }
+                }
+            }
+
+            foreach (var target in vTargets)
+            {
+                if (canSnapTop)
+                {
+                    double dist = Math.Abs(y - target);
+                    if (dist < bestDist)
+                    {
+                        double newH = Math.Max(MinSize, fixedY - target);
+                        double newW = Math.Max(MinSize, newH * aspect);
+                        bestDist = dist;
+                        bestX = fixedXIsLeft ? fixedX : fixedX - newW;
+                        bestY = target;
+                        bestW = newW;
+                        bestH = newH;
+                    }
+                }
+
+                if (canSnapBottom)
+                {
+                    double bottom = y + h;
+                    double dist = Math.Abs(bottom - target);
+                    if (dist < bestDist)
+                    {
+                        double newH = Math.Max(MinSize, target - fixedY);
+                        double newW = Math.Max(MinSize, newH * aspect);
+                        bestDist = dist;
+                        bestX = fixedXIsLeft ? fixedX : fixedX - newW;
+                        bestY = fixedY;
+                        bestW = newW;
+                        bestH = newH;
+                    }
+                }
+            }
+
+            return new Rect(bestX, bestY, bestW, bestH);
         }
 
         #endregion

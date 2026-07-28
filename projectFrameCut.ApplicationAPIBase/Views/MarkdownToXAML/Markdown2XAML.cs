@@ -1,6 +1,7 @@
-﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Layouts;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;
 using System;
@@ -156,6 +157,142 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             ? Colors.White
             : Colors.Black;
 
+        /// <summary>
+        /// 按调用粒度覆盖 Markdown 渲染的样式配置。每个可空字段为 <c>null</c> 时
+        /// 回退到 <see cref="Markdown2XAML"/> 的静态默认值；不为 <c>null</c> 时
+        /// 覆盖对应静态属性的取值。
+        /// </summary>
+        /// <remarks>
+        /// 用法：
+        /// <code>
+        /// var ctx = new Markdown2XAML.MarkdownStyleContext
+        /// {
+        ///     BodyFontSize = 16,
+        ///     ParagraphSpacing = 12,
+        ///     ImageMaxWidth = 320,
+        /// };
+        /// var view = Markdown2XAML.Convert(md, ctx);
+        /// </code>
+        /// </remarks>
+        public sealed class MarkdownStyleContext
+        {
+            /// <summary>正文默认字号。null 时回退到 <see cref="BodyFontSize"/>。</summary>
+            public double? BodyFontSize { get; set; }
+
+            /// <summary>段落之间的间距。null 时回退到 <see cref="ParagraphSpacing"/>。</summary>
+            public double? ParagraphSpacing { get; set; }
+
+            /// <summary>整体文字颜色（覆盖主题黑白判断）。null 时回退到基于主题的默认文字色。</summary>
+            public Color? TextColor { get; set; }
+
+            /// <summary>代码块背景色。</summary>
+            public Color? CodeBlockBackgroundColor { get; set; }
+
+            /// <summary>代码块文字颜色。</summary>
+            public Color? CodeBlockTextColor { get; set; }
+
+            /// <summary>代码块边框颜色。</summary>
+            public Color? CodeBlockBorderColor { get; set; }
+
+            /// <summary>代码块圆角半径。</summary>
+            public double? CodeBlockCornerRadius { get; set; }
+
+            /// <summary>代码块内边距。</summary>
+            public Thickness? CodeBlockPadding { get; set; }
+
+            /// <summary>引用块左边竖线颜色。</summary>
+            public Color? BlockquoteBarColor { get; set; }
+
+            /// <summary>引用块左边竖线宽度。</summary>
+            public double? BlockquoteBarWidth { get; set; }
+
+            /// <summary>引用块背景色。</summary>
+            public Color? BlockquoteBackgroundColor { get; set; }
+
+            /// <summary>引用块文字颜色。</summary>
+            public Color? BlockquoteTextColor { get; set; }
+
+            /// <summary>水平分割线颜色。</summary>
+            public Color? HorizontalRuleColor { get; set; }
+
+            /// <summary>高亮（Mark）默认背景色。</summary>
+            public Color? HighlightColor { get; set; }
+
+            /// <summary>图片最大宽度。</summary>
+            public double? ImageMaxWidth { get; set; }
+
+            /// <summary>图片最大高度。</summary>
+            public double? ImageMaxHeight { get; set; }
+
+            /// <summary>图片圆角半径。</summary>
+            public double? ImageCornerRadius { get; set; }
+
+            /// <summary>图片标题（alt 文本）字号。</summary>
+            public double? ImageCaptionFontSize { get; set; }
+
+            /// <summary>图片标题文字颜色。</summary>
+            public Color? ImageCaptionTextColor { get; set; }
+
+            /// <summary>表格边框颜色。</summary>
+            public Color? TableBorderColor { get; set; }
+
+            /// <summary>表格表头背景色。</summary>
+            public Color? TableHeaderBackgroundColor { get; set; }
+
+            /// <summary>表格偶数行背景色。</summary>
+            public Color? TableRowEvenBackgroundColor { get; set; }
+
+            /// <summary>表格奇数行背景色。</summary>
+            public Color? TableRowOddBackgroundColor { get; set; }
+
+            /// <summary>表格单元格内边距。</summary>
+            public double? TableCellPadding { get; set; }
+
+            /// <summary>表格字体大小。</summary>
+            public double? TableFontSize { get; set; }
+
+            /// <summary>
+            /// 浅拷贝当前 context 的所有字段，用于 <see cref="StreamConverter"/>
+            /// 构造时锁定一份不可变快照，避免外部后续修改影响正在进行的流式渲染。
+            /// </summary>
+            public MarkdownStyleContext Clone() => new()
+            {
+                BodyFontSize = BodyFontSize,
+                ParagraphSpacing = ParagraphSpacing,
+                TextColor = TextColor,
+                CodeBlockBackgroundColor = CodeBlockBackgroundColor,
+                CodeBlockTextColor = CodeBlockTextColor,
+                CodeBlockBorderColor = CodeBlockBorderColor,
+                CodeBlockCornerRadius = CodeBlockCornerRadius,
+                CodeBlockPadding = CodeBlockPadding,
+                BlockquoteBarColor = BlockquoteBarColor,
+                BlockquoteBarWidth = BlockquoteBarWidth,
+                BlockquoteBackgroundColor = BlockquoteBackgroundColor,
+                BlockquoteTextColor = BlockquoteTextColor,
+                HorizontalRuleColor = HorizontalRuleColor,
+                HighlightColor = HighlightColor,
+                ImageMaxWidth = ImageMaxWidth,
+                ImageMaxHeight = ImageMaxHeight,
+                ImageCornerRadius = ImageCornerRadius,
+                ImageCaptionFontSize = ImageCaptionFontSize,
+                ImageCaptionTextColor = ImageCaptionTextColor,
+                TableBorderColor = TableBorderColor,
+                TableHeaderBackgroundColor = TableHeaderBackgroundColor,
+                TableRowEvenBackgroundColor = TableRowEvenBackgroundColor,
+                TableRowOddBackgroundColor = TableRowOddBackgroundColor,
+                TableCellPadding = TableCellPadding,
+                TableFontSize = TableFontSize,
+            };
+        }
+
+        /// <summary>
+        /// 解析当前调用应使用的文字颜色。<c>context</c> 提供了
+        /// <see cref="MarkdownStyleContext.TextColor"/> 时优先使用；否则回退到
+        /// 基于主题的 <see cref="MarkdownTextColor"/>。
+        /// </summary>
+        private static Color GetTextColor(MarkdownStyleContext? context)
+            => context?.TextColor ?? MarkdownTextColor;
+
         // 当前转换的引用式链接定义表（key 不区分大小写）
         // 仅在 Convert / StreamConverter 活动期间有效
         private static Dictionary<string, (string Url, string? Title)>? _currentRefDefinitions;
@@ -211,6 +348,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// 如果输入只有单个块元素，则直接返回该元素而不是包装在布局中。
         /// </summary>
         public static View Convert(string input)
+            => Convert(input, null);
+
+        /// <summary>
+        /// 将完整的 Markdown 字符串一次性转换为 MAUI View。
+        /// 返回的 View 是一个 VerticalStackLayout，包含所有 Markdown 块元素对应的子 View。
+        /// 如果输入只有单个块元素，则直接返回该元素而不是包装在布局中。
+        /// <paramref name="context"/> 为 <c>null</c> 时使用 <see cref="Markdown2XAML"/>
+        /// 的静态样式属性；非 <c>null</c> 时使用 <see cref="MarkdownStyleContext"/>
+        /// 中显式提供的字段（其它未提供字段仍回退到静态默认值）。
+        /// </summary>
+        public static View Convert(string input, MarkdownStyleContext? context)
         {
             if (string.IsNullOrEmpty(input))
                 return new VerticalStackLayout();
@@ -254,7 +402,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
                 foreach (var block in blocks)
                 {
-                    var view = BuildBlockView(block);
+                    var view = BuildBlockView(block, context);
                     if (view != null)
                         views.Add(view);
                 }
@@ -264,7 +412,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (views.Count == 1)
                     return views[0];
 
-                var stack = new VerticalStackLayout { Spacing = ParagraphSpacing };
+                var stack = new VerticalStackLayout
+                {
+                    Spacing = context?.ParagraphSpacing ?? ParagraphSpacing
+                };
                 foreach (var v in views)
                     stack.Children.Add(v);
                 return stack;
@@ -326,6 +477,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             // 引用式链接定义表（key 不区分大小写）
             private readonly Dictionary<string, (string Url, string? Title)> _refDefinitions = new(StringComparer.OrdinalIgnoreCase);
 
+            // 不可变的样式覆盖快照（构造时拷贝，避免外部修改影响正在进行的流式会话）
+            private readonly MarkdownStyleContext? _styleContext;
+
+            /// <summary>
+            /// 创建一个新的流式 Markdown 转换器，使用 <see cref="Markdown2XAML"/>
+            /// 的静态样式属性。
+            /// </summary>
+            public StreamConverter() : this(null) { }
+
+            /// <summary>
+            /// 创建一个新的流式 Markdown 转换器，传入 <paramref name="context"/>
+            /// 可在本次流式会话中覆盖部分或全部样式字段（未提供字段回退到静态默认值）。
+            /// 传入的 <paramref name="context"/> 会被浅拷贝为不可变快照，外部后续
+            /// 修改不会影响本次会话。
+            /// </summary>
+            public StreamConverter(MarkdownStyleContext? context)
+            {
+                _styleContext = context?.Clone();
+            }
+
             // ===== 局部视图节流控制 =====
 
             /// <summary>
@@ -371,7 +542,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         if (shouldAttemptCustomRender)
                         {
                             _lastPartialViewUpdate = DateTime.UtcNow;
-                            var customView = BuildPartialCodeBlockView(_codeLanguage, code);
+                            var customView = BuildPartialCodeBlockView(_codeLanguage, code, _styleContext);
                             if (customView != null)
                             {
                                 // 自定义渲染成功：更新缓存并返回新视图
@@ -387,7 +558,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                             return _cachedCustomPartialView;
 
                         // 无缓存可用，回退到轻量的纯文本代码块视图
-                        return BuildFallbackCodeBlockPartialView(_codeLanguage, code);
+                        return BuildFallbackCodeBlockPartialView(_codeLanguage, code, _styleContext);
                     }
                     // 退出代码块模式后清除缓存
                     _cachedCustomPartialView = null;
@@ -396,10 +567,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         return new Label
                         {
                             Text = _paragraphBuf.ToString(),
-                            FontSize = BodyFontSize,
+                            FontSize = _styleContext?.BodyFontSize ?? BodyFontSize,
                             LineBreakMode = LineBreakMode.WordWrap,
                             Opacity = 0.7,
-                            TextColor = MarkdownTextColor,
+                            TextColor = GetTextColor(_styleContext),
                             StyleId = "SelectableLabel",
                         };
                     }
@@ -411,25 +582,25 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             /// 构建轻量级的纯文本代码块局部视图（备用方案）。
             /// 仅包含代码文本的 Label，不做任何 XAML 解析，性能开销极低。
             /// </summary>
-            private static View BuildFallbackCodeBlockPartialView(string? language, string code)
+            private static View BuildFallbackCodeBlockPartialView(string? language, string code, MarkdownStyleContext? context = null)
             {
                 var label = new Label
                 {
                     Text = code,
                     FontFamily = "MarkdownCodeBlock",
                     FontSize = 13,
-                    TextColor = CodeBlockTextColor,
+                    TextColor = context?.CodeBlockTextColor ?? CodeBlockTextColor,
                     Opacity = 0.7,
                     StyleId = "SelectableLabel",
                 };
 
                 return new Border
                 {
-                    StrokeShape = new RoundRectangle { CornerRadius = CodeBlockCornerRadius },
-                    BackgroundColor = CodeBlockBackgroundColor,
-                    Stroke = CodeBlockBorderColor,
+                    StrokeShape = new RoundRectangle { CornerRadius = context?.CodeBlockCornerRadius ?? CodeBlockCornerRadius },
+                    BackgroundColor = context?.CodeBlockBackgroundColor ?? CodeBlockBackgroundColor,
+                    Stroke = context?.CodeBlockBorderColor ?? CodeBlockBorderColor,
                     StrokeThickness = 1,
-                    Padding = CodeBlockPadding,
+                    Padding = context?.CodeBlockPadding ?? CodeBlockPadding,
                     Margin = new Thickness(0, 4),
                     Opacity = 0.85,
                     Content = label,
@@ -524,7 +695,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         else if (TryMatchImageLine(remaining) is { } imgMatch)
                         {
                             FlushOtherStates(views);
-                            views.Add(BuildImageView(imgMatch.Alt, imgMatch.Url));
+                            views.Add(BuildImageView(imgMatch.Alt, imgMatch.Url, context: _styleContext));
                         }
                         else if (TryMatchHtmlImageLine(remaining) is { } htmlImgMatch)
                         {
@@ -533,7 +704,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                                 htmlImgMatch.Alt ?? "",
                                 htmlImgMatch.Src,
                                 htmlImgMatch.Width,
-                                htmlImgMatch.Height));
+                                htmlImgMatch.Height,
+                                _styleContext));
                         }
                         else if (TryMatchUnorderedList(remaining) is { } ulItem)
                         {
@@ -685,7 +857,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (headerMatch != null)
                 {
                     FlushOtherStates(views);
-                    views.Add(BuildHeaderView(headerMatch.Value.Level, headerMatch.Value.Text));
+                    views.Add(BuildHeaderView(headerMatch.Value.Level, headerMatch.Value.Text, _styleContext));
                     return;
                 }
 
@@ -693,7 +865,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (IsHorizontalRule(line))
                 {
                     FlushOtherStates(views);
-                    views.Add(BuildHorizontalRuleView());
+                    views.Add(BuildHorizontalRuleView(_styleContext));
                     return;
                 }
 
@@ -702,7 +874,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (mdImageMatch != null)
                 {
                     FlushOtherStates(views);
-                    views.Add(BuildImageView(mdImageMatch.Value.Alt, mdImageMatch.Value.Url));
+                    views.Add(BuildImageView(mdImageMatch.Value.Alt, mdImageMatch.Value.Url, context: _styleContext));
                     return;
                 }
 
@@ -715,7 +887,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         htmlImgMatch.Value.Alt ?? "",
                         htmlImgMatch.Value.Src,
                         htmlImgMatch.Value.Width,
-                        htmlImgMatch.Value.Height));
+                        htmlImgMatch.Value.Height,
+                        _styleContext));
                     return;
                 }
 
@@ -794,7 +967,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 if (_paragraphBuf.Length > 0)
                 {
-                    views.Add(BuildParagraphView(_paragraphBuf.ToString()));
+                    views.Add(BuildParagraphView(_paragraphBuf.ToString(), _styleContext));
                     _paragraphBuf.Clear();
                 }
             }
@@ -810,7 +983,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     if (code.EndsWith("\r\n"))
                         code = code[..^2];
 
-                    views.Add(BuildCodeBlockView(_codeLanguage, code));
+                    views.Add(BuildCodeBlockView(_codeLanguage, code, _styleContext));
                     _codeBuf.Clear();
                 }
                 _inCodeBlock = false;
@@ -822,7 +995,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 if (_listItems.Count > 0)
                 {
-                    views.Add(BuildListView(_listOrdered, _listItems));
+                    views.Add(BuildListView(_listOrdered, _listItems, _styleContext));
                     _listItems.Clear();
                     _listOrdered = false;
                 }
@@ -832,7 +1005,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 if (_inBlockquote && _quoteBuf.Count > 0)
                 {
-                    views.Add(BuildBlockquoteView(_quoteBuf.ToArray()));
+                    views.Add(BuildBlockquoteView(_quoteBuf.ToArray(), _styleContext));
                     _quoteBuf.Clear();
                 }
                 _inBlockquote = false;
@@ -872,7 +1045,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     if (rows.Count > 0 && maxCols > 0)
                     {
                         var alignments = _tableAlignments ?? Array.Empty<TextAlignment>();
-                        views.Add(BuildTableView(rows, alignments, _tableHasHeader));
+                        views.Add(BuildTableView(rows, alignments, _tableHasHeader, _styleContext));
                     }
 
                     _tableRowLines.Clear();
@@ -882,7 +1055,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 }
             }
 
-            private static View BuildPartialCodeBlockView(string? language, string code)
+            private static View BuildPartialCodeBlockView(string? language, string code, MarkdownStyleContext? context = null)
             {
                 // 安全开关：检查是否需要跳过自定义渲染器
                 bool skipCustomRenderer = false;
@@ -906,7 +1079,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     // RenderPartial 返回 null 表示暂无内容可渲染，回退到默认行为
                 }
 
-                return BuildFallbackCodeBlockPartialView(language, code);
+                return BuildFallbackCodeBlockPartialView(language, code, context);
             }
         }
 
@@ -1603,14 +1776,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// 1. 预提取不可嵌套的原子元素（行内代码、链接、HTML 标签）
         /// 2. 扫描格式标记，维护当前格式标记集合，每次切换时产生对应 Span
         /// </summary>
-        private static List<Span> ParseInline(string text)
+        private static List<Span> ParseInline(string text, MarkdownStyleContext? context = null)
         {
             var result = new List<Span>();
             if (string.IsNullOrEmpty(text))
                 return result;
 
             // Phase 1: 提取原子元素
-            var atomics = ExtractAtomics(text);
+            var atomics = ExtractAtomics(text, context);
 
             // Phase 2: 格式标记扫描
             var flags = FormatFlags.None;
@@ -1622,7 +1795,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 if (textBuf.Length > 0)
                 {
-                    result.Add(BuildFormattedSpan(textBuf.ToString(), flags));
+                    result.Add(BuildFormattedSpan(textBuf.ToString(), flags, context));
                     textBuf.Clear();
                 }
             }
@@ -1791,9 +1964,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// 从文本中预提取原子元素（行内代码、链接、图片、kbd、small）。
         /// 这些元素不可嵌套，需要优先提取以确保内部内容不被格式标记解析。
         /// </summary>
-        private static List<AtomicSpanInfo> ExtractAtomics(string text)
+        private static List<AtomicSpanInfo> ExtractAtomics(string text, MarkdownStyleContext? context = null)
         {
             var atomics = new List<AtomicSpanInfo>();
+            var textColor = GetTextColor(context);
 
             // 行内代码: `...`
             // 使用手动扫描而非正则，确保正确提取
@@ -1941,7 +2115,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                         {
                             Start = m.Index,
                             Length = m.Length,
-                            Span = new Span { Text = displayText, TextColor = MarkdownTextColor }
+                            Span = new Span { Text = displayText, TextColor = textColor }
                         });
                     }
                 }
@@ -1979,7 +2153,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                             {
                                 Start = m.Index,
                                 Length = m.Length,
-                                Span = new Span { Text = displayText, TextColor = MarkdownTextColor }
+                                Span = new Span { Text = displayText, TextColor = textColor }
                             });
                         }
                     }
@@ -2042,6 +2216,119 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             return false;
         }
 
+        /// <summary>
+        /// 按超链接位置将 Span 列表拆分为若干组。
+        /// 相邻的非超链接 Span 合并为一组（保留可选择文本的 StyleId）；
+        /// 每个超链接 Span 单独成组（不设 StyleId，避免文本选择机制
+        /// 与超链接的 TapGestureRecognizer 冲突导致点击失效）。
+        /// </summary>
+        private static List<InlineSpanGroup> SplitSpansByHyperlink(IReadOnlyList<Span> spans)
+        {
+            var groups = new List<InlineSpanGroup>();
+            List<Span>? current = null;
+            foreach (var span in spans)
+            {
+                if (span is HyperlinkSpan)
+                {
+                    if (current != null)
+                    {
+                        groups.Add(new InlineSpanGroup(current, false));
+                        current = null;
+                    }
+                    groups.Add(new InlineSpanGroup(new Span[] { span }, true));
+                }
+                else
+                {
+                    (current ??= new List<Span>()).Add(span);
+                }
+            }
+            if (current != null)
+                groups.Add(new InlineSpanGroup(current, false));
+            return groups;
+        }
+
+        /// <summary>Span 分组：连续的若干 Span 以及该组是否含超链接。</summary>
+        private readonly record struct InlineSpanGroup(IReadOnlyList<Span> Spans, bool HasHyperlink);
+
+        private static Label CreateInlineLabel(
+            IReadOnlyList<Span> groupSpans,
+            double fontSize,
+            Color textColor,
+            bool hasHyperlink)
+        {
+            var label = new Label
+            {
+                FormattedText = new FormattedString(),
+                FontSize = fontSize,
+                LineBreakMode = LineBreakMode.WordWrap,
+                TextColor = textColor,
+                StyleId = hasHyperlink ? null : "SelectableLabel",
+            };
+            foreach (var span in groupSpans)
+                label.FormattedText.Spans.Add(span);
+            return label;
+        }
+
+        /// <summary>
+        /// 构建承载行内 Span 的 View。
+        /// - 不含超链接时直接返回单个 Label（行为与之前完全一致，无额外开销）；
+        /// - 含超链接时按超链接位置拆分成多组后用 FlexLayout 容纳多组 Label，
+        ///   仅含超链接的 Label 不设置 StyleId，其余组保留 "SelectableLabel"。
+        /// 这样可保证超链接的点击手势不被文本选择机制吞掉，同时让非超链接文本
+        /// 仍可被选中复制。
+        /// </summary>
+        /// <param name="emptyText">当 <paramref name="spans"/> 为空时回退显示的纯文本。</param>
+        /// <param name="configureLabel">对每个 Label 应用附加属性（如对齐、字体等）。</param>
+        /// <param name="configureContainer">对 FlexLayout 容器应用附加属性（仅多组时调用）。</param>
+        private static View BuildInlineSpansContainer(
+            IReadOnlyList<Span> spans,
+            double fontSize,
+            Color textColor,
+            string? emptyText = null,
+            Action<Label>? configureLabel = null,
+            Action<FlexLayout>? configureContainer = null)
+        {
+            if (spans.Count == 0)
+            {
+                var emptyLabel = new Label
+                {
+                    Text = emptyText ?? "",
+                    FontSize = fontSize,
+                    LineBreakMode = LineBreakMode.WordWrap,
+                    TextColor = textColor,
+                    StyleId = "SelectableLabel",
+                };
+                configureLabel?.Invoke(emptyLabel);
+                return emptyLabel;
+            }
+
+            var groups = SplitSpansByHyperlink(spans);
+
+            // 快速路径：单组且无超链接 → 保持原单个 Label 行为
+            if (groups.Count == 1 && !groups[0].HasHyperlink)
+            {
+                var label = CreateInlineLabel(groups[0].Spans, fontSize, textColor, false);
+                configureLabel?.Invoke(label);
+                return label;
+            }
+
+            // 多组：用 FlexLayout 实现可换行的内联流
+            var flex = new FlexLayout
+            {
+                Wrap = FlexWrap.Wrap,
+                Direction = FlexDirection.Row,
+                AlignItems = FlexAlignItems.Start,
+            };
+            configureContainer?.Invoke(flex);
+            foreach (var group in groups)
+            {
+                var label = CreateInlineLabel(group.Spans, fontSize, textColor, group.HasHyperlink);
+                configureLabel?.Invoke(label);
+                flex.Children.Add(label);
+            }
+            return flex;
+        }
+
         // ===== Span 构造辅助 =====
 
         /// <summary>
@@ -2049,22 +2336,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// 单一格式优先使用自定义 Span 子类；
         /// 组合格式使用普通 Span 并手动设置各项属性。
         /// </summary>
-        private static Span BuildFormattedSpan(string text, FormatFlags flags)
+        private static Span BuildFormattedSpan(string text, FormatFlags flags, MarkdownStyleContext? context = null)
         {
+            var textColor = GetTextColor(context);
+            double bodySize = context?.BodyFontSize ?? BodyFontSize;
+            var highlightColor = context?.HighlightColor ?? HighlightColor;
+
             if (flags == FormatFlags.None)
-                return new Span { Text = text, TextColor = MarkdownTextColor };
+                return new Span { Text = text, TextColor = textColor };
 
             // 单一格式 → 使用自定义 Span 子类
-            if (flags == FormatFlags.Bold) return new BoldSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Italic) return new ItalicSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Strikethrough) return new StrikethroughSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Underline) return new UnderlineSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Mark) return new MarkSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Superscript) return new SuperscriptSpan { Text = text, TextColor = MarkdownTextColor };
-            if (flags == FormatFlags.Subscript) return new SubscriptSpan { Text = text, TextColor = MarkdownTextColor };
+            if (flags == FormatFlags.Bold) return new BoldSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Italic) return new ItalicSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Strikethrough) return new StrikethroughSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Underline) return new UnderlineSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Mark) return new MarkSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Superscript) return new SuperscriptSpan { Text = text, TextColor = textColor };
+            if (flags == FormatFlags.Subscript) return new SubscriptSpan { Text = text, TextColor = textColor };
 
             // 组合格式 → 手动构建 Span
-            var span = new Span { Text = text, TextColor = MarkdownTextColor };
+            var span = new Span { Text = text, TextColor = textColor };
 
             if (flags.HasFlag(FormatFlags.Bold))
                 span.FontAttributes |= FontAttributes.Bold;
@@ -2075,70 +2366,59 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             if (flags.HasFlag(FormatFlags.Underline))
                 span.TextDecorations |= TextDecorations.Underline;
             if (flags.HasFlag(FormatFlags.Mark))
-                span.BackgroundColor = HighlightColor;
+                span.BackgroundColor = highlightColor;
             if (flags.HasFlag(FormatFlags.Superscript))
-                span.FontSize = BodyFontSize * 0.75;
+                span.FontSize = bodySize * 0.75;
             if (flags.HasFlag(FormatFlags.Subscript))
-                span.FontSize = BodyFontSize * 0.75;
+                span.FontSize = bodySize * 0.75;
 
             return span;
         }
 
         // ===== View 工厂方法 =====
 
-        private static View? BuildBlockView(Block block)
+        private static View? BuildBlockView(Block block, MarkdownStyleContext? context = null)
         {
             return block.Type switch
             {
-                BlockType.Header => BuildHeaderView(block.Level, block.HeaderText ?? ""),
-                BlockType.Paragraph => BuildParagraphView(block.RawText),
-                BlockType.FencedCodeBlock => BuildCodeBlockView(block.CodeLanguage, block.CodeContent ?? ""),
-                BlockType.UnorderedList => BuildListView(false, block.ListItems ?? Array.Empty<string>()),
-                BlockType.OrderedList => BuildListView(true, block.ListItems ?? Array.Empty<string>()),
-                BlockType.Blockquote => BuildBlockquoteView(block.QuoteLines ?? Array.Empty<QuoteLine>()),
-                BlockType.HorizontalRule => BuildHorizontalRuleView(),
+                BlockType.Header => BuildHeaderView(block.Level, block.HeaderText ?? "", context),
+                BlockType.Paragraph => BuildParagraphView(block.RawText, context),
+                BlockType.FencedCodeBlock => BuildCodeBlockView(block.CodeLanguage, block.CodeContent ?? "", context),
+                BlockType.UnorderedList => BuildListView(false, block.ListItems ?? Array.Empty<string>(), context),
+                BlockType.OrderedList => BuildListView(true, block.ListItems ?? Array.Empty<string>(), context),
+                BlockType.Blockquote => BuildBlockquoteView(block.QuoteLines ?? Array.Empty<QuoteLine>(), context),
+                BlockType.HorizontalRule => BuildHorizontalRuleView(context),
                 BlockType.Image => BuildImageView(block.ImageAlt ?? "", block.ImageUrl ?? "",
-                    block.ImageWidth, block.ImageHeight),
-                BlockType.Table => BuildTableView(block.TableRows!, block.TableAlignments!, block.TableHasHeader),
+                    block.ImageWidth, block.ImageHeight, context),
+                BlockType.Table => BuildTableView(block.TableRows!, block.TableAlignments!, block.TableHasHeader, context),
                 _ => null,
             };
         }
 
-        internal static View BuildHeaderView(HeaderLevel level, string text)
+        internal static View BuildHeaderView(HeaderLevel level, string text, MarkdownStyleContext? context = null)
         {
-            var span = new HeaderSpan { HeaderLevel = level, Text = text, TextColor = MarkdownTextColor };
+            var textColor = GetTextColor(context);
+            var span = new HeaderSpan { HeaderLevel = level, Text = text, TextColor = textColor };
             return new Label
             {
                 FormattedText = new FormattedString { Spans = { span } },
                 Margin = new Thickness(0, 8, 0, 4),
-                TextColor = MarkdownTextColor,
+                TextColor = textColor,
                 StyleId = "SelectableLabel",
             };
         }
 
-        internal static View BuildParagraphView(string text)
+        internal static View BuildParagraphView(string text, MarkdownStyleContext? context = null)
         {
-            var spans = ParseInline(text);
-            var label = new Label
-            {
-                FormattedText = new FormattedString(),
-                LineBreakMode = LineBreakMode.WordWrap,
-                FontSize = BodyFontSize,
-                TextColor = MarkdownTextColor,
-                StyleId = "SelectableLabel",
-            };
-
-            foreach (var span in spans)
-                label.FormattedText.Spans.Add(span);
-
-            // 如果没有解析出 Span，使用原始文本
-            if (label.FormattedText.Spans.Count == 0)
-                label.Text = text;
-
-            return label;
+            var spans = ParseInline(text, context);
+            return BuildInlineSpansContainer(
+                spans,
+                context?.BodyFontSize ?? BodyFontSize,
+                GetTextColor(context),
+                emptyText: text);
         }
 
-        internal static View BuildCodeBlockView(string? language, string code)
+        internal static View BuildCodeBlockView(string? language, string code, MarkdownStyleContext? context = null)
         {
             // 安全开关：检查是否需要绕过自定义渲染器
             bool skipCustomRenderer = false;
@@ -2160,6 +2440,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     return customRenderer.Render(code);
             }
 
+            var codeBg = context?.CodeBlockBackgroundColor ?? CodeBlockBackgroundColor;
+            var codeText = context?.CodeBlockTextColor ?? CodeBlockTextColor;
+            var codeBorder = context?.CodeBlockBorderColor ?? CodeBlockBorderColor;
+            var codeRadius = context?.CodeBlockCornerRadius ?? CodeBlockCornerRadius;
+            var codePadding = context?.CodeBlockPadding ?? CodeBlockPadding;
+
             var children = new VerticalStackLayout();
 
             // 语言标识
@@ -2169,7 +2455,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 {
                     Text = language,
                     FontSize = 11,
-                    TextColor = CodeBlockTextColor.WithAlpha(0.6f),
+                    TextColor = codeText.WithAlpha(0.6f),
                     FontFamily = "MarkdownCodeBlock",
                     Margin = new Thickness(0, 0, 0, 4),
                     StyleId = "SelectableLabel",
@@ -2182,23 +2468,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 Text = code,
                 FontFamily = "MarkdownCodeBlock",
                 FontSize = 13,
-                TextColor = CodeBlockTextColor,
+                TextColor = codeText,
                 StyleId = "SelectableLabel",
             });
 
             return new Border
             {
-                StrokeShape = new RoundRectangle { CornerRadius = CodeBlockCornerRadius },
-                BackgroundColor = CodeBlockBackgroundColor,
-                Stroke = CodeBlockBorderColor,
+                StrokeShape = new RoundRectangle { CornerRadius = codeRadius },
+                BackgroundColor = codeBg,
+                Stroke = codeBorder,
                 StrokeThickness = 1,
-                Padding = CodeBlockPadding,
+                Padding = codePadding,
                 Margin = new Thickness(0, 4),
                 Content = children,
             };
         }
 
-        internal static View BuildListView(bool ordered, IReadOnlyList<string> items)
+        internal static View BuildListView(bool ordered, IReadOnlyList<string> items, MarkdownStyleContext? context = null)
         {
             // 检测是否为任务列表（包含 [ ] 或 [x] 标记的项）
             bool isTaskList = false;
@@ -2215,45 +2501,38 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             }
             if (isTaskList)
             {
-                return BuildTaskListView(items);
+                return BuildTaskListView(items, context);
             }
 
             var stack = new VerticalStackLayout { Spacing = 2 };
+            var textColor = GetTextColor(context);
+            double bodySize = context?.BodyFontSize ?? BodyFontSize;
 
             for (int i = 0; i < items.Count; i++)
             {
-                var spans = ParseInline(items[i]);
+                var spans = ParseInline(items[i], context);
                 var bulletText = ordered ? $"{i + 1}.  " : "•  ";
 
                 var bulletLabel = new Label
                 {
                     Text = bulletText,
-                    FontSize = BodyFontSize,
+                    FontSize = bodySize,
                     VerticalOptions = LayoutOptions.Start,
                     MinimumWidthRequest = 24,
-                    TextColor = MarkdownTextColor,
+                    TextColor = textColor,
                     StyleId = "SelectableLabel",
                 };
 
-                var contentLabel = new Label
-                {
-                    FormattedText = new FormattedString(),
-                    FontSize = BodyFontSize,
-                    LineBreakMode = LineBreakMode.WordWrap,
-                    TextColor = MarkdownTextColor,
-                    StyleId = "SelectableLabel",
-                };
-
-                foreach (var span in spans)
-                    contentLabel.FormattedText.Spans.Add(span);
-
-                if (contentLabel.FormattedText.Spans.Count == 0)
-                    contentLabel.Text = items[i];
+                var contentView = BuildInlineSpansContainer(
+                    spans,
+                    bodySize,
+                    textColor,
+                    emptyText: items[i]);
 
                 stack.Children.Add(new HorizontalStackLayout
                 {
                     Spacing = 4,
-                    Children = { bulletLabel, contentLabel }
+                    Children = { bulletLabel, contentView }
                 });
             }
 
@@ -2264,14 +2543,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// 构建任务列表视图（使用 CheckBox + Label 的横向布局）。
         /// 支持 <c>- [ ]</c>（未完成）和 <c>- [x]</c>（已完成）两种标记。
         /// </summary>
-        internal static View BuildTaskListView(IReadOnlyList<string> items)
+        internal static View BuildTaskListView(IReadOnlyList<string> items, MarkdownStyleContext? context = null)
         {
             var stack = new VerticalStackLayout { Spacing = 2 };
+            var textColor = GetTextColor(context);
+            double bodySize = context?.BodyFontSize ?? BodyFontSize;
 
             for (int i = 0; i < items.Count; i++)
             {
                 TryParseTaskItem(items[i], out var cleanContent, out var isChecked);
-                var spans = ParseInline(cleanContent);
+                var spans = ParseInline(cleanContent, context);
 
                 var checkBox = new CheckBox
                 {
@@ -2280,37 +2561,28 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     IsEnabled = false
                 };
 
-                var contentLabel = new Label
-                {
-                    FormattedText = new FormattedString(),
-                    FontSize = BodyFontSize,
-                    LineBreakMode = LineBreakMode.WordWrap,
-                    TextColor = MarkdownTextColor,
-                    VerticalOptions = LayoutOptions.Center,
-                    StyleId = "SelectableLabel",
-                };
-
-                foreach (var span in spans)
-                    contentLabel.FormattedText.Spans.Add(span);
-
-                if (contentLabel.FormattedText.Spans.Count == 0)
-                    contentLabel.Text = cleanContent;
+                var contentView = BuildInlineSpansContainer(
+                    spans,
+                    bodySize,
+                    textColor,
+                    emptyText: cleanContent,
+                    configureLabel: l => l.VerticalOptions = LayoutOptions.Center);
 
                 stack.Children.Add(new HorizontalStackLayout
                 {
                     Spacing = 4,
-                    Children = { checkBox, contentLabel },
+                    Children = { checkBox, contentView },
                 });
             }
 
             return stack;
         }
 
-        internal static View BuildBlockquoteView(IReadOnlyList<QuoteLine> lines)
+        internal static View BuildBlockquoteView(IReadOnlyList<QuoteLine> lines, MarkdownStyleContext? context = null)
         {
             if (lines.Count == 0)
                 return new VerticalStackLayout();
-            return BuildNestedBlockquote(lines, 0);
+            return BuildNestedBlockquote(lines, 0, context);
         }
 
         /// <summary>
@@ -2319,11 +2591,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         /// Level == baseLevel + 1 的行属于当前层级的文本内容；
         /// Level &gt; baseLevel + 1 的行触发递归创建子引用块。
         /// </summary>
-        private static View BuildNestedBlockquote(IReadOnlyList<QuoteLine> lines, int baseLevel)
+        private static View BuildNestedBlockquote(IReadOnlyList<QuoteLine> lines, int baseLevel, MarkdownStyleContext? context = null)
         {
+            var bgColor = context?.BlockquoteBackgroundColor ?? BlockquoteBackgroundColor;
+            var barColor = context?.BlockquoteBarColor ?? BlockquoteBarColor;
+            var barWidth = context?.BlockquoteBarWidth ?? BlockquoteBarWidth;
+            var textColor = GetTextColor(context);
+            double bodySize = context?.BodyFontSize ?? BodyFontSize;
+
             var contentStack = new VerticalStackLayout
             {
-                BackgroundColor = baseLevel == 0 ? BlockquoteBackgroundColor : Colors.Transparent,
+                BackgroundColor = baseLevel == 0 ? bgColor : Colors.Transparent,
                 Padding = new Thickness(8, 4),
                 Spacing = 4,
             };
@@ -2336,20 +2614,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (textLines.Count > 0)
                 {
                     var text = string.Join("\n", textLines);
-                    var spans = ParseInline(text);
-                    var label = new Label
-                    {
-                        FormattedText = new FormattedString(),
-                        FontSize = BodyFontSize,
-                        LineBreakMode = LineBreakMode.WordWrap,
-                        TextColor = MarkdownTextColor,
-                        StyleId = "SelectableLabel",
-                    };
-                    foreach (var span in spans)
-                        label.FormattedText.Spans.Add(span);
-                    if (label.FormattedText.Spans.Count == 0)
-                        label.Text = text;
-                    contentStack.Children.Add(label);
+                    var spans = ParseInline(text, context);
+                    contentStack.Children.Add(BuildInlineSpansContainer(
+                        spans,
+                        bodySize,
+                        textColor,
+                        emptyText: text));
                     textLines.Clear();
                 }
             }
@@ -2374,7 +2644,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     }
                     if (nestedLines.Count > 0)
                     {
-                        var nestedView = BuildNestedBlockquote(nestedLines, baseLevel + 1);
+                        var nestedView = BuildNestedBlockquote(nestedLines, baseLevel + 1, context);
                         contentStack.Children.Add(nestedView);
                     }
                 }
@@ -2395,7 +2665,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 ColumnDefinitions =
                 {
-                    new ColumnDefinition { Width = BlockquoteBarWidth },
+                    new ColumnDefinition { Width = barWidth },
                     new ColumnDefinition { Width = GridLength.Star },
                 },
                 Margin = new Thickness(0, baseLevel == 0 ? 4 : 2),
@@ -2403,8 +2673,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
             var bar = new BoxView
             {
-                Color = BlockquoteBarColor,
-                WidthRequest = BlockquoteBarWidth,
+                Color = barColor,
+                WidthRequest = barWidth,
                 VerticalOptions = LayoutOptions.Fill,
             };
 
@@ -2416,28 +2686,35 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             return grid;
         }
 
-        internal static View BuildHorizontalRuleView()
+        internal static View BuildHorizontalRuleView(MarkdownStyleContext? context = null)
         {
             return new BoxView
             {
                 HeightRequest = 1,
-                Color = HorizontalRuleColor,
+                Color = context?.HorizontalRuleColor ?? HorizontalRuleColor,
                 HorizontalOptions = LayoutOptions.Fill,
                 Margin = new Thickness(0, 8),
             };
         }
 
         internal static View BuildImageView(string alt, string url,
-            double? explicitWidth = null, double? explicitHeight = null)
+            double? explicitWidth = null, double? explicitHeight = null, MarkdownStyleContext? context = null)
         {
+            var imgMaxW = context?.ImageMaxWidth ?? ImageMaxWidth;
+            var imgMaxH = context?.ImageMaxHeight ?? ImageMaxHeight;
+            var imgRadius = context?.ImageCornerRadius ?? ImageCornerRadius;
+            var imgCaptionSize = context?.ImageCaptionFontSize ?? ImageCaptionFontSize;
+            var imgCaptionColor = context?.ImageCaptionTextColor ?? ImageCaptionTextColor;
+            double bodySize = context?.BodyFontSize ?? BodyFontSize;
+
             // 安全开关：不允许显示图片时，返回占位文本
             if (!SecurityEnableDisplayingImage)
             {
                 return new Label
                 {
                     Text = string.IsNullOrEmpty(alt) ? "🖼" : $"🖼 {alt}",
-                    FontSize = BodyFontSize,
-                    TextColor = ImageCaptionTextColor,
+                    FontSize = bodySize,
+                    TextColor = imgCaptionColor,
                     HorizontalOptions = LayoutOptions.Center,
                     Margin = new Thickness(0, 8),
                     StyleId = "SelectableLabel",
@@ -2454,8 +2731,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             var image = new Image
             {
                 Source = ImageSource.FromUri(new Uri(url)),
-                MaximumWidthRequest = explicitWidth ?? ImageMaxWidth,
-                MaximumHeightRequest = explicitHeight ?? ImageMaxHeight,
+                MaximumWidthRequest = explicitWidth ?? imgMaxW,
+                MaximumHeightRequest = explicitHeight ?? imgMaxH,
                 Aspect = Aspect.AspectFit,
                 HorizontalOptions = LayoutOptions.Center,
             };
@@ -2469,7 +2746,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             // 图片边框
             var imageBorder = new Border
             {
-                StrokeShape = new RoundRectangle { CornerRadius = ImageCornerRadius },
+                StrokeShape = new RoundRectangle { CornerRadius = imgRadius },
                 Stroke = Color.FromArgb("#20000000"),
                 StrokeThickness = 1,
                 Content = image,
@@ -2484,8 +2761,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 container.Children.Add(new Label
                 {
                     Text = alt,
-                    FontSize = ImageCaptionFontSize,
-                    TextColor = ImageCaptionTextColor,
+                    FontSize = imgCaptionSize,
+                    TextColor = imgCaptionColor,
                     HorizontalTextAlignment = TextAlignment.Center,
                     HorizontalOptions = LayoutOptions.Center,
                     StyleId = "SelectableLabel",
@@ -2504,13 +2781,21 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
         internal static View BuildTableView(
             IReadOnlyList<IReadOnlyList<string>> rows,
             IReadOnlyList<TextAlignment> alignments,
-            bool hasHeader)
+            bool hasHeader,
+            MarkdownStyleContext? context = null)
         {
             if (rows.Count == 0)
                 return new VerticalStackLayout();
 
             int colCount = alignments.Count > 0 ? alignments.Count : (rows[0]?.Count ?? 1);
             if (colCount == 0) return new VerticalStackLayout();
+
+            var tableBorder = context?.TableBorderColor ?? TableBorderColor;
+            var tableHeaderBg = context?.TableHeaderBackgroundColor ?? TableHeaderBackgroundColor;
+            var tableEvenBg = context?.TableRowEvenBackgroundColor ?? TableRowEvenBackgroundColor;
+            var tableOddBg = context?.TableRowOddBackgroundColor ?? TableRowOddBackgroundColor;
+            var tableCellPad = context?.TableCellPadding ?? TableCellPadding;
+            var tableFontSize = context?.TableFontSize ?? TableFontSize;
 
             var tableGrid = new Grid
             {
@@ -2531,46 +2816,54 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
 
                 // 交替行背景色
                 var bgColor = isHeader
-                    ? TableHeaderBackgroundColor
-                    : (r % 2 == (hasHeader ? 1 : 0) ? TableRowEvenBackgroundColor : TableRowOddBackgroundColor);
+                    ? tableHeaderBg
+                    : (r % 2 == (hasHeader ? 1 : 0) ? tableEvenBg : tableOddBg);
 
                 for (int c = 0; c < colCount; c++)
                 {
                     var cellText = c < row.Count ? row[c] : "";
 
                     // 解析单元格内联格式
-                    var spans = ParseInline(cellText);
-                    var label = new Label
+                    var spans = ParseInline(cellText, context);
+                    var hAlign = c < alignments.Count ? alignments[c] : TextAlignment.Start;
+                    var flexJustify = hAlign switch
                     {
-                        FormattedText = new FormattedString(),
-                        FontSize = TableFontSize,
-                        LineBreakMode = LineBreakMode.WordWrap,
-                        VerticalTextAlignment = TextAlignment.Center,
-                        VerticalOptions = LayoutOptions.Center,
-                        Padding = new Thickness(TableCellPadding),
-                        BackgroundColor = bgColor,
-                        HorizontalTextAlignment = c < alignments.Count ? alignments[c] : TextAlignment.Start,
-                        StyleId = "SelectableLabel",
+                        TextAlignment.Center => FlexJustify.Center,
+                        TextAlignment.End => FlexJustify.End,
+                        _ => FlexJustify.Start,
                     };
 
-                    if (isHeader)
+                    var cellView = BuildInlineSpansContainer(
+                        spans,
+                        tableFontSize,
+                        GetTextColor(context),
+                        emptyText: cellText,
+                        configureLabel: l =>
+                        {
+                            l.VerticalTextAlignment = TextAlignment.Center;
+                            l.HorizontalTextAlignment = hAlign;
+                            if (isHeader)
+                                l.FontAttributes = FontAttributes.Bold;
+                        },
+                        configureContainer: f =>
+                        {
+                            f.Padding = new Thickness(tableCellPad);
+                            f.BackgroundColor = bgColor;
+                            f.VerticalOptions = LayoutOptions.Center;
+                            f.JustifyContent = flexJustify;
+                        });
+
+                    // 单组（无超链接）时，cellView 是 Label，需要在容器层级应用单元格属性
+                    if (cellView is Label singleCellLabel)
                     {
-                        label.FontAttributes = FontAttributes.Bold;
+                        singleCellLabel.Padding = new Thickness(tableCellPad);
+                        singleCellLabel.BackgroundColor = bgColor;
+                        singleCellLabel.VerticalOptions = LayoutOptions.Center;
                     }
 
-                    if (spans.Count > 0)
-                    {
-                        foreach (var span in spans)
-                            label.FormattedText.Spans.Add(span);
-                    }
-                    else
-                    {
-                        label.Text = cellText;
-                    }
-
-                    Grid.SetRow(label, r);
-                    Grid.SetColumn(label, c);
-                    tableGrid.Children.Add(label);
+                    Grid.SetRow(cellView, r);
+                    Grid.SetColumn(cellView, c);
+                    tableGrid.Children.Add(cellView);
                 }
             }
 
@@ -2579,7 +2872,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 var vLine = new BoxView
                 {
-                    Color = TableBorderColor,
+                    Color = tableBorder,
                     WidthRequest = 1,
                     VerticalOptions = LayoutOptions.Fill,
                     HorizontalOptions = LayoutOptions.End,
@@ -2596,7 +2889,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             {
                 var hLine = new BoxView
                 {
-                    Color = TableBorderColor,
+                    Color = tableBorder,
                     HeightRequest = 1,
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.End,
@@ -2612,7 +2905,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             return new Border
             {
                 StrokeShape = new RoundRectangle { CornerRadius = 4 },
-                Stroke = TableBorderColor,
+                Stroke = tableBorder,
                 StrokeThickness = 1,
                 Padding = 0,
                 Margin = new Thickness(0, 8),

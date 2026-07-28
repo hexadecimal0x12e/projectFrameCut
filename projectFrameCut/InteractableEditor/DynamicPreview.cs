@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -892,6 +892,11 @@ public sealed class DynamicPreview : IDisposable
             generatedView = new Image
             {
                 Source = source.FrameSource,
+                // PreviewHost is already positioned/scaled to the clip's on-screen rect
+                // by UpdatePreviewHostLayout, so the Image should fill that logical rect.
+                // Use Aspect.Fill so the preview stretches to match the clip's visible
+                // area even when the user has disabled aspect-ratio locking and resized
+                // the clip non-uniformly; Aspect.AspectFit would leave letterbox gaps.
                 Aspect = Aspect.Fill,
                 HorizontalOptions = LayoutOptions.Fill,
                 VerticalOptions = LayoutOptions.Fill,
@@ -971,38 +976,40 @@ public sealed class DynamicPreview : IDisposable
             return generatedView;
         }
 
-        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, canvasWidth, canvasHeight, frameIndex);
+        return ApplyClipTargetLayoutPreview(generatedView, clip, enabledEffects, targetWidth, targetHeight, frameIndex);
     }
 
-    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int canvasWidth, int canvasHeight, uint frameIndex)
+    private static View ApplyClipTargetLayoutPreview(View input, IClip clip, IReadOnlyList<IEffect> enabledEffects, int targetWidth, int targetHeight, uint frameIndex)
     {
-        var baseW = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
-        var baseH = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
+        // Use the project-relative target size as the default clip canvas. This
+        // matches the coordinate space InteractableEditor uses to size and place
+        // the selection overlay, so the preview content fills the PreviewHost
+        // exactly instead of being computed against the smaller editor canvas.
+        var baseW = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, targetWidth);
+        var baseH = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, targetHeight);
         double x = clip.TargetX;
         double y = clip.TargetY;
         double w = baseW;
         double h = baseH;
 
-        ApplyPositionProvidersToClip(clip, enabledEffects, frameIndex, canvasWidth, canvasHeight, ref x, ref y, ref w, ref h);
-
-        if (!HasExplicitTargetRect(clip))
-        {
-            input.WidthRequest = Math.Max(1, w);
-            input.HeightRequest = Math.Max(1, h);
-            input.HorizontalOptions = LayoutOptions.Start;
-            input.VerticalOptions = LayoutOptions.Start;
-            input.TranslationX = x;
-            input.TranslationY = y;
-            return ApplyImplicitClipAutoCenterPreview(input, clip, canvasHeight);
-        }
+        // Position providers must evaluate against project-relative dimensions,
+        // not the editor canvas dimensions, otherwise a Place/Resize effect that
+        // returns absolute coordinates based on the target size will produce a
+        // different rect here than the one used for the selection rectangle.
+        ApplyPositionProvidersToClip(clip, enabledEffects, frameIndex, targetWidth, targetHeight, ref x, ref y, ref w, ref h);
 
         input.WidthRequest = Math.Max(1, w);
         input.HeightRequest = Math.Max(1, h);
         input.HorizontalOptions = LayoutOptions.Start;
         input.VerticalOptions = LayoutOptions.Start;
-        input.TranslationX = x;
-        input.TranslationY = y;
-        LogDiagnostic($"Placed clip {clip.Id}/{clip.Name} at ({x},{y}) with size ({w}×{h}) after applying position providers.");
+        // InteractableEditor already positions the PreviewHost at the clip's
+        // on-screen rect (Root.LayoutBounds + Scale). Applying the clip's
+        // project-space translation again here would shift the preview by twice
+        // the expected offset, making the misalignment grow with distance from
+        // the origin (top-right corner in the reported case).
+        input.TranslationX = 0;
+        input.TranslationY = 0;
+        LogDiagnostic($"Sized clip {clip.Id}/{clip.Name} preview to ({w}×{h}) after applying position providers.");
         return input;
     }
 

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.InteractableEditor.InteractableEditor"
@@ -9,7 +9,8 @@
              x:DataType="local:InteractableEditor.InteractableEditor"
              InputTransparent="False">
     <Grid BackgroundColor="Transparent"
-          InputTransparent="False">
+          InputTransparent="False"
+          IsClippedToBounds="True">
         <Image x:Name="PreviewOverlayImage"
              x:FieldModifier="public"
                Aspect="AspectFit"
@@ -25,7 +26,7 @@
                      BackgroundColor="Transparent"
                      InputTransparent="True" />
 
-        <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
+        <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100" HorizontalOptions="Fill" VerticalOptions="Fill">
             <Border x:Name="RenderRectVisual"
                 IsVisible="False"
                 Stroke="#80ffffff"
@@ -49,6 +50,25 @@
                     ZIndex="500"
                     AbsoluteLayout.LayoutFlags="None" />
 
+
+            <Border x:Name="DebugOverlay"
+                IsVisible="True"
+                BackgroundColor="#CC000000"
+                Stroke="#80ffffff"
+                StrokeThickness="1"
+                Padding="6"
+                HorizontalOptions="Start"
+                VerticalOptions="Start"
+                ZIndex="9999"
+                InputTransparent="True"
+                AbsoluteLayout.LayoutFlags="None">
+                <Label x:Name="DebugInfoLabel"
+                    TextColor="White"
+                    FontSize="11"
+                    FontFamily="Consolas"
+                    LineBreakMode="WordWrap"
+                    MaxLines="20" />
+            </Border>
 
         </AbsoluteLayout>
         <Grid x:Name="BottomControlsHost"

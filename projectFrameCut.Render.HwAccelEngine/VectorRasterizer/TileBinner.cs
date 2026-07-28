@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 {
     /// <summary>
@@ -47,59 +49,70 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             int tileCount = tilesX * tilesY;
             int pc = primitives.Count;
 
-            var minTx = new int[pc];
-            var minTy = new int[pc];
-            var maxTx = new int[pc];
-            var maxTy = new int[pc];
+            // Rent scratch arrays from shared pool to reduce GC pressure
+            int[] minTx = ArrayPool<int>.Shared.Rent(pc);
+            int[] minTy = ArrayPool<int>.Shared.Rent(pc);
+            int[] maxTx = ArrayPool<int>.Shared.Rent(pc);
+            int[] maxTy = ArrayPool<int>.Shared.Rent(pc);
             var counts = new int[tileCount];
 
-            // Pass 1: for every primitive, compute the tile range its bounding
-            // box overlaps and accumulate per-tile counts.
-            for (int i = 0; i < pc; i++)
+            try
             {
-                var p = primitives[i];
-                int tx0 = Math.Clamp((int)MathF.Floor(p.BBoxMinX / tileSize), 0, tilesX - 1);
-                int ty0 = Math.Clamp((int)MathF.Floor(p.BBoxMinY / tileSize), 0, tilesY - 1);
-                int tx1 = Math.Clamp((int)MathF.Floor(p.BBoxMaxX / tileSize), 0, tilesX - 1);
-                int ty1 = Math.Clamp((int)MathF.Floor(p.BBoxMaxY / tileSize), 0, tilesY - 1);
-
-                minTx[i] = tx0; minTy[i] = ty0; maxTx[i] = tx1; maxTy[i] = ty1;
-
-                for (int ty = ty0; ty <= ty1; ty++)
+                // Pass 1: for every primitive, compute the tile range its bounding
+                // box overlaps and accumulate per-tile counts.
+                for (int i = 0; i < pc; i++)
                 {
-                    int rowBase = ty * tilesX;
-                    for (int tx = tx0; tx <= tx1; tx++)
-                        counts[rowBase + tx]++;
-                }
-            }
+                    var p = primitives[i];
+                    int tx0 = Math.Clamp((int)MathF.Floor(p.BBoxMinX / tileSize), 0, tilesX - 1);
+                    int ty0 = Math.Clamp((int)MathF.Floor(p.BBoxMinY / tileSize), 0, tilesY - 1);
+                    int tx1 = Math.Clamp((int)MathF.Floor(p.BBoxMaxX / tileSize), 0, tilesX - 1);
+                    int ty1 = Math.Clamp((int)MathF.Floor(p.BBoxMaxY / tileSize), 0, tilesY - 1);
 
-            // Prefix-sum the per-tile counts into CSR offsets.
-            var offsets = new int[tileCount + 1];
-            for (int t = 0; t < tileCount; t++)
-                offsets[t + 1] = offsets[t] + counts[t];
+                    minTx[i] = tx0; minTy[i] = ty0; maxTx[i] = tx1; maxTy[i] = ty1;
 
-            var indices = new int[offsets[tileCount]];
-            var cursor = (int[])offsets.Clone();
-
-            // Pass 2: scatter primitive indices into their tile buckets.
-            // Iterating i in ascending order preserves the original
-            // (layer-sorted) primitive order within each tile bucket, which
-            // is required for correct painter's-algorithm alpha blending.
-            for (int i = 0; i < pc; i++)
-            {
-                int ty0 = minTy[i], ty1 = maxTy[i], tx0 = minTx[i], tx1 = maxTx[i];
-                for (int ty = ty0; ty <= ty1; ty++)
-                {
-                    int rowBase = ty * tilesX;
-                    for (int tx = tx0; tx <= tx1; tx++)
+                    for (int ty = ty0; ty <= ty1; ty++)
                     {
-                        int t = rowBase + tx;
-                        indices[cursor[t]++] = i;
+                        int rowBase = ty * tilesX;
+                        for (int tx = tx0; tx <= tx1; tx++)
+                            counts[rowBase + tx]++;
                     }
                 }
-            }
 
-            return new TileBinResult(offsets, indices, tilesX, tilesY, tileSize);
+                // Prefix-sum the per-tile counts into CSR offsets.
+                var offsets = new int[tileCount + 1];
+                for (int t = 0; t < tileCount; t++)
+                    offsets[t + 1] = offsets[t] + counts[t];
+
+                var indices = new int[offsets[tileCount]];
+                var cursor = (int[])offsets.Clone();
+
+                // Pass 2: scatter primitive indices into their tile buckets.
+                // Iterating i in ascending order preserves the original
+                // (layer-sorted) primitive order within each tile bucket, which
+                // is required for correct painter's-algorithm alpha blending.
+                for (int i = 0; i < pc; i++)
+                {
+                    int ty0 = minTy[i], ty1 = maxTy[i], tx0 = minTx[i], tx1 = maxTx[i];
+                    for (int ty = ty0; ty <= ty1; ty++)
+                    {
+                        int rowBase = ty * tilesX;
+                        for (int tx = tx0; tx <= tx1; tx++)
+                        {
+                            int t = rowBase + tx;
+                            indices[cursor[t]++] = i;
+                        }
+                    }
+                }
+
+                return new TileBinResult(offsets, indices, tilesX, tilesY, tileSize);
+            }
+            finally
+            {
+                ArrayPool<int>.Shared.Return(minTx);
+                ArrayPool<int>.Shared.Return(minTy);
+                ArrayPool<int>.Shared.Return(maxTx);
+                ArrayPool<int>.Shared.Return(maxTy);
+            }
         }
     }
 }
