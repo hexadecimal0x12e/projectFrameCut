@@ -111,6 +111,7 @@ namespace projectFrameCut.StandaloneRender
                     Available modes:
                         - render: Render video/audio/all from the given project file.
                         - bench: Benchmark hardware accelerators for rendering.
+                        - reencode: Decode an existing video and re-encode it. Useful for codec testing.
 
                     Arguments:
                     Mode 'render':
@@ -176,6 +177,16 @@ namespace projectFrameCut.StandaloneRender
                         [-maxFrames=<number>]                       (limit decoded frames)
                         [-VideoFrameDiskCache=<true|false>]
                         [-preferHwAccelDecoder=<true|false>]
+
+                    Mode 'reencode':
+                        -source=<input video>                       (required)
+                        -output=<output file>                       (required)
+                        [-encoder=<codec name>]                     (default: libx264)
+                        [-pixelFormat=<AVPixelFormat name>]         (default: AV_PIX_FMT_YUV420P)
+                        [-maxFrames=<number>]                       (limit frames to reencode)
+                        [-preferHwAccelDecoder=<true|false>]
+                        [-preferHwAccelEncoder=<true|false>]
+                        [-bitRate=<bitrate in bps>]                 (optional, encoder bitrate)
 
                     ---
 
@@ -353,6 +364,39 @@ namespace projectFrameCut.StandaloneRender
                     catch (TaskCanceledException)
                     {
                         Log("Benchmark task was canceled.");
+                        return 255;
+                    }
+                case "reencode":
+                    // 初始化 FFmpeg（与 render 和 bench 使用相同的模式）
+                    Log("Initializing FFmpeg for reencode...");
+                    DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                    ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+                    if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                    {
+                        FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
+                        Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
+                    }
+                    else
+                    {
+                        Log($"FFmpeg library failed to load.", "error");
+                        return 1;
+                    }
+                    FFmpegHelper.SetupFFmpegLogging();
+
+                    if (switches.ContainsKey("preferHwAccelDecoder"))
+                    {
+                        var accelResult1 = InitAccel(switches);
+                        if (accelResult1 != 0) return accelResult1;
+                    }
+
+                    try
+                    {
+                        return await GoReencode(switches);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Log("Reencode task was canceled.");
                         return 255;
                     }
                 case "list_accels":
@@ -1781,6 +1825,200 @@ namespace projectFrameCut.StandaloneRender
             Log("========================================", "stat");
 
             source.Dispose();
+            return 0;
+        }
+
+        /// <summary>
+        /// 重新编码模式：解码输入视频，然后使用指定编码器重新编码输出。
+        /// 用于测试编解码器的正确性和性能。
+        /// </summary>
+        private static async Task<int> GoReencode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            if (!switches.TryGetValue("source", out var sourcePath) || string.IsNullOrWhiteSpace(sourcePath))
+            {
+                Log("ERROR: Reencode requires -source=<input video>.", "error");
+                return 1;
+            }
+            if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))
+            {
+                Log("ERROR: Reencode requires -output=<output file>.", "error");
+                return 1;
+            }
+            if (!File.Exists(sourcePath))
+            {
+                Log($"ERROR: Source file '{sourcePath}' not found.", "error");
+                return 1;
+            }
+
+            bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
+            Log($"Use hardware acceleration for decoding: {hwAccelDecode}, encoding: {hwAccelEncode}");
+
+            var encoder = switches.GetOrAdd("encoder", "libx264");
+            var pixelFormatStr = switches.GetOrAdd("pixelFormat", "AV_PIX_FMT_YUV420P");
+            var maxFrames = int.TryParse(switches.TryGetValue("maxFrames", out var mf) ? mf : "0", out var parsedMf) && parsedMf > 0 ? parsedMf : 0;
+            var bitRate = long.TryParse(switches.TryGetValue("bitRate", out var br) ? br : "0", out var parsedBr) && parsedBr > 0 ? parsedBr : 4_000_000L;
+
+            // ── 创建解码器 ──────────────────────────────────────
+            Log($"Creating decoder for: {sourcePath}");
+            IVideoSource? source = null;
+            try
+            {
+                source = PluginManager.CreateVideoSource(sourcePath);
+                Log($"Created decoder: {source?.TypeName ?? "(null)"}");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to create video source");
+                return 1;
+            }
+
+            if (source is null)
+            {
+                Log("ERROR: Failed to create video source - no plugin supports this file.", "error");
+                return 1;
+            }
+
+            source.Initialize();
+            source.StrictMode = false;
+
+            var totalFrames = source.TotalFrames > 0 ? source.TotalFrames : 0;
+            if (totalFrames <= 0)
+            {
+                Log("ERROR: Cannot determine total frame count.", "error");
+                source.Dispose();
+                return 1;
+            }
+
+            var decodeCount = maxFrames > 0 ? Math.Min(maxFrames, (int)totalFrames) : (int)totalFrames;
+            var srcWidth = source.Width;
+            var srcHeight = source.Height;
+            var srcFps = source.Fps;
+
+            if (srcWidth <= 0 || srcHeight <= 0 || srcFps <= 0)
+            {
+                Log($"ERROR: Invalid source dimensions ({srcWidth}x{srcHeight}) or FPS ({srcFps}).", "error");
+                source.Dispose();
+                return 1;
+            }
+
+            Log($"Source: {srcWidth}x{srcHeight}, {srcFps:F2}fps, {decodeCount}/{totalFrames} frames, decoder: {source.TypeName}");
+
+            // ── 创建编码器 ──────────────────────────────────────
+            outputPath = outputPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+
+            Log($"Creating encoder: {encoder}, pixel format: {pixelFormatStr}, {srcWidth}x{srcHeight} @ {srcFps:F0}fps");
+
+            IVideoWriter writer;
+            if (hwAccelEncode)
+            {
+                writer = new VideoWriterHWAccel
+                {
+                    Width = srcWidth,
+                    Height = srcHeight,
+                    FramePerSecond = (int)Math.Round(srcFps),
+                    CodecName = encoder,
+                    PixelFormat = pixelFormatStr,
+                    OutputPath = outputPath,
+                    BitRate = bitRate,
+                };
+            }
+            else
+            {
+                writer = new VideoWriter
+                {
+                    Width = srcWidth,
+                    Height = srcHeight,
+                    FramePerSecond = (int)Math.Round(srcFps),
+                    CodecName = encoder,
+                    PixelFormat = pixelFormatStr,
+                    OutputPath = outputPath,
+                    BitRate = bitRate,
+                };
+            }
+
+            try
+            {
+                writer.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to initialize encoder");
+                source.Dispose();
+                return 1;
+            }
+
+            Log($"Encoder initialized: {outputPath}");
+
+            // ── 逐帧转码 ──────────────────────────────────────
+            Log("Starting reencode...");
+            var sw = Stopwatch.StartNew();
+            int encodedCount = 0;
+
+            for (uint i = 0; i < decodeCount; i++)
+            {
+                try
+                {
+                    using (var frame = source.GetFrame(i, false))
+                    {
+                        writer.Append(frame);
+                        encodedCount++;
+                    }
+
+                    var elapsed = sw.Elapsed.TotalSeconds;
+                    var fps = (i + 1) / Math.Max(elapsed, 0.001);
+                    Console.Write($"\rReencoding: {((double)(i + 1) / decodeCount):P1}, {fps:F1} FPS， ETA: {TimeSpan.FromSeconds((decodeCount - (i + 1)) / Math.Max(fps, 0.001)):mm\\:ss} ");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to encode frame #{i}");
+                }
+
+
+            }
+            sw.Stop();
+            Console.WriteLine();
+
+            // ── 完成编码 ──────────────────────────────────────
+            Log("Finishing encoding...");
+            try
+            {
+                writer.Finish();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Error during encoder finish");
+            }
+
+            // ── 结果统计 ──────────────────────────────────────
+            var totalTime = sw.Elapsed;
+            var overallFps = encodedCount / Math.Max(totalTime.TotalSeconds, 0.001);
+
+            Log("");
+            Log("========================================", "stat");
+            Log("  Reencode Results", "stat");
+            Log("========================================", "stat");
+            Log($"  Source file       : {Path.GetFileName(sourcePath)}", "stat");
+            Log($"  Output file       : {outputPath}", "stat");
+            Log($"  Resolution        : {srcWidth}x{srcHeight}", "stat");
+            Log($"  FPS               : {srcFps:F2}", "stat");
+            Log($"  Decoder           : {source.TypeName}", "stat");
+            Log($"  Encoder           : {encoder}", "stat");
+            Log($"  Pixel format      : {pixelFormatStr}", "stat");
+            Log($"  Bitrate           : {bitRate / 1000.0 / 1000.0:F1} Mbps", "stat");
+            Log($"  Frames encoded    : {encodedCount}", "stat");
+            Log($"  Total time        : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Overall FPS       : {overallFps:F2}", "stat");
+            if (srcFps > 0)
+                Log($"  Speed vs realtime : {(overallFps / srcFps):F2}x", "stat");
+            Log($"  Avg per frame     : {(totalTime.TotalMilliseconds / Math.Max(encodedCount, 1)):F3}ms", "stat");
+            Log("========================================", "stat");
+
+            source.Dispose();
+            writer.Dispose();
             return 0;
         }
 

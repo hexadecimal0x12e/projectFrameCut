@@ -8853,6 +8853,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u5173\u4E8E\u5E94\u7528\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

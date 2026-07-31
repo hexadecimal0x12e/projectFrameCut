@@ -21,7 +21,9 @@ using projectFrameCut.Shared;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
+#if !DISABLE_POWERSHELL_SDK
 using projectFrameCut.ScriptEngine;
+#endif
 using System.ComponentModel;
 
 namespace projectFrameCut
@@ -164,7 +166,8 @@ namespace projectFrameCut
 
             if (IsBoolSettingTrue("render_SaveCheckpoint"))
             {
-                Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
+                try { Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint")); }
+                catch { /* iOS sandbox fallback */ }
                 MyLoggerExtensions.SaveDiagResult = true;
                 MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
 
@@ -215,7 +218,8 @@ namespace projectFrameCut
             IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
 
             var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
-            Directory.CreateDirectory(vfdCahceDir);
+            try { Directory.CreateDirectory(vfdCahceDir); }
+            catch { /* iOS sandbox — NSFileManager fallback */ }
             VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
             VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
             VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
@@ -240,7 +244,9 @@ namespace projectFrameCut
             );
 
             // Script 引擎审计模式
+#if !DISABLE_POWERSHELL_SDK
             PSCommandAuthorizationHelper.AuditMode = IsBoolSettingTrueOrDefault("Security_Script_AuditMode", false);
+#endif
 
             // 远程内容：HTTP 解码器
             HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);

@@ -24,7 +24,9 @@ using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using Path = System.IO.Path;
+#if !DISABLE_POWERSHELL_SDK
 using projectFrameCut.ScriptEngine;
+#endif
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Base;
 
@@ -2270,6 +2272,7 @@ public partial class AssistanceChatView : ContentView
             item.ContentViews.Add(view);
     }
 
+#if !DISABLE_POWERSHELL_SDK
     public Task<AuthorizationResult> ShowAuthorizationRequestAsync(AuthorizationContext context, bool allowRemember)
     {
         var tcs = new TaskCompletionSource<AuthorizationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -2400,7 +2403,7 @@ public partial class AssistanceChatView : ContentView
 
         return tcs.Task;
     }
-
+#endif
 
 
 

@@ -80,7 +80,9 @@ namespace projectFrameCut
 #else
             "My Assets/.database",
             "My Assets/.thumbnails",
-            "My Assets/.perAssetThumb"
+            "My Assets/.perAssetThumb",
+            "Logs",
+            "AppData",
 #endif
         ];
 
@@ -145,8 +147,42 @@ namespace projectFrameCut
                 }
 
                 IsStoreMode = WinUI.Program.IsStoreModeEnabled;
+#elif IOS
+                DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                // iOS's Environment.GetFolderPath can return empty under hardened
+                // sandbox. Fall back to MAUI's FileSystem (Foundation NSSearchPath).
+                if (string.IsNullOrEmpty(DataPath))
+                {
+                    BasicDataPath = Path.Combine(DataPath, "AppData");
+                }
+                else
+                {
+                    DataPath = FileSystem.AppDataDirectory;
+                }
+                   
+                loggingDir = Path.Combine(DataPath, "Logs");
+                // iOS sandbox: POSIX stat through container root returns EPERM.
+                // .NET's Path.GetFullPath → realpath() resolves each component —
+                // including the protected root. Fall back to NSFileManager.
+                try
+                {
+                    Directory.CreateDirectory(BasicDataPath);
+                    Directory.CreateDirectory(loggingDir);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Foundation.NSFileManager.DefaultManager.CreateDirectory(
+                        Foundation.NSUrl.FromFilename(loggingDir), true, null, out _);
+                    Foundation.NSFileManager.DefaultManager.CreateDirectory(
+                        Foundation.NSUrl.FromFilename(BasicDataPath), true, null, out _);
+                }
+
+#elif MACCATALYST
+                DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
 #endif
+#if !iDevices
                 Directory.CreateDirectory(loggingDir);
+#endif
                 try
                 {
                     Directory.CreateDirectory(DataPath);
@@ -347,7 +383,7 @@ namespace projectFrameCut
                        {
                            options.SetShouldEnableSnackbarOnWindows(false);
                        })
-#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
+#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER
                        .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
                        {
                            options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
@@ -528,14 +564,14 @@ namespace projectFrameCut
 
                 try
                 {
-                    if (!File.Exists(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    if (!File.Exists(Path.Combine(DataPath, $"{Localized.AboutAppData}.txt")))
                     {
-                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), OperatingSystem.IsWindows() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
+                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.AboutAppData}.txt"), OperatingSystem.IsWindows() || OperatingSystem.IsMacCatalyst() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
                     }
 
-                    if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.AboutAppData}.txt")))
                     {
-                        File.WriteAllText(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), Localized.AboutAppData_BasicData);
+                        File.WriteAllText(Path.Combine(BasicDataPath, $"{Localized.AboutAppData}.txt"), Localized.AboutAppData_BasicData);
                     }
                 }
                 catch { }
@@ -801,6 +837,7 @@ namespace projectFrameCut
                 catch { }
                 FFmpegRoot = ffmpeg.RootPath;
                 Log($"FFmpeg library root path: {FFmpegRoot}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
 
                 try
@@ -985,7 +1022,11 @@ namespace projectFrameCut
             Log("FATAL: unhandled exception happened.", "fatal");
             Log(ex, "Global crash");
             throw ex; //let Fishnet handle it
-#endif
+#elif IOS
+            projectFrameCut.Platforms.iOS.Program.Crash(ex);
+#elif MACCATALYST
+            projectFrameCut.Platforms.MacCatalyst.Program.Crash(ex);
+#endif  
         }
 
         public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)

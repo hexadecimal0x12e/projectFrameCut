@@ -42,7 +42,9 @@ using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+#if !DISABLE_POWERSHELL_SDK
 using System.Management.Automation;
+#endif
 
 
 
@@ -1246,6 +1248,7 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region scripting
+#if !DISABLE_POWERSHELL_SDK
     PowerShell? pwsh = null!;
     private void ExecteCommandButton_Clicked(object sender, EventArgs e)
     {
@@ -1275,9 +1278,7 @@ public partial class TestPage : ContentPage
         SysLog(SysLogPriority.Info, "Test message to test libpsl-native");
     }
 
-
-
-    [DllImport("libpsl-native", CharSet = CharSet.Ansi, EntryPoint = "Native_SysLog")] //testing native call of pwsh
+        [DllImport("libpsl-native", CharSet = CharSet.Ansi, EntryPoint = "Native_SysLog")] //testing native call of pwsh
     private static extern void SysLog(SysLogPriority priority, string message);
 
     [Flags]
@@ -1422,6 +1423,19 @@ public partial class TestPage : ContentPage
         /// </summary>
         Local7 = (23 << 3),
     }
+#else
+    private void ExecteCommandButton_Clicked(object sender, EventArgs e)
+    {
+    
+    }
+    private void InvokeNativeFuncButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+#endif
+
+
+
 #endregion
 
     #region misc

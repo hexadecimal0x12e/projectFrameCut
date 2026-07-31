@@ -284,6 +284,7 @@ namespace projectFrameCut.Render.Rendering
         {
             if (Disposed) return;
             Disposed = true;
+            WaitForBuildThreadToStop();  
             try
             {
                 running = false;

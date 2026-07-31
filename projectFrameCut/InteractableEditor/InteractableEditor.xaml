@@ -52,7 +52,7 @@
 
 
             <Border x:Name="DebugOverlay"
-                IsVisible="True"
+                IsVisible="False"
                 BackgroundColor="#CC000000"
                 Stroke="#80ffffff"
                 StrokeThickness="1"

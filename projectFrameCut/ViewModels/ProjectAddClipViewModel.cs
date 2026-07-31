@@ -22,7 +22,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+#if !DISABLE_POWERSHELL_SDK
 using System.Management.Automation;
+#endif
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -1119,6 +1121,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     /// <summary>
     /// 应用脚本模板：用户填入变量 → 注入 PowerShell 运行空间 → 执行脚本。
     /// </summary>
+#if !DISABLE_POWERSHELL_SDK
     private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
     {
         string? tempExtractDir = null;
@@ -1181,6 +1184,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);
         }
     }
+#else
+    private Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
+    {
+        return Task.CompletedTask;
+    }
+#endif
 
     private static void ReplaceTemplatePlaceholders(
         JsonNode? node,

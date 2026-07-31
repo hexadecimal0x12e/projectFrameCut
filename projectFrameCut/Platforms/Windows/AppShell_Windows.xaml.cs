@@ -1,11 +1,12 @@
-﻿namespace projectFrameCut
+namespace projectFrameCut
 {
-    public partial class AppShell : Shell
+    public sealed partial class WindowsAppShell : AppShell
     {
-        public static AppShell instance;
-        public AppShell(bool placeDefaultItem = true)
+        public static new WindowsAppShell instance;
+        public WindowsAppShell(bool placeDefaultItem = true)
         {
             instance = this;
+            AppShell.instance = this;
             Title = Localized.AppBrand;
 #if WINDOWS
             // Must be set explicitly because the XAML file is never loaded via
@@ -15,7 +16,7 @@
             // NullReferenceException on startup.
             FlyoutBehavior = FlyoutBehavior.Disabled;
 
-            if (placeDefaultItem && (this.Items == null || this.Items.Count == 0))
+            if (this.Items == null || this.Items.Count == 0)
             {
                 var shellContent = new Microsoft.Maui.Controls.ShellContent
                 {
@@ -67,11 +68,9 @@
             }
         }
 
-
-
-        public void ShowNavView() => App.ShowNavBar();
-        public void HideNavView() => App.HideNavBar();
-        public void CollapseNavView() => App.CollapseNavView();
+        public override void ShowNavView() => App.ShowNavBar();
+        public override void HideNavView() => App.HideNavBar();
+        public override void CollapseNavView() => App.CollapseNavView();
 
     }
 }

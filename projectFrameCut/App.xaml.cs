@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls;
 using projectFrameCut.Services;
 using System.Globalization;
 using Microsoft.Maui.Handlers;
@@ -6,9 +6,6 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Controls;
 using ResourceDictionary = Microsoft.Maui.Controls.ResourceDictionary;
 using Application = Microsoft.Maui.Controls.Application;
-
-
-
 
 
 
@@ -157,12 +154,45 @@ namespace projectFrameCut
             }
             var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
             var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
+            string styleXAML = "", colorXAML = "";
+            if (!File.Exists(stylePath))
+            {
+                try
+                {
+                    string fileName = $"Styles.{DeviceInfo.Current.Platform}{DeviceInfo.Current.Idiom}.xaml";
+                    if ((stylePath = FileSystemService.GetAppPackageFileSync("Styles", fileName)) != null && File.Exists(stylePath))
+                    {
+                        styleXAML = File.ReadAllText(stylePath);
+                    }
+                    else
+                    {
+                        styleXAML = "";
+                    }
+                }
+                catch
+                {
+                    styleXAML = "";
+                }
+            }
+            else
+            {
+                styleXAML = File.ReadAllText(stylePath);
+            }
+
+            if (!File.Exists(colorPath))
+            {
+                colorPath = FileSystemService.GetAppPackageFileSync("Styles", "Colors.xaml");
+                colorXAML = File.ReadAllText(colorPath);
+            }
+            else
+            {
+                colorXAML = File.ReadAllText(colorPath);
+            }
+
             try
             {
-                if (File.Exists(stylePath) && File.Exists(colorPath) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                if (!string.IsNullOrWhiteSpace(colorXAML) && !string.IsNullOrWhiteSpace(styleXAML) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
                 {
-                    var styleXAML = File.ReadAllText(stylePath);
-                    var colorXAML = File.ReadAllText(colorPath);
                     var resourceDictionary = new ResourceDictionary();
                     var colorResourceDictionary = new ResourceDictionary();
 
@@ -174,8 +204,17 @@ namespace projectFrameCut
                         Application.Current.Resources.MergedDictionaries.Clear();
                         Application.Current.Resources.MergedDictionaries.Add(loadedColor);
                         Application.Current.Resources.MergedDictionaries.Add(loadedStyle);
-                        Log("Applied user style.");
+                        Log($"Applied style from {stylePath} and colors from {colorPath}");
                     }
+                }
+                else
+                {
+                    if(string.IsNullOrWhiteSpace(styleXAML))
+                        Log($"No style file found at {stylePath}, using default style and colors.");
+                    if (string.IsNullOrWhiteSpace(colorXAML))
+                        Log($"No color file found at {colorPath}, using default style and colors.");
+                    if(SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                        Log($"User style is disabled by settings, using default style and colors.");
                 }
             }
             catch (Exception ex)
@@ -187,7 +226,7 @@ namespace projectFrameCut
 #if WINDOWS
                 if (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft || SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
                 {
-                    var shell = new AppShell(false);
+                    var shell = new WindowsAppShell(false);
                     var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                     shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
@@ -200,7 +239,7 @@ namespace projectFrameCut
                 }
                 else
                 {
-                    var shell = new AppShell(true);
+                    var shell = new WindowsAppShell(true);
                     var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                     mauiWindow.HandlerChanged += (s, e) =>
@@ -208,12 +247,26 @@ namespace projectFrameCut
                         MakeWindow(mauiWindow);
                     };
                     return mauiWindow;
-
-
                 }
 
 #else
-                return new Microsoft.Maui.Controls.Window(new AppShell());
+#if IOS
+                return new Microsoft.Maui.Controls.Window(new iOSAppShell());
+#elif MACCATALYST
+                return new Microsoft.Maui.Controls.Window(new MacAppShell());
+#elif ANDROID
+                return new Microsoft.Maui.Controls.Window(new AndroidAppShell());
+#else //general fallback
+                var shell = new Shell(false);
+                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
+                shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_add"), Route = "assets" });
+                shell.Items.Add(new ShellContent { Content = new CreatePage(), Title = Localized.AppShell_CreateTab, Icon = ImageHelper.LoadFromAsset("icon_create"), Route = "create" });
+                shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
+                shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
+                return mauiWindow;
+#endif
 #endif
             }
             catch (Exception ex)
@@ -593,5 +646,15 @@ namespace projectFrameCut
             Application.Current?.OpenWindow(newWindow);
         }
 
+    }
+
+    public abstract class AppShell : Shell
+    {
+        public static AppShell? instance;
+        public virtual void ShowNavView() { }
+
+        public virtual void HideNavView() { }
+
+        public virtual void CollapseNavView() { }
     }
 }

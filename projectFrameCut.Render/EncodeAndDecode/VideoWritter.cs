@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
@@ -210,8 +210,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             AVDictionary* opts = null;
             if (_codecCtx->codec_id == AVCodecID.AV_CODEC_ID_H264)
             {
-                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-                ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
+                // 使用 medium 预设，画质/压缩率比 veryfast 更好；
+                // 去掉 zerolatency，让 B 帧和 lookahead 生效。
+                ffmpeg.av_dict_set(&opts, "preset", "medium", 0);
             }
 
             FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
@@ -525,8 +526,28 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void EncodeFrame(AVFrame* frame)
         {
-            FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, frame), "avcodec_send_frame");
+            // 当编码器内部队列满时，avcodec_send_frame 会返回 AVERROR(EAGAIN)。
+            // 此时需要先取出已编码的包，然后重试发送同一帧，而不是直接报错。
+            while (true)
+            {
+                int sendRet = ffmpeg.avcodec_send_frame(_codecCtx, frame);
+                if (sendRet >= 0)
+                    break;
 
+                if (sendRet == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+                {
+                    DrainEncodedPackets();
+                    continue;
+                }
+
+                FFmpegHelper.Throw(sendRet, "avcodec_send_frame");
+            }
+
+            DrainEncodedPackets();
+        }
+
+        private void DrainEncodedPackets()
+        {
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
@@ -542,7 +563,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 pkt->stream_index = _videoStream->index;
 
                 FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "av_interleaved_write_frame");
-
                 ffmpeg.av_packet_free(&pkt);
             }
         }
@@ -552,21 +572,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_isDisposed || Index <= 0) return;
 
             FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, null), "avcodec_send_frame(flush)");
-            while (true)
-            {
-                AVPacket* pkt = ffmpeg.av_packet_alloc();
-                int ret = ffmpeg.avcodec_receive_packet(_codecCtx, pkt);
-                if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
-                {
-                    ffmpeg.av_packet_free(&pkt);
-                    break;
-                }
-                FFmpegHelper.Throw(ret, "avcodec_receive_packet(flush)");
-                ffmpeg.av_packet_rescale_ts(pkt, _codecCtx->time_base, _videoStream->time_base);
-                pkt->stream_index = _videoStream->index;
-                FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "write_frame(flush)");
-                ffmpeg.av_packet_free(&pkt);
-            }
+            DrainEncodedPackets();
 
             if (_isHeaderWritten)
             {

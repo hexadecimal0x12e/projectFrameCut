@@ -52,7 +52,9 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
+#if !DISABLE_POWERSHELL_SDK
 using projectFrameCut.ScriptEngine;
+#endif
 
 
 #if WINDOWS
@@ -64,9 +66,8 @@ using Windows.Storage;
 #if iDevices
 using Foundation;
 using UIKit;
-using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
-using projectFrameCut.MetalAccelerater;
+using projectFrameCut.Render.HwAccelEngine.Platforms.iOS;
 
 
 #endif
@@ -227,7 +228,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     /// 集成的 PowerShell 脚本引擎，可通过 <c>ScriptEngine.ExecuteAsync()</c> 执行脚本，
     /// 内置 Get-ProjectClip / Add-ProjectClip 等命令与当前时间线交互。
     /// </summary>
+#if !DISABLE_POWERSHELL_SDK
     public ScriptCore ScriptEngine { get; } = new();
+#else
+    public object? ScriptEngine => null;
+#endif
 
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
@@ -479,9 +484,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         NormalizeLoadedClipFrameSemantics();
 
+#if !DISABLE_POWERSHELL_SDK
         ScriptEngine.Initialize(this,
             CreatePowerShellAuthorizationHandler(this),
             CreateEnhancedPowerShellAuthorizationHandler(this));
+#endif
     }
 
     private void RegisterCommands()
@@ -536,7 +543,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await TimelineScrollView.ScrollToAsync(TimelineScrollView.ScrollX + offset, TimelineScrollView.ScrollY, true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
+#if !DISABLE_POWERSHELL_SDK
         ShowScriptWindowCommand = new Command(ShowScriptWindow);
+#endif
 
         EscapeCommand =
             new Command(async () =>
@@ -1317,7 +1326,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    #endregion
+#endregion
 
     #region add stuff
     public ClipElementUI CreateAndAddClip(
@@ -5702,6 +5711,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
+#if !DISABLE_POWERSHELL_SDK
     private void ShowScriptWindow()
     {
         const string scriptWindowTitle = "Script Console";
@@ -5995,6 +6005,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         MainMultiWindowView.AddWindow(window);
     }
+#endif
 
     private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
     {
@@ -7842,7 +7853,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
 #else
             await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
-#endif        
+#endif
         }
     }
 
@@ -9611,6 +9622,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     /// 当脚本尝试执行可能危害或未分类的命令时，弹出对话框询问用户。
     /// 用户可以选择允许/拒绝，并可选择记住此次决策。
     /// </summary>
+#if !DISABLE_POWERSHELL_SDK
     public static CommandAuthorizationCallback CreatePowerShellAuthorizationHandler(Page page)
     {
         return (commandInfo, commandOrigin) =>
@@ -9674,6 +9686,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             return result;
         };
     }
+#endif
 
     /// <summary>
     /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
@@ -9690,6 +9703,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     /// 如果有活跃的 AI 聊天窗口，将授权请求路由到聊天界面中，减少弹框打断。
     /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
     /// </summary>
+#if !DISABLE_POWERSHELL_SDK
     public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
     {
         return (context, allowRemember) =>
@@ -9787,10 +9801,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             return result;
         };
     }
+#endif
 
     /// <summary>
     /// 构建增强授权对话框的详细消息文本。
     /// </summary>
+#if !DISABLE_POWERSHELL_SDK
     private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
     {
         var sb = new System.Text.StringBuilder();
@@ -9830,6 +9846,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         return sb.ToString();
     }
+#endif
 
     #endregion
 

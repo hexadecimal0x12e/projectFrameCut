@@ -1,44 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>LSRequiresIPhoneOS</key>
-		<true/>
-		<key>UIDeviceFamily</key>
-		<array>
-			<integer>1</integer>
-			<integer>2</integer>
-		</array>
-		<key>UIRequiredDeviceCapabilities</key>
-		<array>
-			<string>arm64</string>
-		</array>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>XSAppIconAssets</key>
-		<string>Assets.xcassets/appicon.appiconset</string>
-		<key>CFBundleIdentifier</key>
-		<string></string>
-		<key>UIApplicationSceneManifest</key>
-		<dict>
-			<key>UIApplicationSupportsMultipleScenes</key>
-			<false/>
-		</dict>
-		<key>CFBundleShortVersionString</key>
-		<string>beta1.0.0</string>
-		<key>UIFileSharingEnabled</key>
-		<true/>
-		<key>LSSupportsOpeningDocumentsInPlace</key>
-		<true/>
-	</dict>
+<dict>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>XSAppIconAssets</key>
+	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>For transferring assets between devices, or connect to a Central Asset Server.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hans</string>
+		<!-- zh-CN -->
+		<string>en</string>
+		<!-- en-US -->
+		<string>zh-Hant</string>
+		<!-- zh-TW -->
+		<string>ja</string>
+		<!-- ja-JP -->
+		<string>ko</string>
+		<!-- ko-KR -->
+		<string>fr</string>
+		<!-- fr-FR -->
+		<string>ar</string>
+		<!-- ar-SA -->
+		<string>de</string>
+		<!-- de-DE -->
+		<string>es</string>
+		<!-- es-ES -->
+		<string>it</string>
+		<!-- it-IT -->
+		<string>pl</string>
+		<!-- pl-PL -->
+		<string>pt</string>
+		<!-- pt-BR -->
+		<string>ru</string>
+		<!-- ru-RU -->
+		<string>tr</string>
+		<!-- tr-TR -->
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh-Hans</string>
+</dict>
 </plist>

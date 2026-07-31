@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Handlers;
+#if !DISABLE_POWERSHELL_SDK
 using Microsoft.PowerShell;
+#endif
 using OpenAI.Chat;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -10,15 +12,19 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
+#if !DISABLE_POWERSHELL_SDK
 using projectFrameCut.ScriptEngine;
+#endif
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
+#if !DISABLE_POWERSHELL_SDK
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+#endif
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -173,8 +179,10 @@ namespace projectFrameCut.AIAssistance
                     }
                 }, "browse_webpage", "Open a webpage in a rendered browser, wait for dynamic content, and return the page's content. If detailed is true, this will return a structured JSON including: title, url, text, links (array of {url, text}), and images (array of {url, alt}); else, return the page's content as plain text. Use 'detailed' when you need to programmatically process links or images rather than just read text. The user must authorize each new domain."),
 
+#if !DISABLE_POWERSHELL_SDK
                 AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) scripting engine which could interact with the whole system. See your system prompt fore more rules, usages and descriptions."),
                 AIFunctionFactory.Create(ResetInternalPowerShell, "reset_internal_pwsh_environment", "Reset the internal PowerShell scripting environment. If you found issue on scripting, try this. This will clear all variables, functions, and all files in workspace, and this command cannot be undone."),
+#endif
 
                 AIFunctionFactory.Create((string key, string content) =>
                 {
@@ -326,6 +334,7 @@ namespace projectFrameCut.AIAssistance
             return new(() => toolCalls);
         }
 
+#if !DISABLE_POWERSHELL_SDK
         static async Task<string> InvokeInternalPowerShell(string Command)
         {
             if (currentPage?.ScriptEngine is not null)
@@ -413,6 +422,7 @@ namespace projectFrameCut.AIAssistance
             }
             return "No project is loaded, so no internal PowerShell environment to reset.";
         }
+#endif
 
         static async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural, int Width = 1024, int Height = 1024)
         {

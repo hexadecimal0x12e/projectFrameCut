@@ -108,6 +108,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private AVStream* _videoStream;
         private AVCodecContext* _codecCtx;
         private AVFrame* _frameDst;
+        private AVFrame*[] _framePool = [];
+        private int _framePoolIndex;
         private AVFrame* _frameSrc;
         private SwsContext* _sws;
         private int _frameIndex;
@@ -194,7 +196,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _videoStream->time_base = _codecCtx->time_base;
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = Math.Max(FramePerSecond * 3, 30);
-            _codecCtx->max_b_frames = 2;
+            _codecCtx->max_b_frames = 1;        // 减少B帧重排序缓冲,降低硬件编码器参考帧损坏概率
             _codecCtx->bit_rate = _bitRate;
             _codecCtx->rc_max_rate = _bitRate * 2;
             _codecCtx->rc_buffer_size = _bitRate > int.MaxValue / 2 ? int.MaxValue / 2 : (int)(_bitRate * 2);
@@ -252,7 +254,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         _videoStream->time_base = _codecCtx->time_base;
                         _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
                         _codecCtx->gop_size = Math.Max(FramePerSecond * 3, 30);
-                        _codecCtx->max_b_frames = 2;
+                        _codecCtx->max_b_frames = 1;
                         _codecCtx->bit_rate = _bitRate;
                         _codecCtx->rc_max_rate = _bitRate * 2;
                         _codecCtx->rc_buffer_size = _bitRate > int.MaxValue / 2 ? int.MaxValue / 2 : (int)(_bitRate * 2);
@@ -311,12 +313,23 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     "Open target audio/video stream");
             }
 
-            // ── 9. Allocate frames ──
-            _frameDst = ffmpeg.av_frame_alloc();
-            _frameDst->format = (int)_pixelFormat;
-            _frameDst->width = Width;
-            _frameDst->height = Height;
-            FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(_frameDst, 32), "av_frame_get_buffer(dst)");
+            // ── 9. Allocate frame pool ──
+            // Hardware encoders (NVENC, AMF, QSV, etc.) may hold async references to
+            // submitted frames. A single _frameDst would be overwritten before the GPU
+            // finishes reading it, corrupting reference frames. Use a ring buffer pool
+            // large enough to cover the encoder's internal queue depth.
+            int poolSize = Math.Clamp(_codecCtx->max_b_frames * 8 + 16, 16, 64);
+            _framePool = new AVFrame*[poolSize];
+            for (int i = 0; i < poolSize; i++)
+            {
+                _framePool[i] = ffmpeg.av_frame_alloc();
+                _framePool[i]->format = (int)_pixelFormat;
+                _framePool[i]->width = Width;
+                _framePool[i]->height = Height;
+                FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(_framePool[i], 32), $"av_frame_get_buffer(pool[{i}])");
+            }
+            _frameDst = _framePool[0];
+            _framePoolIndex = 0;
 
             // Source frame: always RGBA / RGBA64LE in system memory
             var srcPixFmt =
@@ -356,6 +369,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_isDisposed) throw new ObjectDisposedException(nameof(VideoWriterHWAccel));
 
             EnsureHeader();
+
+            // ── Advance to next pool frame (HW encoders may hold async references) ──
+            _frameDst = _framePool[_framePoolIndex];
+            _framePoolIndex = (_framePoolIndex + 1) % _framePool.Length;
 
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
@@ -463,6 +480,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_isDisposed) throw new ObjectDisposedException(nameof(VideoWriterHWAccel));
 
             EnsureHeader();
+
+            // ── Advance to next pool frame (HW encoders may hold async references) ──
+            _frameDst = _framePool[_framePoolIndex];
+            _framePoolIndex = (_framePoolIndex + 1) % _framePool.Length;
 
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
@@ -612,8 +633,31 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void EncodeFrame(AVFrame* frame)
         {
-            FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, frame), "avcodec_send_frame");
+            // 硬件编码器是异步的，内部有帧/包队列。
+            // 当 avcodec_send_frame 返回 AVERROR(EAGAIN) 时，说明输入队列已满，
+            // 必须先取出已编码的包，然后重试发送*同一帧*。
+            // 之前的实现把 EAGAIN 当成错误抛出，导致渲染端生成帧速度快于编码器消费时，
+            // 帧被丢弃/跳过。
+            while (true)
+            {
+                int sendRet = ffmpeg.avcodec_send_frame(_codecCtx, frame);
+                if (sendRet >= 0)
+                    break;
 
+                if (sendRet == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+                {
+                    DrainEncodedPackets();
+                    continue;
+                }
+
+                FFmpegHelper.Throw(sendRet, "avcodec_send_frame");
+            }
+
+            DrainEncodedPackets();
+        }
+
+        private void DrainEncodedPackets()
+        {
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
@@ -629,7 +673,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 pkt->stream_index = _videoStream->index;
 
                 FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "av_interleaved_write_frame");
-
                 ffmpeg.av_packet_free(&pkt);
             }
         }
@@ -639,21 +682,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_isDisposed || Index <= 0) return;
 
             FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, null), "avcodec_send_frame(flush)");
-            while (true)
-            {
-                AVPacket* pkt = ffmpeg.av_packet_alloc();
-                int ret = ffmpeg.avcodec_receive_packet(_codecCtx, pkt);
-                if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
-                {
-                    ffmpeg.av_packet_free(&pkt);
-                    break;
-                }
-                FFmpegHelper.Throw(ret, "avcodec_receive_packet(flush)");
-                ffmpeg.av_packet_rescale_ts(pkt, _codecCtx->time_base, _videoStream->time_base);
-                pkt->stream_index = _videoStream->index;
-                FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "write_frame(flush)");
-                ffmpeg.av_packet_free(&pkt);
-            }
+            DrainEncodedPackets();
 
             if (_isHeaderWritten)
             {
@@ -668,11 +697,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 fixed (AVFrame** p = &_frameSrc) { ffmpeg.av_frame_free(p); }
                 _frameSrc = null;
             }
-            if (_frameDst != null)
+            if (_framePool != null && _framePool.Length > 0)
             {
-                fixed (AVFrame** p = &_frameDst) { ffmpeg.av_frame_free(p); }
-                _frameDst = null;
+                for (int i = 0; i < _framePool.Length; i++)
+                {
+                    if (_framePool[i] != null)
+                    {
+                        fixed (AVFrame** p = &_framePool[i])
+                            ffmpeg.av_frame_free(p);
+                        _framePool[i] = null;
+                    }
+                }
+                _framePool = null;
             }
+            _frameDst = null;
             if (_codecCtx != null)
             {
                 // hw_device_ctx is attached to codecctx; clearing our ref before freeing
@@ -1017,9 +1055,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 ffmpeg.av_dict_set(opts, "preset", "p5", 0);       // p5 = 质量/速度最佳平衡 (p1最快-p7最慢)
                 ffmpeg.av_dict_set(opts, "tune", "hq", 0);          // hq = 高质量 (非低延迟模式)
-                ffmpeg.av_dict_set(opts, "rc", "vbr_hq", 0);        // 高质量 VBR 速率控制
-                ffmpeg.av_dict_set(opts, "rc_lookahead", "32", 0);  // 32帧预分析,平滑码率分配
-                ffmpeg.av_dict_set(opts, "b_ref_mode", "middle", 0);// 中档B帧参考模式
+                ffmpeg.av_dict_set(opts, "rc", "vbr", 0);           // VBR 速率控制 (旧版 vbr_hq 已弃用)
+                ffmpeg.av_dict_set(opts, "multipass", "qres", 0);   // 质量分辨率多遍编码 (qres=quality resolution)
+                ffmpeg.av_dict_set(opts, "rc_lookahead", "16", 0);  // 16帧预分析 (原32帧,减少内部队列深度避免参考帧损坏)
+                // b_ref_mode 不使用 middle (驱动默认 disabled),避免B帧引用链过深
             }
             else if (name.Contains("amf"))
             {

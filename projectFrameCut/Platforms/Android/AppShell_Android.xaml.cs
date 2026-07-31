@@ -8,37 +8,35 @@ using ShellItem = Microsoft.Maui.Controls.ShellItem;
 using Android.App;
 using Android.Views;
 using AndroidX.Core.View;
+#endif
 
 namespace projectFrameCut
 {
-    public partial class AppShell : Shell
+    public sealed partial class AndroidAppShell : AppShell
     {
-        public static AppShell instance;
-
-
-        public AppShell()
+        public AndroidAppShell()
         {
-            instance = this;
+            AppShell.instance = this;
 
-            // ±ØĞë¼ÓÔØ XAML£¬·ñÔò Items / ÃüÃûµÄ ShellItem ²»»á±»Éú³É
+            // åŠ è½½ XAMLï¼Œæ‰€æœ‰ Items / é»˜è®¤ ShellItem å°†ä¼šè¢«åŠ è½½
             InitializeComponent();
 
             Title = Localized.AppBrand;
 
 #if ANDROID
-            // ÑÓºóÔÚ UI Ïß³ÌÉèÖÃµ±Ç°Ïî£¬È·±£ Items ÒÑ¾­´´½¨£¨±ÜÃâ "Active Shell Item not set" Òì³££©
+            // ä» UI çº¿ç¨‹è®¾ç½®å½“å‰é¡¹ï¼Œç¡®ä¿ Items å·²ç»åŠ è½½å®Œæˆï¼Œé˜²æ­¢ "Active Shell Item not set" å¼‚å¸¸ã€‚
             Microsoft.Maui.Controls.Application.Current?.Dispatcher.Dispatch(() =>
             {
                 try
                 {
-                    // ÓÅÏÈÊ¹ÓÃ XAML ÖĞµÄÃüÃûÏî£¨ÀıÈç x:Name="ProjectsTab")
+                    // ä¼˜å…ˆä½¿ç”¨ XAML ä¸­çš„å‘½åé¡¹ï¼ˆæ¯”å¦‚ x:Name="ProjectsTab")
                     if (this.FindByName<ShellItem>("ProjectsTab") is ShellItem projectsTab)
                     {
                         this.CurrentItem = projectsTab;
                         return;
                     }
 
-                    // °´ route ²éÕÒ£¨ÀıÈç Route="home"£©
+                    // æŒ‰ route æŸ¥æ‰¾ï¼ŒRoute="home"
                     var homeItem = this.Items?.FirstOrDefault(i => string.Equals(i.Route, "home", System.StringComparison.OrdinalIgnoreCase));
                     if (homeItem is not null)
                     {
@@ -46,7 +44,7 @@ namespace projectFrameCut
                         return;
                     }
 
-                    // ¶µµ×£ºÑ¡ÔñµÚÒ»¸öÏî£¨Èç¹û´æÔÚ£©
+                    // å…œåº•ï¼Œé€‰æ‹©ç¬¬ä¸€ä¸ªé¡¹ï¼ˆå¦‚æœå­˜åœ¨ï¼‰
                     if (this.Items != null && this.Items.Count > 0)
                     {
                         this.CurrentItem = this.Items[0];
@@ -59,21 +57,20 @@ namespace projectFrameCut
             });
 #endif
 
-
         }
 
-
-        public void ShowNavView()
+        public override void ShowNavView()
         {
             //Shell.SetNavBarIsVisible(this, true);
         }
 
-        public void HideNavView()
+        public override void HideNavView()
         {
             //Shell.SetNavBarIsVisible(this, false);
+        }
 
-
+        public override void CollapseNavView()
+        {
         }
     }
 }
-#endif

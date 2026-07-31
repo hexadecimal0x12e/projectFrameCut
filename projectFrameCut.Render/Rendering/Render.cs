@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -857,7 +857,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clips) || clips == null || clips.Length == 0)
                     {
-                        builder?.Append(targetFrame, BlankFrame);
+                        builder?.Append(targetFrame, BlankFrame.Clone());
                         TrackRenderElapsed(TimeSpan.Zero);
                         FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                         FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -1263,7 +1263,7 @@ namespace projectFrameCut.Render.Rendering
                         if (!FrameLayerGroups!.TryGetValue(targetFrame, out var layerGroups) || layerGroups.Length == 0)
                         {
                             // No clips at this frame: treat as blank
-                            builder?.Append(targetFrame, BlankFrame);
+                            builder?.Append(targetFrame, BlankFrame.Clone());
                             TrackRenderElapsed(TimeSpan.Zero);
                             FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                             FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -1625,7 +1625,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 // 空白帧
                 Log($"[ReRenderFrame] Frame {frameIndex} has no clips, returning blank frame.");
-                return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                return BlankFrame.Clone();
             }
 
             var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
@@ -1665,7 +1665,7 @@ namespace projectFrameCut.Render.Rendering
             if (framesToRender.Count == 0)
             {
                 Log($"[ReRenderFrame] Frame {frameIndex}: no source frames available, returning blank.");
-                return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                return BlankFrame.Clone();
             }
 
             // 合成帧（直接复用 RenderAFrameInternal 的合成逻辑）
@@ -2100,7 +2100,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (result is null)
                 {
-                    return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                    return BlankFrame.Clone();
                 }
 
                 if (result.Width < TargetWidth || result.Height < TargetHeight)
@@ -2453,7 +2453,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (merged == null)
                 {
-                    merged = BlankFrame;
+                    merged = BlankFrame.Clone();
                 }
 
                 if (merged.Width < TargetWidth || merged.Height < TargetHeight)
@@ -2824,7 +2824,7 @@ namespace projectFrameCut.Render.Rendering
                         break;
                     }
 
-                    builder?.Append(blankIdx, BlankFrame);
+                    builder?.Append(blankIdx, BlankFrame.Clone());
                     TrackRenderElapsed(TimeSpan.Zero);
                     FramePrepareElapsed.TryAdd(blankIdx, TimeSpan.Zero);
                     FrameRenderElapsed.TryAdd(blankIdx, TimeSpan.Zero);

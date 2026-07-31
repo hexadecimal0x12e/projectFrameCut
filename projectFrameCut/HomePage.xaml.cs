@@ -102,8 +102,15 @@ public partial class HomePage : ContentPage
                 return;
             }
             await ShowManyAlertsAsync();
-            if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
-            HasAlreadyLaunchedFromFile = true;
+            try
+            {
+                if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
+                HasAlreadyLaunchedFromFile = true;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "post-dialogue init", this);
+            }
 
             try
             {
@@ -1203,7 +1210,15 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         _ = McpClientLinkService.Shared.DisconnectAsync();
-        Environment.CurrentDirectory = MauiProgram.DataPath;
+        try
+        {
+            Environment.CurrentDirectory = MauiProgram.DataPath;
+        }
+        catch
+        {
+            // iOS blocks chdir() through the app container root.
+            // We use absolute paths throughout, so CurrentDirectory is unnecessary.
+        }
         try
         {
             if (lastPage is not null && Window is not null)
@@ -1212,19 +1227,28 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-        if (Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
+        try
         {
-            NoContentLayout.IsVisible = true;
-        }
-        else
-        {
-            NoContentLayout.IsVisible = false;
-            await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
-            if (_viewModel.LoadFailed)
+            if (Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
             {
-                await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
-
+                NoContentLayout.IsVisible = true;
             }
+            else
+            {
+                NoContentLayout.IsVisible = false;
+                await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+                if (_viewModel.LoadFailed)
+                {
+                    await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
+
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // iOS 17+ sandbox: stat on container root returns EPERM.
+            Log(ex, "load draft list", this);
+            NoContentLayout.IsVisible = true; // safe fallback
         }
 
 #if WINDOWS
@@ -1239,14 +1263,18 @@ public partial class HomePage : ContentPage
         }
         catch { }
 #elif iDevices
-        if (OperatingSystem.IsMacCatalyst())
-        {
-            AppShell_MacCatalyst.instance.ShowNavView();
-        }
+
 #endif
 
-        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
-        DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+        try
+        {
+            VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
+            DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "set DiskCache root", this);
+        }
 
     }
 
@@ -1355,7 +1383,7 @@ public partial class HomePage : ContentPage
         {
             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_FFmpegFailedLoadWarn(MauiProgram.ffmpegFailMessage), Localized._OK);
         }
-
+#if !iDevices
         try
         {
             if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")) && !Directory.Exists(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))))
@@ -1365,6 +1393,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
+#endif
         MainSettingsPage.SyncSettingToModules();
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();

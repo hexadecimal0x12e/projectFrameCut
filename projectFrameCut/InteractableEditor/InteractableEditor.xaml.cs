@@ -181,6 +181,7 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 field = value;
+                DebugOverlay.IsVisible = value;
                 UpdateVisuals();
             }
         } = false;
